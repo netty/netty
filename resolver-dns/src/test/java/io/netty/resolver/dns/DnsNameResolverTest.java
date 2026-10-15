@@ -2988,21 +2988,30 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testNegativelyCachedBareHostnameStillShortCircuits() throws Exception {
-        // A negative entry for the hostname that is actually being resolved must keep failing fast.
-        String[] searchDomains = { "ns1.svc.cluster.local" };
+    public void testNegativelyCachedBareHostnameDoesNotBlockSearchDomainWalkthrough() throws Exception {
+        // A negative entry for the bare hostname FQDN must NOT short-circuit the search-domain walkthrough.
+        // The negative entry only tells us "the exact FQDN lookup failed", not whether some search-domain
+        // expansion might succeed (Kubernetes cross-namespace resolution, see #17625).
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
         String hostname = "missing-service";
 
         FixedDnsCache cache = new FixedDnsCache();
+        // Bare hostname has a negative entry (NXDOMAIN cached)
         cache.put(hostname, null, new UnknownHostException("failed to resolve " + hostname));
+        // But the second search-domain expansion resolves successfully
+        InetAddress expected = InetAddress.getByAddress(
+                hostname + '.' + searchDomains[1], new byte[] { 10, 96, 0, 42 });
+        cache.put(hostname + '.' + searchDomains[1], expected, null);
 
         Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
                 new SocketProtocolFamily[] { SocketProtocolFamily.INET });
 
-        assertTrue(isCached);
-        assertFalse(promise.isSuccess());
-        assertThat(promise.cause()).isInstanceOf(UnknownHostException.class);
+        // Must NOT short-circuit on the bare hostname's negative entry; must find the positive search-domain hit.
+        assertTrue(isCached,
+                "a negatively cached bare hostname must not block search-domain walkthrough");
+        assertTrue(promise.isSuccess());
+        assertEquals(Collections.singletonList(expected), promise.getNow());
     }
 
     @ParameterizedTest
