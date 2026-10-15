@@ -206,7 +206,11 @@ public class DnsQueryCancelRaceLeakTest {
             promise.addListener((FutureListener<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>) f -> {
                 reached.countDown();
                 // Bounded wait so a failed assertion on the test thread can never park the event loop forever.
-                proceed.await(10, TimeUnit.SECONDS);
+                try {
+                    proceed.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             });
 
             final DnsQuestion question = new DefaultDnsQuestion(HOSTNAME, DnsRecordType.A);
