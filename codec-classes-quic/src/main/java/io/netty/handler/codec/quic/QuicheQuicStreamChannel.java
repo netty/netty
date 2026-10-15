@@ -1082,12 +1082,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 ByteBuf byteBuf = allocHandle.allocate(allocator);
                 try {
                     handleRecvResult(parent.streamRecv(streamId(), byteBuf));
-                } catch (Exception e) {
+                } catch (Throwable cause) {
                     // The stream was reset by the remote peer or the connection was closed, there is nothing left
-                    // to read.
+                    // to read. Let the user know about the cause as the data that was dropped is lost.
                     readable = false;
                     finReceived = true;
                     inputShutdown = true;
+                    pipeline().fireExceptionCaught(cause);
                 } finally {
                     byteBuf.release();
                 }
