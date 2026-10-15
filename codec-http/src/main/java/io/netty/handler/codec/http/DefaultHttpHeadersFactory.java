@@ -71,17 +71,18 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
             (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION;
 
     private static final DefaultHttpHeadersFactory DEFAULT =
-            new DefaultHttpHeadersFactory(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
+            new DefaultHttpHeadersFactory(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false, false);
     private static final DefaultHttpHeadersFactory DEFAULT_TRAILER =
-            new DefaultHttpHeadersFactory(DEFAULT_TRAILER_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
+            new DefaultHttpHeadersFactory(DEFAULT_TRAILER_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false, true);
     private static final DefaultHttpHeadersFactory DEFAULT_COMBINING =
-            new DefaultHttpHeadersFactory(DEFAULT.nameValidator, DEFAULT.valueValidator, true);
+            new DefaultHttpHeadersFactory(DEFAULT.nameValidator, DEFAULT.valueValidator, true, false);
     private static final DefaultHttpHeadersFactory DEFAULT_NO_VALIDATION =
-            new DefaultHttpHeadersFactory(NO_NAME_VALIDATOR, NO_VALUE_VALIDATOR, false);
+            new DefaultHttpHeadersFactory(NO_NAME_VALIDATOR, NO_VALUE_VALIDATOR, false, false);
 
     private final NameValidator<CharSequence> nameValidator;
     private final ValueValidator<CharSequence> valueValidator;
     private final boolean combiningHeaders;
+    private final boolean trailers;
 
     /**
      * Create a header builder with the given settings.
@@ -89,14 +90,18 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
      * @param nameValidator The name validator to use, not null.
      * @param valueValidator The value validator to use, not null.
      * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
+     * @param trailers {@code true} if this factory creates trailers, which means that enabling name validation
+     * will use the trailer name validator.
      */
     private DefaultHttpHeadersFactory(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator,
-            boolean combiningHeaders) {
+            boolean combiningHeaders,
+            boolean trailers) {
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         this.valueValidator = checkNotNull(valueValidator, "valueValidator");
         this.combiningHeaders = combiningHeaders;
+        this.trailers = trailers;
     }
 
     /**
@@ -138,6 +143,9 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
     /**
      * Create a new builder that has HTTP header name validation enabled or disabled.
      * <p>
+     * If this factory was derived from {@link #trailersFactory()}, enabling validation will also reject header names
+     * that are prohibited in trailers.
+     * <p>
      * <b>Warning!</b> Setting {@code validation} to {@code false} will mean that Netty won't
      * validate & protect against user-supplied headers that are malicious.
      * This can leave your server implementation vulnerable to
@@ -151,7 +159,10 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
      * @return The new builder.
      */
     public DefaultHttpHeadersFactory withNameValidation(boolean validation) {
-        return withNameValidator(validation ? DEFAULT_NAME_VALIDATOR : NO_NAME_VALIDATOR);
+        if (!validation) {
+            return withNameValidator(NO_NAME_VALIDATOR);
+        }
+        return withNameValidator(trailers ? DEFAULT_TRAILER_NAME_VALIDATOR : DEFAULT_NAME_VALIDATOR);
     }
 
     /**
@@ -173,10 +184,10 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (nameValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
+        if (!trailers && validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
-        return new DefaultHttpHeadersFactory(validator, valueValidator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(validator, valueValidator, combiningHeaders, trailers);
     }
 
     /**
@@ -217,10 +228,10 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (valueValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
+        if (!trailers && nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
-        return new DefaultHttpHeadersFactory(nameValidator, validator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(nameValidator, validator, combiningHeaders, trailers);
     }
 
     /**
@@ -259,7 +270,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (this.combiningHeaders == combiningHeaders) {
             return this;
         }
-        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders, trailers);
     }
 
     /**
