@@ -1334,6 +1334,26 @@ public class HAProxyMessageDecoderTest {
         assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
     }
 
+    @ParameterizedTest
+    @ValueSource(bytes = { 0x01, 0x02, 0x21, 0x22, 0x30, (byte) 0xE0 })
+    public void testInvalidNonSslTLVLengthCorrectlyHandled(byte type) {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x10, // 12 bytes of addresses and ports + 4 bytes of TLV
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                type, 0x00, (byte) 0xFF, 'h' // TLV with a length of 255, but only one byte of value
+        });
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertFalse(ch.isActive());
+        assertFalse(ch.finish());
+    }
+
     @Test
     public void testReadTlvsLeaksRetainedBufferWhenSecondSSLTLVIsMalformed() {
         final ByteBuf data = Unpooled.buffer();
