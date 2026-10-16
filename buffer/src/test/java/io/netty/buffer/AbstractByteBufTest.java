@@ -2836,6 +2836,10 @@ public abstract class AbstractByteBufTest {
                         }
                     } catch (Throwable e) {
                         innerThrowable.compareAndSet(null, e);
+                        // Short-circuit: wake up the main thread immediately
+                        while (latch.getCount() > 0) {
+                            latch.countDown();
+                        }
                     } finally {
                         try {
                             barrier.await();
@@ -2855,6 +2859,11 @@ public abstract class AbstractByteBufTest {
                 e.addSuppressed(inner);
             }
             throw e;
+        }
+        // Ensure failures in worker threads are propagated to the test thread.
+        Throwable failedThreadException = innerThrowable.get();
+        if (failedThreadException != null) {
+            throw new AssertionError("Worker thread failed", failedThreadException);
         }
     }
 
@@ -2920,6 +2929,10 @@ public abstract class AbstractByteBufTest {
                         }
                     } catch (Throwable e) {
                         innerThrowable.compareAndSet(null, e);
+                        // Short-circuit: wake up the main thread immediately
+                        while (latch.getCount() > 0) {
+                            latch.countDown();
+                        }
                     } finally {
                         try {
                             barrier.await();
@@ -2939,6 +2952,11 @@ public abstract class AbstractByteBufTest {
                 e.addSuppressed(inner);
             }
             throw e;
+        }
+        // Ensure failures in worker threads are propagated to the test thread.
+        Throwable failedThreadException = innerThrowable.get();
+        if (failedThreadException != null) {
+            throw new AssertionError("Worker thread failed", failedThreadException);
         }
     }
 
