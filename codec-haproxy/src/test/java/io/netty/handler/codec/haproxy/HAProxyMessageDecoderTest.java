@@ -1243,7 +1243,12 @@ public class HAProxyMessageDecoderTest {
                 0x08, (byte) 0xAE
         });
 
-        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(data);
+            }
+        });
         assertFalse(ch.isActive());
         assertFalse(ch.finish());
         assertNull(ch.readInbound());
