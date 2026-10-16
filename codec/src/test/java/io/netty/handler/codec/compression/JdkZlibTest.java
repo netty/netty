@@ -421,7 +421,12 @@ public class JdkZlibTest extends ZlibTest {
             }
         });
         // the remaining input is decoded again when the channel is closed
-        assertThrows(DecompressionException.class, channel::finishAndReleaseAll);
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.finishAndReleaseAll();
+            }
+        });
     }
 
     @Test
