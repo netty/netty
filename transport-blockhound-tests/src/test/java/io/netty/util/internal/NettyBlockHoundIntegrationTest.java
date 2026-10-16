@@ -62,6 +62,9 @@ import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +84,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.StampedLock;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -391,6 +395,42 @@ public class NettyBlockHoundIntegrationTest {
         } while (thread.isAlive());
         thread.join();
         task.get();
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void adaptiveBufferMagazineFreeAllowsLockContention() throws Exception {
+        Class<?> magazineClass = Class.forName("io.netty.buffer.AdaptivePoolingAllocator$Magazine");
+        Constructor<?> constructor = magazineClass.getDeclaredConstructors()[0];
+        constructor.setAccessible(true);
+        // An empty shared magazine needs no group or chunk controller to be freed.
+        Object magazine = constructor.newInstance(null, true, null);
+        Field allocationLockField = magazineClass.getDeclaredField("allocationLock");
+        allocationLockField.setAccessible(true);
+        StampedLock allocationLock = (StampedLock) allocationLockField.get(magazine);
+        Method free = magazineClass.getDeclaredMethod("free");
+        free.setAccessible(true);
+
+        FutureTask<Void> task = new FutureTask<>(() -> {
+            free.invoke(magazine);
+            return null;
+        });
+        FastThreadLocalThread thread = new FastThreadLocalThread(task);
+        long stamp = allocationLock.writeLock();
+        boolean contended;
+        try {
+            thread.start();
+            // Keep the lock until free() parks, or BlockHound rejects the blocking call.
+            while (thread.getState() != Thread.State.WAITING && !task.isDone()) {
+                Thread.sleep(1);
+            }
+            contended = thread.getState() == Thread.State.WAITING;
+        } finally {
+            allocationLock.unlockWrite(stamp);
+            thread.join(5000);
+        }
+        task.get(5, TimeUnit.SECONDS);
+        assertTrue(contended, "Magazine.free() must contend on the allocation lock");
     }
 
     @Test
