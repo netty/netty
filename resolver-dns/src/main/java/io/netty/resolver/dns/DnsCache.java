@@ -57,9 +57,32 @@ public interface DnsCache {
      * @param originalTtl the TTL as returned by the DNS server
      * @param loop the {@link EventLoop} used to register the TTL timeout
      * @return The {@link DnsCacheEntry} corresponding to this cache entry.
+     * @deprecated Use {@link #cache(String, DnsRecord[], InetAddress, List, long, EventLoop)} instead.
      */
+    @Deprecated
     DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl,
                         EventLoop loop);
+
+    /**
+     * Create a new {@link DnsCacheEntry} and cache a resolved address with CNAME chain information.
+     * <p>
+     * The default implementation forwards to the deprecated method for backward compatibility.
+     * Cache implementations should override this method to support CNAME chain caching.
+     *
+     * @param hostname the hostname
+     * @param additionals the additional records
+     * @param address the resolved address
+     * @param cnameChain the CNAME chain that led to this resolution, may be empty
+     * @param originalTtl the TTL as returned by the DNS server
+     * @param loop the {@link EventLoop} used to register the TTL timeout
+     * @return The {@link DnsCacheEntry} corresponding to this cache entry.
+     * @since 4.2.0
+     */
+    default DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address,
+                               List<String> cnameChain, long originalTtl, EventLoop loop) {
+        // Forward to old method for backward compatibility
+        return cache(hostname, additionals, address, originalTtl, loop);
+    }
 
     /**
      * Cache the resolution failure for a given hostname.
@@ -71,6 +94,29 @@ public interface DnsCache {
      * @param loop the {@link EventLoop} used to register the TTL timeout
      * @return The {@link DnsCacheEntry} corresponding to this cache entry, or {@code null} if this cache doesn't
      * support caching failed responses.
+     * @deprecated Use {@link #cache(String, DnsRecord[], Throwable, List, EventLoop)} instead.
      */
+    @Deprecated
     DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop);
+
+    /**
+     * Cache the resolution failure with CNAME chain information.
+     * <p>
+     * The default implementation forwards to the deprecated method for backward compatibility.
+     * Cache implementations should override this method to support CNAME chain caching.
+     *
+     * @param hostname the hostname
+     * @param additionals the additional records
+     * @param cause the resolution failure
+     * @param cnameChain the CNAME chain that was attempted before failure, may be empty
+     * @param loop the {@link EventLoop} used to register the TTL timeout
+     * @return The {@link DnsCacheEntry} corresponding to this cache entry, or {@code null} if this cache doesn't
+     * support caching failed responses.
+     * @since 4.2.0
+     */
+    default DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause,
+                               List<String> cnameChain, EventLoop loop) {
+        // Forward to old method for backward compatibility
+        return cache(hostname, additionals, cause, loop);
+    }
 }
