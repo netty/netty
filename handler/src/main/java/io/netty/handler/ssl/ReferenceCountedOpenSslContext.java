@@ -53,7 +53,6 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +94,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
+    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -455,7 +455,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateListBytes(maxCertificateList));
             }
 
             // Set the curves / groups if anything is configured.
@@ -483,8 +483,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             case CHOOSE_MY_LAST_PROTOCOL:
                 return SSL.SSL_SELECTOR_FAILURE_CHOOSE_MY_LAST_PROTOCOL;
             default:
-                throw new Error();
+                throw new Error("Unexpected behavior: " + behavior);
         }
+    }
+
+    static int maxCertificateListBytes(int maxCertificateListBytes) {
+        return maxCertificateListBytes > 0 ?
+                Math.max(maxCertificateListBytes, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateListBytes;
     }
 
     @Override
