@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -107,6 +108,28 @@ public class DefaultHttp2HeadersTest {
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
         }
+    }
+
+    @Test
+    public void overwritingPseudoHeaderWithInvalidValueNotAllowed() {
+        final Http2Headers headers = new DefaultHttp2Headers();
+        headers.authority("netty.io");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.authority("");
+            }
+        });
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                Iterator<Entry<CharSequence, CharSequence>> itr = headers.iterator();
+                assertTrue(itr.hasNext());
+                Entry<CharSequence, CharSequence> entry = itr.next();
+                assertEquals(":authority", entry.getKey().toString());
+                entry.setValue(""); // This must throw
+            }
+        });
     }
 
     @Test
