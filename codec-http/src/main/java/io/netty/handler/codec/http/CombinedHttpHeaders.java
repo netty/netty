@@ -177,14 +177,9 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 throw new IllegalArgumentException("can't add to itself.");
             }
             if (headers instanceof CombinedHttpHeadersImpl) {
-                if (isEmpty()) {
-                    // Can use the fast underlying copy
-                    addImpl(headers);
-                } else {
-                    // Values are already escaped so don't escape again
-                    for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
-                        addEscapedValue(header.getKey(), header.getValue());
-                    }
+                // Values are already escaped so don't escape again
+                for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                    addEscapedValue(header.getKey(), header.getValue());
                 }
             } else {
                 for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
