@@ -41,41 +41,32 @@ public class CleanerJava24Linker implements Cleaner {
     private static final boolean SUPPORTED;
 
     static {
-        boolean suitableJavaVersion;
+        Throwable error;
         if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-            // native image supports this since 25, but we don't use PlatformDependent0 here, since
-            // we need to initialize CleanerJava24Linker at build time.
-            String v = System.getProperty("java.specification.version");
-            try {
-                suitableJavaVersion = Integer.parseInt(v) >= 25;
-            } catch (NumberFormatException e) {
-                suitableJavaVersion = false;
-            }
-            // also need to prevent initializing the logger at build time
+            // A native image can only link the downcalls that were registered when the image was built, and
+            // linking on first use is too late to fall back to another cleaner, so a native image never uses
+            // this one. We don't use PlatformDependent0 or the logger here, since this class may be initialized
+            // at build time.
             logger = null;
+            error = new UnsupportedOperationException(
+                    "Linking to malloc and free is not supported in a native image.");
         } else {
+            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
             // Only attempt to use MemorySegments on Java 24 or greater, where warnings about Unsafe
             // memory access operations start to appear.
             // The following JDK bugs do NOT affect our implementation because the memory segments we
             // create are associated with the GLOBAL_SESSION:
             // - https://bugs.openjdk.org/browse/JDK-8357145
             // - https://bugs.openjdk.org/browse/JDK-8357268
-            suitableJavaVersion = PlatformDependent0.javaVersion() >= 24;
-            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
-        }
-
-        Throwable error;
-        if (suitableJavaVersion) {
-            try {
-                error = Symbols.UNAVAILABILITY_CAUSE;
-            } catch (Throwable throwable) {
-                error = throwable;
+            if (PlatformDependent0.javaVersion() >= 24) {
+                try {
+                    error = Symbols.UNAVAILABILITY_CAUSE;
+                } catch (Throwable throwable) {
+                    error = throwable;
+                }
+            } else {
+                error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
             }
-        } else {
-            error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
-        }
-
-        if (logger != null) {
             if (error == null) {
                 logger.debug("java.nio.ByteBuffer.cleaner(): available");
             } else {
