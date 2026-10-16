@@ -961,6 +961,24 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(headers), eq(0));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"abc", "1,2", "99999999999999999999"})
+    public void testPromiseWithInvalidContentLength(String contentLength) throws Exception {
+        final Http2FrameListener dec = decode();
+        final Http2Headers headers = new DefaultHttp2Headers(false)
+                .method("GET").scheme("https").authority("example.org").path("/")
+                .set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(ex));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
     @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
