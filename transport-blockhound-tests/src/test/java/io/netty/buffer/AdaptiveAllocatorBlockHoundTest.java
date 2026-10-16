@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,6 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 class AdaptiveAllocatorBlockHoundTest {
     @BeforeAll
     static void installBlockHound() {
-        assumeFalse(PlatformDependent.javaVersion() == 26, "Fails on JDK26, possible Blockhound bug?");
         assumeFalse(SystemPropertyUtil.getBoolean("io.netty.allocator.lowMemory",
                 Runtime.getRuntime().maxMemory() <= 512 * 1024 * 1024),
                 "Low-memory mode disables magazine expansion");
