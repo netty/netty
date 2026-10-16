@@ -397,6 +397,34 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
+    public void testDictionaryMismatchThrowsDecompressionException() {
+        Deflater deflater = new Deflater();
+        byte[] compressed = new byte[64];
+        int length;
+        try {
+            deflater.setDictionary("some dictionary".getBytes(CharsetUtil.UTF_8));
+            deflater.setInput("hello".getBytes(CharsetUtil.UTF_8));
+            deflater.finish();
+            length = deflater.deflate(compressed);
+            assertTrue(deflater.finished());
+        } finally {
+            deflater.end();
+        }
+
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new JdkZlibDecoder("another dictionary".getBytes(CharsetUtil.UTF_8), 0));
+        final ByteBuf input = Unpooled.wrappedBuffer(compressed, 0, length);
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(input);
+            }
+        });
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, channel::finishAndReleaseAll);
+    }
+
+    @Test
     void testAllowDefaultCompression() {
         assertDoesNotThrow(new Executable() {
             @Override
