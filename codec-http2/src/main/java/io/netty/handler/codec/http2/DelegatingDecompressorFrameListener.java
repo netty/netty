@@ -197,7 +197,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder(maxAllocation))
+                    .handlers(BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation))
                     .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
