@@ -53,15 +53,12 @@ import org.mockito.stubbing.Answer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
-import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
@@ -69,9 +66,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -286,8 +281,29 @@ public class DataCompressionHttp2Test {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 10})
+    public void brotliEncodingHonorsMaxAllocation(final int padding) throws Exception {
+        // Use a maxAllocation well below the default output buffer size of the BrotliDecoder (64 KiB).
+        final byte[] text = new byte[128 * 1024];
+        for (int i = 0; i < text.length; i++) {
+            text[i] = (byte) (i % 251);
+        }
+        maxAllocation = 1024;
+
+        testEncodingMessage(padding, text, HttpHeaderValues.BR, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                awaitServer();
+                assertThat(serverOut.toByteArray()).isEqualTo(text);
+                assertThat(maxServerOutBufferSize).isLessThanOrEqualTo(maxAllocation);
+                return null;
+            }
+        });
+    }
+
     private void testEncodingMessage(final int padding, final String text, AsciiString compressionAlgorithmName)
-            throws Exception {
+        throws Exception {
         testEncodingMessage(padding, text, compressionAlgorithmName, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
