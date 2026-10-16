@@ -75,6 +75,96 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
+    @Timeout(10)
+    public void testShutdownFromTaskClosesRegisteredChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel socket = SocketChannel.open();
+        Channel channel = new NioSocketChannel(socket);
+        try {
+            group.register(channel).sync();
+            channel.eventLoop().submit(() -> group.shutdownGracefully(0, 5, TimeUnit.SECONDS)).sync();
+            group.terminationFuture().sync();
+
+            assertFalse(channel.isOpen());
+            assertFalse(socket.isOpen());
+            assertTrue(channel.closeFuture().isDone());
+            assertFalse(channel.isRegistered());
+        } finally {
+            socket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    public void testShutdownDuringRunningTaskClosesRegisteredChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel socket = SocketChannel.open();
+        Channel channel = new NioSocketChannel(socket);
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            group.register(channel).sync();
+            Future<?> heldTask = channel.eventLoop().submit(() -> {
+                entered.countDown();
+                try {
+                    assertTrue(release.await(5, TimeUnit.SECONDS));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+            });
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            Future<?> termination = group.shutdownGracefully(0, 5, TimeUnit.SECONDS);
+            release.countDown();
+            heldTask.sync();
+            termination.sync();
+
+            assertFalse(channel.isOpen());
+            assertFalse(socket.isOpen());
+            assertTrue(channel.closeFuture().isDone());
+            assertFalse(channel.isRegistered());
+        } finally {
+            release.countDown();
+            socket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    public void testShutdownCloseListenerRegistersAnotherChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel firstSocket = SocketChannel.open();
+        SocketChannel secondSocket = SocketChannel.open();
+        Channel first = new NioSocketChannel(firstSocket);
+        Channel second = new NioSocketChannel(secondSocket);
+        AtomicBoolean registeredDuringClose = new AtomicBoolean();
+        try {
+            group.register(first).sync();
+            first.closeFuture().addListener(future -> {
+                registeredDuringClose.set(group.register(second).isSuccess());
+            });
+            first.eventLoop().submit(() -> group.shutdownGracefully(0, 5, TimeUnit.SECONDS)).sync();
+            group.terminationFuture().sync();
+
+            assertTrue(registeredDuringClose.get());
+            assertFalse(first.isOpen());
+            assertFalse(second.isOpen());
+            assertFalse(firstSocket.isOpen());
+            assertFalse(secondSocket.isOpen());
+            assertTrue(first.closeFuture().isDone());
+            assertTrue(second.closeFuture().isDone());
+            assertFalse(first.isRegistered());
+            assertFalse(second.isRegistered());
+        } finally {
+            firstSocket.close();
+            secondSocket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
     public void testRebuildSelector() {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
