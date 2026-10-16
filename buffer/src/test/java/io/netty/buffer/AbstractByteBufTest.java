@@ -74,6 +74,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -4597,6 +4598,26 @@ public abstract class AbstractByteBufTest {
             } catch (IllegalReferenceCountException e) {
                 // expected
             }
+        }
+    }
+
+    @Test
+    public void testMemoryAddressUnsupportedWhenNoMemoryAddress() {
+        final ByteBuf buf = newBuffer(16);
+        try {
+            if (buf.hasMemoryAddress()) {
+                // Must not throw, and must not be the "no address" marker.
+                assertNotEquals(0L, buf.memoryAddress());
+            } else {
+                assertThrows(UnsupportedOperationException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        buf.memoryAddress();
+                    }
+                });
+            }
+        } finally {
+            buf.release();
         }
     }
 
