@@ -373,7 +373,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         stream.id(), stream.state());
                     break;
                 default:
-                    error = streamError(stream.id(), PROTOCOL_ERROR,
+                    // IDLE, RESERVED_LOCAL or RESERVED_REMOTE: this must be treated as a connection error
+                    // (RFC 9113, section 5.1).
+                    error = connectionError(PROTOCOL_ERROR,
                         "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     break;
             }

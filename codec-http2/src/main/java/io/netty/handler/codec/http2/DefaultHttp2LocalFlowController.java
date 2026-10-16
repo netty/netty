@@ -180,14 +180,16 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             return false;
         }
 
-        // Streams automatically consume all remaining bytes when they are closed, so just ignore
-        // if already closed.
-        if (stream != null && !isClosed(stream)) {
+        if (stream != null) {
             if (stream.id() == CONNECTION_STREAM_ID) {
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
 
-            return consumeAllBytes(state(stream), numBytes);
+            // Streams automatically consume all remaining bytes when they are closed, and streams that are not
+            // active yet (IDLE or RESERVED_*) never have bytes accounted to them, so just ignore those.
+            if (isActive(stream)) {
+                return consumeAllBytes(state(stream), numBytes);
+            }
         }
         return false;
     }
@@ -270,7 +272,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         FlowState connectionState = connectionState();
         connectionState.receiveFlowControlledFrame(dataLength);
 
-        if (stream != null && !isClosed(stream)) {
+        if (stream != null && isActive(stream)) {
             // Apply the stream-level flow control
             FlowState state = state(stream);
             state.endOfStream(endOfStream);
@@ -287,6 +289,21 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     private FlowState state(Http2Stream stream) {
         return stream.getProperty(stateKey);
+    }
+
+    /**
+     * Returns {@code true} if the stream is active and so has its own flow control state. Streams that are
+     * {@code IDLE}, {@code RESERVED_*} or {@code CLOSED} use the {@link #REDUCED_FLOW_STATE}.
+     */
+    private static boolean isActive(Http2Stream stream) {
+        switch (stream.state()) {
+            case OPEN:
+            case HALF_CLOSED_LOCAL:
+            case HALF_CLOSED_REMOTE:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static boolean isClosed(Http2Stream stream) {
