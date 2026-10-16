@@ -320,7 +320,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @Test
     public void writeFrameZeroPayload() throws Exception {
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
 
         byte[] expectedFrameBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, // payload length
@@ -339,7 +339,7 @@ public class DefaultHttp2FrameWriterTest {
 
         // will auto release after frameWriter.writeFrame succeed
         ByteBuf payloadByteBuf = Unpooled.wrappedBuffer(payload);
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payloadByteBuf, promise);
 
         byte[] expectedFrameHeaderBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length

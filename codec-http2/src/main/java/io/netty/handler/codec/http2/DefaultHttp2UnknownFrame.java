@@ -21,15 +21,15 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
 public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder implements Http2UnknownFrame {
-    private final byte frameType;
+    private final short frameType;
     private final Http2Flags flags;
     private Http2FrameStream stream;
 
-    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags) {
+    public DefaultHttp2UnknownFrame(short frameType, Http2Flags flags) {
         this(frameType, flags, Unpooled.EMPTY_BUFFER);
     }
 
-    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags, ByteBuf data) {
+    public DefaultHttp2UnknownFrame(short frameType, Http2Flags flags, ByteBuf data) {
         super(data);
         this.frameType = frameType;
         this.flags = flags;
@@ -47,7 +47,7 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
     }
 
     @Override
-    public byte frameType() {
+    public short frameType() {
         return frameType;
     }
 
