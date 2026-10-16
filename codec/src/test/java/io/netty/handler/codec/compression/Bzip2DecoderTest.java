@@ -322,6 +322,23 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         });
     }
 
+    /**
+     * Regression test: a Huffman code length read in {@code RECEIVE_HUFFMAN_LENGTH} was never
+     * validated against the 1..23 range before being stored and later used to index the per-table
+     * code-base array (sized for lengths up to 23), so a crafted stream could trigger an
+     * {@link ArrayIndexOutOfBoundsException} instead of a clean {@link DecompressionException}.
+     */
+    @Test
+    public void testCodeLengthOutOfRange() {
+        final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange());
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(in);
+            }
+        }, "Bzip2 block Huffman code length not in range");
+    }
+
     @Override
     protected byte[] compress(byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
