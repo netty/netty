@@ -63,14 +63,17 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
         out.writeBytes(TEXT_PREFIX);
         out.writeByte((byte) ' ');
         out.writeCharSequence(msg.proxiedProtocol().name(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
+        // "PROXY UNKNOWN" has no addresses and ports
+        if (msg.proxiedProtocol() != HAProxyProxiedProtocol.UNKNOWN) {
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
+        }
         out.writeByte((byte) '\r');
         out.writeByte((byte) '\n');
     }
