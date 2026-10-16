@@ -333,6 +333,7 @@ public class DefaultHttp2ConnectionTest {
                 () -> server.local().reservePushStream(4, parent));
 
         assertEquals(Http2Error.PROTOCOL_ERROR, error.error());
+        assertTrue(error.getMessage().contains("opposite endpoint"));
         assertNull(server.stream(4));
         assertEquals(2, server.local().lastStreamCreated());
     }
@@ -345,6 +346,7 @@ public class DefaultHttp2ConnectionTest {
                 () -> client.remote().reservePushStream(4, parent));
 
         assertEquals(Http2Error.PROTOCOL_ERROR, error.error());
+        assertTrue(error.getMessage().contains("opposite endpoint"));
         assertNull(client.stream(4));
         assertEquals(2, client.remote().lastStreamCreated());
     }
