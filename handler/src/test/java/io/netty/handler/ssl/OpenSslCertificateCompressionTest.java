@@ -361,12 +361,13 @@ public class OpenSslCertificateCompressionTest {
                         .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
                         .build(), certificate, privateKey);
 
-        Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
+        CompletionException ex = Assertions.assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 runCertCompressionTest(clientSslContext, serverSslContext);
             }
         });
+        assertInstanceOf(SSLHandshakeException.class, ex.getCause());
     }
 
     public void runCertCompressionTest(SslContext clientSslContext, SslContext serverSslContext) throws Throwable {
