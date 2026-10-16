@@ -65,6 +65,30 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
+    public void testUnknownEncodeProxyV1() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
+
+        HAProxyMessage message = new HAProxyMessage(
+                HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNKNOWN,
+                null, null, 0, 0);
+        assertTrue(ch.writeOutbound(message));
+
+        ByteBuf byteBuf = ch.readOutbound();
+
+        assertEquals("PROXY UNKNOWN\r\n", byteBuf.toString(CharsetUtil.US_ASCII));
+
+        // the encoded header can be decoded again
+        EmbeddedChannel decoder = new EmbeddedChannel(new HAProxyMessageDecoder());
+        assertTrue(decoder.writeInbound(byteBuf));
+        HAProxyMessage decoded = decoder.readInbound();
+        assertEquals(HAProxyProtocolVersion.V1, decoded.protocolVersion());
+        assertEquals(HAProxyProxiedProtocol.UNKNOWN, decoded.proxiedProtocol());
+        assertTrue(decoded.release());
+        assertFalse(decoder.finish());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testIPV6EncodeProxyV1() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
