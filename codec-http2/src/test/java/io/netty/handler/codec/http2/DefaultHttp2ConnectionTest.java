@@ -326,6 +326,30 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
+    public void localPushReservationRejectsLocallyInitiatedParent() throws Http2Exception {
+        Http2Stream parent = server.local().createStream(2, false);
+
+        Http2Exception error = assertThrows(Http2Exception.class,
+                () -> server.local().reservePushStream(4, parent));
+
+        assertEquals(Http2Error.PROTOCOL_ERROR, error.error());
+        assertNull(server.stream(4));
+        assertEquals(2, server.local().lastStreamCreated());
+    }
+
+    @Test
+    public void remotePushReservationRejectsRemotelyInitiatedParent() throws Http2Exception {
+        Http2Stream parent = client.remote().createStream(2, false);
+
+        Http2Exception error = assertThrows(Http2Exception.class,
+                () -> client.remote().reservePushStream(4, parent));
+
+        assertEquals(Http2Error.PROTOCOL_ERROR, error.error());
+        assertNull(client.stream(4));
+        assertEquals(2, client.remote().lastStreamCreated());
+    }
+
+    @Test
     public void serverRemoteIncrementAndGetStreamShouldSucceed() throws Http2Exception {
         incrementAndGetStreamShouldSucceed(server.remote());
     }
