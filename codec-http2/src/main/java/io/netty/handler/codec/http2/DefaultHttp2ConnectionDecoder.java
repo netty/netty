@@ -676,7 +676,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // extract the content-length header
             List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
             if (contentLength != null && !contentLength.isEmpty()) {
-                long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                long cLength;
+                try {
+                    cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                } catch (IllegalArgumentException e) {
+                    throw streamError(promisedStreamId, PROTOCOL_ERROR, e,
+                        "Promised request on stream %d for promised stream %d contains invalid content-length header",
+                        streamId, promisedStreamId);
+                }
                 if (cLength != -1 && cLength != 0) {
                     throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d contains invalid content-length header",
