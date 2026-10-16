@@ -1440,7 +1440,12 @@ public class HAProxyMessageDecoderTest {
                 type, 0x00, (byte) 0xFF, 'h' // TLV with a length of 255, but only one byte of value
         });
 
-        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(data);
+            }
+        });
         assertFalse(ch.isActive());
         assertFalse(ch.finish());
     }
