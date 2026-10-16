@@ -194,7 +194,12 @@ public class HttpVersionParsingTest {
             "H/21474836470.1",
     })
     void testVersionNumberOverflowIsRejected(final String text) {
-        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpVersion.valueOf(text);
+            }
+        });
     }
 
     @Test
