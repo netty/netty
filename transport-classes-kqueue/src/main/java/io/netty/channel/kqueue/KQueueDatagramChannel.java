@@ -391,7 +391,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
-            readReadyBefore();
 
             Throwable exception = null;
             try {
@@ -475,7 +474,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                readReadyFinally(config);
+                if (shouldStopReading(config)) {
+                    clearReadFilter0();
+                }
             }
         }
     }
