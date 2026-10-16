@@ -183,7 +183,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-              ctx.channel().config(), new BrotliDecoder(maxAllocation));
+              ctx.channel().config(), BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation));
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
