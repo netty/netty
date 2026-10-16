@@ -1095,7 +1095,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         HeaderEntry<K, V> entry = newHeaderEntry(h, name, value, entries[i]);
         if (valueValidator != ValueValidator.NO_VALIDATION) {
             // Allows HeaderEntry.setValue(...) to validate new values, also for subclasses of HeaderEntry.
-            entry.valueValidator = valueValidator;
+            entry.origin = this;
         }
         entries[i] = entry;
         ++size;
@@ -1422,7 +1422,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         /**
          * The validator of the owning headers, or {@code null} if values are not validated.
          */
-        private ValueValidator<V> valueValidator;
+        private DefaultHeaders<K, V, ?> origin;
 
         protected HeaderEntry(int hash, K key) {
             this.hash = hash;
@@ -1477,9 +1477,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         @Override
         public final V setValue(V value) {
             checkNotNull(value, "value");
-            if (valueValidator != null) {
+            if (origin != null) {
                 try {
-                    valueValidator.validate(value);
+                    origin.validateValue(origin.valueValidator, key, value);
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("Validation failed for header '" + key + "'", e);
                 }
