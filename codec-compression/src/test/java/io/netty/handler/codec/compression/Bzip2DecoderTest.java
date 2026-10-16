@@ -262,12 +262,8 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     @Test
     public void testCodeLengthOutOfRange() {
         final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange());
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "Bzip2 block Huffman code length not in range");
+        assertThrows(DecompressionException.class,
+            () -> channel.writeInbound(in), "Bzip2 block Huffman code length not in range");
     }
 
     @Override
