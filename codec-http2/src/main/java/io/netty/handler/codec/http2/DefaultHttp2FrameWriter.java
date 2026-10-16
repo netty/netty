@@ -480,7 +480,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
             // in the catch block.
-            writeFrameHeaderInternal(buf, payload.readableBytes(), frameType, flags, streamId);
+            writeFrameHeaderInternal(buf, payload.readableBytes(), frameType, allowedFlags(frameType, flags), streamId);
             ctx.write(buf, promiseAggregator.newPromise());
         } catch (Throwable t) {
             try {
@@ -497,6 +497,39 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             promiseAggregator.setFailure(t);
         }
         return promiseAggregator.doneAllocatingPromises();
+    }
+
+    private static Http2Flags allowedFlags(byte frameType, Http2Flags flags) {
+        short mask;
+        switch (frameType) {
+            case DATA:
+                mask = Http2Flags.END_STREAM | Http2Flags.PADDED;
+                break;
+            case HEADERS:
+                mask = Http2Flags.END_STREAM | Http2Flags.END_HEADERS |
+                        Http2Flags.PADDED | Http2Flags.PRIORITY;
+                break;
+            case SETTINGS:
+            case PING:
+                mask = Http2Flags.ACK;
+                break;
+            case PUSH_PROMISE:
+                mask = Http2Flags.END_HEADERS | Http2Flags.PADDED;
+                break;
+            case CONTINUATION:
+                mask = Http2Flags.END_HEADERS;
+                break;
+            case PRIORITY:
+            case RST_STREAM:
+            case GO_AWAY:
+            case WINDOW_UPDATE:
+                mask = 0;
+                break;
+            default:
+                // Extension frame types have their own flag definitions.
+                return flags;
+        }
+        return new Http2Flags((short) (flags.value() & mask));
     }
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx,
