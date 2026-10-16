@@ -112,7 +112,7 @@ public class DefaultHttp2HeadersTest {
 
     @Test
     public void overwritingPseudoHeaderWithInvalidValueNotAllowed() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        final Http2Headers headers = new DefaultHttp2Headers();
         headers.authority("netty.io");
         assertThrows(Http2Exception.class, new Executable() {
             @Override
