@@ -2682,6 +2682,7 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
+            hasMemoryAddress = false;
             handle.unguardedRecycle(this);
         }
     }

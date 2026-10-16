@@ -55,12 +55,13 @@ public abstract class AbstractAdaptiveByteBufTest extends AbstractPooledByteBufT
         CompositeByteBuf composite = Unpooled.compositeBuffer().addComponents(true,
                 Unpooled.directBuffer(32).writeBytes(bytes, 0, 32),
                 Unpooled.buffer(32).writeBytes(bytes, 32, 32));
+        ByteBuf wrappedHeap = Unpooled.wrappedBuffer(bytes);
         final ByteBuf[] sources = {
                 pooledDirect.slice(8, 64),
                 unpooledHeap.slice(8, 64),
                 adaptive.slice(8, 64),
                 composite,
-                Unpooled.wrappedBuffer(bytes).asReadOnly(),
+                wrappedHeap.asReadOnly(),
         };
         final ByteBuf target = alloc(128, 128);
         try {
@@ -82,6 +83,7 @@ public abstract class AbstractAdaptiveByteBufTest extends AbstractPooledByteBufT
             unpooledHeap.release();
             adaptive.release();
             composite.release();
+            wrappedHeap.release();
         }
     }
 }
