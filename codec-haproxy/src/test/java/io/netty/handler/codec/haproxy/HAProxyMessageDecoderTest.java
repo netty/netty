@@ -1336,7 +1336,7 @@ public class HAProxyMessageDecoderTest {
 
     @ParameterizedTest
     @ValueSource(bytes = { 0x01, 0x02, 0x21, 0x22, 0x30, (byte) 0xE0 })
-    public void testInvalidNonSslTLVLengthCorrectlyHandled(byte type) {
+    public void testInvalidNonSslTLVLengthCorrectlyHandled(byte type) throws Exception {
         final ByteBuf data = Unpooled.buffer();
         data.writeBytes(new byte[] {
                 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
