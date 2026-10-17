@@ -7,7 +7,7 @@ on:
 
 jobs:
   check-jdk-early-access-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
