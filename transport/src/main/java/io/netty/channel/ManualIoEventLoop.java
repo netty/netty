@@ -526,10 +526,11 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     public final void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
         boolean inEventLoop = inEventLoop();
-        if (inEventLoop) {
-            if (isShutdown()) {
-                throw new RejectedExecutionException("event executor terminated");
-            }
+        if (isShutdown()) {
+            // Check this before adding the task, also for other threads: the task queue does not support
+            // remove(...), so the check after add(...) can not take the task back, and a terminated event loop never
+            // runs it.
+            throw new RejectedExecutionException("event executor terminated");
         }
         taskQueue.add(command);
         if (!inEventLoop) {
