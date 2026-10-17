@@ -367,6 +367,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     void readFilter(boolean readFilterEnabled) throws IOException {
         if (this.readFilterEnabled != readFilterEnabled) {
+            // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+            System.err.println("NETTY-DIAG readFilter fd=" + fd().intValue() + " -> " + readFilterEnabled);
             this.readFilterEnabled = readFilterEnabled;
             submit(readFilterEnabled ? Native.READ_ENABLED_OPS : Native.READ_DISABLED_OPS);
         }
