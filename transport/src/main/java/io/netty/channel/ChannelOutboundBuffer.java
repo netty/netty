@@ -704,6 +704,7 @@ public final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
+            channel.unsafe().prepareToDiscardOutboundMessages(this);
             for (;;) {
                 if (!remove0(cause, notify)) {
                     break;

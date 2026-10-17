@@ -33,6 +33,8 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.channel.unix.Socket;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -48,6 +50,8 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -553,9 +557,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 int numWritten = sendmsgHdrs.length();
                 sendmsgHdrs.clear();
                 ChannelOutboundBuffer outboundBuffer = outboundBuffer();
-                if (outboundBuffer == null) {
-                    // The completion may arrive after close() or shutdownOutput() already dropped the
-                    // outbound buffer.
+                if (retainedWriteBuffers != null) {
+                    // Close, shutdownOutput() or an inactive flush may already have failed this batch.
                     return true;
                 }
                 for (int i = 0; i < numWritten; i++) {
@@ -624,10 +627,10 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             }
 
             long bufferAddress = IoUring.memoryAddress(data) + data.readerIndex();
-            return scheduleSendmsg(data, remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
+            return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
         }
 
-        private boolean scheduleSendmsg(ByteBuf data, InetSocketAddress remoteAddress, long bufferAddress,
+        private boolean scheduleSendmsg(InetSocketAddress remoteAddress, long bufferAddress,
                                         int bufferLength, int segmentSize, boolean first) {
             MsgHdrMemory hdr = sendmsgHdrs.nextHdr();
             if (hdr == null) {
@@ -635,24 +638,49 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // before we can write again.
                 return false;
             }
-            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
-
-            int fd = fd().intValue();
-            int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
-            short opsId = hdr.idx();
-            // The id is the MsgHdrMemoryArray index, which that array allocates and recycles itself.
-            writeTracker.recordForeign(opsId, ops.opcode(), data);
-            long id = registration.submit(ops);
-            if (id == 0) {
-                // Submission failed we don't used the MsgHdrMemory and so should give it back.
-                sendmsgHdrs.restoreNextHdr(hdr);
-                writeTracker.abandon(opsId, ops.opcode());
-                return false;
+            long id = 0;
+            try {
+                hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+                int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
+                IoUringIoOps ops = IoUringIoOps.newSendmsg(
+                        fd().intValue(), (byte) 0, msgFlags, hdr.address(), hdr.idx());
+                id = submitWrite(ops);
+                if (id == 0) {
+                    return false;
+                }
+                sendmsgHdrs.setId(hdr.idx(), id);
+                return true;
+            } finally {
+                if (id == 0) {
+                    sendmsgHdrs.restoreNextHdr(hdr);
+                }
             }
-            sendmsgHdrs.setId(hdr.idx(), id);
-            return true;
+        }
+
+        @Override
+        List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+            final int count = (int) currentWrite.userData() + 1;
+            final List<ReferenceCounted> buffers = new ArrayList<>(count);
+            try {
+                buffer.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
+                    @Override
+                    public boolean processMessage(Object msg) {
+                        int index = buffers.size();
+                        buffers.add(sendmsgHdrs.id(index) != MsgHdrMemoryArray.NO_ID ?
+                                ((ReferenceCounted) msg).retain() : null);
+                        return buffers.size() < count;
+                    }
+                });
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+            return buffers;
+        }
+
+        @Override
+        void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
+            // Batched SENDMSG requests may complete out of order; clear and release only the slot indexed by data.
+            ReferenceCountUtil.safeRelease(buffers.set((int) data, null));
         }
 
         @Override

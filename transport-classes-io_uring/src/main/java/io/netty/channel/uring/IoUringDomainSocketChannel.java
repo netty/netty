@@ -29,6 +29,8 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.PeerCredentials;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -37,6 +39,7 @@ import java.net.SocketAddress;
  * {@link DomainSocketChannel} implementation that uses linux io_uring
  */
 public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel implements DomainSocketChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringDomainSocketChannel.class);
 
     private final IoUringDomainSocketChannelConfig config;
 
@@ -123,6 +126,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
 
         private MsgHdrMemory writeMsgHdrMemory;
         private MsgHdrMemory readMsgHdrMemory;
+        private FileDescriptor pendingSendFd;
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
@@ -132,19 +136,41 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
-                IoRegistration registration = registration();
-                IoUringIoOps ioUringIoOps = prepSendFdIoOps((FileDescriptor) msg, writeMsgHdrMemory);
-                writeId = registration.submit(ioUringIoOps);
-                writeOpCode = Native.IORING_OP_SENDMSG;
-                if (writeId == 0) {
-                    MsgHdrMemory memory = writeMsgHdrMemory;
-                    writeMsgHdrMemory = null;
-                    memory.release();
+                try {
+                    // Keep a private fd until SENDMSG completes, even if a failed write listener closes the original.
+                    pendingSendFd = new FileDescriptor(Native.duplicateFd(((FileDescriptor) msg).intValue()));
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
                     return 0;
                 }
-                return 1;
+                try {
+                    IoUringIoOps ioUringIoOps = prepSendFdIoOps(pendingSendFd, writeMsgHdrMemory);
+                    writeId = submitWrite(ioUringIoOps);
+                    writeOpCode = Native.IORING_OP_SENDMSG;
+                    if (writeId == 0) {
+                        MsgHdrMemory memory = writeMsgHdrMemory;
+                        writeMsgHdrMemory = null;
+                        memory.release();
+                        return 0;
+                    }
+                    return 1;
+                } finally {
+                    if (writeId == 0) {
+                        closePendingSendFd();
+                    }
+                }
             }
             return super.scheduleWriteSingle(msg);
+        }
+
+        private void closePendingSendFd() {
+            FileDescriptor fd = pendingSendFd;
+            pendingSendFd = null;
+            try {
+                fd.close();
+            } catch (IOException e) {
+                logger.debug("Error while closing a duplicated file descriptor", e);
+            }
         }
 
         @Override
@@ -152,17 +178,16 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                closePendingSendFd();
+                ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+                // A failed batch may still return an error after shutdownOutput(). It must not close the input.
+                if (channelOutboundBuffer == null || res == Native.ERRNO_ECANCELED_NEGATIVE) {
                     return true;
                 }
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
-                        // The completion may arrive after close() or shutdownOutput() dropped the buffer.
-                        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-                        if (channelOutboundBuffer != null) {
-                            channelOutboundBuffer.remove();
-                        }
+                        channelOutboundBuffer.remove();
                     }
                 } catch (Throwable throwable) {
                    handleWriteError(throwable);

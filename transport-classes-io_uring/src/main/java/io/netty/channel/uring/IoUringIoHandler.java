@@ -72,8 +72,6 @@ public final class IoUringIoHandler implements IoHandler {
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
     private final IovArray iovArray;
-    private final IovArrayReferenceCollector iovArrayReferenceCollector;
-    private final MsgHdrMemoryArray msgHdrMemoryArray;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -149,8 +147,6 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
-        iovArrayReferenceCollector = new IovArrayReferenceCollector(iovArray);
-        msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
     }
 
     @Override
@@ -249,7 +245,6 @@ public final class IoUringIoHandler implements IoHandler {
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
         iovArray.clear();
-        msgHdrMemoryArray.clear();
         return submitted;
     }
 
@@ -418,7 +413,6 @@ public final class IoUringIoHandler implements IoHandler {
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
         iovArray.clear();
-        msgHdrMemoryArray.clear();
         return submitted;
     }
 
@@ -539,7 +533,6 @@ public final class IoUringIoHandler implements IoHandler {
         eventfdReadBufCleanable.clean();
         timeoutMemoryCleanable.clean();
         iovArray.release();
-        msgHdrMemoryArray.release();
     }
 
     @Override
@@ -775,22 +768,6 @@ public final class IoUringIoHandler implements IoHandler {
             assert iovArray.count() == 0;
         }
         return iovArray;
-    }
-
-    /**
-     * Returns the {@link IovArrayReferenceCollector} paired with {@link #iovArray()}. A plain getter: callers are
-     * expected to have already called {@link #iovArray()} to make room, so this must not itself submit-and-clear.
-     */
-    IovArrayReferenceCollector iovArrayReferenceCollector() {
-        return iovArrayReferenceCollector;
-    }
-
-    MsgHdrMemoryArray msgHdrMemoryArray() {
-        if (msgHdrMemoryArray.isFull()) {
-            // Submit so we can reuse the msgHdrArray.
-            submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
-        }
-        return msgHdrMemoryArray;
     }
 
     /**
