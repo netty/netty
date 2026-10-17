@@ -326,6 +326,32 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
+    public void clientReceivesPushStreamWithLocallyInitiatedParent() throws Http2Exception {
+        Http2Stream parent = client.local().createStream(3, false);
+
+        Http2Stream pushStream = client.remote().reservePushStream(2, parent);
+
+        assertEquals(2, pushStream.id());
+        assertEquals(State.RESERVED_REMOTE, pushStream.state());
+        assertEquals(1, client.numActiveStreams());
+        assertEquals(2, client.remote().lastStreamCreated());
+    }
+
+    @Test
+    public void pushReservationRejectsParentFromAnotherConnection() throws Http2Exception {
+        DefaultHttp2Connection other = new DefaultHttp2Connection(true);
+        Http2Stream foreignParent = other.remote().createStream(3, false);
+
+        Http2Exception error = assertThrows(Http2Exception.class,
+                () -> server.local().reservePushStream(2, foreignParent));
+
+        assertEquals(Http2Error.PROTOCOL_ERROR, error.error());
+        assertTrue(error.getMessage().contains("opposite endpoint"));
+        assertNull(server.stream(2));
+        assertEquals(0, server.local().lastStreamCreated());
+    }
+
+    @Test
     public void localPushReservationRejectsLocallyInitiatedParent() throws Http2Exception {
         Http2Stream parent = server.local().createStream(2, false);
 
