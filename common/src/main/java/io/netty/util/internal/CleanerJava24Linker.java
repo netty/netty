@@ -18,52 +18,113 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SymbolLookup;
+import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 
 import static java.lang.invoke.MethodType.methodType;
 
+/**
+ * Allocates direct buffers with malloc and free from libc, linked through the Foreign Function &amp; Memory API.
+ * <p>
+ * The FFM API is compiled against the {@code netty-ffm-stub} module. It and the signature-polymorphic
+ * {@link MethodHandle} calls are only used from the nested classes, which are only loaded on Java versions that
+ * have the FFM API, so this class still loads and verifies where it is missing (e.g. Android).
+ */
 public class CleanerJava24Linker implements Cleaner {
     private static final InternalLogger logger;
-
-    private static final MethodHandle INVOKE_MALLOC;
-    private static final MethodHandle INVOKE_CREATE_BYTEBUFFER;
-    private static final MethodHandle INVOKE_FREE;
+    private static final boolean SUPPORTED;
 
     static {
-        boolean suitableJavaVersion;
+        Throwable error;
         if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-            // native image supports this since 25, but we don't use PlatformDependent0 here, since
-            // we need to initialize CleanerJava24Linker at build time.
-            String v = System.getProperty("java.specification.version");
-            try {
-                suitableJavaVersion = Integer.parseInt(v) >= 25;
-            } catch (NumberFormatException e) {
-                suitableJavaVersion = false;
-            }
-            // also need to prevent initializing the logger at build time
+            // A native image can only link the downcalls that were registered when the image was built, and
+            // linking on first use is too late to fall back to another cleaner, so a native image never uses
+            // this one. We don't use PlatformDependent0 or the logger here, since this class may be initialized
+            // at build time.
             logger = null;
+            error = new UnsupportedOperationException(
+                    "Linking to malloc and free is not supported in a native image.");
         } else {
+            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
             // Only attempt to use MemorySegments on Java 24 or greater, where warnings about Unsafe
             // memory access operations start to appear.
             // The following JDK bugs do NOT affect our implementation because the memory segments we
             // create are associated with the GLOBAL_SESSION:
             // - https://bugs.openjdk.org/browse/JDK-8357145
             // - https://bugs.openjdk.org/browse/JDK-8357268
-            suitableJavaVersion = PlatformDependent0.javaVersion() >= 24;
-            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
+            if (PlatformDependent0.javaVersion() >= 24) {
+                try {
+                    error = Symbols.UNAVAILABILITY_CAUSE;
+                } catch (Throwable throwable) {
+                    error = throwable;
+                }
+            } else {
+                error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
+            }
+            if (error == null) {
+                logger.debug("java.nio.ByteBuffer.cleaner(): available");
+            } else {
+                logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
+            }
         }
+        SUPPORTED = error == null;
+    }
 
-        MethodHandle mallocMethod;
-        MethodHandle wrapMethod;
-        MethodHandle freeMethod;
-        Throwable error;
+    static boolean isSupported() {
+        return SUPPORTED;
+    }
 
-        if (suitableJavaVersion) {
+    @Override
+    public CleanableDirectBuffer allocate(int capacity) {
+        return CleanableDirectBufferImpl.allocate(capacity);
+    }
+
+    @Override
+    public void freeDirectBuffer(ByteBuffer buffer) {
+        throw new UnsupportedOperationException("Cannot clean arbitrary ByteBuffer instances");
+    }
+
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
+    static long malloc(int capacity) {
+        // Always allocate at least 1 byte, to avoid relying on non-portable behavior
+        // of malloc(3) for zero size allocations.
+        long addr = Holder.malloc(Math.max(capacity, 1L));
+        if (addr == 0) {
+            throw new OutOfMemoryError("malloc(2) failed to allocate " + capacity + " bytes");
+        }
+        return addr;
+    }
+
+    static void free(long memoryAddress) {
+        Holder.free(memoryAddress);
+    }
+
+    /**
+     * Checks that native access is enabled for this module, and that this platform has a 64-bit native linker
+     * that finds malloc and free.
+     */
+    private static final class Symbols {
+        static final MemorySegment MALLOC;
+        static final MemorySegment FREE;
+        static final Throwable UNAVAILABILITY_CAUSE;
+
+        static {
+            MemorySegment malloc = null;
+            MemorySegment free = null;
+            Throwable error = null;
             try {
                 // First, we need to check if we have access to "restricted" methods through the Java Module system.
+                // java.lang.Module is not part of the Java 8 API we compile against, so we look it up.
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
                 Class<?> moduleCls = Class.forName("java.lang.Module");
                 MethodHandle getModule = lookup.findVirtual(
@@ -81,153 +142,57 @@ public class CleanerJava24Linker implements Cleaner {
 
                 // Second, we need to check the size of a pointer address. For simplicity, we'd like to assume the size
                 // of an address is the same as a Java long. So effectively, we're only enabled on 64-bit platforms.
-                Class<?> memoryLayoutCls = Class.forName("java.lang.foreign.MemoryLayout");
-                Class<?> memoryLayoutArrayCls = Class.forName("[Ljava.lang.foreign.MemoryLayout;");
-                Class<?> valueLayoutCls = Class.forName("java.lang.foreign.ValueLayout");
-                Class<?> valueLayoutAddressCls = Class.forName("java.lang.foreign.AddressLayout");
-                MethodHandle addressLayoutGetter = lookup.findStaticGetter(
-                        valueLayoutCls, "ADDRESS", valueLayoutAddressCls);
-                MethodHandle byteSize = lookup.findVirtual(valueLayoutAddressCls, "byteSize", methodType(long.class));
-                MethodHandle byteSizeOfAddress = MethodHandles.foldArguments(byteSize, addressLayoutGetter);
-                long addressSize = (long) byteSizeOfAddress.invokeExact();
-                if (addressSize != Long.BYTES) {
+                if (ValueLayout.ADDRESS.byteSize() != Long.BYTES) {
                     throw new UnsupportedOperationException(
                             "Linking to malloc and free is only supported on 64-bit platforms.");
                 }
 
-                // Finally, we create three method handles, for malloc, free, and for wrapping an address in a
-                // ByteBuffer. Effectively, we need the equivalent of these three code snippets:
-                //
-                //        MemorySegment mallocPtr = Linker.nativeLinker().defaultLookup().find("malloc").get();
-                //        MethodHandle malloc = Linker.nativeLinker().downcallHandle(
-                //                mallocPtr, FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
-                //
-                //        MemorySegment freePtr = Linker.nativeLinker().defaultLookup().find("free").get();
-                //        MethodHandle free = Linker.nativeLinker().downcallHandle(
-                //                freePtr, FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
-                //
-                //        ByteBuffer byteBuffer = MemorySegment.ofAddress(addr).asByteBuffer();
-                Class<?> ofLongValueLayoutCls = Class.forName("java.lang.foreign.ValueLayout$OfLong");
-                Class<?> linkerCls = Class.forName("java.lang.foreign.Linker");
-                Class<?> linkerOptionCls = Class.forName("java.lang.foreign.Linker$Option");
-                Class<?> linkerOptionArrayCls = Class.forName("[Ljava.lang.foreign.Linker$Option;");
-                Class<?> symbolLookupCls = Class.forName("java.lang.foreign.SymbolLookup");
-                Class<?> memSegCls = Class.forName("java.lang.foreign.MemorySegment");
-                Class<?> funcDescCls = Class.forName("java.lang.foreign.FunctionDescriptor");
-
-                MethodHandle nativeLinker = lookup.findStatic(linkerCls, "nativeLinker", methodType(linkerCls));
-                MethodHandle defaultLookupStatic = MethodHandles.foldArguments(
-                        lookup.findVirtual(linkerCls, "defaultLookup", methodType(symbolLookupCls)),
-                        nativeLinker);
-                MethodHandle downcallHandleStatic = MethodHandles.foldArguments(
-                        lookup.findVirtual(linkerCls, "downcallHandle",
-                                methodType(MethodHandle.class, memSegCls, funcDescCls, linkerOptionArrayCls)),
-                        nativeLinker);
-                MethodHandle findSymbol = MethodHandles.foldArguments(
-                        lookup.findVirtual(symbolLookupCls, "findOrThrow", methodType(memSegCls, String.class)),
-                        defaultLookupStatic);
-
-                // Constructing the malloc (long)long handle
-                Object longLayout = lookup.findStaticGetter(valueLayoutCls, "JAVA_LONG", ofLongValueLayoutCls).invoke();
-                Object layoutArray = Array.newInstance(memoryLayoutCls, 1);
-                Array.set(layoutArray, 0, longLayout);
-                MethodHandle mallocFuncDesc = MethodHandles.insertArguments(
-                        lookup.findStatic(funcDescCls, "of",
-                                methodType(funcDescCls, memoryLayoutCls, memoryLayoutArrayCls)),
-                        0, longLayout, layoutArray);
-                MethodHandle mallocLinker = MethodHandles.foldArguments(
-                        MethodHandles.foldArguments(downcallHandleStatic,
-                                MethodHandles.foldArguments(findSymbol,
-                                        MethodHandles.constant(String.class, "malloc"))),
-                        mallocFuncDesc);
-                mallocMethod = (MethodHandle) mallocLinker.invoke(Array.newInstance(linkerOptionCls, 0));
-
-                // Constructing the free (long)void handle
-                MethodHandle freeFuncDesc = MethodHandles.insertArguments(
-                        lookup.findStatic(funcDescCls, "ofVoid",
-                                methodType(funcDescCls, memoryLayoutArrayCls)),
-                        0, layoutArray);
-                MethodHandle freeLinker = MethodHandles.foldArguments(
-                        MethodHandles.foldArguments(downcallHandleStatic,
-                                MethodHandles.foldArguments(findSymbol,
-                                        MethodHandles.constant(String.class, "free"))),
-                        freeFuncDesc);
-                freeMethod = (MethodHandle) freeLinker.invoke(Array.newInstance(linkerOptionCls, 0));
-
-                // Constructing the wrapper (long, long)ByteBuffer handle
-                MethodHandle ofAddress = lookup.findStatic(memSegCls, "ofAddress", methodType(memSegCls, long.class));
-                MethodHandle reinterpret = lookup.findVirtual(memSegCls, "reinterpret",
-                        methodType(memSegCls, long.class));
-                MethodHandle asByteBuffer = lookup.findVirtual(memSegCls, "asByteBuffer", methodType(ByteBuffer.class));
-                wrapMethod = MethodHandles.filterReturnValue(
-                        MethodHandles.filterArguments(reinterpret, 0, ofAddress),
-                        asByteBuffer);
-
-                error = null;
+                // Finally, we check that this platform has a native linker, and that it finds malloc and free.
+                SymbolLookup symbols = Linker.nativeLinker().defaultLookup();
+                malloc = symbols.findOrThrow("malloc");
+                free = symbols.findOrThrow("free");
             } catch (Throwable throwable) {
-                mallocMethod = null;
-                wrapMethod = null;
-                freeMethod = null;
+                malloc = null;
+                free = null;
                 error = throwable;
             }
-        } else {
-            mallocMethod = null;
-            wrapMethod = null;
-            freeMethod = null;
-            error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
+            MALLOC = malloc;
+            FREE = free;
+            UNAVAILABILITY_CAUSE = error;
+        }
+    }
+
+    /**
+     * Links malloc and free on first use rather than when {@link PlatformDependent} is initialized,
+     * because creating the downcall handles is a startup cost for applications that may never allocate
+     * a direct buffer.
+     */
+    private static final class Holder {
+        private static final MethodHandle INVOKE_MALLOC;
+        private static final MethodHandle INVOKE_FREE;
+
+        static {
+            Linker linker = Linker.nativeLinker();
+            INVOKE_MALLOC = linker.downcallHandle(Symbols.MALLOC,
+                    FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+            INVOKE_FREE = linker.downcallHandle(Symbols.FREE,
+                    FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
         }
 
-        if (logger != null) {
-            if (error == null) {
-                logger.debug("java.nio.ByteBuffer.cleaner(): available");
-            } else {
-                logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
+        static long malloc(long size) {
+            try {
+                return (long) INVOKE_MALLOC.invokeExact(size);
+            } catch (Throwable e) {
+                throw new Error(e); // Should not happen.
             }
         }
-        INVOKE_MALLOC = mallocMethod;
-        INVOKE_CREATE_BYTEBUFFER = wrapMethod;
-        INVOKE_FREE = freeMethod;
-    }
 
-    static boolean isSupported() {
-        return INVOKE_MALLOC != null;
-    }
-
-    @Override
-    public CleanableDirectBuffer allocate(int capacity) {
-        return new CleanableDirectBufferImpl(capacity);
-    }
-
-    @Override
-    public void freeDirectBuffer(ByteBuffer buffer) {
-        throw new UnsupportedOperationException("Cannot clean arbitrary ByteBuffer instances");
-    }
-
-    @Override
-    public boolean hasExpensiveClean() {
-        return false;
-    }
-
-    static long malloc(int capacity) {
-        final long addr;
-        try {
-            // Always allocate at least 1 byte, to avoid relying on non-portable behavior
-            // of malloc(3) for zero size allocations.
-            addr = (long) INVOKE_MALLOC.invokeExact(Math.max(capacity, 1L));
-        } catch (Throwable e) {
-            throw new Error(e); // Should not happen.
-        }
-        if (addr == 0) {
-            throw new OutOfMemoryError("malloc(2) failed to allocate " + capacity + " bytes");
-        }
-        return addr;
-    }
-
-    static void free(long memoryAddress) {
-        try {
-            INVOKE_FREE.invokeExact(memoryAddress);
-        } catch (Throwable e) {
-            throw new Error(e); // Should not happen.
+        static void free(long memoryAddress) {
+            try {
+                INVOKE_FREE.invokeExact(memoryAddress);
+            } catch (Throwable e) {
+                throw new Error(e); // Should not happen.
+            }
         }
     }
 
@@ -235,7 +200,14 @@ public class CleanerJava24Linker implements Cleaner {
         private final ByteBuffer buffer;
         private final long memoryAddress;
 
-        private CleanableDirectBufferImpl(int capacity) {
+        CleanableDirectBufferImpl(ByteBuffer buffer, long memoryAddress) {
+            this.buffer = buffer;
+            this.memoryAddress = memoryAddress;
+        }
+
+        // Creates the ByteBuffer close to the caller: C2 only scalar-replaces it when the whole (deep)
+        // DirectByteBuffer construction fits within MaxInlineLevel of the caller.
+        static CleanableDirectBuffer allocate(int capacity) {
             PlatformDependent.incrementMemoryCounter(capacity);
             long addr;
             try {
@@ -245,8 +217,8 @@ public class CleanerJava24Linker implements Cleaner {
                 throw e;
             }
             try {
-                memoryAddress = addr;
-                buffer = (ByteBuffer) INVOKE_CREATE_BYTEBUFFER.invokeExact(addr, (long) capacity);
+                return new CleanableDirectBufferImpl(
+                        MemorySegment.ofAddress(addr).reinterpret(capacity).asByteBuffer(), addr);
             } catch (Throwable throwable) {
                 PlatformDependent.decrementMemoryCounter(capacity);
                 Error error = new Error(throwable);
