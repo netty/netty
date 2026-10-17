@@ -674,6 +674,40 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void connectRequestWithSchemeRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("CONNECT").scheme("https").authority("example.org:443");
+        assertThat(assertHeadersRejected(strictDecode(), headers, false).getMessage()).contains(":scheme");
+    }
+
+    @Test
+    public void connectRequestWithPathRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("CONNECT").authority("example.org:443").path("/");
+        assertThat(assertHeadersRejected(strictDecode(), headers, false).getMessage()).contains(":path");
+    }
+
+    @Test
+    public void connectRequestWithSchemeAndPathRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("CONNECT").scheme("https").authority("example.org:443").path("/");
+        assertThat(assertHeadersRejected(strictDecode(), headers, true).getMessage()).contains(":scheme");
+    }
+
+    @Test
+    public void connectRequestWithSchemeAllowedWhenStrictValidationDisabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("CONNECT").scheme("https").authority("example.org:443");
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+    }
+
+    @Test
     public void connectRequestMissingAuthorityRejectedWhenEnabled() throws Exception {
         when(connection.isServer()).thenReturn(true);
         Http2Headers headers = new DefaultHttp2Headers().method("CONNECT");
