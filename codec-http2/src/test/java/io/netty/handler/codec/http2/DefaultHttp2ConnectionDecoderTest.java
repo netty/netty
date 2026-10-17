@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -23,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -42,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder.HEAD_REQUEST_KEY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
@@ -218,6 +221,12 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
+        when(connection.newKey()).thenAnswer(new Answer<Http2Connection.PropertyKey>() {
+            @Override
+            public Http2Connection.PropertyKey answer(InvocationOnMock invocation) {
+                return new Http2Connection.PropertyKey() { };
+            }
+        });
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         setupCodec(ctx, encoder, decoder, listener);
@@ -1289,6 +1298,86 @@ public class DefaultHttp2ConnectionDecoderTest {
             // Verify that the event was absorbed and not propagated to the observer.
             verify(listener, never()).onHeadersRead(eq(ctx), anyInt(),
                     any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        }
+    }
+
+    @Test
+    public void clientResponseContentLengthZeroDataAllowedFor204() throws Exception {
+        verifyNoContentResponseContentLengthAllowed(HttpResponseStatus.NO_CONTENT.codeAsText(), false);
+    }
+
+    @Test
+    public void clientResponseContentLengthZeroDataAllowedFor304() throws Exception {
+        verifyNoContentResponseContentLengthAllowed(HttpResponseStatus.NOT_MODIFIED.codeAsText(), false);
+    }
+
+    @Test
+    public void clientResponseContentLengthZeroDataAllowedForHeadRequest() throws Exception {
+        // Mark stream as a HEAD request via stream property
+        when(stream.getProperty(HEAD_REQUEST_KEY)).thenReturn(Boolean.TRUE);
+        verifyNoContentResponseContentLengthAllowed(HttpResponseStatus.OK.codeAsText(), false);
+    }
+
+    @Test
+    public void clientResponseContentLengthZeroDataRejectedForStandard200() throws Exception {
+        verifyNoContentResponseContentLengthRejected(HttpResponseStatus.OK.codeAsText());
+    }
+
+    @Test
+    public void clientResponseContentLengthZeroDataRejectedForStandard404() throws Exception {
+        verifyNoContentResponseContentLengthRejected(HttpResponseStatus.NOT_FOUND.codeAsText());
+    }
+
+    private void verifyNoContentResponseContentLengthRejected(CharSequence status) throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        mockFlowControl(0);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .status(status)
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        //Inbound headers with content length 5
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+        assertThrows(Http2Exception.StreamException.class, () -> {
+            decode().onDataRead(ctx, STREAM_ID, EMPTY_BUFFER, 0, true);
+        });
+        // Verify remote stream was NOT closed cleanly by lifecycleManager
+        verify(lifecycleManager, never()).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+    }
+
+    private void verifyNoContentResponseContentLengthAllowed(CharSequence status, boolean isServer) throws Exception {
+        when(connection.isServer()).thenReturn(isServer);
+        mockFlowControl(0);
+        Http2Headers headers = new DefaultHttp2Headers()
+                .status(status)
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        // Inbound headers with content length 5 (end of stream false)
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+        verify(listener, times(1)).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                                                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+
+        //Inbound empty DATA frame with END_STREAM true
+        decode().onDataRead(ctx, STREAM_ID, EMPTY_BUFFER, 0, true);
+        verify(listener, times(1)).onDataRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_BUFFER), eq(0), eq(true));
+        verify(lifecycleManager, times(1)).closeStreamRemote(eq(stream), eq(future));
+    }
+
+    @Test
+    public void clientResponseContentLengthPartialDataRejectedEvenForNoContentResponse() throws Exception {
+        // RFC 9113: 204/304/HEAD may carry non-zero content-length ONLY with 0 DATA bytes.
+        // If ANY data is received (seen > 0) but seen < expected, it MUST be rejected as PROTOCOL_ERROR.
+        final ByteBuf data = Unpooled.copiedBuffer("a", UTF_8);
+        final int padding = 0;
+        try {
+            Http2Headers headers = new DefaultHttp2Headers()
+                    .status(HttpResponseStatus.NO_CONTENT.codeAsText())
+                    .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+
+            //Receive 204 headers with content-length 5
+            decode().onHeadersRead(ctx, STREAM_ID, headers, padding, false);
+
+            assertThrows(Http2Exception.StreamException.class,
+                         () -> decode().onDataRead(ctx, STREAM_ID, data, padding, true));
+        } finally {
+            data.release();
         }
     }
 

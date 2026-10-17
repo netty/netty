@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
+import static io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder.HEAD_REQUEST_KEY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -66,6 +68,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2Connection.PropertyKey contentLengthKey;
     private final boolean validateHeaders;
     private final boolean validateRequiredPseudoHeaders;
+    private final Http2Connection.PropertyKey statusCodeKey;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -186,6 +189,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
         }
         connection.local().flowController().frameWriter(encoder.frameWriter());
+        this.statusCodeKey = this.connection.newKey();
     }
 
     @Override
@@ -270,12 +274,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     // See https://tools.ietf.org/html/rfc7540#section-8.1.2.6
     private void verifyContentLength(Http2Stream stream, int data, boolean isEnd) throws Http2Exception {
         ContentLength contentLength = stream.getProperty(contentLengthKey);
+
         if (contentLength != null) {
             try {
-                contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd);
+                HttpResponseStatus status = stream.getProperty(statusCodeKey);
+                boolean isNoContentResponse = isNoContentResponse(stream, status);
+                contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd,
+                                                    isNoContentResponse);
             } finally {
                 if (isEnd) {
                     stream.removeProperty(contentLengthKey);
+                    stream.removeProperty(statusCodeKey);
                 }
             }
         }
@@ -472,6 +481,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 if (validateRequiredPseudoHeaders && !isInformational) {
                     // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
+                }
+                CharSequence statusHeader = headers.status();
+                if (statusHeader != null) {
+                    HttpResponseStatus status = HttpConversionUtil.parseStatus(statusHeader);
+                    stream.setProperty(statusCodeKey, status);
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
@@ -909,6 +923,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
     }
 
+    private boolean isNoContentResponse(Http2Stream stream, HttpResponseStatus status) {
+        if (status != null) {
+            int statusCode = status.code();
+            if (statusCode == 204 || statusCode == 304) {
+                return true;
+            }
+        }
+        Boolean isHead = stream.getProperty(HEAD_REQUEST_KEY);
+        return isHead != null && isHead;
+    }
+
     private static final class ContentLength {
         private final long expected;
         private long seen;
@@ -917,21 +942,23 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             this.expected = expected;
         }
 
-        void increaseReceivedBytes(boolean server, int streamId, int bytes, boolean isEnd) throws Http2Exception {
+        void increaseReceivedBytes(boolean server, int streamId, int bytes, boolean isEnd, boolean isNoContentResponse)
+                throws Http2Exception {
             seen += bytes;
             // Check for overflow
             if (seen < 0) {
                 throw streamError(streamId, PROTOCOL_ERROR,
-                        "Received amount of data did overflow and so not match content-length header %d", expected);
+                                  "Received amount of data did overflow and so not match content-length header %d",
+                                  expected);
             }
             // Check if we received more data then what was advertised via the content-length header.
             if (seen > expected) {
                 throw streamError(streamId, PROTOCOL_ERROR,
-                        "Received amount of data %d does not match content-length header %d", seen, expected);
+                                  "Received amount of data %d does not match content-length header %d", seen, expected);
             }
 
             if (isEnd) {
-                if (seen == 0 && !server) {
+                if (seen == 0 && !server && isNoContentResponse) {
                     // This may be a response to a HEAD request, let's just allow it.
                     return;
                 }
@@ -939,7 +966,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Check that we really saw what was told via the content-length header.
                 if (expected > seen) {
                     throw streamError(streamId, PROTOCOL_ERROR,
-                            "Received amount of data %d does not match content-length header %d", seen, expected);
+                                      "Received amount of data %d does not match content-length header %d", seen,
+                                      expected);
                 }
             }
         }
