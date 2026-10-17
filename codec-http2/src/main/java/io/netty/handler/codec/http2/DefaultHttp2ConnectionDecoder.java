@@ -189,7 +189,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
         }
         connection.local().flowController().frameWriter(encoder.frameWriter());
-        this.statusCodeKey=this.connection.newKey();
+        this.statusCodeKey = this.connection.newKey();
     }
 
     @Override
@@ -279,7 +279,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             try {
                 HttpResponseStatus status = stream.getProperty(statusCodeKey);
                 boolean isNoContentResponse = isNoContentResponse(stream, status);
-                contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd, isNoContentResponse);
+                contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd,
+                                                    isNoContentResponse);
             } finally {
                 if (isEnd) {
                     stream.removeProperty(contentLengthKey);
@@ -934,17 +935,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             this.expected = expected;
         }
 
-        void increaseReceivedBytes(boolean server, int streamId, int bytes, boolean isEnd, boolean isNoContentResponse) throws Http2Exception {
+        void increaseReceivedBytes(boolean server, int streamId, int bytes, boolean isEnd, boolean isNoContentResponse)
+                throws Http2Exception {
             seen += bytes;
             // Check for overflow
             if (seen < 0) {
                 throw streamError(streamId, PROTOCOL_ERROR,
-                        "Received amount of data did overflow and so not match content-length header %d", expected);
+                                  "Received amount of data did overflow and so not match content-length header %d",
+                                  expected);
             }
             // Check if we received more data then what was advertised via the content-length header.
             if (seen > expected) {
                 throw streamError(streamId, PROTOCOL_ERROR,
-                        "Received amount of data %d does not match content-length header %d", seen, expected);
+                                  "Received amount of data %d does not match content-length header %d", seen, expected);
             }
 
             if (isEnd) {
@@ -956,7 +959,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Check that we really saw what was told via the content-length header.
                 if (expected > seen) {
                     throw streamError(streamId, PROTOCOL_ERROR,
-                            "Received amount of data %d does not match content-length header %d", seen, expected);
+                                      "Received amount of data %d does not match content-length header %d", seen,
+                                      expected);
                 }
             }
         }
