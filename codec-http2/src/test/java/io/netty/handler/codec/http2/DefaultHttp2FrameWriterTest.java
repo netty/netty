@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -331,6 +332,32 @@ public class DefaultHttp2FrameWriterTest {
 
         expectedOutbound = Unpooled.wrappedBuffer(expectedFrameBytes);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, 9",   // DATA: END_STREAM | PADDED
+            "1, 45",  // HEADERS: END_STREAM | END_HEADERS | PADDED | PRIORITY
+            "2, 0",   // PRIORITY
+            "3, 0",   // RST_STREAM
+            "4, 1",   // SETTINGS: ACK
+            "5, 12",  // PUSH_PROMISE: END_HEADERS | PADDED
+            "6, 1",   // PING: ACK
+            "7, 0",   // GO_AWAY
+            "8, 0",   // WINDOW_UPDATE
+            "9, 4",   // CONTINUATION: END_HEADERS
+            "15, 255" // Unknown frame types keep their extension-defined flags
+    })
+    public void writeFrameStripsUnusedFlagsForStandardTypes(int frameType, int expectedFlags) {
+        Http2Flags flags = new Http2Flags((short) 0xff);
+
+        frameWriter.writeFrame(ctx, (byte) frameType, 1, flags, Unpooled.EMPTY_BUFFER, promise);
+
+        assertEquals(0, outbound.getUnsignedMedium(0));
+        assertEquals(frameType, outbound.getUnsignedByte(3));
+        assertEquals(expectedFlags, outbound.getUnsignedByte(4));
+        assertEquals(1, outbound.getInt(5));
+        assertEquals(0xff, flags.value()); // Do not mutate the caller's flags.
     }
 
     @Test
