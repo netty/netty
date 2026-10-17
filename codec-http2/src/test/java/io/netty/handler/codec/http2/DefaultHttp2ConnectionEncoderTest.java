@@ -373,6 +373,62 @@ public class DefaultHttp2ConnectionEncoderTest {
         verify(pipeline).fireExceptionCaught(cause);
     }
 
+    @Test
+    public void clientCannotWriteRequestWithConflictingHostAndAuthority() throws Exception {
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
+
+        Http2Headers headers = new DefaultHttp2Headers().method("GET").scheme("https")
+                .authority("public.example.com").path("/").add("host", "internal.example.com");
+        ChannelPromise promise = newPromise();
+
+        encoder.writeHeaders(ctx, 1, headers, 0, true, promise);
+
+        assertInstanceOf(Http2Exception.StreamException.class, promise.cause());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) promise.cause()).error());
+        verify(writer, never()).writeHeaders(eq(ctx), eq(1), any(Http2Headers.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class));
+    }
+
+    @Test
+    public void clientCanWriteRequestWithSchemeNormalizedHostAndAuthority() throws Exception {
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
+
+        Http2Headers headers = new DefaultHttp2Headers().method("GET").scheme("https")
+                .authority("example.com:443").path("/").add("host", "EXAMPLE.com");
+        ChannelPromise promise = newPromise();
+
+        encoder.writeHeaders(ctx, 1, headers, 0, true, promise);
+
+        assertTrue(promise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(1), eq(headers), eq(0), eq(true), eq(promise));
+    }
+
+    @Test
+    public void clientCannotWriteRequestWhenAnyHostHeaderConflictsWithAuthority() throws Exception {
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
+
+        Http2Headers headers = new DefaultHttp2Headers().method("GET").scheme("https")
+                .authority("public.example.com").path("/")
+                .add("host", "public.example.com").add("host", "internal.example.com");
+        ChannelPromise promise = newPromise();
+
+        encoder.writeHeaders(ctx, 1, headers, 0, true, promise);
+
+        assertInstanceOf(Http2Exception.StreamException.class, promise.cause());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) promise.cause()).error());
+        verify(writer, never()).writeHeaders(eq(ctx), eq(1), any(Http2Headers.class), anyInt(), anyBoolean(),
+                any(ChannelPromise.class));
+    }
+
     private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Exception {
         createStream(STREAM_ID, false);
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);

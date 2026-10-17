@@ -20,11 +20,15 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
@@ -32,6 +36,7 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
@@ -163,6 +168,52 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         return isInformational;
     }
 
+    private static void validateClientHostHeader(Http2Stream stream, Http2Headers headers) throws Http2Exception {
+        CharSequence authority = headers.authority();
+        if (authority != null) {
+            List<CharSequence> hostHeaders = headers.getAll(HttpHeaderNames.HOST);
+            for (CharSequence host : hostHeaders) {
+                if (!sameAuthority(headers.scheme(), authority, host)) {
+                    throw streamError(stream.id(), PROTOCOL_ERROR,
+                            "Conflicting ':authority' and 'host' headers found");
+                }
+            }
+        }
+    }
+
+    private static boolean sameAuthority(CharSequence scheme, CharSequence authority, CharSequence host) {
+        if (contentEqualsIgnoreCase(authority, host)) {
+            return true;
+        }
+        try {
+            // RFC 9113 requires authority values to be normalized before comparing them, including default ports.
+            URI authorityUri = new URI(null, authority.toString(), null, null, null);
+            URI hostUri = new URI(null, host.toString(), null, null, null);
+            String authorityHost = authorityUri.getHost();
+            String hostName = hostUri.getHost();
+            if (authorityHost == null || hostName == null || authorityUri.getRawUserInfo() != null ||
+                    hostUri.getRawUserInfo() != null) {
+                return false;
+            }
+            int authorityPort = authorityUri.getPort();
+            int hostPort = hostUri.getPort();
+            if (isDefaultPort(scheme, authorityPort)) {
+                authorityPort = -1;
+            }
+            if (isDefaultPort(scheme, hostPort)) {
+                hostPort = -1;
+            }
+            return authorityHost.equalsIgnoreCase(hostName) && authorityPort == hostPort;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
+    private static boolean isDefaultPort(CharSequence scheme, int port) {
+        return port == 80 && contentEqualsIgnoreCase(scheme, "http") ||
+                port == 443 && contentEqualsIgnoreCase(scheme, "https");
+    }
+
     @Override
     public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
             final Http2Headers headers, final int streamDependency, final short weight,
@@ -227,6 +278,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Trailing headers must go through flow control if there are other frames queued in flow control
             // for this stream.
             Http2RemoteFlowController flowController = flowController();
+            if (!connection.isServer() && !stream.isHeadersSent()) {
+                validateClientHostHeader(stream, headers);
+            }
             if (!endOfStream || !flowController.hasFlowControlled(stream)) {
                 // The behavior here should mirror that in FlowControlledHeaders
 
