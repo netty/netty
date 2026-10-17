@@ -403,6 +403,27 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void dataReadForReservedStreamShouldThrowConnectionError() throws Exception {
+        when(stream.state()).thenReturn(RESERVED_REMOTE);
+        final ByteBuf data = dummyData();
+        try {
+            Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+                }
+            });
+            assertThat(ex).isNotInstanceOf(Http2Exception.StreamException.class);
+            assertEquals(PROTOCOL_ERROR, ex.error());
+            verify(localFlow).receiveFlowControlledFrame(eq(stream), eq(data), eq(10), eq(true));
+            verify(localFlow).consumeBytes(eq(stream), eq(data.readableBytes() + 10));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
     public void dataReadAfterGoAwaySentForStreamInInvalidStateShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
         when(stream.state()).thenReturn(Http2Stream.State.CLOSED);
