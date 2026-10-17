@@ -21,10 +21,12 @@ import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.LongToIntFunction;
 
 import static io.netty.handler.codec.http3.Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackDecoderStateSyncStrategy.ackEachInsert;
@@ -32,9 +34,11 @@ import static io.netty.handler.codec.http3.QpackUtil.MAX_UNSIGNED_INT;
 import static java.lang.Math.toIntExact;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class QpackDecoderTest {
@@ -185,6 +189,109 @@ public class QpackDecoderTest {
         }
     }
 
+    @ParameterizedTest(name = "always acknowledge insertions: {0}")
+    @ValueSource(booleans = { false, true })
+    public void insertCountIncrementDoesNotRepeatInsertsAcknowledgedBySection(boolean alwaysAcknowledgeInsertions)
+            throws Exception {
+        setup(128, 1, alwaysAcknowledgeInsertions ? new QpackDecoderStateSyncStrategy() {
+            @Override
+            public void sectionAcknowledged(int requiredInsertCount) {
+                // NOOP
+            }
+
+            @Override
+            public boolean entryAdded(int insertCount) {
+                return true;
+            }
+        } : ackEachInsert());
+        BiConsumer<CharSequence, CharSequence> sink = (n, v) -> { };
+        ByteBuf in = encodeBlockingFrame(1);
+        try {
+            boolean[] resumed = new boolean[1];
+            // Like Http3FrameCodec, decode the header block again once the stream is unblocked.
+            assertFalse(decoder.decode(attributes, 0L, in, in.readableBytes(), sink, () -> {
+                try {
+                    resumed[0] = decoder.decode(attributes, 0L, in, in.readableBytes(), sink, () -> { });
+                } catch (QpackException e) {
+                    throw new AssertionError(e);
+                }
+            }));
+
+            // Unblocks stream 0, which sends a Section Acknowledgment for a Required Insert Count of 1.
+            decoder.insertLiteral(decoderStream, FOO, BAR);
+            assertTrue(resumed[0]);
+            decoder.insertLiteral(decoderStream, FOO + 2, BAR + 2);
+
+            assertThat(knownReceivedCountOfEncoder(streamId -> 1), is(2));
+        } finally {
+            in.release();
+            assertFalse(decoderStream.finishAndReleaseAll());
+        }
+    }
+
+    @Test
+    public void sectionAcknowledgmentOfLowerRequiredInsertCountDoesNotLowerAcknowledgedInsertCount() throws Exception {
+        setup(128, 2);
+        BiConsumer<CharSequence, CharSequence> sink = (n, v) -> { };
+        ByteBuf blocked = encodeBlockingFrame(2);
+        ByteBuf lower = encodeBlockingFrame(1);
+        try {
+            assertFalse(decoder.decode(attributes, 0L, blocked, blocked.readableBytes(), sink, () -> {
+                // Decoding is not repeated, only the Section Acknowledgment sent on resumption matters here.
+            }));
+            // Unblocks stream 0 on the second insertion and acknowledges a Required Insert Count of 2 in doing so.
+            decoder.insertLiteral(decoderStream, FOO, BAR);
+            decoder.insertLiteral(decoderStream, FOO + 2, BAR + 2);
+            // Stream 4 is not blocked and acknowledges a Required Insert Count that is lower than the one of stream 0.
+            assertTrue(decoder.decode(attributes, 4L, lower, lower.readableBytes(), sink, () -> { }));
+            decoder.insertLiteral(decoderStream, FOO + 3, BAR + 3);
+
+            assertThat(knownReceivedCountOfEncoder(streamId -> streamId == 0 ? 2 : 1), is(3));
+        } finally {
+            blocked.release();
+            lower.release();
+            assertFalse(decoderStream.finishAndReleaseAll());
+        }
+    }
+
+    /**
+     * Replays the instructions written to the decoder stream the way the remote encoder does and returns its
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count">Known Received Count</a>.
+     *
+     * @param requiredInsertCountOfStream the Required Insert Count of the header block a Section Acknowledgment for
+     * the given stream id acknowledges.
+     */
+    private int knownReceivedCountOfEncoder(LongToIntFunction requiredInsertCountOfStream) throws QpackException {
+        int knownReceivedCount = 0;
+        for (;;) {
+            ByteBuf instruction = decoderStream.readOutbound();
+            if (instruction == null) {
+                return knownReceivedCount;
+            }
+            try {
+                while (instruction.isReadable()) {
+                    byte b = instruction.getByte(instruction.readerIndex());
+                    if ((b & 0b1000_0000) == 0b1000_0000) {
+                        // Section Acknowledgment
+                        long streamId = QpackUtil.decodePrefixedInteger(instruction, 7);
+                        knownReceivedCount = Math.max(knownReceivedCount,
+                                requiredInsertCountOfStream.applyAsInt(streamId));
+                    } else if ((b & 0b0100_0000) == 0b0100_0000) {
+                        // Stream Cancellation
+                        QpackUtil.decodePrefixedInteger(instruction, 6);
+                    } else {
+                        // Insert Count Increment, must not be 0.
+                        int increment = toIntExact(QpackUtil.decodePrefixedInteger(instruction, 6));
+                        assertThat(increment, greaterThan(0));
+                        knownReceivedCount += increment;
+                    }
+                }
+            } finally {
+                instruction.release();
+            }
+        }
+    }
+
     @Test
     public void blockedStreamsCountReleasedAfterStreamAbandoned() throws Exception {
         int maxBlockedStreams = 2;
@@ -244,6 +351,11 @@ public class QpackDecoderTest {
     }
 
     private void setup(long capacity, int maxBlockedStreams) throws QpackException {
+        setup(capacity, maxBlockedStreams, ackEachInsert());
+    }
+
+    private void setup(long capacity, int maxBlockedStreams, QpackDecoderStateSyncStrategy syncStrategy)
+            throws QpackException {
         long maxTableCapacity = MAX_UNSIGNED_INT;
         inserted = 0;
         this.maxEntries = toIntExact(QpackUtil.maxEntries(maxTableCapacity));
@@ -254,7 +366,7 @@ public class QpackDecoderTest {
         attributes = new QpackAttributes(parent, false);
         decoderStream = new EmbeddedQuicStreamChannel();
         attributes.decoderStream(decoderStream);
-        decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams, table, ackEachInsert());
+        decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams, table, syncStrategy);
         decoder.setDynamicTableCapacity(capacity);
     }
 
