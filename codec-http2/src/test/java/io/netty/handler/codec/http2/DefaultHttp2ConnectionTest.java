@@ -29,6 +29,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -465,15 +467,75 @@ public class DefaultHttp2ConnectionTest {
         });
     }
 
-    @Test
-    public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
-        assertThrows(Http2Exception.class, new Executable() {
+    @ParameterizedTest
+    @CsvSource({ "false, 0", "false, 3", "false, 7", "false, 2147483647",
+                 "true, 0", "true, 4", "true, 8", "true, 2147483647" })
+    public void goAwayReceivedShouldDisallowLocalCreation(boolean isServer, int lastStreamId)
+            throws Http2Exception {
+        final DefaultHttp2Connection connection = isServer ? server : client;
+        int firstStreamId = isServer ? 2 : 1;
+        final int nextStreamId = firstStreamId + 2;
+        connection.local().createStream(firstStreamId, false);
+        connection.goAwayReceived(lastStreamId, Http2Error.NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+        int activeStreams = connection.numActiveStreams();
+
+        Http2Exception.StreamException error = assertThrows(Http2Exception.StreamException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                server.local().createStream(3, true);
+                connection.local().createStream(nextStreamId, true);
             }
         });
+        assertEquals(Http2Error.REFUSED_STREAM, error.error());
+        assertEquals(nextStreamId, error.streamId());
+        assertNull(connection.stream(nextStreamId));
+        assertEquals(firstStreamId, connection.local().lastStreamCreated());
+        assertEquals(activeStreams, connection.numActiveStreams());
+    }
+
+    @Test
+    public void goAwayReceivedShouldDisallowNewPushReservation() throws Http2Exception {
+        final Http2Stream parent = server.remote().createStream(3, false);
+        server.goAwayReceived(MAX_VALUE, Http2Error.NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+
+        Http2Exception.StreamException error = assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                server.local().reservePushStream(2, parent);
+            }
+        });
+        assertEquals(Http2Error.REFUSED_STREAM, error.error());
+        assertEquals(2, error.streamId());
+        assertNull(server.stream(2));
+        assertEquals(1, server.numActiveStreams());
+    }
+
+    @Test
+    public void goAwayReceivedShouldAllowExistingPushReservationToOpen() throws Http2Exception {
+        Http2Stream parent = server.remote().createStream(3, false);
+        Http2Stream push = server.local().reservePushStream(2, parent);
+        server.goAwayReceived(MAX_VALUE, Http2Error.NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+
+        push.open(false);
+
+        assertEquals(State.HALF_CLOSED_REMOTE, push.state());
+        assertEquals(2, server.numActiveStreams());
+    }
+
+    @Test
+    public void goAwaySentShouldAllowRemoteCreationUpToLastStream() throws Http2Exception {
+        server.goAwaySent(5, Http2Error.NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+
+        assertNotNull(server.remote().createStream(3, false));
+        assertNotNull(server.remote().createStream(5, false));
+        Http2Exception.StreamException error = assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                server.remote().createStream(7, false);
+            }
+        });
+        assertEquals(Http2Error.REFUSED_STREAM, error.error());
+        assertEquals(7, error.streamId());
+        assertEquals(2, server.numActiveStreams());
     }
 
     @Test
