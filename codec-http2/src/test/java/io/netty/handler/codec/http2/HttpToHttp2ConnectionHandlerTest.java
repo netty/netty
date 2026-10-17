@@ -31,13 +31,17 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
@@ -76,6 +80,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -404,6 +409,41 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertFalse(writeFuture.isSuccess());
         cause = writeFuture.cause();
         assertInstanceOf(Http2NoMoreStreamIdsException.class, cause);
+    }
+
+    @Test
+    public void testInformationalResponseDoesNotEndStream() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST, "/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        httpHeaders.set(HttpHeaderNames.HOST, "localhost");
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        httpHeaders.set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
+        ChannelPromise writePromise = newPromise();
+        clientChannel.writeAndFlush(request, writePromise);
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        awaitRequests();
+
+        // The server sends 100 (Continue) and then the final response on the same stream.
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.CONTINUE);
+        continueResponse.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture continueFuture = serverConnectedChannel.writeAndFlush(continueResponse);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture responseFuture = serverConnectedChannel.writeAndFlush(response);
+        assertTrue(continueFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(continueFuture.isSuccess());
+        assertTrue(responseFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(responseFuture.isSuccess());
+
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("100")),
+                eq(0), anyShort(), eq(false), eq(0), eq(false));
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("200")),
+                eq(0), anyShort(), eq(false), eq(0), eq(true));
     }
 
     @Test

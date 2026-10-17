@@ -193,6 +193,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                                         final boolean exclusive, final int padding,
                                         final boolean endOfStream, ChannelPromise promise) {
         try {
+            if (endOfStream && connection.isServer() && HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL) {
+                // An informational response must not end the stream (RFC 9113, 8.1). Like writeData(...) on a
+                // stream in the wrong state, only fail this write.
+                promise.tryFailure(new IllegalStateException(
+                        "Informational response on stream " + streamId + " must not end the stream"));
+                return promise;
+            }
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
                 try {

@@ -553,6 +553,26 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void infoHeadersWithEOSFails() {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        Http2Headers infoHeaders = informationalHeaders();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, infoHeaders, 0, true, newPromise());
+        assertTrue(future.isDone());
+        assertInstanceOf(IllegalStateException.class, future.cause());
+        verify(writer, never()).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders),
+                anyInt(), anyBoolean(), any(ChannelPromise.class));
+        verify(lifecycleManager, never()).onError(eq(ctx), anyBoolean(), any(Throwable.class));
+
+        // Only the write failed, the final response can still be sent.
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+        assertTrue(promise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+                eq(0), eq(true), eq(promise));
+    }
+
+    @Test
     public void tooManyHeadersWithDataNoEOSThrows() {
         tooManyHeadersWithDataThrows(false);
     }
