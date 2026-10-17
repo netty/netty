@@ -133,10 +133,14 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
      */
     void closeSent(ChannelPromise promise) {
         if (closeSent != null) {
-            // Already sending (or already sent) a close frame, e.g. a peer that sends more than one CLOSE
-            // frame. Keep the original promise (and the deadline already armed for it) authoritative, and
-            // just cascade its outcome onto the new one instead of losing track of the original.
-            closeSent.addListener(new PromiseNotifier<Void, ChannelFuture>(false, promise));
+            if (!closeSent.isDone()) {
+                // Only cascade if the original close promise is still pending. If it is
+                // already done, adding a PromiseNotifier would complete the new promise
+                // immediately, which breaks callers that later pass that same promise to
+                // write() — Netty rejects write promises that are already done. See
+                // https://github.com/netty/netty/issues/17776
+                closeSent.addListener(new PromiseNotifier<Void, ChannelFuture>(false, promise));
+            }
             return;
         }
         closeSent = promise;
