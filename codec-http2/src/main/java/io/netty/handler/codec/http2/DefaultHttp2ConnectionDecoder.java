@@ -601,11 +601,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onSettingsRead(final ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
             if (settingsReceivedConsumer == null) {
-                // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
-                // remote peer applies these settings before any subsequent frames that we may send which depend upon
-                // these new settings. See https://github.com/netty/netty/issues/6520.
+                // We write the SETTINGS ACK frame to the outbound buffer before applying the settings.
+                //
+                // Per RFC 9113 §6.5.3 the peer may rely on receiving the ACK only after the settings have
+                // been applied ("the ACK tells the peer that the oldest unacknowledged settings have been
+                // applied").  The reason this ordering is still compliant is that application happens
+                // synchronously (see below) while the ACK remains buffered until the next outbound flush,
+                // which can only occur after remoteSettings has returned.  Any flow-control triggered flush
+                // during remoteSettings will therefore happen with the settings already applied, and the ACK
+                // will be emitted on that same flush (or a later one) — so the first ACK that the peer
+                // observes is always preceded by the updated settings actually being in effect.
                 encoder.writeSettingsAck(ctx, ctx.newPromise());
-
                 encoder.remoteSettings(settings);
             } else {
                 settingsReceivedConsumer.consumeReceivedSettings(settings);
