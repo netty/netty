@@ -31,20 +31,25 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.IntSupplier;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
@@ -302,6 +308,40 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 Thread.sleep(50);
             }
             assertEquals(1, registered);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelClosedBeforeSuspendIsReallyClosed() throws Exception {
+        Semaphore loopThreadExited = new Semaphore(0);
+        Executor executor = task -> new Thread(() -> {
+            try {
+                task.run();
+            } finally {
+                loopThreadExited.release();
+            }
+        }).start();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, executor, NioIoHandler.newFactory());
+        try {
+            SingleThreadIoEventLoop loop = (SingleThreadIoEventLoop) group.next();
+            ServerSocketChannel channel = new NioServerSocketChannel();
+            loop.register(channel).syncUninterruptibly();
+            channel.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly();
+            InetSocketAddress address = channel.localAddress();
+
+            // The loop will only suspend once the channel is not registered anymore.
+            assertTrue(loop.trySuspend());
+            channel.close().syncUninterruptibly();
+            loopThreadExited.acquire();
+            assertTrue(loop.isSuspended());
+
+            // The channel was closed so its socket must not accept connections anymore.
+            try (Socket socket = new Socket()) {
+                assertThrows(ConnectException.class, () -> socket.connect(address));
+            }
         } finally {
             group.shutdownGracefully();
         }
