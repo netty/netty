@@ -122,6 +122,8 @@ public final class HttpHeaderValidationUtil {
         //  HTAB           = %x09 ; horizontal tab
         //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
         //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+        //
+        // Additionally per RFC 9113 §8.2.1: field values MUST NOT start or end with SP or HTAB.
         final byte[] array = value.array();
         final int start = value.arrayOffset();
         int b = array[start] & 0xFF;
@@ -134,6 +136,11 @@ public final class HttpHeaderValidationUtil {
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
                 return i - start;
             }
+        }
+        // Ensure the value also does not end with SP or HTAB (field-content rule and RFC 9113 §8.2.1).
+        b = array[end - 1] & 0xFF;
+        if (b == 0x20 || b == 0x09) {
+            return value.length() - 1;
         }
         return -1;
     }
@@ -148,6 +155,8 @@ public final class HttpHeaderValidationUtil {
         //  HTAB           = %x09 ; horizontal tab
         //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
         //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+        //
+        // Additionally per RFC 9113 §8.2.1: field values MUST NOT start or end with SP or HTAB.
         int b = value.charAt(0);
         if (b < 0x21 || b == 0x7F) {
             return 0;
@@ -158,6 +167,11 @@ public final class HttpHeaderValidationUtil {
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
                 return i;
             }
+        }
+        // Ensure the value also does not end with SP or HTAB (field-content rule and RFC 9113 §8.2.1).
+        b = value.charAt(length - 1);
+        if (b == 0x20 || b == 0x09) {
+            return length - 1;
         }
         return -1;
     }
