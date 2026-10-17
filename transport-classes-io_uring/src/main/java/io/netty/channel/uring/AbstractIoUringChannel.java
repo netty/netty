@@ -407,12 +407,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         // A zero return means the write could not be scheduled: registration.submit(...) failed because the
         // registration is no longer valid, a FileRegion's open() threw, or transferTo(...) produced no bytes or
-        // threw. numOutstandingWrites is a short, so guard the narrowing before it happens: a future
-        // scheduleWriteSingle/scheduleWriteMultiple override that batches more writes than a short can hold must
-        // not silently wrap around.
-        assert scheduled <= Short.MAX_VALUE;
-        numOutstandingWrites = (short) scheduled;
-        return numOutstandingWrites;
+        // threw. Each accepted submission already accounted for its completion in submitWrite(...), including
+        // when a later submission in the same batch throws.
+        return scheduled;
     }
 
     protected final IoRegistration registration() {
@@ -472,6 +469,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             long id = registration().submit(ops);
             if (id != 0) {
                 currentWrite.copyFrom(ops);
+                numOutstandingWrites++;
+                ioState |= WRITE_SCHEDULED;
             }
             return id;
         }
