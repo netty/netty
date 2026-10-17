@@ -439,6 +439,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             boolean isInformational = !connection.isServer() &&
                     HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL;
+            if (isInformational && endOfStream) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Informational response on stream %d must not end the stream", streamId);
+            }
             if ((isInformational || !endOfStream) && stream.isHeadersReceived() || stream.isTrailersReceived()) {
                 throw streamError(streamId, PROTOCOL_ERROR,
                                   "Stream %d received too many headers EOS: %s state: %s",
