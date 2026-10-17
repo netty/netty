@@ -243,7 +243,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
-            return new IoUringFileRegion((DefaultFileRegion) msg);
+            int pipeSize = ((IoUringStreamChannelConfig) config()).getSendfilePipeSize();
+            return new IoUringFileRegion((DefaultFileRegion) msg, pipeSize);
         }
 
         if (msg instanceof FileRegion) {

@@ -635,6 +635,18 @@ final class Native {
      */
     static native int close(int fd);
 
+    /**
+     * Set the capacity of the pipe referred to by {@code fd} to {@code size} bytes and return the resulting
+     * capacity, or the negated {@code errno} on failure (for example {@code EPERM} when {@code size} exceeds
+     * {@code /proc/sys/fs/pipe-max-size}).
+     */
+    static native int setPipeSize(int fd, int size);
+
+    /**
+     * Return the capacity of the pipe referred to by {@code fd} in bytes, or the negated {@code errno} on failure.
+     */
+    static native int getPipeSize(int fd);
+
     static int getFd(DefaultFileRegion fileChannel) {
         return getFd0(fileChannel);
     }

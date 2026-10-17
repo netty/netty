@@ -67,4 +67,18 @@ public class IoUringChannelConfigTest {
         disabledCleanable.clean();
         enabledCleanable.clean();
     }
+
+    @Test
+    public void testSendfilePipeSizeOption() throws Exception {
+        IoUringSocketChannel channel = new IoUringSocketChannel();
+        try {
+            assertEquals(Integer.valueOf(0),
+                    channel.config().getOption(IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE));
+            channel.config().setOption(IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE, 1 << 20);
+            assertEquals(Integer.valueOf(1 << 20),
+                    channel.config().getOption(IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE));
+        } finally {
+            channel.fd().close();
+        }
+    }
 }

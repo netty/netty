@@ -24,6 +24,7 @@ import java.util.Map;
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     private volatile short bufferGroupId = -1;
+    private volatile int sendfilePipeSize;
 
     IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -39,6 +40,9 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             return (T) Short.valueOf(getBufferGroupId());
         }
+        if (option == IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE) {
+            return (T) Integer.valueOf(getSendfilePipeSize());
+        }
         return super.getOption(option);
     }
 
@@ -48,13 +52,18 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
             setBufferGroupId((Short) value);
             return true;
         }
+        if (option == IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE) {
+            setSendfilePipeSize((Integer) value);
+            return true;
+        }
         return super.setOption(option, value);
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(),
-                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID
+                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
+                IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE
         );
     }
 
@@ -64,6 +73,15 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
         this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
+        return this;
+    }
+
+    int getSendfilePipeSize() {
+        return sendfilePipeSize;
+    }
+
+    IoUringStreamChannelConfig setSendfilePipeSize(int sendfilePipeSize) {
+        this.sendfilePipeSize = ObjectUtil.checkPositiveOrZero(sendfilePipeSize, "sendfilePipeSize");
         return this;
     }
 }

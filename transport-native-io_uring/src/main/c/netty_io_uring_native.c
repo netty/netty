@@ -73,6 +73,15 @@
 #define MAX_SKB_FRAGS 17
 #endif
 
+// F_SETPIPE_SZ / F_GETPIPE_SZ are Linux specific. They are available with _GNU_SOURCE (defined above), but define
+// them here as well so we can compile against older kernel / libc headers.
+#ifndef F_SETPIPE_SZ
+#define F_SETPIPE_SZ 1031
+#endif
+#ifndef F_GETPIPE_SZ
+#define F_GETPIPE_SZ 1032
+#endif
+
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
 #define LIBRARYNAME "netty_transport_native_io_uring42"
@@ -701,6 +710,24 @@ static jint netty_io_uring_maxSkbFrags(JNIEnv* env, jclass clazz) {
     return MAX_SKB_FRAGS;
 }
 
+// Sets the capacity of the pipe referred to by fd and returns the new capacity, or the negated errno on failure.
+static jint netty_io_uring_setPipeSize(JNIEnv* env, jclass clazz, jint fd, jint size) {
+    int result = fcntl(fd, F_SETPIPE_SZ, size);
+    if (result < 0) {
+        return -errno;
+    }
+    return result;
+}
+
+// Returns the capacity of the pipe referred to by fd, or the negated errno on failure.
+static jint netty_io_uring_getPipeSize(JNIEnv* env, jclass clazz, jint fd) {
+    int result = fcntl(fd, F_GETPIPE_SZ);
+    if (result < 0) {
+        return -errno;
+    }
+    return result;
+}
+
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -914,7 +941,9 @@ static const JNINativeMethod method_table[] = {
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
-    {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
+    {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size },
+    {"setPipeSize", "(II)I", (void *) netty_io_uring_setPipeSize },
+    {"getPipeSize", "(I)I", (void *) netty_io_uring_getPipeSize }
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);

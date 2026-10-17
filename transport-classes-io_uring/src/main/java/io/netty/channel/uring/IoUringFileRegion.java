@@ -31,18 +31,40 @@ final class IoUringFileRegion implements FileRegion {
     private static final short SPLICE_TO_SOCKET = 2;
 
     final DefaultFileRegion fileRegion;
+    private final int pipeSize;
     private FileDescriptor[] pipe;
     private int transferred;
     private int pipeLen = -1;
 
-    IoUringFileRegion(DefaultFileRegion fileRegion) {
+    IoUringFileRegion(DefaultFileRegion fileRegion, int pipeSize) {
         this.fileRegion = fileRegion;
+        this.pipeSize = pipeSize;
     }
 
     void open() throws IOException {
         fileRegion.open();
         if (pipe == null) {
             pipe = FileDescriptor.pipe();
+            applyPipeSize();
+        }
+    }
+
+    private void applyPipeSize() {
+        if (pipeSize <= 0) {
+            // Keep the kernel default.
+            return;
+        }
+        int result = Native.setPipeSize(pipe[1].intValue(), pipeSize);
+        if (result < 0) {
+            // For example EPERM when pipeSize exceeds /proc/sys/fs/pipe-max-size. Fall back to the kernel
+            // default instead of failing the write.
+            if (logger.isDebugEnabled()) {
+                logger.debug("Unable to set the sendfile pipe size to {} bytes (errno {}); using the kernel default",
+                        pipeSize, -result);
+            }
+        } else if (result != pipeSize && logger.isDebugEnabled()) {
+            logger.debug("Requested sendfile pipe size of {} bytes, but the kernel set it to {} bytes",
+                    pipeSize, result);
         }
     }
 
