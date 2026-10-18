@@ -44,6 +44,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -248,6 +249,45 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     private static Http2Settings expectedSettings() {
         return new Http2Settings().maxConcurrentStreams(100).initialWindowSize(65535);
+    }
+
+    @Test
+    public void upgradeAfterChannelClosed() throws Exception {
+        final List<Throwable> exceptions = new ArrayList<>();
+        HttpServerCodec httpServerCodec = new HttpServerCodec();
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec,
+                protocol -> new Http2ServerUpgradeCodec(Http2FrameCodecBuilder.forServer().build(),
+                        new ChannelInboundHandler() {
+                            @Override
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                exceptions.add(cause);
+                            }
+                        }), 1024);
+        channel = new EmbeddedChannel(new CleartextHttp2ServerUpgradeHandler(
+                httpServerCodec, upgradeHandler, Http2FrameCodecBuilder.forServer().build()));
+
+        // The first request is too large, so the server responds with 413 and closes the channel. The pipelined
+        // upgrade request is still decoded and handled after the channel was closed.
+        StringBuilder request = new StringBuilder("POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Upgrade: h2c\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 2000\r\n\r\n");
+        for (int i = 0; i < 2000; i++) {
+            request.append('x');
+        }
+        request.append("GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+
+        channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII));
+        assertFalse(channel.isOpen());
+
+        // The upgrade fails because the channel is closed, which must be the only exception.
+        assertEquals(1, exceptions.size());
+        assertInstanceOf(Http2Exception.class, exceptions.get(0));
     }
 
     private void validateClearTextUpgrade(String upgradeString) throws Exception {
