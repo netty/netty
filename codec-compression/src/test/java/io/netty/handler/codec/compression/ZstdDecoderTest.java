@@ -100,7 +100,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testFrameContentSizeDoesNotDriveAllocationWhenUnlimited() {
+    public void testFrameContentSizeDoesNotDriveAllocationWhenUnlimited() throws Exception {
         // Frame header declaring a Frame_Content_Size of 0x7FFFFFF0 followed by a single raw
         // block that only holds one byte.
         byte[] frame = {
@@ -145,7 +145,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testDecompressLargeFrameWhenUnlimited() {
+    public void testDecompressLargeFrameWhenUnlimited() throws Exception {
         byte[] payload = new byte[1024 * 1024];
         new Random(12345L).nextBytes(payload);
         byte[] compressed = Zstd.compress(payload);
