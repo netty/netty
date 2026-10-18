@@ -65,6 +65,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
+import javax.net.ssl.StandardConstants;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
@@ -262,11 +263,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 requestedServerNames = Collections.emptyList();
                             } else {
                                 String name = SSL.getSniHostname(ssl);
-                                requestedServerNames = (name == null || name.isEmpty()) ?
-                                        Collections.emptyList() :
-                                        // Convert to bytes as we do not want to do any strict validation of the
-                                        // SNIHostName while creating it.
-                                        Collections.singletonList(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
+
+                                if (name == null || name.isEmpty()) {
+                                    requestedServerNames = Collections.emptyList();
+                                } else {
+                                    requestedServerNames = Collections.singletonList(toServerName(name));
+                                }
                             }
                         }
                         return requestedServerNames;
@@ -2302,10 +2304,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
+    /**
+     * Converts the given hostname to a {@link SNIServerName}. We convert to bytes as we do not want to do any strict
+     * validation of the {@link SNIHostName} while creating it. If the byte constructor still rejects the name we
+     * expose it as a plain {@link SNIServerName} of type host_name instead of failing.
+     */
+    private static SNIServerName toServerName(String hostname) {
+        byte[] encoded = hostname.getBytes(CharsetUtil.UTF_8);
+        try {
+            return new SNIHostName(encoded);
+        } catch (IllegalArgumentException ignored) {
+            return new SNIServerName(StandardConstants.SNI_HOST_NAME, encoded) { };
+        }
+    }
+
     final boolean checkSniHostnameMatch(String hostname) {
         Collection<SNIMatcher> matchers = this.matchers;
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname.getBytes(CharsetUtil.UTF_8));
+            SNIServerName name = toServerName(hostname);
             for (SNIMatcher matcher : matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {

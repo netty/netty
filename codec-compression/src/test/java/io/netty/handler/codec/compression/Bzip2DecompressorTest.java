@@ -61,4 +61,20 @@ public class Bzip2DecompressorTest extends AbstractDecompressorTest {
                     "incorrect selector index");
         }
     }
+
+    /**
+     * Regression test: a Huffman code length read in {@code RECEIVE_HUFFMAN_LENGTH} was never
+     * validated against the 1..23 range before being stored and later used to index the per-table
+     * code-base array (sized for lengths up to 23), so a crafted stream could trigger an
+     * {@link ArrayIndexOutOfBoundsException} instead of a clean {@link DecompressionException}.
+     */
+    @Test
+    public void testCodeLengthOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange())),
+                    "Bzip2 block Huffman code length not in range");
+        }
+    }
 }

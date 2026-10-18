@@ -294,6 +294,11 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
+            // Data the peer wrote before it closed must be delivered before we close, like TCP does for data that
+            // arrived before the FIN. The finishReadTask may have been re-queued behind this task by
+            // finishPeerRead0(...) if we were writing while the peer wrote, in which case the data would otherwise
+            // be dropped by releaseInboundBuffers().
+            finishPeerRead0(this);
             unsafe().close(unsafe().voidPromise());
         } else if (connectPromise != null) {
             // The accepted channel was closed before the connection was established, for example because the server
