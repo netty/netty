@@ -108,7 +108,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     public void testFrameContentSizeDoesNotDriveAllocationWhenUnlimited() {
         // Frame header declaring a Frame_Content_Size of 0x7FFFFFF0 followed by a single raw
         // block that only holds one byte.
-        byte[] frame = {
+        final byte[] frame = {
                 0x28, (byte) 0xB5, 0x2F, (byte) 0xFD, // magic
                 (byte) 0x80, // FCS field 4 bytes, no single segment
                 0x00, // Window_Descriptor: 1 KiB window
@@ -118,7 +118,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
         };
 
         final int[] maxRequested = new int[1];
-        EmbeddedChannel ch = new EmbeddedChannel(new ZstdDecoder(0));
+        final EmbeddedChannel ch = new EmbeddedChannel(new ZstdDecoder(0));
         ch.config().setAllocator(new AbstractByteBufAllocator() {
             @Override
             protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
@@ -141,7 +141,12 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
             }
         });
         try {
-            assertThrows(DecompressionException.class, () -> ch.writeInbound(Unpooled.wrappedBuffer(frame)));
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() {
+                    ch.writeInbound(Unpooled.wrappedBuffer(frame));
+                }
+            });
             assertTrue(maxRequested[0] <= CompressionUtil.DEFAULT_MAX_FORWARD_BYTES,
                     "requested " + maxRequested[0] + " bytes");
         } finally {
