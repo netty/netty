@@ -230,15 +230,17 @@ public class HashedWheelTimerTest {
 
     @Test
     public void testRejectedExecutionExceptionWhenTooManyTimeoutsAreAddedBackToBack() {
-        HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
             TimeUnit.MILLISECONDS, 32, true, 2);
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         try {
-            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
-            fail("Timer allowed adding 3 timeouts when maxPendingTimeouts was 2");
-        } catch (RejectedExecutionException e) {
-            // Expected
+            assertThrows(RejectedExecutionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
+                }
+            });
         } finally {
             timer.stop();
         }

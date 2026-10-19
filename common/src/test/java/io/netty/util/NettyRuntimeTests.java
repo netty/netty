@@ -18,6 +18,7 @@ package io.netty.util;
 
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class NettyRuntimeTests {
@@ -35,12 +37,13 @@ public class NettyRuntimeTests {
     public void testIllegalSet() {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         for (final int i : new int[] { -1, 0 }) {
-            try {
-                holder.setAvailableProcessors(i);
-                fail();
-            } catch (final IllegalArgumentException e) {
-                assertThat(e.getMessage()).contains("(expected: > 0)");
-            }
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    holder.setAvailableProcessors(i);
+                }
+            });
+            assertThat(e.getMessage()).contains("(expected: > 0)");
         }
     }
 
@@ -48,24 +51,26 @@ public class NettyRuntimeTests {
     public void testMultipleSets() {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         holder.setAvailableProcessors(1);
-        try {
-            holder.setAvailableProcessors(2);
-            fail();
-        } catch (final IllegalStateException e) {
-            assertThat(e.getMessage()).contains("availableProcessors is already set to [1], rejecting [2]");
-        }
+        IllegalStateException e = assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                holder.setAvailableProcessors(2);
+            }
+        });
+        assertThat(e.getMessage()).contains("availableProcessors is already set to [1], rejecting [2]");
     }
 
     @Test
     public void testSetAfterGet() {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         holder.availableProcessors();
-        try {
-            holder.setAvailableProcessors(1);
-            fail();
-        } catch (final IllegalStateException e) {
-            assertThat(e.getMessage()).contains("availableProcessors is already set");
-        }
+        IllegalStateException e = assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                holder.setAvailableProcessors(1);
+            }
+        });
+        assertThat(e.getMessage()).contains("availableProcessors is already set");
     }
 
     @Test

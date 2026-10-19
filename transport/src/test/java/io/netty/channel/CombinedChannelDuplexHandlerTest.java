@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CombinedChannelDuplexHandlerTest {
 
@@ -173,7 +172,7 @@ public class CombinedChannelDuplexHandlerTest {
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                 inboundHandler, new ChannelOutboundHandlerAdapter());
 
-        EmbeddedChannel channel = new EmbeddedChannel();
+        final EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast(handler);
         assertEquals(Event.HANDLER_ADDED, inboundHandler.pollEvent());
 
@@ -188,12 +187,13 @@ public class CombinedChannelDuplexHandlerTest {
 
         // Should have not received any more events as it was removed before via removeInboundHandler()
         assertNull(inboundHandler.pollEvent());
-        try {
-            channel.checkException();
-            fail();
-        } catch (Throwable cause) {
-            assertSame(CAUSE, cause);
-        }
+        Throwable cause = assertThrows(Throwable.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.checkException();
+            }
+        });
+        assertSame(CAUSE, cause);
 
         assertTrue(channel.finish());
         assertNull(inboundHandler.pollEvent());

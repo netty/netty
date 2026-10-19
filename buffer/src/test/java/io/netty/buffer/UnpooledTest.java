@@ -38,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests channel buffers
@@ -404,87 +403,87 @@ public class UnpooledTest {
 
     @Test
     public void testUnmodifiableBuffer() throws Exception {
-        ByteBuf buf = unmodifiableBuffer(buffer(16));
+        final ByteBuf buf = unmodifiableBuffer(buffer(16));
 
-        try {
-            buf.discardReadBytes();
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.discardReadBytes();
+            }
+        });
 
-        try {
-            buf.setByte(0, (byte) 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setByte(0, (byte) 0);
+            }
+        });
 
-        try {
-            buf.setBytes(0, EMPTY_BUFFER, 0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setBytes(0, EMPTY_BUFFER, 0, 0);
+            }
+        });
 
-        try {
-            buf.setBytes(0, EMPTY_BYTES, 0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setBytes(0, EMPTY_BYTES, 0, 0);
+            }
+        });
 
-        try {
-            buf.setBytes(0, ByteBuffer.allocate(0));
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setBytes(0, ByteBuffer.allocate(0));
+            }
+        });
 
-        try {
-            buf.setShort(0, (short) 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setShort(0, (short) 0);
+            }
+        });
 
-        try {
-            buf.setMedium(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setMedium(0, 0);
+            }
+        });
 
-        try {
-            buf.setInt(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setInt(0, 0);
+            }
+        });
 
-        try {
-            buf.setLong(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setLong(0, 0);
+            }
+        });
 
-        InputStream inputStream = Mockito.mock(InputStream.class);
-        try {
-            buf.setBytes(0, inputStream, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        final InputStream inputStream = Mockito.mock(InputStream.class);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setBytes(0, inputStream, 0);
+            }
+        });
         Mockito.verifyNoInteractions(inputStream);
 
-        ScatteringByteChannel scatteringByteChannel = Mockito.mock(ScatteringByteChannel.class);
-        try {
-            buf.setBytes(0, scatteringByteChannel, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        final ScatteringByteChannel scatteringByteChannel = Mockito.mock(ScatteringByteChannel.class);
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buf.setBytes(0, scatteringByteChannel, 0);
+            }
+        });
         Mockito.verifyNoInteractions(scatteringByteChannel);
         buf.release();
     }

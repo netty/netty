@@ -1979,8 +1979,8 @@ public class DefaultChannelPipelineTest {
         testWriteThrowsReleaseMessage0(true);
     }
 
-    private void testWriteThrowsReleaseMessage0(boolean flush) {
-        ReferenceCounted referenceCounted = new AbstractReferenceCounted() {
+    private void testWriteThrowsReleaseMessage0(final boolean flush) {
+        final ReferenceCounted referenceCounted = new AbstractReferenceCounted() {
             @Override
             protected void deallocate() {
                 // NOOP
@@ -1993,21 +1993,21 @@ public class DefaultChannelPipelineTest {
         };
         assertEquals(1, referenceCounted.refCnt());
 
-        Channel channel = new LocalChannel();
-        Channel channel2 = new LocalChannel();
+        final Channel channel = new LocalChannel();
+        final Channel channel2 = new LocalChannel();
         group.register(channel).syncUninterruptibly();
         group.register(channel2).syncUninterruptibly();
 
-        try {
-            if (flush) {
-                channel.writeAndFlush(referenceCounted, channel2.newPromise());
-            } else {
-                channel.write(referenceCounted, channel2.newPromise());
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                if (flush) {
+                    channel.writeAndFlush(referenceCounted, channel2.newPromise());
+                } else {
+                    channel.write(referenceCounted, channel2.newPromise());
+                }
             }
-            fail();
-        } catch (IllegalArgumentException expected) {
-            // expected
-        }
+        });
         assertEquals(0, referenceCounted.refCnt());
 
         channel.close().syncUninterruptibly();

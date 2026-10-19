@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 
@@ -61,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -732,19 +734,20 @@ public class HttpContentCompressorTest {
     @Test
     public void testTooManyResponses() throws Exception {
         FullHttpRequest request = newRequest();
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(request);
 
         ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
-        try {
-            ch.writeOutbound(new DefaultFullHttpResponse(
+        EncoderException e = assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeOutbound(new DefaultFullHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
-            fail();
-        } catch (EncoderException e) {
-            assertTrue(e.getCause() instanceof IllegalStateException);
-        }
+            }
+        });
+        assertInstanceOf(IllegalStateException.class, e.getCause());
         assertTrue(ch.finish());
         for (;;) {
             Object message = ch.readOutbound();

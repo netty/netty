@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Iterator;
 
@@ -41,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTest {
 
@@ -91,20 +92,20 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
     }
 
     private static void testCloseReason0(ChannelHandler... handlers) {
-        EmbeddedChannel ch = new EmbeddedChannel(
+        final EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42));
         ch.pipeline().addLast(handlers);
         testUpgrade0(ch, new WebSocketServerHandshaker13("ws://example.com/chat", "chat",
                 WebSocketDecoderConfig.newBuilder().maxFramePayloadLength(4).closeOnProtocolViolation(true).build()));
 
         ch.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(new byte[8])));
-        ByteBuf buffer = ch.readOutbound();
-        try {
-            ch.writeInbound(buffer);
-            fail();
-        } catch (CorruptedWebSocketFrameException expected) {
-            // expected
-        }
+        final ByteBuf buffer = ch.readOutbound();
+        assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeInbound(buffer);
+            }
+        });
         ReferenceCounted closeMessage = ch.readOutbound();
         assertInstanceOf(ByteBuf.class, closeMessage);
         closeMessage.release();

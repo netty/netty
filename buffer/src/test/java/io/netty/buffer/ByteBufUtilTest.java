@@ -41,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
@@ -799,14 +798,16 @@ public class ByteBufUtilTest {
         int invoke(Object... args);
     }
 
-    private void testInvalidSubsequences(BufferType bufferType, TestMethod method) {
-        for (int [] range : INVALID_RANGES) {
-            ByteBuf buf = buffer(bufferType, 16);
+    private void testInvalidSubsequences(BufferType bufferType, final TestMethod method) {
+        for (final int [] range : INVALID_RANGES) {
+            final ByteBuf buf = buffer(bufferType, 16);
             try {
-                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
-                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
-            } catch (IndexOutOfBoundsException iiobe) {
-                // expected
+                assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
+                    }
+                });
             } finally {
                 assertFalse(buf.isReadable());
                 buf.release();
@@ -938,7 +939,7 @@ public class ByteBufUtilTest {
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
     public void testIsTextWithInvalidIndexAndLength(BufferType bufferType) {
-        ByteBuf buffer = buffer(bufferType, 4);
+        final ByteBuf buffer = buffer(bufferType, 4);
         try {
             buffer.writeBytes(new byte[4]);
             int[][] validIndexLengthPairs = {
@@ -957,13 +958,13 @@ public class ByteBufUtilTest {
                     {5, 0},
                     {1, 5},
             };
-            for (int[] pair : invalidIndexLengthPairs) {
-                try {
-                    ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
-                    fail("Expected IndexOutOfBoundsException");
-                } catch (IndexOutOfBoundsException e) {
-                    // expected
-                }
+            for (final int[] pair : invalidIndexLengthPairs) {
+                assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
+                    }
+                });
             }
         } finally {
             buffer.release();

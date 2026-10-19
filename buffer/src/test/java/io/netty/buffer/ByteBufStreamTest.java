@@ -41,12 +41,12 @@ public class ByteBufStreamTest {
     public void testAll() throws Exception {
         ByteBuf buf = Unpooled.buffer(0, 65536);
 
-        try {
-            new ByteBufOutputStream(null);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new ByteBufOutputStream(null);
+            }
+        });
 
         final ByteBufOutputStream out = new ByteBufOutputStream(buf);
         try {
@@ -79,19 +79,19 @@ public class ByteBufStreamTest {
             out.close();
         }
 
-        try {
-            new ByteBufInputStream(null, true);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new ByteBufInputStream(null, true);
+            }
+        });
 
-        try {
-            new ByteBufInputStream(null, 0, true);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new ByteBufInputStream(null, 0, true);
+            }
+        });
 
         try {
             new ByteBufInputStream(buf.retainedSlice(), -1, true);
@@ -105,7 +105,7 @@ public class ByteBufStreamTest {
             // Expected
         }
 
-        ByteBufInputStream in = new ByteBufInputStream(buf, true);
+        final ByteBufInputStream in = new ByteBufInputStream(buf, true);
         try {
             assertTrue(in.markSupported());
             in.mark(Integer.MAX_VALUE);
@@ -125,7 +125,7 @@ public class ByteBufStreamTest {
             assertEquals(42, in.readByte());
             assertEquals(224, in.readUnsignedByte());
 
-            byte[] tmp = new byte[13];
+            final byte[] tmp = new byte[13];
             in.readFully(tmp);
             assertEquals("Hello, World!", new String(tmp, "ISO-8859-1"));
 
@@ -163,26 +163,26 @@ public class ByteBufStreamTest {
             assertEquals(-1, in.read());
             assertEquals(-1, in.read(tmp));
 
-            try {
-                in.readByte();
-                fail();
-            } catch (EOFException e) {
-                // Expected
-            }
+            assertThrows(EOFException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    in.readByte();
+                }
+            });
 
-            try {
-                in.readFully(tmp, 0, -1);
-                fail();
-            } catch (IndexOutOfBoundsException e) {
-                // Expected
-            }
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    in.readFully(tmp, 0, -1);
+                }
+            });
 
-            try {
-                in.readFully(tmp);
-                fail();
-            } catch (EOFException e) {
-                // Expected
-            }
+            assertThrows(EOFException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    in.readFully(tmp);
+                }
+            });
         } finally {
             // Ownership was transferred to the ByteBufOutputStream, before we close we must retain the underlying
             // buffer.

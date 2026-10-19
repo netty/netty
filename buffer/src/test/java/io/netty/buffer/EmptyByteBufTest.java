@@ -17,11 +17,13 @@ package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -42,14 +44,16 @@ public class EmptyByteBufTest {
 
     @Test
     public void testWriteEmptyByteBuf() {
-        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        final EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
         empty.writeBytes(Unpooled.EMPTY_BUFFER); // Ok
-        ByteBuf nonEmpty = UnpooledByteBufAllocator.DEFAULT.buffer().writeBoolean(false);
+        final ByteBuf nonEmpty = UnpooledByteBufAllocator.DEFAULT.buffer().writeBoolean(false);
         try {
-            empty.writeBytes(nonEmpty);
-            fail();
-        } catch (IndexOutOfBoundsException ignored) {
-            // Ignore.
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    empty.writeBytes(nonEmpty);
+                }
+            });
         } finally {
             nonEmpty.release();
         }

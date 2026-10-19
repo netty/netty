@@ -56,6 +56,7 @@ import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
@@ -85,6 +86,7 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -118,12 +120,13 @@ public class NettyBlockHoundIntegrationTest {
         });
         GlobalEventExecutor.INSTANCE.execute(future);
 
-        try {
-            future.get(5, TimeUnit.SECONDS);
-            fail("Expected an exception due to a blocking call but none was thrown");
-        } catch (ExecutionException e) {
-            assertInstanceOf(BlockingOperationError.class, e.getCause());
-        }
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                future.get(5, TimeUnit.SECONDS);
+            }
+        });
+        assertInstanceOf(BlockingOperationError.class, e.getCause());
     }
 
     @Test

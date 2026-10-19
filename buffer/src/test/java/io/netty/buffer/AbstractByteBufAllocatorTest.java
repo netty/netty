@@ -27,9 +27,9 @@ import java.nio.ByteBuffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -62,7 +62,7 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     }
 
     private void testCalculateNewCapacity(boolean preferDirect) {
-        T allocator = newAllocator(preferDirect);
+        final T allocator = newAllocator(preferDirect);
         assertEquals(8, allocator.calculateNewCapacity(1, 8));
         assertEquals(7, allocator.calculateNewCapacity(1, 7));
         assertEquals(64, allocator.calculateNewCapacity(1, 129));
@@ -72,19 +72,19 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertEquals(AbstractByteBufAllocator.CALCULATE_THRESHOLD * 2,
                 allocator.calculateNewCapacity(AbstractByteBufAllocator.CALCULATE_THRESHOLD + 1,
                         AbstractByteBufAllocator.CALCULATE_THRESHOLD * 4));
-        try {
-            allocator.calculateNewCapacity(8, 7);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                allocator.calculateNewCapacity(8, 7);
+            }
+        });
 
-        try {
-            allocator.calculateNewCapacity(-1, 8);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                allocator.calculateNewCapacity(-1, 8);
+            }
+        });
     }
 
     @Test

@@ -47,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * An abstract test class for composite channel buffers
@@ -1222,19 +1221,19 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         cbuf.addComponent(EMPTY_BUFFER);
         cbuf.addComponent(EMPTY_BUFFER);
 
-        Iterator<ByteBuf> it = cbuf.iterator();
+        final Iterator<ByteBuf> it = cbuf.iterator();
         assertTrue(it.hasNext());
         assertSame(EMPTY_BUFFER, it.next());
         assertTrue(it.hasNext());
         assertSame(EMPTY_BUFFER, it.next());
         assertFalse(it.hasNext());
 
-        try {
-            it.next();
-            fail();
-        } catch (NoSuchElementException e) {
-            //Expected
-        }
+        assertThrows(NoSuchElementException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                it.next();
+            }
+        });
         cbuf.release();
     }
 
@@ -1242,15 +1241,15 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testEmptyIterator() {
         CompositeByteBuf cbuf = newCompositeBuffer();
 
-        Iterator<ByteBuf> it = cbuf.iterator();
+        final Iterator<ByteBuf> it = cbuf.iterator();
         assertFalse(it.hasNext());
 
-        try {
-            it.next();
-            fail();
-        } catch (NoSuchElementException e) {
-            //Expected
-        }
+        assertThrows(NoSuchElementException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                it.next();
+            }
+        });
         cbuf.release();
     }
 
@@ -1537,12 +1536,13 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testComponentsLessThanLowerBound() {
-        try {
-            new CompositeByteBuf(ALLOC, true, 0);
-            fail();
-        } catch (IllegalArgumentException e) {
-            assertEquals("maxNumComponents: 0 (expected: >= 1)", e.getMessage());
-        }
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new CompositeByteBuf(ALLOC, true, 0);
+            }
+        });
+        assertEquals("maxNumComponents: 0 (expected: >= 1)", e.getMessage());
     }
 
     @Test
@@ -1759,15 +1759,17 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         CompositeByteBuf composite = compositeBuffer();
         composite.addComponent(true, buffer(8).writeZero(8));
 
-        ByteBuf slice = composite.retainedSlice();
+        final ByteBuf slice = composite.retainedSlice();
         composite.skipBytes(slice.readableBytes());
         composite.discardSomeReadBytes();
 
         try {
-            slice.readByte();
-            fail("Expected readByte of discarded slice to throw.");
-        } catch (IllegalStateException ignore) {
-            // Good.
+            assertThrows(IllegalStateException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    slice.readByte();
+                }
+            });
         } finally {
             slice.release();
             composite.release();

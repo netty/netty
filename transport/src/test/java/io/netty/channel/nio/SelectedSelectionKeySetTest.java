@@ -17,6 +17,7 @@ package io.netty.channel.nio;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -28,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class SelectedSelectionKeySetTest {
     @Mock
@@ -75,26 +76,26 @@ public class SelectedSelectionKeySetTest {
         SelectedSelectionKeySet set = new SelectedSelectionKeySet();
         assertTrue(set.add(mockKey));
         assertTrue(set.add(mockKey2));
-        Iterator<SelectionKey> keys = set.iterator();
+        final Iterator<SelectionKey> keys = set.iterator();
         assertTrue(keys.hasNext());
         assertSame(mockKey, keys.next());
         assertTrue(keys.hasNext());
         assertSame(mockKey2, keys.next());
         assertFalse(keys.hasNext());
 
-        try {
-            keys.next();
-            fail();
-        } catch (NoSuchElementException expected) {
-            // expected
-        }
+        assertThrows(NoSuchElementException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                keys.next();
+            }
+        });
 
-        try {
-            keys.remove();
-            fail();
-        } catch (UnsupportedOperationException expected) {
-            // expected
-        }
+        assertThrows(UnsupportedOperationException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                keys.remove();
+            }
+        });
     }
 
     @Test

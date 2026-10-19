@@ -38,6 +38,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -55,9 +56,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -192,14 +194,15 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             serverChannel.close().awaitUninterruptibly();
             clientChannel.close().awaitUninterruptibly();
             sc.close().awaitUninterruptibly();
-            try {
-                if (serverException.get() != null) {
-                    throw serverException.get();
+            DecoderException e = assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    if (serverException.get() != null) {
+                        throw serverException.get();
+                    }
                 }
-                fail();
-            } catch (DecoderException e) {
-                assertTrue(e.getCause() instanceof SSLHandshakeException);
-            }
+            });
+            assertInstanceOf(SSLHandshakeException.class, e.getCause());
             if (clientException.get() != null) {
                 throw clientException.get();
             }
@@ -256,7 +259,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
                 } else {
                     if (ctx.channel().parent() == null) {
-                        assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);
+                        assertInstanceOf(ClosedChannelException.class, handshakeEvt.cause());
                     }
                 }
             }
