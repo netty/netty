@@ -51,6 +51,7 @@ import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.GeneralName;
@@ -112,7 +113,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
     @Test
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
-        final AtomicBoolean ocspStatus = new AtomicBoolean();
+        final AtomicReference<OcspResponse.Status> ocspStatus = new AtomicReference<>();
         EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final SslContext sslContext = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -142,8 +143,8 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                                     if (evt instanceof OcspValidationEvent) {
                                         OcspValidationEvent event = (OcspValidationEvent) evt;
 
-                                        ocspStatus.set(event.response().status() == OcspResponse.Status.VALID);
-                                        ctx.channel().close();
+                                        ocspStatus.set(event.response().status());
+                                        ctx.close();
                                         latch.countDown();
                                     }
                                 }
@@ -156,7 +157,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
             // Wait for maximum of 1 minute for Ocsp validation to happen
             latch.await(1, TimeUnit.MINUTES);
-            assertTrue(ocspStatus.get());
+            assertEquals(OcspResponse.Status.VALID, ocspStatus.get());
 
             // Wait for Channel to be closed
             channelFuture.channel().closeFuture().sync();

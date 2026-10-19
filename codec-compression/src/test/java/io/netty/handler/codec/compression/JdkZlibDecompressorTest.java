@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @ParameterizedClass
@@ -78,6 +79,42 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
             assertEquals(Decompressor.Status.COMPLETE, decompressor.status());
         } finally {
             decompressor.close();
+        }
+    }
+
+    @Test
+    public void testDictionaryMismatchThrowsDecompressionException() {
+        assumeTrue(wrapper == ZlibWrapper.ZLIB);
+        byte[] compressed = deflateWithDictionary("hello".getBytes(CharsetUtil.UTF_8),
+                "some dictionary".getBytes(CharsetUtil.UTF_8));
+        final Decompressor decompressor = JdkZlibDecompressor.builder().wrapper(ZlibWrapper.ZLIB)
+                .dictionary("another dictionary".getBytes(CharsetUtil.UTF_8))
+                .build(ByteBufAllocator.DEFAULT);
+        try {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(compressed));
+            assertThrows(DecompressionException.class, () -> {
+                while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
+                    decompressor.takeOutput().release();
+                }
+            });
+        } finally {
+            decompressor.close();
+        }
+    }
+
+    private static byte[] deflateWithDictionary(byte[] data, byte[] dictionary) {
+        Deflater deflater = new Deflater();
+        try {
+            deflater.setDictionary(dictionary);
+            deflater.setInput(data);
+            deflater.finish();
+            byte[] out = new byte[data.length + 64];
+            int length = deflater.deflate(out);
+            assertTrue(deflater.finished());
+            return Arrays.copyOf(out, length);
+        } finally {
+            deflater.end();
         }
     }
 
