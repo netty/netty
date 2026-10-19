@@ -29,6 +29,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -40,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -147,6 +150,20 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, MAX_PADDING + 1})
+    public void writeHeadersRejectsInvalidPadding(int padding) {
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> frameWriter.writeHeaders(ctx, streamId, headers, padding, true, promise));
+
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertFalse(outbound.isReadable());
     }
 
     @Test

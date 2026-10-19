@@ -71,6 +71,10 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
+      - name: Delete old netty artifacts in local maven repository
+        run:
+          rm -rf ~/.m2/repository/io/netty/*
+
       # The default "docker" buildx driver can't export cache to a registry; switch to the
       # docker-container driver so cache_to: type=registry in the compose files actually works.
       # Pinned to v4.4.1
