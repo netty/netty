@@ -197,6 +197,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    private static final int MAX_PENDING_TASKS = 1024;
+
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
@@ -220,6 +222,12 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                         for (;;) {
                             loop.execute(task);
                             loopStarted.set(true);
+                            // Don't let the queue grow without bounds if the producer is faster than the event
+                            // loop, otherwise we may run into an OutOfMemoryError. Keep it non-empty so we still
+                            // race with the task removal on shutdown.
+                            while (loop.pendingTasks() > MAX_PENDING_TASKS && !loop.isShuttingDown()) {
+                                Thread.yield();
+                            }
                         }
                     } catch (Throwable cause) {
                         error.set(cause);
