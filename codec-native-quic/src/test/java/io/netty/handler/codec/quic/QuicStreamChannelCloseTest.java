@@ -323,7 +323,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
                             if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 ctx.writeAndFlush(Unpooled.directBuffer(responseSize).writeZero(responseSize))
-                                    .addListener(f -> ctx.shutdown(ChannelShutdownType.newInbound()));
+                                        .addListener(f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
                             }
                             ctx.fireChannelShutdown(type);
                         }
@@ -476,7 +476,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                             if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 endOfInput.countDown();
                             }
-                            ctx.fireChannelShutdown(ChannelShutdownType.newOutbound());
+                            ctx.fireChannelShutdown(type);
                         }
                     }).get();
             stream.writeAndFlush(Unpooled.directBuffer().writeZero(8))
