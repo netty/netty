@@ -76,7 +76,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultChannelPipelineTest {
 
@@ -1802,19 +1801,16 @@ public class DefaultChannelPipelineTest {
         channel.register().syncUninterruptibly();
         channel2.register().syncUninterruptibly();
 
-        try {
-            // Create a promise and complete it so our write methods throw
-            Promise<Void> promise = channel2.newPromise();
-            promise.setSuccess(null);
+        // Create a promise and complete it so our write methods throw
+        Promise<Void> promise = channel2.newPromise();
+        promise.setSuccess(null);
+        assertThrows(IllegalArgumentException.class, () -> {
             if (flush) {
                 channel.writeAndFlush(referenceCounted, promise);
             } else {
                 channel.write(referenceCounted, promise);
             }
-            fail();
-        } catch (IllegalArgumentException expected) {
-            // expected
-        }
+        });
         assertEquals(0, referenceCounted.refCnt());
 
         channel.close().syncUninterruptibly();

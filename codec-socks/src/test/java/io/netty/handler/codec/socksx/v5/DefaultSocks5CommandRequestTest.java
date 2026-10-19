@@ -25,19 +25,19 @@ public class DefaultSocks5CommandRequestTest {
         try {
             new DefaultSocks5CommandRequest(null, Socks5AddressType.DOMAIN, "", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
 
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.CONNECT, null, "", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
 
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.CONNECT, Socks5AddressType.DOMAIN, null, 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 
@@ -46,7 +46,7 @@ public class DefaultSocks5CommandRequestTest {
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.IPv4, "54.54.1111.253", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -55,7 +55,7 @@ public class DefaultSocks5CommandRequestTest {
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.IPv6, "xxx:xxx:xxx", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -68,7 +68,7 @@ public class DefaultSocks5CommandRequestTest {
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή" +
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -78,14 +78,14 @@ public class DefaultSocks5CommandRequestTest {
             new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", -1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
 
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", 65536);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
 
         new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,

@@ -132,7 +132,7 @@ public class HttpClientCodecTest {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
                             // This is just a simple demo...don't block in IO
-                            assertTrue(ctx.channel() instanceof SocketChannel);
+                            assertInstanceOf(SocketChannel.class, ctx.channel());
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
                             /**
                              * The point of this test is to not add any content-length or content-encoding headers

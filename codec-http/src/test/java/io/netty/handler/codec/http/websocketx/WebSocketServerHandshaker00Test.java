@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTest {
 
@@ -77,9 +77,8 @@ public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTe
         WebSocketServerHandshaker00 handshaker00 = new WebSocketServerHandshaker00(
             "ws://example.com/chat", "chat", Integer.MAX_VALUE);
         try {
-            handshaker00.handshake(ch, req);
-            fail("Expecting WebSocketHandshakeException");
-        } catch (WebSocketHandshakeException e) {
+            WebSocketHandshakeException e = assertThrows(WebSocketHandshakeException.class, () ->
+                    handshaker00.handshake(ch, req));
             assertEquals("Missing origin header, got only "
                     + "[host, upgrade, connection, sec-websocket-key1, sec-websocket-protocol]",
                 e.getMessage());

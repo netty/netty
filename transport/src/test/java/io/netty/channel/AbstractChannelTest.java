@@ -33,6 +33,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -123,7 +124,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         TestChannel channel = new TestChannel(eventLoop);
         final ChannelId channelId = channel.id();
-        assertTrue(channelId instanceof DefaultChannelId);
+        assertInstanceOf(DefaultChannelId.class, channelId);
     }
 
     @Test
@@ -251,7 +252,7 @@ public class AbstractChannelTest {
     private static void assertClosedChannelException(Future<Void> future, IOException expected)
             throws InterruptedException {
         Throwable cause = future.await().cause();
-        assertTrue(cause instanceof ClosedChannelException);
+        assertInstanceOf(ClosedChannelException.class, cause);
         assertSame(expected, cause.getCause());
     }
 

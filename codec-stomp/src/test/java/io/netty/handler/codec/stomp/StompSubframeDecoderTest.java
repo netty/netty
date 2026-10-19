@@ -76,7 +76,7 @@ public class StompSubframeDecoderTest {
         assertEquals(StompCommand.SEND, frame.command());
 
         StompContentSubframe content = channel.readInbound();
-        assertTrue(content instanceof LastStompContentSubframe);
+        assertInstanceOf(LastStompContentSubframe.class, content);
         String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!!!", s);
         content.release();
@@ -95,7 +95,7 @@ public class StompSubframeDecoderTest {
         assertEquals(StompCommand.SEND, frame.command());
 
         StompContentSubframe content = channel.readInbound();
-        assertTrue(content instanceof LastStompContentSubframe);
+        assertInstanceOf(LastStompContentSubframe.class, content);
         String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!", s);
         content.release();

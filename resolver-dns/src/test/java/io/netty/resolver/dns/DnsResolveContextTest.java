@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.UnknownHostException;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DnsResolveContextTest {
 
@@ -29,12 +29,9 @@ public class DnsResolveContextTest {
     @Test
     public void testCnameLoop() {
         for (int i = 1; i < 128; i++) {
-            try {
-                DnsResolveContext.cnameResolveFromCache(buildCache(i), HOSTNAME);
-                fail();
-            } catch (UnknownHostException expected) {
-                // expected
-            }
+            final int cacheSize = i;
+            assertThrows(UnknownHostException.class, () ->
+                    DnsResolveContext.cnameResolveFromCache(buildCache(cacheSize), HOSTNAME));
         }
     }
 

@@ -26,6 +26,7 @@ import java.util.Iterator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -43,7 +44,7 @@ public class Slf4JLoggerFactoryTest {
         Logger logger = mock(Logger.class);
         when(logger.getName()).thenReturn("testlogger");
         InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
-        assertTrue(internalLogger instanceof Slf4JLogger);
+        assertInstanceOf(Slf4JLogger.class, internalLogger);
         assertEquals("testlogger", internalLogger.name());
     }
 
@@ -52,7 +53,7 @@ public class Slf4JLoggerFactoryTest {
         Logger logger = mock(LocationAwareLogger.class);
         when(logger.getName()).thenReturn("testlogger");
         InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
-        assertTrue(internalLogger instanceof LocationAwareSlf4JLogger);
+        assertInstanceOf(LocationAwareSlf4JLogger.class, internalLogger);
         assertEquals("testlogger", internalLogger.name());
     }
 

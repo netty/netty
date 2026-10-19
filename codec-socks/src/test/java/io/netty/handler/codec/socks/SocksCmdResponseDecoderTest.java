@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
@@ -37,7 +37,7 @@ public class SocksCmdResponseDecoderTest {
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         if (addressType == SocksAddressType.UNKNOWN) {
-            assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
+            assertInstanceOf(UnknownSocksResponse.class, embedder.readInbound());
         } else {
             msg = embedder.readInbound();
             assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);

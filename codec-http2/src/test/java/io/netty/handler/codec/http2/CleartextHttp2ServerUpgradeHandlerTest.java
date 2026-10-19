@@ -113,7 +113,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertFalse(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
-        assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
+        assertInstanceOf(PriorKnowledgeUpgradeEvent.class, userEvents.get(0));
 
         assertEquals(100, http2ConnectionHandler.connection().local().maxActiveStreams());
         assertEquals(65535, http2ConnectionHandler.connection().local().flowController().initialWindowSize());
@@ -166,7 +166,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertFalse(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
-        assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
+        assertInstanceOf(PriorKnowledgeUpgradeEvent.class, userEvents.get(0));
 
         assertEquals(100, http2ConnectionHandler.connection().local().maxActiveStreams());
         assertEquals(65535, http2ConnectionHandler.connection().local().flowController().initialWindowSize());
@@ -186,7 +186,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertTrue(channel.writeInbound(inbound));
 
         Object firstInbound = channel.readInbound();
-        assertTrue(firstInbound instanceof HttpRequest);
+        assertInstanceOf(HttpRequest.class, firstInbound);
         HttpRequest request = (HttpRequest) firstInbound;
         assertEquals(HttpMethod.GET, request.method());
         assertEquals("/", request.uri());
@@ -234,7 +234,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertTrue(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
-        assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
+        assertInstanceOf(PriorKnowledgeUpgradeEvent.class, userEvents.get(0));
     }
 
     @ParameterizedTest
@@ -377,7 +377,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertEquals(1, userEvents.size());
 
         Object userEvent = userEvents.get(0);
-        assertTrue(userEvent instanceof UpgradeEvent);
+        assertInstanceOf(UpgradeEvent.class, userEvent);
         assertEquals("h2c", ((UpgradeEvent) userEvent).protocol());
         ReferenceCountUtil.release(userEvent);
 

@@ -1862,7 +1862,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
@@ -1995,7 +1995,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());

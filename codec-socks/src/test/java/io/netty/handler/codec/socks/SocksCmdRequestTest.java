@@ -27,7 +27,7 @@ import java.nio.CharBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class SocksCmdRequestTest {
     @Test
@@ -35,19 +35,19 @@ public class SocksCmdRequestTest {
         try {
             new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
 
         try {
             new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
 
         try {
             new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 1);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 
@@ -56,7 +56,7 @@ public class SocksCmdRequestTest {
         try {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -65,7 +65,7 @@ public class SocksCmdRequestTest {
         try {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -78,7 +78,7 @@ public class SocksCmdRequestTest {
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή" +
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή", 1);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -158,14 +158,14 @@ public class SocksCmdRequestTest {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", 0);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
 
         try {
             new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", 65536);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 }
