@@ -52,6 +52,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
     private DecoderJNI.Wrapper decoder;
     private boolean destroyed;
     private boolean needsRead;
+    private boolean pulledSinceLastPush;
     private ByteBuf accumBuffer;
 
     /**
@@ -98,6 +99,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
 
     private void forwardOutput(ChannelHandlerContext ctx) {
         ByteBuffer nativeBuffer = decoder.pull(outputBufferSize);
+        pulledSinceLastPush = true;
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
         int remaining = nativeBuffer.remaining();
         if (accumBuffer == null) {
@@ -127,7 +129,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
                     return State.DONE;
 
                 case OK:
-                    decoder.push(0);
+                    push(0);
                     break;
 
                 case NEEDS_MORE_INPUT:
@@ -136,13 +138,20 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
                     }
 
                     if (!input.isReadable()) {
+                        if (pulledSinceLastPush) {
+                            // After a pull, the decoder reports NEEDS_MORE_INPUT as soon as all pushed input is
+                            // consumed, even if it could still produce more output from its internal state
+                            // (e.g. a long back-reference). Push without new input to find out.
+                            push(0);
+                            break;
+                        }
                         return State.NEEDS_MORE_INPUT;
                     }
 
                     ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
                     decoderInputBuffer.clear();
                     int readBytes = readBytes(input, decoderInputBuffer);
-                    decoder.push(readBytes);
+                    push(readBytes);
                     break;
 
                 case NEEDS_MORE_OUTPUT:
@@ -153,6 +162,11 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
                     return State.ERROR;
             }
         }
+    }
+
+    private void push(int length) {
+        pulledSinceLastPush = false;
+        decoder.push(length);
     }
 
     private static int readBytes(ByteBuf in, ByteBuffer dest) {
