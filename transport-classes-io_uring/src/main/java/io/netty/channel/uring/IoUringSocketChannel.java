@@ -547,6 +547,11 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             final ChannelPipeline pipeline = pipeline();
             try {
                 int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
+                if (nativeCallResult == 0) {
+                    // EOF: the peer closed the connection, so there is no control message to inspect.
+                    shutdownInput(true);
+                    return;
+                }
                 int nativeFd = readMsgHdrMemory.getScmRightsFd();
                 allocHandle.lastBytesRead(nativeFd);
                 allocHandle.incMessagesRead(1);
@@ -619,6 +624,13 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                     int read = res;
                     for (;;) {
                         int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                        // Snapshot the number of allocated buffers before calling useBuffer(...) as that call
+                        // might grow the ring (and so change allocatedBuffers) once the last posted buffer is
+                        // consumed. The bundle completion we are walking here was produced by the kernel using
+                        // the ring size as it was *before* any such growth, so the wrap-around for the next bid
+                        // in this bundle must be computed with that same (old) size to stay in sync with the
+                        // kernel.
+                        int allocatedBuffers = bufferRing.allocatedBuffers();
                         byteBuf = bufferRing.useBuffer(bid, read, more);
                         read -= byteBuf.readableBytes();
                         allocHandle.attemptedBytesRead(attemptedBytesRead);
@@ -633,7 +645,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                         allocHandle.incMessagesRead(1);
                         pipeline.fireChannelRead(byteBuf);
                         byteBuf = null;
-                        bid = bufferRing.nextBid(bid);
+                        bid = bufferRing.nextBid(bid, allocatedBuffers);
                         if (!allocHandle.continueReading()) {
                             // We should call fireChannelReadComplete() to mimic a normal read loop.
                             allocHandle.readComplete();
