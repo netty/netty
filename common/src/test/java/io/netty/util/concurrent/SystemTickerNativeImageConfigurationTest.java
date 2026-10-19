@@ -31,7 +31,7 @@ class SystemTickerNativeImageConfigurationTest {
     void systemTickerIsInitializedAtRuntime() throws IOException {
         Properties properties = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream(
-                "META-INF/native-image/io.netty/netty-common/native-image.properties")) {
+                "META-INF/native-image/io.netty/netty5-common/native-image.properties")) {
             assertNotNull(input);
             properties.load(input);
         }
