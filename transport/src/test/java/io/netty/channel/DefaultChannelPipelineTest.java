@@ -197,6 +197,39 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testPendingOutboundBytesHandlerRemovedWhileHandlingEvent() throws Exception {
+        class PendingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+            private long pending;
+
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                return pending;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                // Hold on to the write, the same way a handler that waits for a handshake does.
+                pending = 5;
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                // Remove ourself while the pipeline accounts for the pending bytes, and only release them
+                // afterwards. The bytes must be released from the pipeline exactly once.
+                ctx.pipeline().remove(this);
+                pending = 0;
+            }
+        }
+        EmbeddedChannel channel = new EmbeddedChannel(new PendingHandler());
+        channel.write(new Object());
+        assertEquals(5, ((DefaultChannelPipeline) channel.pipeline()).pendingOutboundBytes());
+
+        channel.writeInbound(new Object());
+        assertEquals(0, ((DefaultChannelPipeline) channel.pipeline()).pendingOutboundBytes());
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testFreeCalled() throws Exception {
         final CountDownLatch free = new CountDownLatch(1);
 
