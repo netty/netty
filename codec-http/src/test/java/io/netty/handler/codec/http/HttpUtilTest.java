@@ -41,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpUtilTest {
 
@@ -309,36 +308,21 @@ public class HttpUtilTest {
     public void testGetContentLengthThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message));
     }
 
     @Test
     public void testGetContentLengthIntDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1));
     }
 
     @Test
     public void testGetContentLengthLongDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1L);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1L));
     }
 
     @Test

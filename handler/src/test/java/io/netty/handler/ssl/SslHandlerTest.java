@@ -565,11 +565,11 @@ public class SslHandlerTest {
         assertTrue(channel.finishAndReleaseAll());
 
         SslCompletionEvent evt = events.take();
-        assertTrue(evt instanceof SslHandshakeCompletionEvent);
+        assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
         assertInstanceOf(ClosedChannelException.class, evt.cause());
 
         evt = events.take();
-        assertTrue(evt instanceof SslCloseCompletionEvent);
+        assertInstanceOf(SslCloseCompletionEvent.class, evt);
         assertInstanceOf(ClosedChannelException.class, evt.cause());
         assertTrue(events.isEmpty());
     }
@@ -640,7 +640,7 @@ public class SslHandlerTest {
             latch.await();
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslHandshakeCompletionEvent);
+            assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
             assertInstanceOf(SSLException.class, evt.cause());
 
             Future<Void> future = (Future<Void>) events.take();
@@ -653,7 +653,7 @@ public class SslHandlerTest {
 
             latch2.await();
             evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslCloseCompletionEvent);
+            assertInstanceOf(SslCloseCompletionEvent.class, evt);
             assertInstanceOf(ClosedChannelException.class, evt.cause());
             assertTrue(events.isEmpty());
         } finally {

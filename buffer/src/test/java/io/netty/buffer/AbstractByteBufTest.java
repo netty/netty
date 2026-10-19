@@ -405,12 +405,7 @@ public abstract class AbstractByteBufTest {
     public void getByteArrayBoundaryCheck3() {
         byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
-        try {
-            buffer.getBytes(0, dst, -1, 4);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Success
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.getBytes(0, dst, -1, 4));
 
         // No partial copy is expected.
         assertEquals(0, dst[0]);
@@ -423,12 +418,7 @@ public abstract class AbstractByteBufTest {
     public void getByteArrayBoundaryCheck4() {
         byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
-        try {
-            buffer.getBytes(0, dst, 1, 4);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Success
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.getBytes(0, dst, 1, 4));
 
         // No partial copy is expected.
         assertEquals(0, dst[0]);
@@ -1902,12 +1892,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testWriteZero() {
-        try {
-            buffer.writeZero(-1);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // Expected
-        }
+        assertThrows(IllegalArgumentException.class, () -> buffer.writeZero(-1));
 
         buffer.clear();
         while (buffer.isWritable()) {
@@ -2266,12 +2251,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testCompareTo() {
-        try {
-            buffer.compareTo(null);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, () -> buffer.compareTo(null));
 
         // Fill the random stuff
         byte[] value = new byte[32];
@@ -2538,19 +2518,9 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
         assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
 
-        try {
-            buffer.indexOf(0, buffer.capacity() + 1, (byte) 0);
-            fail();
-        } catch (IndexOutOfBoundsException expected) {
-            // expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.indexOf(0, buffer.capacity() + 1, (byte) 0));
 
-        try {
-            buffer.indexOf(buffer.capacity(), -1, (byte) 0);
-            fail();
-        } catch (IndexOutOfBoundsException expected) {
-            // expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.indexOf(buffer.capacity(), -1, (byte) 0));
 
         assertEquals(4, buffer.indexOf(buffer.capacity() + 1, 0, (byte) 1));
         assertEquals(0, buffer.indexOf(-1, buffer.capacity(), (byte) 1));
@@ -2560,12 +2530,7 @@ public abstract class AbstractByteBufTest {
     public void testIndexOfReleaseBuffer() {
         ByteBuf buffer = releasedBuffer();
         if (buffer.capacity() != 0) {
-            try {
-                buffer.indexOf(0, 1, (byte) 1);
-                fail();
-            } catch (IllegalReferenceCountException expected) {
-                // expected
-            }
+            assertThrows(IllegalReferenceCountException.class, () -> buffer.indexOf(0, 1, (byte) 1));
         } else {
             assertEquals(-1, buffer.indexOf(0, 1, (byte) 1));
         }
@@ -2623,12 +2588,7 @@ public abstract class AbstractByteBufTest {
         buffer.skipBytes(CAPACITY / 4);
         assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
 
-        try {
-            buffer.skipBytes(CAPACITY / 4 + 1);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.skipBytes(CAPACITY / 4 + 1));
 
         // Should remain unchanged.
         assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
@@ -4590,12 +4550,7 @@ public abstract class AbstractByteBufTest {
     public void testArrayAfterRelease() {
         ByteBuf buf = releasedBuffer();
         if (buf.hasArray()) {
-            try {
-                buf.array();
-                fail();
-            } catch (IllegalReferenceCountException e) {
-                // expected
-            }
+            assertThrows(IllegalReferenceCountException.class, () -> buf.array());
         }
     }
 
@@ -4603,12 +4558,7 @@ public abstract class AbstractByteBufTest {
     public void testMemoryAddressAfterRelease() {
         ByteBuf buf = releasedBuffer();
         if (buf.hasMemoryAddress()) {
-            try {
-                buf.memoryAddress();
-                fail();
-            } catch (IllegalReferenceCountException e) {
-                // expected
-            }
+            assertThrows(IllegalReferenceCountException.class, () -> buf.memoryAddress());
         }
     }
 
@@ -4654,13 +4604,10 @@ public abstract class AbstractByteBufTest {
             }
         }
         for (ByteBuf buf : bufs) {
-            try {
+            assertThrows(IllegalReferenceCountException.class, () -> {
                 assertEquals(0, buf.refCnt());
                 buf.slice();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+            });
         }
     }
 
@@ -4729,13 +4676,10 @@ public abstract class AbstractByteBufTest {
             }
         }
         for (ByteBuf buf : bufs) {
-            try {
+            assertThrows(IllegalReferenceCountException.class, () -> {
                 assertEquals(0, buf.refCnt());
                 buf.retainedSlice();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+            });
         }
     }
 
@@ -4804,13 +4748,10 @@ public abstract class AbstractByteBufTest {
             }
         }
         for (ByteBuf buf : bufs) {
-            try {
+            assertThrows(IllegalReferenceCountException.class, () -> {
                 assertEquals(0, buf.refCnt());
                 buf.duplicate();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+            });
         }
     }
 
@@ -4844,13 +4785,10 @@ public abstract class AbstractByteBufTest {
             }
         }
         for (ByteBuf buf : bufs) {
-            try {
+            assertThrows(IllegalReferenceCountException.class, () -> {
                 assertEquals(0, buf.refCnt());
                 buf.retainedDuplicate();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+            });
         }
     }
 
@@ -5933,12 +5871,7 @@ public abstract class AbstractByteBufTest {
 
         ByteBuffer dst = direct ? ByteBuffer.allocateDirect(bytes.length) : ByteBuffer.allocate(bytes.length);
         ByteBuffer readOnlyDst = dst.asReadOnlyBuffer();
-        try {
-            buffer.getBytes(0, readOnlyDst);
-            fail();
-        } catch (ReadOnlyBufferException e) {
-            // expected
-        }
+        assertThrows(ReadOnlyBufferException.class, () -> buffer.getBytes(0, readOnlyDst));
         assertEquals(0, readOnlyDst.position());
         buffer.release();
     }
@@ -6384,10 +6317,7 @@ public abstract class AbstractByteBufTest {
         buffer.writerIndex(buffer.readerIndex());
         buffer.writeByte(1);
         try {
-            buffer.ensureWritable(Integer.MAX_VALUE);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // expected
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.ensureWritable(Integer.MAX_VALUE));
         } finally {
             buffer.release();
         }

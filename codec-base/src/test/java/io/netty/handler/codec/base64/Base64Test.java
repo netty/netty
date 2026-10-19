@@ -33,8 +33,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class Base64Test {
 
@@ -251,10 +251,7 @@ public class Base64Test {
         for (char invalidChar : invalidChars) {
             ByteBuf buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1);
             try {
-                Base64.decode(buf);
-                fail("Invalid character in not detected: " + invalidChar);
-            } catch (IllegalArgumentException ignored) {
-                // as expected
+                assertThrows(IllegalArgumentException.class, () -> Base64.decode(buf));
             } finally {
                 assertTrue(buf.release());
             }
