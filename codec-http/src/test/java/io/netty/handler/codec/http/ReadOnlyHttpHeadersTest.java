@@ -127,6 +127,17 @@ public class ReadOnlyHttpHeadersTest {
     }
 
     @Test
+    public void validateValuesFail() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyHttpHeaders(true, "x", "a\r\nInjected: 1");
+            }
+        });
+        new ReadOnlyHttpHeaders(false, "x", "a\r\nInjected: 1");
+    }
+
+    @Test
     public void emptyHeaderName() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override

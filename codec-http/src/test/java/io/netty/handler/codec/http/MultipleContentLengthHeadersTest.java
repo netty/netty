@@ -21,6 +21,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MultipleContentLengthHeadersTest {
@@ -81,6 +83,10 @@ public class MultipleContentLengthHeadersTest {
     }
 
     private static String setupRequestString(boolean sameValue, boolean singleField) {
+        return setupRequestString(sameValue, singleField, "HTTP/1.1");
+    }
+
+    private static String setupRequestString(boolean sameValue, boolean singleField, String version) {
         String firstValue = "1";
         String secondValue = sameValue ? firstValue : "2";
         String contentLength;
@@ -90,7 +96,7 @@ public class MultipleContentLengthHeadersTest {
             contentLength = "Content-Length: " + firstValue + "\r\n" +
                             "Content-Length: " + secondValue + "\r\n\r\n";
         }
-        return "PUT /some/path HTTP/1.1\r\n" +
+        return "PUT /some/path " + version + "\r\n" +
                contentLength +
                "ab";
     }
@@ -105,6 +111,18 @@ public class MultipleContentLengthHeadersTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertInvalid(request);
+        assertFalse(channel.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"HTTP/1.0", "HTTP/0.9"})
+    public void testMultipleContentLengthHeadersHttp10(String version) {
+        EmbeddedChannel channel = newChannel(false);
+        String requestStr = setupRequestString(false, false, version);
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertInvalid(request);
+        assertNull(channel.readInbound());
         assertFalse(channel.finish());
     }
 

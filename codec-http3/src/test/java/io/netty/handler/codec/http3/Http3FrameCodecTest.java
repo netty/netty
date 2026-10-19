@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_
 import static io.netty.handler.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertException;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
+import static io.netty.handler.codec.http3.QpackUtil.encodePrefixedInteger;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1083,6 +1084,68 @@ public class Http3FrameCodecTest {
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_SETTINGS_FRAME_TYPE, 1, 1}),
             Http3ErrorCode.H3_FRAME_ERROR);
+    }
+
+    @Test
+    public void testClosingBlockedStreamReleasesBlockedStream() throws Exception {
+        setUp(1, false);
+        assertFalse(codecChannel.writeInbound(blockingHeadersFrame()));
+        codecChannel.close().syncUninterruptibly();
+        ByteBuf expected = Unpooled.buffer();
+        encodePrefixedInteger(expected, (byte) 0b0100_0000, 6, codecChannel.streamId());
+        ByteBuf canceled = decoderStream.readOutbound();
+        try {
+            assertEquals(expected, canceled);
+        } finally {
+            canceled.release();
+            expected.release();
+        }
+    }
+
+    @Test
+    public void testFinOnBlockedStreamReleasesBlockedStream() throws Exception {
+        setUp(1, false);
+        EmbeddedQuicStreamChannel first = newValidatedRequestStream();
+        EmbeddedQuicStreamChannel second = newValidatedRequestStream();
+        try {
+            assertFalse(first.writeInboundWithFin(blockingHeadersFrame()));
+            assertTrue(first.isActive());
+            assertFalse(second.writeInbound(blockingHeadersFrame()));
+        } finally {
+            first.finishAndReleaseAll();
+            second.finishAndReleaseAll();
+            decoderStream.releaseOutbound();
+        }
+    }
+
+    private static ByteBuf blockingHeadersFrame() {
+        ByteBuf buffer = Unpooled.buffer();
+        writeVariableLengthInteger(buffer, HTTP3_HEADERS_FRAME_TYPE);
+        writeVariableLengthInteger(buffer, 3);
+        buffer.writeByte(0x02);
+        buffer.writeByte(0x00);
+        buffer.writeByte(0x80);
+        return buffer;
+    }
+
+    private EmbeddedQuicStreamChannel newValidatedRequestStream() throws Exception {
+        return (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+            new ChannelInitializer<QuicStreamChannel>() {
+                @Override
+                protected void initChannel(QuicStreamChannel ch) {
+                    Http3RequestStreamEncodeStateValidator encStateValidator =
+                        new Http3RequestStreamEncodeStateValidator();
+                    Http3RequestStreamDecodeStateValidator decStateValidator =
+                        new Http3RequestStreamDecodeStateValidator();
+                    ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION,
+                        decoder, MAX_HEADER_SIZE, Integer.MAX_VALUE, encoder,
+                        encStateValidator, decStateValidator, (id, v) -> false));
+                    ch.pipeline().addLast(encStateValidator);
+                    ch.pipeline().addLast(decStateValidator);
+                    ch.pipeline().addLast(Http3RequestStreamValidationHandler.newServerValidator(
+                        qpackAttributes, decoder, encStateValidator, decStateValidator));
+                }
+            }).get();
     }
 
     private void testInvalidHttp3Frame0(boolean delayQpackStreams, int type, int length, Http3ErrorCode code) {

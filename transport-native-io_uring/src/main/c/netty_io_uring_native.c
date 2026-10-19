@@ -222,6 +222,21 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
+static jint netty_io_uring_close(JNIEnv* env, jclass clazz, jint fd) {
+    if (close(fd) < 0) {
+        // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and
+        // "assume" everything is fine == we closed the file descriptor.
+        //
+        // For more details see:
+        //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+        //     - https://lwn.net/Articles/576478/
+        if (errno != EINTR) {
+            return -errno;
+        }
+    }
+    return 0;
+}
+
 static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
@@ -600,6 +615,10 @@ static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
     return sizeof(size_t);
 }
 
+static jint netty_io_uring_sizeofInt(JNIEnv* env, jclass clazz) {
+    return sizeof(int);
+}
+
 static jint netty_io_uring_sizeofIovec(JNIEnv* env, jclass clazz) {
     return sizeof(struct iovec);
 }
@@ -758,6 +777,10 @@ static jint netty_io_uring_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
+static jint netty_io_uring_msgCtrunc(JNIEnv* env, jclass clazz) {
+    return MSG_CTRUNC;
+}
+
 static jint netty_io_uring_cmsgSpace(JNIEnv* env, jclass clazz) {
     return CMSG_SPACE(sizeof(uint16_t));
 }
@@ -821,6 +844,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrUnOffsetofSunPath", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunPath },
   { "maxSunPathLen", "()I", (void *) netty_io_uring_max_sun_path_len },
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
+  { "sizeofInt", "()I", (void *) netty_io_uring_sizeofInt },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},
   { "cmsgSpaceForFd", "()I", (void *) netty_io_uring_cmsgSpace_for_fd},
@@ -851,6 +875,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "iosqeBufferSelect", "()I", (void *) netty_io_uring_BufferSelect },
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
   { "msgFastopen", "()I", (void *) netty_io_uring_msgFastopen },
+  { "msgCtrunc", "()I", (void *) netty_io_uring_msgCtrunc },
   { "solUdp", "()I", (void *) netty_io_uring_solUdp },
   { "solSocket", "()I", (void *) netty_io_uring_solSocket },
   { "udpSegment", "()I", (void *) netty_io_uring_udpSegment },
@@ -882,6 +907,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
+    {"close", "(I)I", (void *) netty_io_uring_close },
     {"registerUnix", "()I", (void *) netty_io_uring_registerUnix },
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
