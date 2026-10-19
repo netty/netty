@@ -133,7 +133,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testMaxLengthFrameWithDelimiterSplitAcrossReads() {
+    public void testMaxLengthFrameWithDelimiterSplitAcrossReads() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
         // The frame has maxFrameLength bytes, the first delimiter byte is in the same read.
         ch.writeInbound(ascii("ABCD#"));
@@ -145,7 +145,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDelimiterSplitAcrossReadsWhileDiscarding() {
+    public void testDelimiterSplitAcrossReadsWhileDiscarding() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
         // failFast: the exception is raised as soon as the frame is known to be too long.
         assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("AAAAAAAAAA#")));
@@ -157,7 +157,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDelimiterSplitAcrossReadsWhileDiscardingNoFailFast() {
+    public void testDelimiterSplitAcrossReadsWhileDiscardingNoFailFast() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(4, true, false, ascii("##")));
         ch.writeInbound(ascii("AAAAAAAAAA#"));
@@ -171,7 +171,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testMaxFrameLengthEnforcedWithDelimiterSplitAcrossReads() {
+    public void testMaxFrameLengthEnforcedWithDelimiterSplitAcrossReads() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
         // One byte more than maxFrameLength.
         assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("ABCDE#")));
