@@ -215,7 +215,7 @@ public final class PlatformDependent {
                     // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
                     // but we cannot use "shared" arenas due to JDK bugs.
                     // If the "linker" implementation is supported, then we have native access permissions
-                    // in the "io.netty.common" module, and we can link directly to malloc() and free() from libc.
+                    // in the "io.netty.common" module, and we can link directly to the process' malloc() and free().
                     LEGACY_CLEANER = new CleanerJava24Linker();
                 } else if (CleanerJava25.isSupported()) {
                     // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
