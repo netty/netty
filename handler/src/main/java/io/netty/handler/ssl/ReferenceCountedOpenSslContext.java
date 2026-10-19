@@ -35,7 +35,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -294,11 +293,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
         }
-        if (isCertificateCompressionDisabled(mode)) {
+        if (certCompressionConfig == null && isCertificateCompressionDisabled(mode)) {
             certCompressionConfig = null;
-        } else {
-            certCompressionConfig = resolveCertificateCompressionConfig(certCompressionConfig,
-                    PlatformDependent.javaVersion(), OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
+        } else if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+            certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
         }
 
         this.tlsFalseStart = tlsFalseStart;
@@ -520,14 +518,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
         }
         return false;
-    }
-
-    static OpenSslCertificateCompressionConfig resolveCertificateCompressionConfig(
-            OpenSslCertificateCompressionConfig config, int javaVersion, boolean supportsCertificateCompression) {
-        if (config == null && javaVersion >= 27 && supportsCertificateCompression) {
-            return DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
-        }
-        return config;
     }
 
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {

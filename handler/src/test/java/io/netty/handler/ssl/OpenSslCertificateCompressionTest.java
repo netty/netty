@@ -34,7 +34,6 @@ import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,10 +46,7 @@ import javax.net.ssl.SSLHandshakeException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OpenSslCertificateCompressionTest {
@@ -78,22 +74,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    public void testDefaultCompressionConfigVersionBoundary() {
-        assertNull(ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 26, true));
-        assertNull(ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 27, false));
-
-        OpenSslCertificateCompressionConfig config =
-                ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 27, true);
-        OpenSslCertificateCompressionConfig.AlgorithmConfig algorithmConfig = config.iterator().next();
-        assertSame(ZlibCertificateCompressionAlgorithm.INSTANCE, algorithmConfig.algorithm());
-        assertEquals(OpenSslCertificateCompressionConfig.AlgorithmMode.Both, algorithmConfig.mode());
-
-        OpenSslCertificateCompressionConfig explicitConfig = OpenSslCertificateCompressionConfig.newBuilder().build();
-        assertSame(explicitConfig,
-                ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(explicitConfig, 27, true));
-    }
-
-    @Test
     public void testSimple() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = buildClientContext(
@@ -117,7 +97,6 @@ public class OpenSslCertificateCompressionTest {
     @Test
     public void testDefaultZlibCompression() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
-        assumeTrue(PlatformDependent.javaVersion() >= 27);
         TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
         SslContext clientSslContext = SslContextBuilder.forClient()
                 .sslProvider(SslProvider.OPENSSL)
@@ -141,7 +120,6 @@ public class OpenSslCertificateCompressionTest {
     @Test
     public void testDefaultZlibDecompression() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
-        assumeTrue(PlatformDependent.javaVersion() >= 27);
         SslContext clientSslContext = SslContextBuilder.forClient()
                 .sslProvider(SslProvider.OPENSSL)
                 .protocols(SslProtocols.TLS_v1_3)
@@ -163,38 +141,6 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    public void testNoDefaultCompressionBeforeJdk27() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
-        assumeTrue(PlatformDependent.javaVersion() < 27);
-        TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
-        SslContext clientSslContext = buildClientContext(
-                OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(clientAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
-                        .build());
-        SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.OPENSSL)
-                .protocols(SslProtocols.TLS_v1_3)
-                .build();
-
-        runCertCompressionTest(clientSslContext, serverSslContext);
-        assertFalse(clientAlgorithm.decompressCalled);
-
-        clientSslContext = SslContextBuilder.forClient()
-                .sslProvider(SslProvider.OPENSSL)
-                .protocols(SslProtocols.TLS_v1_3)
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-        TrackingZlibAlgorithm serverAlgorithm = new TrackingZlibAlgorithm();
-        serverSslContext = buildServerContext(
-                OpenSslCertificateCompressionConfig.newBuilder()
-                        .addAlgorithm(serverAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
-                        .build());
-
-        runCertCompressionTest(clientSslContext, serverSslContext);
-        assertFalse(serverAlgorithm.compressCalled);
-    }
-
-    @Test
     public void testEmptyConfigDisablesDefault() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         SslContext clientSslContext = buildClientContext(OpenSslCertificateCompressionConfig.newBuilder().build());
@@ -209,17 +155,17 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    public void testClientDisableExtensionsOverridesExplicitConfig() throws Throwable {
+    public void testClientDisableExtensionsDisablesDefaultConfig() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String property = "jdk.tls.client.disableExtensions";
         String previous = System.getProperty(property);
         System.setProperty(property, "compress_certificate_extra, compress_certificate");
         try {
-            TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
-            SslContext clientSslContext = buildClientContext(
-                    OpenSslCertificateCompressionConfig.newBuilder()
-                            .addAlgorithm(clientAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
-                            .build());
+            SslContext clientSslContext = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .build();
             TrackingZlibAlgorithm serverAlgorithm = new TrackingZlibAlgorithm();
             SslContext serverSslContext = buildServerContext(
                     OpenSslCertificateCompressionConfig.newBuilder()
@@ -227,7 +173,6 @@ public class OpenSslCertificateCompressionTest {
                             .build());
 
             runCertCompressionTest(clientSslContext, serverSslContext);
-            assertFalse(clientAlgorithm.decompressCalled);
             assertFalse(serverAlgorithm.compressCalled);
         } finally {
             restoreProperty(property, previous);
@@ -235,7 +180,7 @@ public class OpenSslCertificateCompressionTest {
     }
 
     @Test
-    public void testServerDisableExtensionsOverridesExplicitConfig() throws Throwable {
+    public void testServerDisableExtensionsDisablesDefaultConfig() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String property = "jdk.tls.server.disableExtensions";
         String previous = System.getProperty(property);
@@ -246,29 +191,27 @@ public class OpenSslCertificateCompressionTest {
                     OpenSslCertificateCompressionConfig.newBuilder()
                             .addAlgorithm(clientAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                             .build());
-            TrackingZlibAlgorithm serverAlgorithm = new TrackingZlibAlgorithm();
-            SslContext serverSslContext = buildServerContext(
-                    OpenSslCertificateCompressionConfig.newBuilder()
-                            .addAlgorithm(serverAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
-                            .build());
+            SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
 
             runCertCompressionTest(clientSslContext, serverSslContext);
             assertFalse(clientAlgorithm.decompressCalled);
-            assertFalse(serverAlgorithm.compressCalled);
         } finally {
             restoreProperty(property, previous);
         }
     }
 
     @Test
-    public void testOtherDisabledExtensionsDoNotDisableCompression() throws Throwable {
+    public void testExplicitConfigOverridesDisableExtensions() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String clientProperty = "jdk.tls.client.disableExtensions";
         String serverProperty = "jdk.tls.server.disableExtensions";
         String previousClient = System.getProperty(clientProperty);
         String previousServer = System.getProperty(serverProperty);
-        System.setProperty(clientProperty, "compress_certificate_extra");
-        System.setProperty(serverProperty, "compress_certificate_extra");
+        System.setProperty(clientProperty, "compress_certificate_extra, compress_certificate");
+        System.setProperty(serverProperty, "compress_certificate, compress_certificate_extra");
         try {
             TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
             SslContext clientSslContext = buildClientContext(
@@ -284,6 +227,48 @@ public class OpenSslCertificateCompressionTest {
             runCertCompressionTest(clientSslContext, serverSslContext);
             assertTrue(clientAlgorithm.decompressCalled);
             assertTrue(serverAlgorithm.compressCalled);
+        } finally {
+            restoreProperty(clientProperty, previousClient);
+            restoreProperty(serverProperty, previousServer);
+        }
+    }
+
+    @Test
+    public void testOtherDisabledExtensionsDoNotDisableDefaultConfig() throws Throwable {
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
+        String clientProperty = "jdk.tls.client.disableExtensions";
+        String serverProperty = "jdk.tls.server.disableExtensions";
+        String previousClient = System.getProperty(clientProperty);
+        String previousServer = System.getProperty(serverProperty);
+        System.setProperty(clientProperty, "compress_certificate_extra");
+        System.setProperty(serverProperty, "compress_certificate_extra");
+        try {
+            SslContext clientSslContext = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .build();
+            TrackingZlibAlgorithm serverAlgorithm = new TrackingZlibAlgorithm();
+            SslContext serverSslContext = buildServerContext(
+                    OpenSslCertificateCompressionConfig.newBuilder()
+                            .addAlgorithm(serverAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                            .build());
+
+            runCertCompressionTest(clientSslContext, serverSslContext);
+            assertTrue(serverAlgorithm.compressCalled);
+
+            TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
+            clientSslContext = buildClientContext(
+                    OpenSslCertificateCompressionConfig.newBuilder()
+                            .addAlgorithm(clientAlgorithm, OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                            .build());
+            serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
+
+            runCertCompressionTest(clientSslContext, serverSslContext);
+            assertTrue(clientAlgorithm.decompressCalled);
         } finally {
             restoreProperty(clientProperty, previousClient);
             restoreProperty(serverProperty, previousServer);
