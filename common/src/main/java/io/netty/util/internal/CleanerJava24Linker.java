@@ -158,8 +158,12 @@ public class CleanerJava24Linker implements Cleaner {
                     MethodHandle dlsym = linker.downcallHandle(linker.defaultLookup().findOrThrow("dlsym"),
                         FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
                     try (Arena arena = Arena.ofConfined()) {
-                        malloc = (MemorySegment) dlsym.invoke(rtldDefault, arena.allocateFrom("malloc"));
-                        free = (MemorySegment) dlsym.invoke(rtldDefault, arena.allocateFrom("free"));
+                        long mallocAddr = (long) dlsym.invoke(rtldDefault, arena.allocateFrom("malloc"));
+                        long freeAddr = (long) dlsym.invoke(rtldDefault, arena.allocateFrom("free"));
+                        if (mallocAddr != 0 && freeAddr != 0) {
+                            malloc = MemorySegment.ofAddress(mallocAddr);
+                            free = MemorySegment.ofAddress(freeAddr);
+                        }
                     }
                 }
                 if (malloc == null || malloc == MemorySegment.NULL || free == null || free == MemorySegment.NULL) {
