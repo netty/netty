@@ -15,11 +15,13 @@
  */
 package io.netty.handler.codec.quic;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,9 +30,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicStreamLimitTest extends AbstractQuicTest {
 
@@ -179,6 +184,80 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             streamPromise.sync();
             // Second stream creation should fail.
             assertInstanceOf(QuicException.class, stream2Promise.get());
+            quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamLimitRestoredWhenStreamClosedBeforeEndOfInput(Executor executor) throws Throwable {
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1),
+                InsecureQuicTokenHandler.INSTANCE,
+                serverHandler, new ChannelInboundHandler() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ReferenceCountUtil.release(msg);
+                        // Close the stream before the FIN of the remote peer was received.
+                        ctx.close();
+                    }
+                });
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(executor);
+
+        Semaphore streamLimitChanged = new Semaphore(0);
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof QuicStreamLimitChangedEvent) {
+                    streamLimitChanged.release();
+                }
+                super.userEventTriggered(ctx, evt);
+            }
+        };
+        try {
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientHandler)
+                    .streamHandler(new ChannelInboundHandler() { })
+                    .remoteAddress(address)
+                    .connect().get();
+            assertTrue(streamLimitChanged.tryAcquire(5, TimeUnit.SECONDS));
+
+            // Each stream uses the only stream the server allows, so the next one can only be created once the
+            // server completed the previous one.
+            for (int i = 0; i < 3; i++) {
+                assertEquals(1, quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL));
+                QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                        new ChannelInboundHandler() {
+                            @Override
+                            public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                                if (type.direction() == ChannelShutdownDirection.Inbound) {
+                                    // The server closed its side, now send our FIN.
+                                    ctx.close();
+                                }
+                                ctx.fireChannelShutdown(type);
+                            }
+                        }).get();
+                stream.writeAndFlush(Unpooled.directBuffer().writeZero(8)).sync();
+                stream.closeFuture().sync();
+                assertTrue(streamLimitChanged.tryAcquire(5, TimeUnit.SECONDS),
+                        "server did not complete stream " + stream.streamId());
+            }
             quicChannel.close().sync();
 
             serverHandler.assertState();
