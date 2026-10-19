@@ -98,7 +98,7 @@ public class SocksCmdResponseDecoderTest {
      * The bound domain length octet is unsigned; a bound domain of 128 to 255 characters must decode.
      */
     @Test
-    public void testSocksCmdResponseDecoderLongDomain() {
+    public void testSocksCmdResponseDecoderLongDomain() throws Exception {
         testSocksCmdResponseDecoderWithDifferentParams(
                 SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN, SocksCommonTestUtils.domainOfLength(128), 80);
         testSocksCmdResponseDecoderWithDifferentParams(

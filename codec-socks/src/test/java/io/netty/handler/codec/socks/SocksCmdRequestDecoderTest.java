@@ -118,7 +118,7 @@ public class SocksCmdRequestDecoderTest {
      * fails on spec-legal domain names of 128 to 255 characters.
      */
     @Test
-    public void testCmdRequestDecoderLongDomain() {
+    public void testCmdRequestDecoderLongDomain() throws Exception {
         String[] hosts = {SocksCommonTestUtils.domainOfLength(128), SocksCommonTestUtils.domainOfLength(255)};
         for (SocksCmdType cmdType : SocksCmdType.values()) {
             for (String host : hosts) {
