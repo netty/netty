@@ -49,6 +49,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * <p>
  * This handler can be configured using one or more {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
+ * <p>
+ * If CORS support is enabled for at least one {@link CorsConfig}, every response written
+ * by this handler will carry {@code Vary: Origin}, including responses to requests without
+ * {@code Origin} header or with an origin that is not allowed.
  */
 public class CorsHandler extends ChannelDuplexHandler {
 
@@ -60,6 +64,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private HttpRequest request;
     private final List<CorsConfig> configList;
     private final boolean isShortCircuit;
+    private final boolean varyOnOrigin;
     private boolean consumeContent;
 
     /**
@@ -80,6 +85,16 @@ public class CorsHandler extends ChannelDuplexHandler {
         checkNonEmpty(configList, "configList");
         this.configList = configList;
         this.isShortCircuit = isShortCircuit;
+        this.varyOnOrigin = isCorsSupportEnabled();
+    }
+
+    private boolean isCorsSupportEnabled() {
+        for (CorsConfig config : configList) {
+            if (config.isCorsSupportEnabled()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -167,6 +182,7 @@ public class CorsHandler extends ChannelDuplexHandler {
         if (origin != null && config != null) {
             if (NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed()) {
                 setNullOrigin(response);
+                setVaryHeader(response);
                 return true;
             }
             if (config.isAnyOriginSupported()) {
@@ -255,11 +271,14 @@ public class CorsHandler extends ChannelDuplexHandler {
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
+        if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
-            if (setOrigin(response)) {
+            if (config != null && config.isCorsSupportEnabled() && setOrigin(response)) {
                 setAllowCredentials(response);
                 setExposeHeaders(response);
+            }
+            if (varyOnOrigin) {
+                setVaryHeader(response);
             }
         }
         ctx.write(msg, promise);

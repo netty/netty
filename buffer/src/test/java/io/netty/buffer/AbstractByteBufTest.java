@@ -79,6 +79,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -2155,6 +2156,53 @@ public abstract class AbstractByteBufTest {
         duplicate = slice.retainedDuplicate();
         assertEquals(slice.capacity(), duplicate.capacity());
         duplicate.release();
+    }
+
+    @Test
+    public void testRetainedSliceOfNonRetainedDerivedBufferCoversTheReadableBytes() {
+        for (int i = 0; i < buffer.capacity(); i++) {
+            buffer.setByte(i, i);
+        }
+        // a writer index below the capacity, and a reader index at zero or above
+        for (int readerIndex = 0; readerIndex <= 1; readerIndex++) {
+            buffer.setIndex(readerIndex, buffer.capacity() - 2);
+            ByteBuf retainedDuplicate = null;
+            ByteBuf retainedSlice = null;
+            try {
+                retainedDuplicate = buffer.retainedDuplicate();
+                retainedSlice = buffer.retainedSlice();
+                for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice());
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate().duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice().slice());
+                }
+            } finally {
+                if (retainedDuplicate != null) {
+                    retainedDuplicate.release();
+                }
+                if (retainedSlice != null) {
+                    retainedSlice.release();
+                }
+            }
+            assertEquals(1, buffer.refCnt());
+        }
+    }
+
+    private static void assertRetainedSliceBeforeAndAfterRead(ByteBuf buf) {
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+        buf.readByte();
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+    }
+
+    private static void assertRetainedSliceMatchesTheReadableBytes(ByteBuf buf) {
+        ByteBuf retainedSlice = buf.retainedSlice();
+        try {
+            assertEquals(buf.readableBytes(), retainedSlice.readableBytes());
+            assertEquals(buf.slice(), retainedSlice);
+        } finally {
+            retainedSlice.release();
+        }
     }
 
     @Test
@@ -4511,6 +4559,21 @@ public abstract class AbstractByteBufTest {
         ByteBuf buf = releasedBuffer();
         if (buf.hasMemoryAddress()) {
             assertThrows(IllegalReferenceCountException.class, () -> buf.memoryAddress());
+        }
+    }
+
+    @Test
+    public void testMemoryAddressUnsupportedWhenNoMemoryAddress() {
+        ByteBuf buf = newBuffer(16);
+        try {
+            if (buf.hasMemoryAddress()) {
+                // Must not throw, and must not be the "no address" marker.
+                assertNotEquals(0L, buf.memoryAddress());
+            } else {
+                assertThrows(UnsupportedOperationException.class, () -> buf.memoryAddress());
+            }
+        } finally {
+            buf.release();
         }
     }
 
