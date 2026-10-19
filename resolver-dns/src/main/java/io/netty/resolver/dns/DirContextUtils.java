@@ -16,6 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -34,7 +35,20 @@ final class DirContextUtils {
 
     private DirContextUtils() { }
 
+    /**
+     * On IBM i the JNDI lookup ends up in {@code LoadDnsConfig}, which needs special authority
+     * ({@code *IOSYSCFG}) and can terminate the whole JVM when it is missing. See
+     * <a href="https://github.com/netty/netty/issues/17396">#17396</a>.
+     */
+    static boolean isIbmI(String osName) {
+        return "OS/400".equalsIgnoreCase(osName);
+    }
+
     static void addNameServers(List<InetSocketAddress> defaultNameServers, int defaultPort) {
+        if (isIbmI(SystemPropertyUtil.get("os.name", ""))) {
+            logger.debug("Not obtaining nameservers via InitialDirContext on IBM i");
+            return;
+        }
         // Using jndi-dns to obtain the default name servers.
         //
         // See:

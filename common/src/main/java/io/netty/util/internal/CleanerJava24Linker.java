@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.foreign.MemorySegment;
@@ -26,6 +27,7 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
+import java.util.Locale;
 
 import static java.lang.invoke.MethodType.methodType;
 
@@ -114,6 +116,7 @@ public class CleanerJava24Linker implements Cleaner {
      * that finds malloc and free.
      */
     private static final class Symbols {
+        private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
         static final MemorySegment MALLOC;
         static final MemorySegment FREE;
         static final Throwable UNAVAILABILITY_CAUSE;
@@ -148,9 +151,24 @@ public class CleanerJava24Linker implements Cleaner {
                 }
 
                 // Finally, we check that this platform has a native linker, and that it finds malloc and free.
-                SymbolLookup symbols = Linker.nativeLinker().defaultLookup();
-                malloc = symbols.findOrThrow("malloc");
-                free = symbols.findOrThrow("free");
+                Linker linker = Linker.nativeLinker();
+                long rtldDefault = rtldDefault();
+                SymbolLookup symbols = linker.defaultLookup();
+                if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
+                    MethodHandle dlsym = linker.downcallHandle(linker.defaultLookup().findOrThrow("dlsym"),
+                        FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
+                    try (Arena arena = Arena.ofConfined()) {
+                        malloc = (MemorySegment) dlsym.invoke(rtldDefault, arena.allocateFrom("malloc"));
+                        free = (MemorySegment) dlsym.invoke(rtldDefault, arena.allocateFrom("free"));
+                    }
+                }
+                if (malloc == null || malloc == MemorySegment.NULL || free == null || free == MemorySegment.NULL) {
+                    if (logger != null) {
+                        logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup");
+                    }
+                    malloc = symbols.findOrThrow("malloc");
+                    free = symbols.findOrThrow("free");
+                }
             } catch (Throwable throwable) {
                 malloc = null;
                 free = null;
@@ -159,6 +177,27 @@ public class CleanerJava24Linker implements Cleaner {
             MALLOC = malloc;
             FREE = free;
             UNAVAILABILITY_CAUSE = error;
+        }
+
+        /**
+         * The value of the {@code RTLD_DEFAULT} pseudo-handle for {@code dlsym(3)} on this platform, or
+         * {@link #RTLD_DEFAULT_UNSUPPORTED} if we do not know it. The value is not standardised: glibc and musl use
+         * {@code (void*) 0}, while macOS and the BSDs use {@code (void*) -2}. Windows has no {@code dlsym},
+         * and a native image must keep using the default lookup because the resolved addresses would otherwise be
+         * captured in the image heap at build time.
+         */
+        private static long rtldDefault() {
+            if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
+                return RTLD_DEFAULT_UNSUPPORTED;
+            }
+            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+            if (os.contains("linux")) {
+                return 0L;
+            }
+            if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
+                return -2L;
+            }
+            return RTLD_DEFAULT_UNSUPPORTED;
         }
     }
 
@@ -174,9 +213,9 @@ public class CleanerJava24Linker implements Cleaner {
         static {
             Linker linker = Linker.nativeLinker();
             INVOKE_MALLOC = linker.downcallHandle(Symbols.MALLOC,
-                    FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+                FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
             INVOKE_FREE = linker.downcallHandle(Symbols.FREE,
-                    FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
+                FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
         }
 
         static long malloc(long size) {

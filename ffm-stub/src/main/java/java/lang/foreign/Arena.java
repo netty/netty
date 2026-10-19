@@ -20,6 +20,14 @@ public interface Arena extends SegmentAllocator, AutoCloseable {
         throw new UnsupportedOperationException("Stub");
     }
 
+    static Arena ofConfined() {
+        throw new UnsupportedOperationException("Stub");
+    }
+
+    default MemorySegment allocateFrom(String str) {
+        throw new UnsupportedOperationException("Stub");
+    }
+
     @Override
     void close();
 }

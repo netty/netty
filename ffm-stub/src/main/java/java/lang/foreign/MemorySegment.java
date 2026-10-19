@@ -18,6 +18,8 @@ package java.lang.foreign;
 import java.nio.ByteBuffer;
 
 public interface MemorySegment {
+    MemorySegment NULL = null;
+
     long address();
 
     MemorySegment reinterpret(long newSize);
