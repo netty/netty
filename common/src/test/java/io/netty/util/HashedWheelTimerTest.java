@@ -226,10 +226,8 @@ public class HashedWheelTimerTest {
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         try {
-            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
-            fail("Timer allowed adding 3 timeouts when maxPendingTimeouts was 2");
-        } catch (RejectedExecutionException e) {
-            // Expected
+            assertThrows(RejectedExecutionException.class, () ->
+                    timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS));
         } finally {
             timer.stop();
         }

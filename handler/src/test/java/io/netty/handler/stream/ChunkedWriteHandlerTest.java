@@ -33,8 +33,11 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -149,6 +152,52 @@ public class ChunkedWriteHandlerTest {
                 });
             }
         });
+    }
+
+    @ParameterizedTest(name = "nio = {0}")
+    @ValueSource(booleans = { false, true })
+    public void testChunkedFileFailsWhenFileWasTruncated(boolean nio) throws Exception {
+        File file = PlatformDependent.createTempFile("netty-chunk-truncated-", ".tmp", null);
+        file.deleteOnExit();
+        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+            raf.write(BYTES, 0, 1024);
+            ChunkedInput<ByteBuf> input = nio ? new ChunkedNioFile(raf.getChannel(), 0, 1024, 100) :
+                    new ChunkedFile(raf, 0, 1024, 100);
+            // The file is truncated after the input was created, for example by another process.
+            raf.setLength(512);
+
+            final AtomicInteger writes = new AtomicInteger();
+            EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandler() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    if (writes.incrementAndGet() > 100) {
+                        // Stop ChunkedWriteHandler if it keeps writing empty chunks.
+                        ReferenceCountUtil.release(msg);
+                        handler.failure(new IllegalStateException("too many writes"));
+                        ctx.close();
+                        return;
+                    }
+                    ctx.write(msg, handler);
+                }
+            }, new ChunkedWriteHandler());
+
+            Future<Void> future = ch.writeAndFlush(input);
+            assertTrue(future.isDone());
+            assertInstanceOf(EOFException.class, future.cause());
+            assertEquals(5, writes.get());
+
+            int read = 0;
+            for (;;) {
+                ByteBuf buffer = ch.readOutbound();
+                if (buffer == null) {
+                    break;
+                }
+                read += buffer.readableBytes();
+                buffer.release();
+            }
+            assertEquals(500, read);
+            assertFalse(ch.finish());
+        }
     }
 
     @Test
@@ -341,7 +390,7 @@ public class ChunkedWriteHandlerTest {
         assertTrue(ch.finish());
 
         assertFalse(r.isSuccess());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
 
         // 3 out of 4 chunks were already written
         int read = 0;
@@ -689,7 +738,7 @@ public class ChunkedWriteHandlerTest {
 
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
     }
 
     private static void checkSkipFailed(Object input1, Object input2) throws Exception {
@@ -713,7 +762,7 @@ public class ChunkedWriteHandlerTest {
         Future<Void> r2 = ch.writeAndFlush(input2).awaitUninterruptibly();
         assertTrue(ch.finish());
 
-        assertTrue(r1.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r1.cause());
         assertTrue(r2.isSuccess());
 
         // note, that after we've "skipped" the first write,

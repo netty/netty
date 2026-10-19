@@ -39,11 +39,14 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -456,6 +459,109 @@ public class WebSocketServerProtocolHandlerTest {
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testForceCloseTimeoutAppliedToInboundCloseFrame() throws Exception {
+        final long forceCloseTimeoutMillis = 100;
+        final Queue<Promise<Void>> stalledWrites = new ArrayDeque<Promise<Void>>();
+        EmbeddedChannel client = createClient();
+        EmbeddedChannel server = createStallingServer(forceCloseTimeoutMillis, stalledWrites);
+
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
+
+        // The peer initiates the close handshake.
+        assertTrue(client.writeOutbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE)));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+
+        // The server's echo write is stalled, simulating a peer that stopped draining its socket
+        // receive buffer. The channel must not stay open indefinitely waiting on that write.
+        assertEquals(1, stalledWrites.size());
+        assertTrue(server.isOpen());
+
+        server.advanceTimeBy(forceCloseTimeoutMillis * 2, TimeUnit.MILLISECONDS);
+        server.runScheduledPendingTasks();
+
+        assertFalse(server.isOpen());
+
+        client.close();
+        assertFalse(client.finishAndReleaseAll());
+        assertFalse(server.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testSimultaneousCloseDoesNotLeakOriginalPromise() throws Exception {
+        // The application initiates an outbound close (e.g. via ctx.close()) while the peer's own CLOSE
+        // frame is concurrently in flight. Both paths call closeSent(): the second call must not silently
+        // overwrite (and orphan) the promise the first call already armed a deadline for.
+        final long forceCloseTimeoutMillis = 100;
+        final Queue<Promise<Void>> stalledWrites = new ArrayDeque<Promise<Void>>();
+        EmbeddedChannel client = createClient();
+        EmbeddedChannel server = createStallingServer(forceCloseTimeoutMillis, stalledWrites);
+
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
+
+        // The application decides to close first.
+        ChannelHandlerContext serverCtx = server.pipeline().context(WebSocketServerProtocolHandler.class);
+        Promise<Void> applicationClosePromise = serverCtx.newPromise();
+        ((WebSocketServerProtocolHandler) serverCtx.handler()).close(serverCtx, applicationClosePromise);
+
+        // Before that echo completes, the peer's own CLOSE frame arrives too.
+        assertTrue(client.writeOutbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE)));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+
+        // Both echo writes are stalled, but only a single deadline should govern the close handshake.
+        assertEquals(2, stalledWrites.size());
+        // The second echo (triggered by the peer's inbound frame) is the one whose promise was cascaded
+        // from the original closeSent instead of overwriting it.
+        Promise<Void> peerEchoWrite = new ArrayList<Promise<Void>>(stalledWrites).get(1);
+        assertTrue(server.isOpen());
+
+        server.advanceTimeBy(forceCloseTimeoutMillis * 2, TimeUnit.MILLISECONDS);
+        server.runScheduledPendingTasks();
+
+        assertFalse(server.isOpen());
+        // Neither promise is left hanging forever: the application's own close promise completes, and so
+        // does the promise cascaded from it for the peer's own (redundant) close frame.
+        assertTrue(applicationClosePromise.isDone());
+        assertTrue(peerEchoWrite.isDone());
+
+        client.close();
+        assertFalse(client.finishAndReleaseAll());
+        assertFalse(server.finishAndReleaseAll());
+    }
+
+    private static EmbeddedChannel createStallingServer(
+            long forceCloseTimeoutMillis, final Queue<Promise<Void>> stalledWrites) throws Exception {
+        WebSocketServerProtocolConfig serverConfig = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .dropPongFrames(false)
+                .forceCloseTimeoutMillis(forceCloseTimeoutMillis)
+                .build();
+        EmbeddedChannel ch = new EmbeddedChannel(false, false,
+                new ChannelOutboundHandler() {
+                    private boolean handshakeResponseSent;
+
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                        if (msg instanceof ByteBuf && handshakeResponseSent) {
+                            // Simulate a peer that stopped draining its socket receive buffer: the
+                            // close-frame echo write never completes on its own.
+                            ReferenceCountUtil.release(msg);
+                            stalledWrites.add((Promise<Void>) handler);
+                            return;
+                        }
+                        handshakeResponseSent = true;
+                        ctx.write(msg, handler);
+                    }
+                },
+                new HttpServerCodec(),
+                new HttpObjectAggregator(8192),
+                new WebSocketServerProtocolHandler(serverConfig));
+        ch.register();
+        return ch;
     }
 
     private EmbeddedChannel createClient(ChannelHandler... handlers) throws Exception {

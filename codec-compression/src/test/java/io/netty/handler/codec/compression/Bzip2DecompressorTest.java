@@ -44,4 +44,37 @@ public class Bzip2DecompressorTest extends AbstractDecompressorTest {
             assertThrows(DecompressionException.class, decompressor::endOfInput);
         }
     }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange())),
+                    "incorrect selector index");
+        }
+    }
+
+    /**
+     * Regression test: a Huffman code length read in {@code RECEIVE_HUFFMAN_LENGTH} was never
+     * validated against the 1..23 range before being stored and later used to index the per-table
+     * code-base array (sized for lengths up to 23), so a crafted stream could trigger an
+     * {@link ArrayIndexOutOfBoundsException} instead of a clean {@link DecompressionException}.
+     */
+    @Test
+    public void testCodeLengthOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange())),
+                    "Bzip2 block Huffman code length not in range");
+        }
+    }
 }

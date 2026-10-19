@@ -18,13 +18,20 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
+
 
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -139,6 +146,55 @@ public class WebSocketProtocolHandlerTest {
         assertPropagatedInbound(textFrame, channel);
 
         textFrame.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTimeout() throws Exception {
+        WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
+                false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                ReferenceCountUtil.release(msg);
+            }
+        }, handler);
+
+        ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
+        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame());
+        handler.close(ctx, ctx.newPromise());
+
+        do {
+            Thread.sleep(10);
+            channel.runPendingTasks();
+        } while (!future.isDone());
+
+        assertInstanceOf(WebSocketHandshakeException.class, future.cause());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTimeoutWithoutExplicitClose() throws Exception {
+        // A bare write(CloseWebSocketFrame) is not followed by any close() call: the force-close
+        // timeout itself must be the thing that closes the channel once it fires.
+        WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
+                false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                // Simulate a stalled write: never complete the handler.
+                ReferenceCountUtil.release(msg);
+            }
+        }, handler);
+
+        channel.writeAndFlush(new CloseWebSocketFrame());
+
+        while (channel.isOpen()) {
+            Thread.sleep(10);
+            channel.runPendingTasks();
+        }
+
+        assertFalse(channel.isOpen());
         assertFalse(channel.finish());
     }
 

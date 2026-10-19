@@ -489,8 +489,10 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
                     (DefaultHeaders<? extends K, ? extends V, T>) headers;
             HeaderEntry<? extends K, ? extends V> e = defaultHeaders.head.after;
             if (defaultHeaders.hashingStrategy == hashingStrategy &&
-                    defaultHeaders.nameValidator == nameValidator) {
-                // Fastest copy
+                    defaultHeaders.nameValidator == nameValidator &&
+                    defaultHeaders.valueValidator == valueValidator) {
+                // Fastest copy. The entries of the other headers have been validated by the same validators that
+                // we use, so there is no need to validate them again.
                 while (e != defaultHeaders.head) {
                     add0(e.hash, index(e.hash), e.key, e.value);
                     e = e.after;
@@ -1090,7 +1092,12 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     private void add0(int h, int i, K name, V value) {
         // Update the hash table.
-        entries[i] = newHeaderEntry(h, name, value, entries[i]);
+        HeaderEntry<K, V> entry = newHeaderEntry(h, name, value, entries[i]);
+        if (valueValidator != ValueValidator.NO_VALIDATION) {
+            // Allows HeaderEntry.setValue(...) to validate new values, also for subclasses of HeaderEntry.
+            entry.origin = this;
+        }
+        entries[i] = entry;
         ++size;
     }
 
@@ -1318,7 +1325,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
      */
     public DefaultHeaders<K, V, T> copy() {
         DefaultHeaders<K, V, T> copy = new DefaultHeaders<K, V, T>(
-                hashingStrategy, valueConverter, nameValidator, entries.length);
+                hashingStrategy, valueConverter, nameValidator, entries.length, valueValidator);
         copy.addImpl(this);
         return copy;
     }
@@ -1412,6 +1419,10 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
          * Overall insertion order linked list
          */
         protected HeaderEntry<K, V> before, after;
+        /**
+         * The validator of the owning headers, or {@code null} if values are not validated.
+         */
+        private DefaultHeaders<K, V, ?> origin;
 
         protected HeaderEntry(int hash, K key) {
             this.hash = hash;
@@ -1466,6 +1477,13 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         @Override
         public final V setValue(V value) {
             checkNotNull(value, "value");
+            if (origin != null) {
+                try {
+                    origin.validateValue(origin.valueValidator, key, value);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Validation failed for header '" + key + "'", e);
+                }
+            }
             V oldValue = this.value;
             this.value = value;
             return oldValue;

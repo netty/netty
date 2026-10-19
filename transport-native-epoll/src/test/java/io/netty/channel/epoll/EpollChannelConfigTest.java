@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EpollChannelConfigTest {
 
@@ -38,12 +38,7 @@ public class EpollChannelConfigTest {
         EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         channel.config().getOption(ChannelOption.SO_LINGER);
         channel.fd().close();
-        try {
-            channel.config().getOption(ChannelOption.SO_LINGER);
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, () -> channel.config().getOption(ChannelOption.SO_LINGER));
     }
 
     @Test
@@ -52,12 +47,7 @@ public class EpollChannelConfigTest {
         EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         channel.config().getOption(ChannelOption.SO_KEEPALIVE);
         channel.fd().close();
-        try {
-            channel.config().getOption(ChannelOption.SO_KEEPALIVE);
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, () -> channel.config().getOption(ChannelOption.SO_KEEPALIVE));
     }
 
     @Test
