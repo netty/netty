@@ -36,6 +36,7 @@ import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
@@ -49,8 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpClientCodecTest {
 
@@ -84,25 +85,26 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedChannel ch = new EmbeddedChannel(codec);
+        final EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "http://localhost/")));
         ByteBuf buffer = ch.readOutbound();
         assertNotNull(buffer);
         buffer.release();
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        CodecException e = assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.finish();
+            }
+        });
+        assertInstanceOf(PrematureChannelClosureException.class, e);
     }
 
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedChannel ch = new EmbeddedChannel(codec);
+        final EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ByteBuf buffer = ch.readOutbound();
@@ -115,12 +117,13 @@ public class HttpClientCodecTest {
         ((HttpContent) ch.readInbound()).release(); // Chunk 'second'
         assertNull(ch.readInbound());
 
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        CodecException e = assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.finish();
+            }
+        });
+        assertInstanceOf(PrematureChannelClosureException.class, e);
     }
 
     @Test
@@ -142,7 +145,7 @@ public class HttpClientCodecTest {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
                             // This is just a simple demo...don't block in IO
-                            assertTrue(ctx.channel() instanceof SocketChannel);
+                            assertInstanceOf(SocketChannel.class, ctx.channel());
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
                             /**
                              * The point of this test is to not add any content-length or content-encoding headers

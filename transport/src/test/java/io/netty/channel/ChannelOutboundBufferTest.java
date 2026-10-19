@@ -727,7 +727,7 @@ public class ChannelOutboundBufferTest {
         ChannelFuture future = ch.write(buffer);
         ch.runPendingTasks();
 
-        assertTrue(future.cause() instanceof RejectedExecutionException);
+        assertInstanceOf(RejectedExecutionException.class, future.cause());
         assertEquals(0, buffer.refCnt());
 
         // In case of rejected task we should not have anything pending.

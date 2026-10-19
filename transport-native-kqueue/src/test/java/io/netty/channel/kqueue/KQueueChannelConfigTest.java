@@ -26,13 +26,14 @@ import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KQueueChannelConfigTest {
     @BeforeEach
@@ -42,28 +43,28 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        final KQueueSocketChannel channel = new KQueueSocketChannel();
         channel.config().getSoLinger();
         channel.fd().close();
-        try {
-            channel.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.config().getSoLinger();
+            }
+        });
     }
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        final KQueueSocketChannel channel = new KQueueSocketChannel();
         channel.config().setKeepAlive(true);
         channel.fd().close();
-        try {
-            channel.config().setKeepAlive(true);
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.config().setKeepAlive(true);
+            }
+        });
     }
 
     // See https://github.com/netty/netty/issues/7159

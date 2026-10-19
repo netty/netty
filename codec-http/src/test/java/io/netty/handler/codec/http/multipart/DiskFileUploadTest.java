@@ -25,6 +25,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -41,8 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DiskFileUploadTest {
     @Test
@@ -268,7 +269,7 @@ public class DiskFileUploadTest {
     @Test
     public void setSetContentFromFileExceptionally() throws Exception {
         final long maxSize = 4;
-        DiskFileUpload f1 = new DiskFileUpload("file5", "file5", "application/json", null, null, 0);
+        final DiskFileUpload f1 = new DiskFileUpload("file5", "file5", "application/json", null, null, 0);
         f1.setMaxSize(maxSize);
         try {
             f1.setContent(Unpooled.wrappedBuffer(new byte[(int) maxSize]));
@@ -278,7 +279,7 @@ public class DiskFileUploadTest {
             assertEquals(maxSize, f1.length());
             byte[] bytes = new byte[8];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
-            File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
+            final File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
             tmpFile.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tmpFile);
             try {
@@ -287,14 +288,15 @@ public class DiskFileUploadTest {
             } finally {
                 fos.close();
             }
-            try {
-                f1.setContent(tmpFile);
-                fail("should not reach here!");
-            } catch (IOException e) {
-                assertNotNull(f1.getFile());
-                assertEquals(originalFile, f1.getFile());
-                assertEquals(maxSize, f1.length());
-            }
+            IOException e = assertThrows(IOException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    f1.setContent(tmpFile);
+                }
+            });
+            assertNotNull(f1.getFile());
+            assertEquals(originalFile, f1.getFile());
+            assertEquals(maxSize, f1.length());
         } finally {
             f1.delete();
         }

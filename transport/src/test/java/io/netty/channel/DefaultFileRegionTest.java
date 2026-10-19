@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -28,7 +29,7 @@ import java.nio.channels.WritableByteChannel;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultFileRegionTest {
 
@@ -90,11 +91,11 @@ public class DefaultFileRegionTest {
     public void testTruncated() throws IOException  {
         File file = newFile();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        WritableByteChannel channel = Channels.newChannel(outputStream);
+        final WritableByteChannel channel = Channels.newChannel(outputStream);
         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
 
         try {
-            FileRegion region = new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length);
+            final FileRegion region = new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length);
 
             randomAccessFile.getChannel().truncate(data.length - 1024);
 
@@ -104,12 +105,12 @@ public class DefaultFileRegionTest {
             assertEquals(data.length - 1024, region.transferTo(channel, 0));
             assertEquals(data.length, region.count());
             assertEquals(data.length - 1024, region.transferred());
-            try {
-                region.transferTo(channel, data.length - 1024);
-                fail();
-            } catch (IOException expected) {
-                // expected
-            }
+            assertThrows(IOException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    region.transferTo(channel, data.length - 1024);
+                }
+            });
         } finally {
             channel.close();
 

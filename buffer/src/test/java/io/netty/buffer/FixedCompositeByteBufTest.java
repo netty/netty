@@ -33,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class FixedCompositeByteBufTest {
 
@@ -475,13 +474,15 @@ public class FixedCompositeByteBufTest {
         }
 
         ByteBuf buf2 = directBuffer(10);
-        ByteBuf buf = newBuffer(buf1, buf2);
+        final ByteBuf buf = newBuffer(buf1, buf2);
         assertFalse(buf.hasMemoryAddress());
         try {
-            buf.memoryAddress();
-            fail();
-        } catch (UnsupportedOperationException expected) {
-            // expected
+            assertThrows(UnsupportedOperationException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buf.memoryAddress();
+                }
+            });
         } finally {
             buf.release();
         }

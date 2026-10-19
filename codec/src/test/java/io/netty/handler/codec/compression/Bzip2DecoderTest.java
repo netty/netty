@@ -55,7 +55,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         } finally {
             assertThrows(DecompressionException.class, new Executable() {
                 @Override
-                public void execute() {
+                public void execute() throws Throwable {
                     destroyChannel();
                 }
             });

@@ -47,6 +47,7 @@ import java.util.Arrays;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -415,7 +416,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload);
+        assertInstanceOf(FileUpload.class, part1);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp 0.txt", fileUpload.getFilename());
         decoder.destroy();
@@ -485,7 +486,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload, "the item should be a FileUpload");
+        assertInstanceOf(FileUpload.class, part1, "the item should be a FileUpload");
         FileUpload fileUpload = (FileUpload) part1;
         byte[] fileBytes = fileUpload.get();
         assertTrue(filecontent.equals(new String(fileBytes)), "the filecontent should not be decoded");
@@ -514,10 +515,15 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(inMemoryFactory, req);
+                        }
+                    });
+            assertInstanceOf(UnsupportedCharsetException.class, e.getCause());
         } finally {
             assertTrue(req.release());
         }
@@ -547,10 +553,15 @@ public class HttpPostRequestDecoderTest {
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(inMemoryFactory, req);
+                        }
+                    });
+            assertInstanceOf(UnsupportedCharsetException.class, e.getCause());
         } finally {
             assertTrue(req.release());
         }
@@ -558,15 +569,20 @@ public class HttpPostRequestDecoderTest {
 
     @Test
     public void testFormEncodeIncorrect() throws Exception {
-        LastHttpContent content = new DefaultLastHttpContent(
+        final LastHttpContent content = new DefaultLastHttpContent(
                 Unpooled.copiedBuffer("project=netty&=netty&project=netty", CharsetUtil.US_ASCII));
         DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req);
         try {
-            decoder.offer(content);
-            fail();
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertTrue(e.getCause() instanceof IllegalArgumentException);
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            decoder.offer(content);
+                        }
+                    });
+            assertInstanceOf(IllegalArgumentException.class, e.getCause());
         } finally {
             content.release();
             decoder.destroy();
@@ -600,7 +616,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload, "the item should be a FileUpload");
+        assertInstanceOf(FileUpload.class, part1, "the item should be a FileUpload");
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals(filename, fileUpload.getFilename(), "the filename should be decoded");
         decoder.destroy();
@@ -636,7 +652,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload, "the item should be a FileUpload");
+        assertInstanceOf(FileUpload.class, part1, "the item should be a FileUpload");
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals(filename, fileUpload.getFilename(), "the filename should be decoded");
         decoder.destroy();
@@ -666,10 +682,15 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertTrue(e.getCause() instanceof ArrayIndexOutOfBoundsException);
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(inMemoryFactory, req);
+                        }
+                    });
+            assertInstanceOf(ArrayIndexOutOfBoundsException.class, e.getCause());
         } finally {
             assertTrue(req.release());
         }
@@ -698,10 +719,15 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         try {
-            new HttpPostRequestDecoder(inMemoryFactory, req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
-            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(inMemoryFactory, req);
+                        }
+                    });
+            assertInstanceOf(UnsupportedCharsetException.class, e.getCause());
         } finally {
             assertTrue(req.release());
         }
@@ -736,7 +762,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload);
+        assertInstanceOf(FileUpload.class, part1);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp-0.txt", fileUpload.getFilename());
         assertEquals(HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE, fileUpload.getContentType());
@@ -869,7 +895,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
-        assertTrue(part1 instanceof FileUpload, "the item should be a FileUpload");
+        assertInstanceOf(FileUpload.class, part1, "the item should be a FileUpload");
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals(filename, fileUpload.getFilename(), "the filename should be decoded");
 
@@ -915,11 +941,16 @@ public class HttpPostRequestDecoderTest {
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
         try {
-            new HttpPostRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(req);
+                        }
+                    });
             assertEquals("Invalid hex byte at index '0' in string: '%'", e.getMessage());
         } finally {
             assertTrue(req.release());
@@ -932,11 +963,16 @@ public class HttpPostRequestDecoderTest {
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
         try {
-            new HttpPostRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(req);
+                        }
+                    });
             assertEquals("Invalid hex byte at index '0' in string: '%2'", e.getMessage());
         } finally {
             assertTrue(req.release());
@@ -949,11 +985,16 @@ public class HttpPostRequestDecoderTest {
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
         try {
-            new HttpPostRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(req);
+                        }
+                    });
             assertEquals("Invalid hex byte at index '0' in string: '%Zc'", e.getMessage());
         } finally {
             assertTrue(req.release());
@@ -966,11 +1007,16 @@ public class HttpPostRequestDecoderTest {
         ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
         try {
-            new HttpPostRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            new HttpPostRequestDecoder(req);
+                        }
+                    });
             assertEquals("Invalid hex byte at index '0' in string: '%2g'", e.getMessage());
         } finally {
             assertTrue(req.release());
@@ -1001,11 +1047,11 @@ public class HttpPostRequestDecoderTest {
             HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
             assertEquals(2, decoder.getBodyHttpDatas().size());
             InterfaceHttpData data = decoder.getBodyHttpData("title");
-            assertTrue(data instanceof MemoryAttribute);
+            assertInstanceOf(MemoryAttribute.class, data);
             assertEquals("bar-stream", ((MemoryAttribute) data).getString());
             assertTrue(data.release());
             data = decoder.getBodyHttpData("data");
-            assertTrue(data instanceof MemoryFileUpload);
+            assertInstanceOf(MemoryFileUpload.class, data);
             assertEquals("{\"title\":\"Test\"}", ((MemoryFileUpload) data).getString());
             assertTrue(data.release());
             decoder.destroy();
@@ -1105,14 +1151,15 @@ public class HttpPostRequestDecoderTest {
     public void testTooLongFormFieldStandardDecoder() {
         HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
 
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
 
-        try {
-            decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
-            fail();
-        } catch (DecoderException e) {
-            assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
-        }
+        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
+            }
+        });
+        assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
         decoder.destroy();
     }
 
@@ -1131,14 +1178,15 @@ public class HttpPostRequestDecoderTest {
         HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         req.headers().add("Content-Type", "multipart/form-data;boundary=be38b42a9ad2713f");
 
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
 
-        try {
-            decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
-            fail();
-        } catch (DecoderException e) {
-            assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
-        }
+        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
+            }
+        });
+        assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
         decoder.destroy();
     }
 

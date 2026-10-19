@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -45,8 +46,8 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
@@ -122,23 +123,25 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         Socket s = null;
         try {
             ss.bind(newSocketAddress());
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            final SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
             assertTrue(ch.isActive());
             s = ss.accept();
 
             ch.close().syncUninterruptibly();
-            try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
-            try {
-                ch.shutdownOutput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.shutdownInput().syncUninterruptibly();
+                }
+            });
+            checkThrowable(cause);
+            cause = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.shutdownOutput().syncUninterruptibly();
+                }
+            });
+            checkThrowable(cause);
         } finally {
             if (s != null) {
                 s.close();
@@ -198,13 +201,16 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isInputShutdown());
             assertTrue(h.ch.isOutputShutdown());
 
-            try {
-                // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[]{ 2 }, 0 , 2)).sync();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            // If half-closed, the local endpoint shouldn't be able to write
+            final SocketChannel finalCh = ch;
+            Throwable cause = assertThrows(Throwable.class,
+                    new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            finalCh.writeAndFlush(randomBufferType(finalCh.alloc(), new byte[]{ 2 }, 0 , 2)).sync();
+                        }
+                    });
+            checkThrowable(cause);
             assertNull(h.writabilityQueue.poll());
         } finally {
             if (s != null) {

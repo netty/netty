@@ -22,6 +22,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.buffer.Unpooled.*;
 import java.nio.ByteOrder;
@@ -29,7 +30,7 @@ import java.nio.ByteOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LengthFieldPrependerTest {
 
@@ -85,12 +86,12 @@ public class LengthFieldPrependerTest {
     @Test
     public void testAdjustedLengthLessThanZero() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
-        try {
-            ch.writeOutbound(msg);
-            fail(EncoderException.class.getSimpleName() + " must be raised.");
-        } catch (EncoderException e) {
-            // Expected
-        }
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeOutbound(msg);
+            }
+        });
     }
 
     @Test

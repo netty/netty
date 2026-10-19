@@ -17,10 +17,11 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.UnknownHostException;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DnsResolveContextTest {
 
@@ -29,12 +30,13 @@ public class DnsResolveContextTest {
     @Test
     public void testCnameLoop() {
         for (int i = 1; i < 128; i++) {
-            try {
-                DnsResolveContext.cnameResolveFromCache(buildCache(i), HOSTNAME);
-                fail();
-            } catch (UnknownHostException expected) {
-                // expected
-            }
+            final int cacheSize = i;
+            assertThrows(UnknownHostException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    DnsResolveContext.cnameResolveFromCache(buildCache(cacheSize), HOSTNAME);
+                }
+            });
         }
     }
 

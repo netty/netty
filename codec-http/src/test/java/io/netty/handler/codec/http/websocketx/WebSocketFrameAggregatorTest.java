@@ -22,12 +22,13 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class WebSocketFrameAggregatorTest {
@@ -113,26 +114,26 @@ public class WebSocketFrameAggregatorTest {
 
     @Test
     public void textFrameTooBig() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
+        final EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
-        try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+            }
+        });
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
         channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
 
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
-        try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+            }
+        });
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
         channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
         for (;;) {

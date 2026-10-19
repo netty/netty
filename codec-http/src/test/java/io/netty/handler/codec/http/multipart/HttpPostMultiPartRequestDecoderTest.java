@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -37,19 +38,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpPostMultiPartRequestDecoderTest {
 
     @Test
     public void testDecodeFullHttpRequestWithNoContentTypeHeader() {
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    new HttpPostMultipartRequestDecoder(req);
+                }
+            });
         } finally {
             assertTrue(req.release());
         }
@@ -57,15 +60,17 @@ public class HttpPostMultiPartRequestDecoderTest {
 
     @Test
     public void testDecodeFullHttpRequestWithInvalidCharset() {
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         req.headers().set(HttpHeaderNames.CONTENT_TYPE,
                 "multipart/form-data; boundary=--89421926422648 [; charset=UTF-8]");
 
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    new HttpPostMultipartRequestDecoder(req);
+                }
+            });
         } finally {
             assertTrue(req.release());
         }
@@ -80,16 +85,18 @@ public class HttpPostMultiPartRequestDecoderTest {
                         "x\n" +
                         "--861fbeab-cd20-470c-9609-d40a0f704466--\n";
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+        final FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
                 Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII));
         req.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
         req.headers().set("content-length", content.length());
 
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    new HttpPostMultipartRequestDecoder(req);
+                }
+            });
         } finally {
             assertTrue(req.release());
         }

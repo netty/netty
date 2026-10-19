@@ -132,6 +132,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -677,7 +678,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(serverException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, serverException);
     }
 
     @MethodSource("newTestParams")
@@ -693,7 +694,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(clientException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, clientException);
     }
 
     @MethodSource("newTestParams")
@@ -3697,7 +3698,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession clientSession = clientEngine.getSession();
-            SSLSession serverSession = serverEngine.getSession();
+            final SSLSession serverSession = serverEngine.getSession();
 
             // The values should not have been carried over.
             // This is broken in conscrypt.
@@ -3818,12 +3819,12 @@ public abstract class SSLEngineTest {
                 assertNull(clientSession.getLocalCertificates());
                 assertNull(clientSession.getLocalPrincipal());
 
-                try {
-                    serverSession.getPeerCertificates();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        serverSession.getPeerCertificates();
+                    }
+                });
 
                 additionalPeerAssertions(serverSession, mutualAuth);
 
@@ -3837,12 +3838,12 @@ public abstract class SSLEngineTest {
                     assertTrue(PlatformDependent.javaVersion() >= 15);
                 }
 
-                try {
-                    serverSession.getPeerPrincipal();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        serverSession.getPeerPrincipal();
+                    }
+                });
             }
 
             Certificate[] clientPeerCertificates = clientSession.getPeerCertificates();
@@ -4790,7 +4791,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             fail();
         } catch (SSLException expected) {
-            // Expected
+            // expected
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);

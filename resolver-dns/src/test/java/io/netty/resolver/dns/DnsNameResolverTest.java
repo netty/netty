@@ -777,33 +777,33 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
-        try {
-            resolver.resolve("non-existent.netty.io").sync();
-            fail();
-            return null;
-        } catch (Exception e) {
-            assertInstanceOf(UnknownHostException.class, e);
+    private static UnknownHostException resolveNonExistentDomain(final DnsNameResolver resolver) {
+        Exception e = assertThrows(Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                resolver.resolve("non-existent.netty.io").sync();
+            }
+        });
+        assertInstanceOf(UnknownHostException.class, e);
 
-            TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
-                (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
-            // Queries which are not answered from the cache (e.g. the AAAA query until its negative answer is cached)
-            // complete asynchronously on the EventLoop, so the observer may only have seen some of its events yet.
-            // Only verify that no unexpected event was recorded.
-            TestDnsQueryLifecycleObserver observer;
-            while ((observer = lifecycleObserverFactory.observers.poll()) != null) {
-                Object o;
-                while ((o = observer.events.poll()) != null) {
-                    if (o instanceof QueryCancelledEvent) {
-                        assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
-                            "unexpected type: " + observer.question);
-                    } else if (!(o instanceof QueryWrittenEvent) && !(o instanceof QueryFailedEvent)) {
-                        fail("unexpected event type: " + o);
-                    }
+        TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
+            (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
+        // Queries which are not answered from the cache (e.g. the AAAA query until its negative answer is cached)
+        // complete asynchronously on the EventLoop, so the observer may only have seen some of its events yet.
+        // Only verify that no unexpected event was recorded.
+        TestDnsQueryLifecycleObserver observer;
+        while ((observer = lifecycleObserverFactory.observers.poll()) != null) {
+            Object o;
+            while ((o = observer.events.poll()) != null) {
+                if (o instanceof QueryCancelledEvent) {
+                    assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
+                        "unexpected type: " + observer.question);
+                } else if (!(o instanceof QueryWrittenEvent) && !(o instanceof QueryFailedEvent)) {
+                    fail("unexpected event type: " + o);
                 }
             }
-            return (UnknownHostException) e;
         }
+        return (UnknownHostException) e;
     }
 
     @ParameterizedTest
@@ -1865,7 +1865,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
@@ -1998,7 +1998,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
@@ -3843,12 +3843,13 @@ public class DnsNameResolverTest {
                 .datagramChannelStrategy(strategy)
                 .build();
 
-        try {
-            resolver.resolve("non-existent.netty.io", promise).sync();
-            fail();
-        } catch (Exception e) {
-            assertInstanceOf(CancellationException.class, e);
-        }
+        Exception e = assertThrows(Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                resolver.resolve("non-existent.netty.io", promise).sync();
+            }
+        });
+        assertInstanceOf(CancellationException.class, e);
         assertFalse(isQuerySentToSecondServer.get());
     }
 
@@ -4522,9 +4523,12 @@ public class DnsNameResolverTest {
             // setup call to fail and verify
             returnSuccess.set(false);
             try {
-                resolver.resolve("yahoo.com").syncUninterruptibly().getNow();
-                fail();
-            } catch (Exception e) {
+                Exception e = assertThrows(Exception.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        resolver.resolve("yahoo.com").syncUninterruptibly().getNow();
+                    }
+                });
                 // expected
                 assertInstanceOf(UnknownHostException.class, e);
             } finally {

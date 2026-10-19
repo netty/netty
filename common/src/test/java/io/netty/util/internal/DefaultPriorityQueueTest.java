@@ -16,6 +16,7 @@
 package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultPriorityQueueTest {
     @Test
@@ -109,10 +110,11 @@ public class DefaultPriorityQueueTest {
 
     @Test
     public void testClearIgnoringIndexes() {
-        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
+        final PriorityQueue<TestElement> queue =
+                new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
         assertEmptyQueue(queue);
 
-        TestElement a = new TestElement(5);
+        final TestElement a = new TestElement(5);
         TestElement b = new TestElement(10);
         TestElement c = new TestElement(2);
         TestElement d = new TestElement(6);
@@ -127,12 +129,12 @@ public class DefaultPriorityQueueTest {
         assertEmptyQueue(queue);
 
         // Elements cannot be re-inserted but new ones can.
-        try {
-            queue.offer(a);
-            fail();
-        } catch (IllegalArgumentException t) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                queue.offer(a);
+            }
+        });
 
         assertOffer(queue, e);
         assertSame(e, queue.peek());
@@ -287,16 +289,17 @@ public class DefaultPriorityQueueTest {
         }
     }
 
-    private static void assertOffer(PriorityQueue<TestElement> queue, TestElement a) {
+    private static void assertOffer(final PriorityQueue<TestElement> queue, final TestElement a) {
         assertTrue(queue.offer(a));
         assertTrue(queue.contains(a));
         assertTrue(queue.containsTyped(a));
-        try { // An element can not be inserted more than 1 time.
-            queue.offer(a);
-            fail();
-        } catch (IllegalArgumentException ignored) {
-            // ignored
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                // An element can not be inserted more than 1 time.
+                queue.offer(a);
+            }
+        });
     }
 
     private static void assertEmptyQueue(PriorityQueue<TestElement> queue) {

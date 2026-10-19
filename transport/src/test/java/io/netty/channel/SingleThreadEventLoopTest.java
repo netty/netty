@@ -24,6 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
@@ -44,8 +45,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class SingleThreadEventLoopTest {
 
@@ -136,13 +137,13 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static void assertRejection(EventExecutor loop) {
-        try {
-            loop.execute(NOOP);
-            fail("A task must be rejected after shutdown() is called.");
-        } catch (RejectedExecutionException e) {
-            // Expected
-        }
+    private static void assertRejection(final EventExecutor loop) {
+        assertThrows(RejectedExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                loop.execute(NOOP);
+            }
+        });
     }
 
     @Test
@@ -472,15 +473,15 @@ public class SingleThreadEventLoopTest {
             loopA.execute(NOOP);
         }
 
-        try {
-            for (int i = 0; i < 20; i ++) {
-                Thread.sleep(100);
-                loopA.execute(NOOP);
+        assertThrows(RejectedExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                for (int i = 0; i < 20; i ++) {
+                    Thread.sleep(100);
+                    loopA.execute(NOOP);
+                }
             }
-            fail("shutdownGracefully() must reject a task after timeout.");
-        } catch (RejectedExecutionException e) {
-            // Expected
-        }
+        });
 
         assertTrue(loopA.isShuttingDown());
         assertTrue(loopA.isShutdown());

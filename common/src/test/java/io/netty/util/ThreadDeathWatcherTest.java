@@ -18,6 +18,7 @@ package io.netty.util;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -26,8 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ThreadDeathWatcherTest {
 
@@ -57,12 +58,12 @@ public class ThreadDeathWatcherTest {
             }
         };
 
-        try {
-            ThreadDeathWatcher.watch(t, task);
-            fail("must reject to watch a non-alive thread.");
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ThreadDeathWatcher.watch(t, task);
+            }
+        });
 
         t.start();
         ThreadDeathWatcher.watch(t, task);

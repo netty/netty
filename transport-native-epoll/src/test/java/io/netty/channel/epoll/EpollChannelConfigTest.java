@@ -21,41 +21,42 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EpollChannelConfigTest {
 
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        final EpollSocketChannel channel = new EpollSocketChannel();
         channel.config().getSoLinger();
         channel.fd().close();
-        try {
-            channel.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.config().getSoLinger();
+            }
+        });
     }
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        final EpollSocketChannel channel = new EpollSocketChannel();
         channel.config().setKeepAlive(true);
         channel.fd().close();
-        try {
-            channel.config().setKeepAlive(true);
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.config().setKeepAlive(true);
+            }
+        });
     }
 
     @Test

@@ -402,7 +402,7 @@ public class ChunkedWriteHandlerTest {
         assertTrue(ch.finish());
 
         assertFalse(r.isSuccess());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
 
         // 3 out of 4 chunks were already written
         int read = 0;
@@ -767,7 +767,7 @@ public class ChunkedWriteHandlerTest {
 
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
     }
 
     private static void checkSkipFailed(Object input1, Object input2) {
@@ -791,7 +791,7 @@ public class ChunkedWriteHandlerTest {
         ChannelFuture r2 = ch.writeAndFlush(input2).awaitUninterruptibly();
         assertTrue(ch.finish());
 
-        assertTrue(r1.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r1.cause());
         assertTrue(r2.isSuccess());
 
         // note, that after we've "skipped" the first write,

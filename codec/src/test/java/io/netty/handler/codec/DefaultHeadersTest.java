@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link DefaultHeaders}.
@@ -186,7 +185,7 @@ public class DefaultHeadersTest {
         assertEquals(1, headers.size());
 
         List<CharSequence> values = new ArrayList<CharSequence>();
-        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        final Iterator<CharSequence> itr = headers.valueIterator(of("name"));
         while (itr.hasNext()) {
             values.add(itr.next());
             itr.remove();
@@ -195,12 +194,12 @@ public class DefaultHeadersTest {
         assertEquals(0, headers.size());
         assertTrue(headers.isEmpty());
         assertTrue(values.contains(of("value1")));
-        try {
-            itr.remove();
-            fail();
-        } catch (IllegalStateException ignored) {
-            // ignored
-        }
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                itr.remove();
+            }
+        });
     }
 
     @Test
@@ -208,17 +207,17 @@ public class DefaultHeadersTest {
         TestDefaultHeaders headers = newInstance();
 
         List<CharSequence> values = new ArrayList<CharSequence>();
-        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        final Iterator<CharSequence> itr = headers.valueIterator(of("name"));
         while (itr.hasNext()) {
             values.add(itr.next());
         }
         assertEquals(0, values.size());
-        try {
-            itr.next();
-            fail();
-        } catch (NoSuchElementException ignored) {
-            // ignored
-        }
+        assertThrows(NoSuchElementException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                itr.next();
+            }
+        });
     }
 
     @Test
