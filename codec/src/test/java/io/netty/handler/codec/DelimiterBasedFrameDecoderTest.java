@@ -23,6 +23,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -148,7 +149,12 @@ public class DelimiterBasedFrameDecoderTest {
     public void testDelimiterSplitAcrossReadsWhileDiscarding() {
         final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
         // failFast: the exception is raised as soon as the frame is known to be too long.
-        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("AAAAAAAAAA#")));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(ascii("AAAAAAAAAA#"));
+            }
+        });
         // The rest of the delimiter ends the discarded frame, the next frame must not be lost.
         ch.writeInbound(ascii("#ok##"));
         assertFrame(ch, "ok");
@@ -162,7 +168,12 @@ public class DelimiterBasedFrameDecoderTest {
                 new DelimiterBasedFrameDecoder(4, true, false, ascii("##")));
         ch.writeInbound(ascii("AAAAAAAAAA#"));
         // The exception is raised once the delimiter that ends the too long frame was read.
-        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("#ok##")));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(ascii("#ok##"));
+            }
+        });
         ch.writeInbound(ascii("next##"));
         assertFrame(ch, "ok");
         assertFrame(ch, "next");
@@ -174,7 +185,12 @@ public class DelimiterBasedFrameDecoderTest {
     public void testMaxFrameLengthEnforcedWithDelimiterSplitAcrossReads() {
         final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
         // One byte more than maxFrameLength.
-        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("ABCDE#")));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(ascii("ABCDE#"));
+            }
+        });
         ch.writeInbound(ascii("#ok##"));
         assertFrame(ch, "ok");
         assertNull(ch.readInbound());
