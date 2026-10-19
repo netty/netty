@@ -26,6 +26,8 @@ import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
@@ -72,6 +74,8 @@ import static java.lang.Math.min;
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
  */
 public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSizePolicy, Configuration {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2FrameWriter.class);
+
     private static final String STREAM_ID = "Stream ID";
     private static final String STREAM_DEPENDENCY = "Stream Dependency";
     /**
@@ -322,6 +326,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         try {
             checkNotNull(settings, "settings");
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
+            verifyPayloadLength(SETTINGS, payloadLength);
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payloadLength);
             writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);
             for (Http2Settings.PrimitiveEntry<Long> entry : settings.entries()) {
@@ -428,6 +433,17 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             verifyStreamOrConnectionId(lastStreamId, "Last Stream ID");
             verifyErrorCode(errorCode);
 
+            // GOAWAY must still be sent, so instead of rejecting oversized debug data truncate it to fit into
+            // SETTINGS_MAX_FRAME_SIZE together with the 8 bytes of last stream id and error code.
+            int maxDebugDataLength = maxFrameSize - 8;
+            if (debugData.readableBytes() > maxDebugDataLength) {
+                logger.warn("GOAWAY debug data of {} bytes exceeds the maximum of {} bytes allowed by " +
+                        "SETTINGS_MAX_FRAME_SIZE, truncating it.", debugData.readableBytes(), maxDebugDataLength);
+                ByteBuf truncated = debugData.retainedSlice(debugData.readerIndex(), maxDebugDataLength);
+                debugData.release();
+                debugData = truncated;
+            }
+
             int payloadLength = 8 + debugData.readableBytes();
             ByteBuf buf = ctx.alloc().buffer(GO_AWAY_FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
@@ -479,7 +495,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             verifyStreamOrConnectionId(streamId, STREAM_ID);
             // RFC 9113 Section 4.2: SETTINGS_MAX_FRAME_SIZE applies to the payload of every frame. The semantics of
             // a generic frame are unknown so it cannot be split, the write must fail instead.
-            verifyPayloadLength(payload.readableBytes());
+            verifyPayloadLength(frameType, payload.readableBytes());
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
             // in the catch block.
@@ -663,10 +679,11 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         }
     }
 
-    private void verifyPayloadLength(int payloadLength) {
+    private void verifyPayloadLength(byte frameType, int payloadLength) {
         if (payloadLength > maxFrameSize) {
-            throw new IllegalArgumentException("Frame payload length " + payloadLength +
-                    " exceeds the maximum frame size " + maxFrameSize + " advertised by the remote peer.");
+            throw new IllegalArgumentException("Payload length " + payloadLength + " of frame type 0x" +
+                    Integer.toHexString(frameType & 0xFF) + " exceeds the maximum frame size " + maxFrameSize +
+                    " advertised by the remote peer.");
         }
     }
 

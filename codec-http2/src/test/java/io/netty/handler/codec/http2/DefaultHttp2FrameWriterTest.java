@@ -362,6 +362,7 @@ public class DefaultHttp2FrameWriterTest {
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
         assertInstanceOf(IllegalArgumentException.class, future.cause());
+        assertTrue(future.cause().getMessage().contains("0xf"));
         // Nothing must have been written and the payload must have been released
         assertEquals(0, outbound.readableBytes());
         assertEquals(0, payload.refCnt());
@@ -381,6 +382,40 @@ public class DefaultHttp2FrameWriterTest {
                 outbound.readableBytes());
         // 24 bit payload length field must hold exactly the payload size
         assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+    }
+
+    @Test
+    public void writeSettingsExceedingMaxFrameSizeFailsPromise() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        Http2Settings settings = new Http2Settings();
+        // Each setting takes 6 bytes, so this is one entry more than fits into a single frame
+        int entries = Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND / Http2CodecUtil.SETTING_ENTRY_LENGTH + 1;
+        for (int i = 0; i < entries; i++) {
+            settings.put((char) (0x100 + i), Long.valueOf(0));
+        }
+
+        ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
+
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, future.cause());
+        assertTrue(future.cause().getMessage().contains("0x4"));
+        assertEquals(0, outbound.readableBytes());
+    }
+
+    @Test
+    public void writeGoAwayTruncatesDebugDataExceedingMaxFrameSize() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf debugData = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        frameWriter.writeGoAway(ctx, 0, Http2Error.NO_ERROR.code(), debugData, promise);
+
+        // 8 bytes of last stream id and error code plus the truncated debug data fill exactly one frame
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // The original debug data buffer must have been released
+        assertEquals(0, debugData.refCnt());
     }
 
     @Test
