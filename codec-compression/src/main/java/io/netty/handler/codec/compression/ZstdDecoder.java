@@ -52,7 +52,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_WINDOW_LOG = 27;
     private static final int MIN_WINDOW_LOG = 10;
     private static final int MAX_WINDOW_LOG = 31;
-    private final int maximumAllocationSize;
     private final int maxForwardBytes;
     private final int maxWindowLog;
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
@@ -104,7 +103,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
      *                              decoder may allocate per stream.
      */
     public ZstdDecoder(int maximumAllocationSize, int maxWindowLog) {
-        this.maximumAllocationSize = ObjectUtil.checkPositiveOrZero(maximumAllocationSize, "maximumAllocationSize");
+        ObjectUtil.checkPositiveOrZero(maximumAllocationSize, "maximumAllocationSize");
         this.maxForwardBytes = maximumAllocationSize > 0 ? maximumAllocationSize : DEFAULT_MAX_FORWARD_BYTES;
         this.maxWindowLog = ObjectUtil.checkInRange(maxWindowLog, MIN_WINDOW_LOG, MAX_WINDOW_LOG, "maxWindowLog");
     }
@@ -141,8 +140,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 int w;
                 do {
                     if (outBuffer == null) {
-                        outBuffer = ctx.alloc().heapBuffer((int) (maximumAllocationSize == 0 ?
-                                uncompressedLength : Math.min(maximumAllocationSize, uncompressedLength)));
+                        // The frame content size is read from the (untrusted) frame header, so never use it
+                        // to size the buffer beyond what we forward in one go.
+                        outBuffer = ctx.alloc().heapBuffer((int) Math.min(maxForwardBytes, uncompressedLength));
                     }
                     do {
                         w = outBuffer.writeBytes(zstdIs, outBuffer.writableBytes());

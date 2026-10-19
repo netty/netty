@@ -25,6 +25,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAG
 import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_2;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_DECODE_MAX_CODE_LENGTH;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAXIMUM_TABLES;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MINIMUM_TABLES;
@@ -273,6 +274,10 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
                                 saveStateAndReturn = true;
                                 break loop;
                             }
+                        }
+                        if (currLength < 1 || currLength > HUFFMAN_DECODE_MAX_CODE_LENGTH) {
+                            throw new DecompressionException("Bzip2 block Huffman code length not in range 1.."
+                                    + HUFFMAN_DECODE_MAX_CODE_LENGTH);
                         }
                         codeLength[currGroup][currAlpha] = (byte) currLength;
                     }
