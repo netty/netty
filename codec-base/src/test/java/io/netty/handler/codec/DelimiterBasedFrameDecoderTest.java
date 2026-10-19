@@ -30,6 +30,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DelimiterBasedFrameDecoderTest {
@@ -129,6 +130,65 @@ public class DelimiterBasedFrameDecoderTest {
 
         buf.release();
         buf2.release();
+    }
+
+    @Test
+    public void testMaxLengthFrameWithDelimiterSplitAcrossReads() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
+        // The frame has maxFrameLength bytes, the first delimiter byte is in the same read.
+        ch.writeInbound(ascii("ABCD#"));
+        ch.writeInbound(ascii("#ok##"));
+        assertFrame(ch, "ABCD");
+        assertFrame(ch, "ok");
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDelimiterSplitAcrossReadsWhileDiscarding() throws Exception {
+        final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
+        // failFast: the exception is raised as soon as the frame is known to be too long.
+        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("AAAAAAAAAA#")));
+        // The rest of the delimiter ends the discarded frame, the next frame must not be lost.
+        ch.writeInbound(ascii("#ok##"));
+        assertFrame(ch, "ok");
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDelimiterSplitAcrossReadsWhileDiscardingNoFailFast() throws Exception {
+        final EmbeddedChannel ch = new EmbeddedChannel(
+                new DelimiterBasedFrameDecoder(4, true, false, ascii("##")));
+        ch.writeInbound(ascii("AAAAAAAAAA#"));
+        // The exception is raised once the delimiter that ends the too long frame was read.
+        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("#ok##")));
+        ch.writeInbound(ascii("next##"));
+        assertFrame(ch, "ok");
+        assertFrame(ch, "next");
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testMaxFrameLengthEnforcedWithDelimiterSplitAcrossReads() throws Exception {
+        final EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(4, ascii("##")));
+        // One byte more than maxFrameLength.
+        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(ascii("ABCDE#")));
+        ch.writeInbound(ascii("#ok##"));
+        assertFrame(ch, "ok");
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    private static ByteBuf ascii(String s) {
+        return Unpooled.copiedBuffer(s, CharsetUtil.US_ASCII);
+    }
+
+    private static void assertFrame(EmbeddedChannel ch, String expected) {
+        ByteBuf frame = ch.readInbound();
+        assertEquals(expected, frame.toString(CharsetUtil.US_ASCII));
+        frame.release();
     }
 
     /**

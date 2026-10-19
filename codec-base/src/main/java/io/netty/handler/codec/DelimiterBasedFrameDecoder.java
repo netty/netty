@@ -314,11 +314,14 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
             return frame;
         } else {
+            // The buffer may end with the first bytes of a delimiter whose remaining bytes were not received yet.
+            // They are neither counted as part of the frame nor discarded.
+            int frameBytes = readableBytes - partialDelimiterLength(buffer);
             if (!discardingTooLongFrame) {
-                if (readableBytes > maxFrameLength) {
+                if (frameBytes > maxFrameLength) {
                     // Discard the content of the buffer until a delimiter is found.
-                    tooLongFrameLength = readableBytes;
-                    buffer.skipBytes(readableBytes);
+                    tooLongFrameLength = frameBytes;
+                    buffer.skipBytes(frameBytes);
                     discardingTooLongFrame = true;
                     scanOffset = 0;
                     if (failFast) {
@@ -331,12 +334,29 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
                 }
             } else {
                 // Still discarding the buffer since a delimiter is not found.
-                tooLongFrameLength += buffer.readableBytes();
-                buffer.skipBytes(buffer.readableBytes());
+                tooLongFrameLength += frameBytes;
+                buffer.skipBytes(frameBytes);
                 scanOffset = 0;
             }
             return null;
         }
+    }
+
+    /**
+     * Returns the length of the longest suffix of the readable bytes that is the beginning of a delimiter.
+     */
+    private int partialDelimiterLength(ByteBuf buffer) {
+        int readableBytes = buffer.readableBytes();
+        int partialLength = 0;
+        for (ByteBuf delim: delimiters) {
+            for (int length = Math.min(delim.capacity() - 1, readableBytes); length > partialLength; length--) {
+                if (ByteBufUtil.equals(buffer, buffer.writerIndex() - length, delim, 0, length)) {
+                    partialLength = length;
+                    break;
+                }
+            }
+        }
+        return partialLength;
     }
 
     private void fail(long frameLength) {
