@@ -589,6 +589,9 @@ public class LocalChannel extends AbstractChannel {
         if (!(boundChannel instanceof LocalServerChannel)) {
             Exception cause = new ConnectException("connection refused: " + remoteAddress);
             promise.setFailure(cause);
+            // Nothing is listening on the remote address, so the channel can not be used anymore. Close it, as it is
+            // done when the connection is refused after the connect was queued.
+            ioTransport().close(CompletionHandler.ignore());
             return;
         }
 
