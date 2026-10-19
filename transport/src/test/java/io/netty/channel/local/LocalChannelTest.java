@@ -858,6 +858,23 @@ public class LocalChannelTest {
         assertInstanceOf(ConnectException.class, cause.getCause());
     }
 
+    @Test
+    public void testChannelClosedWhenConnectionRefused() throws Exception {
+        Channel cc = registerChannel();
+        try {
+            Future<Void> cf = cc.connect(new LocalAddress("unbound-" + getClass().getName()));
+
+            assertTrue(cf.await(5, SECONDS));
+            assertInstanceOf(ConnectException.class, cf.cause());
+            // The connect promise is failed before the channel is closed, and await() may return before the close,
+            // so wait for it.
+            assertTrue(cc.closeFuture().await(5, SECONDS));
+            assertFalse(cc.isOpen());
+        } finally {
+            closeChannel(cc);
+        }
+    }
+
     private static final class LatchChannelFutureListener extends CountDownLatch implements FutureListener<Void> {
         private LatchChannelFutureListener(int count) {
             super(count);
