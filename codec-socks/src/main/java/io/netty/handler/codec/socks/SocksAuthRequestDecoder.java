@@ -48,7 +48,7 @@ public class SocksAuthRequestDecoder extends ByteToMessageDecoder {
                 if (byteBuf.readableBytes() < 1) {
                     return;
                 }
-                int fieldLength = byteBuf.getByte(byteBuf.readerIndex());
+                int fieldLength = byteBuf.getUnsignedByte(byteBuf.readerIndex());
                 if (byteBuf.readableBytes() < 1 + fieldLength) {
                     return;
                 }
@@ -60,7 +60,7 @@ public class SocksAuthRequestDecoder extends ByteToMessageDecoder {
                 if (byteBuf.readableBytes() < 1) {
                     return;
                 }
-                int fieldLength = byteBuf.getByte(byteBuf.readerIndex());
+                int fieldLength = byteBuf.getUnsignedByte(byteBuf.readerIndex());
                 if (byteBuf.readableBytes() < 1 + fieldLength) {
                     return;
                 }
