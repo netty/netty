@@ -111,6 +111,17 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
     private static final long NEXT_UPDATE_AHEAD_MILLIS = TimeUnit.HOURS.toMillis(1);
 
+    @Test
+    void defaultResolverUsesSecondFactorDefences() {
+        DnsNameResolver resolver = OcspServerCertificateValidator.createDefaultResolver(IoTransport.DEFAULT);
+        try {
+            assertTrue(resolver.isCaseRandomizationEnabled());
+            assertTrue(resolver.isDnsCookiesEnabled());
+        } finally {
+            resolver.close();
+        }
+    }
+
     /**
      * Full round trip over plain HTTP against a local OCSP responder: a good, fresh response with a
      * {@code nextUpdate} must result in a {@link OcspResponse.Status#VALID} verdict and an open channel.
