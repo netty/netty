@@ -19,9 +19,14 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -247,6 +252,207 @@ public class AbstractChannelTest {
             channel.close();
             loop.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void ensureClosedChannelOnWriteReleaseMsg() throws Exception {
+        EventLoop loop = new SingleThreadEventLoop(null, Executors.defaultThreadFactory(), true) {
+
+            @Override
+            protected void run() {
+                for (;;) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        runTask(task);
+                        updateLastExecutionTime();
+                    }
+
+                    if (confirmShutdown()) {
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public Future<IoRegistration> register(IoHandle handle) {
+                return newSucceededFuture(new IoRegistration() {
+                    @Override
+                    public <T> T attachment() {
+                        return null;
+                    }
+
+                    @Override
+                    public long submit(IoOps ops) {
+                        return 0;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean cancel() {
+                        return false;
+                    }
+                });
+            }
+
+            @Override
+            public boolean isCompatible(Class<? extends IoHandle> handleType) {
+                return true;
+            }
+
+            @Override
+            public boolean isIoType(Class<? extends IoHandler> handlerType) {
+                return true;
+            }
+        };
+        final IOException ioException = new IOException();
+        final TestChannel channel = new TestChannel(loop) {
+            private boolean open = true;
+            private boolean active;
+
+            @Override
+            protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+                active = true;
+                promise.setSuccess(null);
+            }
+
+            @Override
+            protected void doClose(Promise<Void> promise) {
+                active = false;
+                open = false;
+                promise.setSuccess(null);
+            }
+
+            @Override
+            protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+                throw ioException;
+            }
+
+            @Override
+            public boolean isOpen() {
+                return open;
+            }
+
+            @Override
+            public boolean isActive() {
+                return active;
+            }
+        };
+        try {
+            registerChannel(channel);
+            channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
+
+            assertSame(ioException, channel.writeAndFlush("").await().cause());
+            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            assertEquals(1, msg.refCnt());
+            Promise<Void> promise = channel.newPromise();
+            loop.execute(() -> {
+                channel.ioTransport().write(msg, promise);
+            });
+
+            assertTrue(promise.await(2, TimeUnit.SECONDS));
+            assertTrue(promise.isDone());
+            assertInstanceOf(ClosedChannelException.class, promise.cause());
+            assertEquals(0, msg.refCnt());
+        } finally {
+            channel.close().sync();
+            loop.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void flushOnUnconnectedOpenChannelFailsWithNotYetConnected() throws Exception {
+        EventLoop eventLoop = newMockEventLoop();
+        TestChannel channel = new TestChannel(eventLoop) {
+            @Override
+            public boolean isOpen() {
+                //Open, but never connected
+                return true;
+            }
+
+            @Override
+            public boolean isActive() {
+                return false;
+            }
+        };
+
+        try {
+            registerChannel(channel);
+            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            Promise<Void> promise = channel.newPromise();
+
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.ioTransport().write(msg, promise);
+                    channel.ioTransport().flush();
+                }
+            });
+            assertTrue(promise.isDone());
+            assertInstanceOf(NotYetConnectedException.class, promise.cause());
+            assertEquals(0, msg.refCnt());
+        } finally {
+            channel.close().sync();
+        }
+    }
+
+    @Test
+    public void flushOnUnconnectedClosedChannelFailsWithClosedChannel() throws Exception {
+        EventLoop eventLoop = newMockEventLoop();
+        TestChannel channel = new TestChannel(eventLoop) {
+            private boolean open = true;
+
+            @Override
+            public boolean isOpen() {
+                return open;
+            }
+
+            @Override
+            public boolean isActive() {
+                return false;
+            }
+
+            @Override
+            protected void doClose(Promise<Void> promise) {
+                this.open = false;
+                promise.setSuccess(null);
+            }
+        };
+        try {
+            registerChannel(channel);
+            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            Promise<Void> promise = channel.newPromise();
+
+            eventLoop.execute(() -> {
+                channel.ioTransport().write(msg, promise);
+                channel.ioTransport().close(CompletionHandler.ignore());
+                channel.ioTransport().flush();
+            });
+
+            assertTrue(promise.isDone());
+            assertInstanceOf(ClosedChannelException.class, promise.cause());
+            assertEquals(0, msg.refCnt());
+        } finally {
+            channel.close().sync();
+        }
+    }
+
+    private static EventLoop newMockEventLoop() {
+        final EventLoop eventLoop = mock(EventLoop.class);
+        // This allows us to have a single-threaded test
+        when(eventLoop.inEventLoop()).thenReturn(true);
+        doAnswer(m -> new DefaultPromise<>(eventLoop)).when(eventLoop).newPromise();
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) {
+                ((Runnable) invocationOnMock.getArgument(0)).run();
+                return null;
+            }
+        }).when(eventLoop).execute(any(Runnable.class));
+        return eventLoop;
     }
 
     private static void assertClosedChannelException(Future<Void> future, IOException expected)
