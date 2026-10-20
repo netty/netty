@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 public class XmlFrameDecoderTest {
 
@@ -122,6 +124,33 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeInvalidNestedClosingTag() throws Exception {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                ch.writeInbound(Unpooled.copiedBuffer("<a></</a>", CharsetUtil.UTF_8));
+            }
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testDecodeInvalidRepeatedClosingTags() throws Exception {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+            }
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
     public void testDecodeWithCDATABlock() throws Exception {
         final String xml = "<book>" +
                 "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
@@ -135,6 +164,46 @@ public class XmlFrameDecoderTest {
         final String xml = "<info>" +
                 "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>" +
                 "</info>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCDATABlockContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<![CDATA[close </a then open <b]]>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<!-- close </a then open <b -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTag() throws Exception {
+        final String xml = "<root>" +
+                "<!-- close </a -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<?pi close </a then open <b ?>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTag() throws Exception {
+        final String xml = "<root>" +
+                "<?pi close </a ?>" +
+                "</root>";
         testDecodeWithXml(xml, xml);
     }
 
@@ -162,10 +231,118 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testFramingWithSplitClosingTag() throws Exception {
+        testDecodeWithXml(Arrays.asList("<abc>", "123</", "abc>"), "<abc>123</abc>");
+    }
+
+    @Test
+    public void testFramingWithCommentContainingClosingTagThenOpeningBracket() throws Exception {
+        final String frame = "<root><!-- close </a then open <b --></root>";
+        testDecodeWithXml(Arrays.asList("<root><!-- close </", "a then open <b --></root>"), frame);
+    }
+
+    @Test
+    public void testFramingWithProcessingInstructionContainingClosingTagThenOpeningBracket() throws Exception {
+        final String frame = "<root><?pi close </a then open <b ?></root>";
+        testDecodeWithXml(Arrays.asList("<root><?pi close </", "a then open <b ?></root>"), frame);
+    }
+
+    @Test
     public void testDecodeWithSampleXml() throws Exception {
         for (final String xmlSample : xmlSamples) {
             testDecodeWithXml(xmlSample, xmlSample);
         }
+    }
+
+    @Test
+    public void testFramingWithCommentStartSplitAcrossChunks() throws Exception {
+        final String frame = "<root><!-- comment --></root>";
+        // split right in the middle of the "<!--" start marker, so the decoder cannot
+        // tell yet (with only "<!" available) whether this is a comment or CDATA block.
+        testDecodeWithXml(Arrays.asList("<root><!", "-- comment --></root>"), frame);
+    }
+
+    @Test
+    public void testFramingWithCDATAStartSplitAcrossChunks() throws Exception {
+        final String frame = "<root><![CDATA[hello]]></root>";
+        // split in the middle of the "<![CDATA[" start marker.
+        testDecodeWithXml(Arrays.asList("<root><![CDA", "TA[hello]]></root>"), frame);
+    }
+
+    @Test
+    public void testFramingWithOpeningBracketAsLastByteOfChunk() throws Exception {
+        // '<' arrives with nothing after it yet, so the decoder cannot peek ahead to
+        // classify it until the next chunk arrives.
+        testDecodeWithXml(Arrays.asList("<", "abc/>"), "<abc/>");
+    }
+
+    @Test
+    public void testFramingWithSelfClosingSlashAsLastByteOfChunk() throws Exception {
+        // '/' arrives with nothing after it yet, so the decoder cannot peek ahead to see
+        // whether it is immediately followed by '>' until the next chunk arrives.
+        testDecodeWithXml(Arrays.asList("<abc", "/", ">"), "<abc/>");
+    }
+
+    @Test
+    public void testDecodeDoesNotHangOnTrickledUnbalancedElement() throws Exception {
+        // Regression test: a peer that opens an element ("<a>") and then trickles
+        // non-markup content one byte at a time, without ever closing the element, used
+        // to force XmlFrameDecoder to rescan the whole accumulated buffer from the start
+        // on every single decode() call, making the total work quadratic in the number
+        // of bytes received. If the fix regresses, this test will time out instead of
+        // failing an assertion.
+        final int contentBytes = 200_000;
+        final XmlFrameDecoder decoder = new XmlFrameDecoder(contentBytes + 1024);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        try {
+            assertTimeoutPreemptively(Duration.ofSeconds(10), new Executable() {
+                @Override
+                public void execute() throws Exception {
+                    ch.writeInbound(Unpooled.copiedBuffer("<a>", CharsetUtil.UTF_8));
+                    for (int i = 0; i < contentBytes; i++) {
+                        ch.writeInbound(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
+                    }
+                }
+            });
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void lookAheadBufferForUnknownMarkupDeclarationsMustNotIgnoreFollowingTags() throws Exception {
+        testDecodeWithXml("<a><!x></a>", "<a><!x></a>");
+        testDecodeWithXml("<aa><!x></aa>", "<aa><!x></aa>");
+    }
+
+    @Test
+    public void mustDecodeRemainingDataAfterCumulationCompaction() throws Exception {
+        // Regression test for the retained *absolute* 'length' field. The chunk sizes are
+        // chosen so that ByteToMessageDecoder's cumulation buffer is re-based in between:
+        //  - chunk 1 (59 bytes) becomes the cumulation buffer itself, capacity == 59;
+        //  - chunk 2 (5 bytes) is appended, growing the capacity to exactly 64. The
+        //    60-byte element is emitted and the stray "</b>" is left unread, which drives
+        //    openBracketsCount to -1 while 'length' keeps the absolute value 64;
+        //  - channelReadComplete() then calls discardSomeReadBytes(): readerIndex (60) is
+        //    >= capacity/2 (32), so the 4 unread bytes move down to offset 0 and
+        //    readerIndex becomes 0 -- 'length' is now stale by 60 bytes;
+        //  - chunk 3 ("<c") brings openBracketsCount back to 0 via the '<' + start-char
+        //    increment, without any '>' being scanned, so the stale 'length' decides the
+        //    frame boundary: "</b><c" is emitted instead of "</b>", swallowing the start
+        //    of the next element, and chunk 4 ("/>") then looks like leading garbage.
+        StringBuilder content = new StringBuilder();
+        for (int i = 0; i < 53; i++) {
+            content.append('x');
+        }
+        final String frame = "<a>" + content + "</a>";
+        assertEquals(60, frame.length());
+
+        testDecodeWithXml(Arrays.asList(
+                frame.substring(0, 59),       // the element minus its final '>'
+                frame.substring(59) + "</b>", // completes it, plus a stray closing tag
+                "<c",
+                "/>"),
+            frame, "</b>", "<c/>");
     }
 
     private static void testDecodeWithXml(List<String> xmlFrames, Object... expected) throws Exception {

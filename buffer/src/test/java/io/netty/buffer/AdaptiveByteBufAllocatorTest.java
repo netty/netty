@@ -16,17 +16,24 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
+import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -35,8 +42,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import io.netty.buffer.AbstractByteBufTest.TestGatheringByteChannel;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -72,6 +82,45 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertInstanceOf(heapBuffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
         assertFalse(heapBuffer.isDirect());
         heapBuffer.release();
+    }
+
+    @Test
+    public void testDirectBufferMemoryAddressFollowsItsSegment() {
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        // A direct buffer's address is the chunk's address plus the buffer's offset in the chunk. The second buffer
+        // is likely at an offset above zero.
+        ByteBuf first = allocator.directBuffer(16, 1 << 20);
+        ByteBuf second = allocator.directBuffer(16, 1 << 20);
+        AbstractByteBuf unwrappedSecond = unwrapToAbstractByteBuf(second);
+        try {
+            assumeTrue(first.hasMemoryAddress());
+            assumeTrue(PlatformDependent.hasDirectByteBufferAddress(first.nioBuffer(0, first.capacity())));
+            assertMemoryAddressMatchesTheNioBuffer(first);
+            assertMemoryAddressMatchesTheNioBuffer(second);
+            // growing beyond its segment moves the buffer to another segment, with another address
+            second.ensureWritable(128 * 1024);
+            assertMemoryAddressMatchesTheNioBuffer(second);
+        } finally {
+            first.release();
+            second.release();
+        }
+        // a released buffer has no address
+        assertEquals(0L, unwrappedSecond._memoryAddress());
+    }
+
+    // The NIO buffer's address is computed from the chunk's buffer separately from memoryAddress(), and comparing the
+    // addresses avoids reading memory through a wrong one.
+    private static void assertMemoryAddressMatchesTheNioBuffer(ByteBuf buf) {
+        assertEquals(PlatformDependent.directBufferAddress(buf.nioBuffer(0, buf.capacity())), buf.memoryAddress());
+    }
+
+    // with leak detection, the allocator wraps the AdaptiveByteBuf
+    private static AbstractByteBuf unwrapToAbstractByteBuf(ByteBuf buf) {
+        ByteBuf unwrapped = buf;
+        while (!(unwrapped instanceof AbstractByteBuf)) {
+            unwrapped = unwrapped.unwrap();
+        }
+        return (AbstractByteBuf) unwrapped;
     }
 
     @Override
@@ -141,6 +190,42 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
         while (!bufs.isEmpty()) {
             bufs.pop().release();
+        }
+    }
+
+    @Test
+    public void getBytesBoundaryCheckWithFileChannel() {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, (FileChannel) null, 0L, 8);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesBoundaryCheckWithGatheringByteChannel() throws Exception {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        TestGatheringByteChannel channel = new TestGatheringByteChannel();
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, channel, 8);
+                }
+            });
+        } finally {
+            channel.close();
+            buf.release();
         }
     }
 
@@ -266,6 +351,68 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 buf.release();
             }
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void purgeScanShouldEvictIdleChunks(boolean threadLocal) throws Exception {
+        // Thread-local magazines require FastThreadLocalThread
+        // (allocate() checks currentThreadWillCleanupFastThreadLocals)
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
+        long purgePolls = threadLocal ?
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL :
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
+        Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
+        if (threadLocal) {
+            FastThreadLocalThread.runWithFastThreadLocal(test);
+        } else {
+            test.run();
+        }
+    }
+
+    private static void assertPurgeScanEvictsIdleChunks(AdaptiveByteBufAllocator allocator, long purgePolls) {
+        ByteBuf probe = allocator.heapBuffer(256);
+        long chunkSize = allocator.usedHeapMemory();
+        int buffersPerChunk = (int) (chunkSize / 256);
+        probe.release();
+
+        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
+        int totalBuffers = totalChunks * buffersPerChunk;
+        List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
+        for (int i = 0; i < totalBuffers; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+        bufs.clear();
+        long memoryAfterRelease = allocator.usedHeapMemory();
+
+        int threshold = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD;
+        // Account for pollChunk calls burned during setup (one per chunk created)
+        // and partition shuffle: with N notEmpty and P polls, each chunk is polled
+        // P/N of the time. Epochs advance at rate 1-P/N per cycle. Need enough cycles
+        // for the slowest chunk to reach threshold.
+        int setupPolls = totalChunks;
+        int notEmpty = totalChunks - AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        double advanceRate = 1.0 - (double) purgePolls / notEmpty;
+        int cyclesNeeded = advanceRate > 0 ? (int) Math.ceil((threshold + 1) / advanceRate) + 2 : threshold + 2;
+        int pollsNeeded = setupPolls + (int) (cyclesNeeded * purgePolls);
+        for (int poll = 0; poll < pollsNeeded; poll++) {
+            for (int i = 0; i < buffersPerChunk; i++) {
+                bufs.add(allocator.heapBuffer(256));
+            }
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            bufs.clear();
+        }
+
+        long memoryAfterPurge = allocator.usedHeapMemory();
+        assertTrue(memoryAfterPurge < memoryAfterRelease,
+                "Memory should decrease after purge scans evict idle chunks. " +
+                "Before purge: " + memoryAfterRelease + ", after purge: " + memoryAfterPurge);
     }
 
     private static void shuffle(SplittableRandom rng, Object array) {

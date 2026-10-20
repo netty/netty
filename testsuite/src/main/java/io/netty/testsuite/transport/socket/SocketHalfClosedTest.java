@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,10 +41,13 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -762,6 +767,215 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             if (serverChannel != null) {
                 serverChannel.close().sync();
             }
+        }
+    }
+
+    @Test
+    public void testShutdownInputAllowsOutboundWrites(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testShutdownInputAllowsOutboundWrites(true, serverBootstrap, bootstrap);
+                testShutdownInputAllowsOutboundWrites(false, serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    private static void testShutdownInputAllowsOutboundWrites(final boolean clientInitiates, final ServerBootstrap sb,
+                                                              final Bootstrap cb)
+            throws Exception {
+        final byte[] expectedBytes = new byte[100];
+        ThreadLocalRandom.current().nextBytes(expectedBytes);
+        final CountDownLatch readDoneLatch = new CountDownLatch(1);
+
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            final ShutdownInputWriter shutdownInputWriter = new ShutdownInputWriter(expectedBytes);
+            final ShutdownInputReader shutdownInputReader =
+                    new ShutdownInputReader(expectedBytes.length, readDoneLatch);
+            sb.childOption(ChannelOption.ALLOW_HALF_CLOSURE, true);
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientInitiates? shutdownInputReader : shutdownInputWriter);
+                }
+            });
+            cb.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientInitiates? shutdownInputWriter : shutdownInputReader);
+                }
+            });
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            assertTrue(readDoneLatch.await(5, TimeUnit.SECONDS),
+                       "Timed out waiting for inbound data after input shutdown");
+            assertArrayEquals(expectedBytes, shutdownInputReader.receivedBytes());
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+        }
+    }
+
+    private static final class ShutdownInputReader extends SimpleChannelInboundHandler<ByteBuf> {
+        private final CountDownLatch readDoneLatch;
+        private final int expectedBytesCount;
+        private final ByteBuf receivedMsgs;
+        private byte[] actualBytes;
+
+        ShutdownInputReader(final int expectedBytesCount,
+                            final CountDownLatch readDoneLatch) {
+            this.readDoneLatch = readDoneLatch;
+            this.expectedBytesCount = expectedBytesCount;
+            this.receivedMsgs = Unpooled.buffer(expectedBytesCount);
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            receivedMsgs.writeBytes(msg);
+            if (receivedMsgs.readableBytes() == expectedBytesCount) {
+                actualBytes = ByteBufUtil.getBytes(receivedMsgs);
+                readDoneLatch.countDown();
+            }
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            receivedMsgs.release();
+        }
+
+        byte[] receivedBytes() {
+            return actualBytes;
+        }
+    }
+
+    private static final class ShutdownInputWriter implements ChannelInboundHandler {
+        private final byte[] expectedBytes;
+
+        ShutdownInputWriter(final byte[] expectedBytes) {
+            this.expectedBytes = expectedBytes;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.channel().shutdown(ChannelShutdownType.newInbound())
+                                           .addListener(f -> {
+                                               ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
+                                           });
+        }
+    }
+
+    @Test
+    public void testShutdownOutputAllowsInboundReads(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testShutdownOutputAllowsInboundReads(true, serverBootstrap, bootstrap);
+                testShutdownOutputAllowsInboundReads(false, serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    private static void testShutdownOutputAllowsInboundReads(final boolean clientInitiates, final ServerBootstrap sb,
+                                                             final Bootstrap cb) throws Exception {
+        final byte[] expectedBytes = new byte[100];
+        ThreadLocalRandom.current().nextBytes(expectedBytes);
+        final CountDownLatch readDoneLatch = new CountDownLatch(1);
+
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            final ShutdownOutputWriter shutdownOutputWriter = new ShutdownOutputWriter(expectedBytes);
+            final ShutdownOutputReader
+                    shutdownOutputReader =
+                    new ShutdownOutputReader(expectedBytes.length, readDoneLatch);
+            sb.childOption(ChannelOption.ALLOW_HALF_CLOSURE, true);
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientInitiates? shutdownOutputWriter : shutdownOutputReader);
+                }
+            });
+            cb.handler(new ChannelInitializer<Channel>() {
+
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientInitiates? shutdownOutputReader : shutdownOutputWriter);
+                }
+            });
+
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            assertTrue(readDoneLatch.await(5, TimeUnit.SECONDS),
+                       "Timed out waiting for inbound data after output shutdown");
+            assertArrayEquals(expectedBytes, shutdownOutputReader.receivedBytes());
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+        }
+    }
+
+    private static final class ShutdownOutputWriter implements ChannelInboundHandler {
+        private final byte[] expectedBytes;
+
+        ShutdownOutputWriter(final byte[] expectedBytes) {
+            this.expectedBytes = expectedBytes;
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
+                ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
+            }
+            ctx.fireChannelShutdown(type);
+        }
+    }
+
+    private static final class ShutdownOutputReader extends SimpleChannelInboundHandler<ByteBuf> {
+        private final CountDownLatch readDoneLatch;
+        private final int expectedBytesCount;
+        private final ByteBuf receivedMsgs;
+        private byte[] actualbytes;
+
+        ShutdownOutputReader(final int expectedBytesCount,
+                             final CountDownLatch readDoneLatch) {
+            this.readDoneLatch = readDoneLatch;
+            this.expectedBytesCount = expectedBytesCount;
+            this.receivedMsgs = Unpooled.buffer(expectedBytesCount);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            ctx.channel().shutdown(ChannelShutdownType.newOutbound());
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+            receivedMsgs.writeBytes(msg);
+            if (receivedMsgs.readableBytes() == expectedBytesCount) {
+                this.actualbytes = ByteBufUtil.getBytes(receivedMsgs);
+                readDoneLatch.countDown();
+            }
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            receivedMsgs.release();
+        }
+
+        byte[] receivedBytes() {
+            return actualbytes;
         }
     }
 

@@ -105,6 +105,11 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.buffer.AdaptivePoolingAllocator$Magazine",
+                    "free"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.SslHandler",
                     "handshake"
             );
@@ -166,6 +171,14 @@ class Hidden {
             builder.allowBlockingCallsInside(
                     "io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider",
                     "parseEtcResolverOptions");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.DnsQueryIdSpace",
+                    "nextId");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.DnsQueryIdSpace$DnsQueryIdRange",
+                    "pushId");
 
             builder.allowBlockingCallsInside(
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",

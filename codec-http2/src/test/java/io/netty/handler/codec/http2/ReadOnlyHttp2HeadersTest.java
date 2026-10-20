@@ -89,6 +89,16 @@ public class ReadOnlyHttp2HeadersTest {
     }
 
     @Test
+    public void illegalValuesAreNotAllowed() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                ReadOnlyHttp2Headers.trailers(true, new AsciiString("foo"), new AsciiString("ba\nr"));
+            }
+        });
+    }
+
+    @Test
     public void emptyHeaderNameAllowed() {
         ReadOnlyHttp2Headers.trailers(false, AsciiString.EMPTY_STRING, new AsciiString("foo"));
     }

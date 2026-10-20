@@ -26,6 +26,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -714,6 +716,99 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testV2WithNestedSslTLVs() throws Exception {
+        ch = new EmbeddedChannel(new HAProxyMessageDecoder());
+
+        // Outer SSL TLV (type=0x20, content=28):
+        //   client(1)=0x05  verify(4)=0
+        //   Inner SSL TLV (type=0x20, content=13):     <-- depth-1 nested SSL
+        //     client(1)=0x01  verify(4)=0
+        //     PP2_TYPE_SSL_VERSION (type=0x21, len=5): "TLSv1"   <-- depth-2 leaf
+        //   PP2_TYPE_SSL_CN (type=0x22, len=4): "LEAF"           <-- depth-1 leaf
+        final byte[] bytes = {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,   // v2 signature
+                33, 17,                                            // v2|PROXY, TCP4
+                0, 43,                                             // remaining: 12 + 31
+                127, 0, 0, 1, 127, 0, 0, 1, -55, -90, 7, 89,     // addresses + ports
+                32, 0, 28,                                         // outer SSL: type=0x20, len=28
+                5, 0, 0, 0, 0,                                    // outer: client=0x05, verify=0
+                32, 0, 13,                                         // inner SSL: type=0x20, len=13
+                1, 0, 0, 0, 0,                                    // inner: client=0x01, verify=0
+                33, 0, 5, 84, 76, 83, 118, 49,                    // SSL_VERSION: "TLSv1"
+                34, 0, 4, 76, 69, 65, 70                           // SSL_CN: "LEAF"
+        };
+
+        int startChannels = ch.pipeline().names().size();
+        assertTrue(ch.writeInbound(copiedBuffer(bytes)));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        HAProxyMessage msg = (HAProxyMessage) msgObj;
+
+        assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
+        assertEquals(HAProxyCommand.PROXY, msg.command());
+        assertEquals(HAProxyProxiedProtocol.TCP4, msg.proxiedProtocol());
+        assertEquals("127.0.0.1", msg.sourceAddress());
+        assertEquals("127.0.0.1", msg.destinationAddress());
+        assertEquals(51622, msg.sourcePort());
+        assertEquals(1881, msg.destinationPort());
+        final List<HAProxyTLV> tlvs = msg.tlvs();
+
+        // Flattened list: [outerSSL, innerSSL, SSL_CN]
+        // SSL_CN is a direct child of outer, so it is flattened.
+        // innerSSL is also a direct child of outer, so it is flattened.
+        // But "TLSv1" (SSL_VERSION) is a child of innerSSL (depth 2) — NOT flattened.
+        assertEquals(3, tlvs.size());
+        final HAProxyTLV firstTlv = tlvs.get(0);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.type());
+        final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
+        assertEquals(0, sslTlv.verify());
+        assertTrue(sslTlv.isPP2ClientSSL());
+        assertTrue(sslTlv.isPP2ClientCertSess());
+        assertFalse(sslTlv.isPP2ClientCertConn());
+
+        final HAProxyTLV secondTlv = tlvs.get(1);
+
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, secondTlv.type());
+        final HAProxySSLTLV innerSslTlv = (HAProxySSLTLV) secondTlv;
+
+        // The depth-2 leaf: SSL_VERSION "TLSv1" lives inside innerSslTlv
+        assertEquals(1, innerSslTlv.encapsulatedTLVs().size());
+        final HAProxyTLV depth2Leaf = innerSslTlv.encapsulatedTLVs().get(0);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, depth2Leaf.type());
+        ByteBuf versionBuf = depth2Leaf.content();
+        byte[] versionContent = new byte[versionBuf.readableBytes()];
+        versionBuf.readBytes(versionContent);
+        assertArrayEquals("TLSv1".getBytes(CharsetUtil.US_ASCII), versionContent);
+
+        final HAProxyTLV thirdTLV = tlvs.get(2);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.type());
+        ByteBuf thirdContentBuf = thirdTLV.content();
+        byte[] thirdContent = new byte[thirdContentBuf.readableBytes()];
+        thirdContentBuf.readBytes(thirdContent);
+        assertArrayEquals("LEAF".getBytes(CharsetUtil.US_ASCII), thirdContent);
+
+        assertTrue(sslTlv.encapsulatedTLVs().contains(secondTlv));
+        assertTrue(sslTlv.encapsulatedTLVs().contains(thirdTLV));
+
+        assertTrue(0 < firstTlv.refCnt());
+        assertTrue(0 < secondTlv.refCnt());
+        assertTrue(0 < thirdTLV.refCnt());
+        assertTrue(0 < depth2Leaf.refCnt());
+        assertTrue(msg.release());
+
+        // The depth-2 leaf TLV must be fully released after message.release().
+        // It is a child of the inner SSL TLV (depth 1), but readTlvs() only flattens
+        // one level of encapsulated TLVs.
+        assertEquals(0, depth2Leaf.refCnt(), "Depth-2 leaf TLV leaked");
+        assertEquals(0, firstTlv.refCnt());
+        assertEquals(0, secondTlv.refCnt());
+        assertEquals(0, thirdTLV.refCnt());
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testReleaseHAProxyMessage() throws Exception {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder());
 
@@ -1051,6 +1146,64 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testV2HeaderTooLongFollowedByData() throws Exception {
+        ch = new EmbeddedChannel(new HAProxyMessageDecoder(0));
+
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x01, 0x00  // 256 bytes of address information, exceeds the maximum
+        });
+        data.writeZero(256);
+        // followed by another header, which must not be decoded
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11,
+                0x00, 0x0C, // 12 bytes of address information
+                0x0A, 0x00, 0x00, 0x01,
+                0x0A, 0x00, 0x00, 0x02,
+                0x04, 0x57,
+                0x08, (byte) 0xAE
+        });
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertFalse(ch.isActive());
+        assertFalse(ch.finish());
+        assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testV2DecodeWithNonZeroReaderIndex() throws Exception {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeZero(4).skipBytes(4);
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x13, // 12 bytes of addresses and ports + 7 bytes of TLV
+                0x0A, 0x00, 0x00, 0x01,
+                0x0A, 0x00, 0x00, 0x02,
+                0x04, 0x57,
+                0x08, (byte) 0xAE,
+                0x02, 0x00, 0x04, 'a', 'b', 'c', 'd', // PP2_TYPE_AUTHORITY
+                'd', 'a', 't', 'a'
+        });
+
+        assertTrue(ch.writeInbound(data));
+        HAProxyMessage msg = ch.readInbound();
+        assertEquals("10.0.0.1", msg.sourceAddress());
+        assertEquals("10.0.0.2", msg.destinationAddress());
+        assertEquals(1, msg.tlvs().size());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_AUTHORITY, msg.tlvs().get(0).type());
+        assertEquals("abcd", msg.tlvs().get(0).content().toString(CharsetUtil.US_ASCII));
+        assertTrue(msg.release());
+        ByteBuf payload = ch.readInbound();
+        assertEquals("data", payload.toString(CharsetUtil.US_ASCII));
+        assertTrue(payload.release());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testV2IncompleteHeader() throws Exception {
         byte[] header = new byte[13];
         header[0] = 0x0D; // Binary Prefix
@@ -1121,6 +1274,14 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testInvalidProtocolUnsigned() {
+        final ByteBuf invalidData = buffer().writeBytes(
+                new byte[] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, (byte) 0xFF });
+        invalidData.writeZero(64);
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(invalidData));
+    }
+
+    @Test
     public void testNestedTLV() throws Exception {
         ByteArrayOutputStream headerWriter = new ByteArrayOutputStream();
         //src_ip = "AAAA", dst_ip = "BBBB", src_port = "CC", dst_port = "DD"
@@ -1174,5 +1335,252 @@ public class HAProxyMessageDecoderTest {
         data.writeBytes(header);
 
         assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+    }
+
+    @ParameterizedTest
+    @ValueSource(shorts = {
+            4, // Use a length which is < 5.
+            Short.MAX_VALUE // Use a length which is > readable bytes.
+    })
+    public void testInvalidTLVLengthCorrectlyHandled(short length) throws Exception {
+        ByteArrayOutputStream headerWriter = new ByteArrayOutputStream();
+        //src_ip = "AAAA", dst_ip = "BBBB", src_port = "CC", dst_port = "DD"
+        headerWriter.write(new byte[] {'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'D', 'D'});
+        //write TLV
+        ByteBuffer tlvLengthBuf = ByteBuffer.allocate(2);
+        tlvLengthBuf.order(ByteOrder.BIG_ENDIAN);
+        //write PP2_TYPE_SSL TLV
+        headerWriter.write(0x20); //PP2_TYPE_SSL
+        //notice that the TLV length cannot be bigger than 0xffff
+        tlvLengthBuf.clear();
+        tlvLengthBuf.putShort(length);
+        //add to the header
+        headerWriter.write(tlvLengthBuf.array());
+        //write client field
+        headerWriter.write(1);
+        //write verify field
+        headerWriter.write(new byte[] {'V', 'V', 'V', 'V'});
+        //subtract the client and verify fields
+
+        byte[] header = headerWriter.toByteArray();
+        ByteBuffer numsWrite = ByteBuffer.allocate(2);
+        numsWrite.order(ByteOrder.BIG_ENDIAN);
+        numsWrite.putShort((short) header.length);
+
+        final  ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x00,
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x51,
+                (byte) 0x55,
+                (byte) 0x49,
+                (byte) 0x54,
+                (byte) 0x0A
+        });
+        //verCmd = 32
+        byte versionCmd = 0x20 | 1; //V2 | ProxyCmd
+        data.writeByte(versionCmd);
+        data.writeByte(17); //TPAF_TCP4_BYTE
+        data.writeBytes(numsWrite.array());
+        data.writeBytes(header);
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = { 0x01, 0x02, 0x21, 0x22, 0x30, (byte) 0xE0 })
+    public void testInvalidNonSslTLVLengthCorrectlyHandled(byte type) throws Exception {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x10, // 12 bytes of addresses and ports + 4 bytes of TLV
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                type, 0x00, (byte) 0xFF, 'h' // TLV with a length of 255, but only one byte of value
+        });
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertFalse(ch.isActive());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testReadTlvsLeaksRetainedBufferWhenSecondSSLTLVIsMalformed() {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,   // v2 signature
+                33, 17,                                            // V2|PROXY, TCP4
+                0, 26,                                             // remaining = 26 (12 addr + 8 TLV#1 + 6 TLV#2)
+                65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 68, 68,  // addr + ports
+                32, 0, 5, 1, 0, 0, 0, 0,                         // TLV #1: PP2_TYPE_SSL len=5, client=1, verify=0
+                32, 0, 3, 65, 66, 67                              // TLV #2: PP2_TYPE_SSL len=3 (MALFORMED: len < 5)
+        });
+
+        assertEquals(1, data.refCnt());
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+
+        try {
+            assertEquals(1, data.refCnt(),
+                    "TLV #1 rawContent leaked in readTlvs() - expected refCnt=1, got " + data.refCnt());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void testEncapsulatedTLVsLeakWhenInnerSSLTLVIsMalformed() {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,     // v2 signature
+                33, 17,                                            // V2|PROXY, TCP4
+                0, 34,                                             // remaining = 34 (12 addr + 22 outer SSL TLV)
+                65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 68, 68,    // addr + ports
+                32, 0, 19,                                         // outer SSL: type=0x20, len=19
+                5, 0, 0, 0, 0,                                     // outer: client=0x05, verify=0
+                33, 0, 5, 84, 76, 83, 118, 49,                     // inner SSL_VERSION: "TLSv1" (readRetainedSlice)
+                32, 0, 3, 65, 66, 67                               // inner SSL: len=3 (MALFORMED) → throws
+        });
+
+        assertEquals(1, data.refCnt());
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+
+        try {
+            assertEquals(1, data.refCnt(),
+                    "Inner PP2_TYPE_SSL_VERSION buffer leaked in encapsulated TLV loop - " +
+                            "expected refCnt=1, got " + data.refCnt());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void grandchildByteBufIsReleasedOnErrorPath() {
+        byte[] wire = new byte[] {
+            // -- 12-byte v2 signature (decodeHeader only skipBytes(12); contents unchecked) --
+            0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+            0x21,             // verCmd: version 2, PROXY command
+            0x11,             // protFam: AF_IPv4 + STREAM (TCP4)
+            0x00, 0x0C,       // addressInfoLen = 12 (min for IPv4; does not bound the TLV region)
+            0x00, 0x00, 0x00, 0x00,  // src addr 0.0.0.0
+            0x00, 0x00, 0x00, 0x00,  // dst addr 0.0.0.0
+            0x00, 0x00,       // src port
+            0x00, 0x00,       // dst port
+            // -- outer SSL TLV: type 0x20, len 21 --
+            0x20, 0x00, 0x15,
+            0x00,                     //   client
+            0x00, 0x00, 0x00, 0x00,   //   verify
+            // ---- child SSL TLV: type 0x20, len 9 (a grandchild-holder) ----
+            0x20, 0x00, 0x09,
+            0x00,                     //     client
+            0x00, 0x00, 0x00, 0x00,   //     verify
+            // ------ ALPN grandchild TLV: type 0x01, len 1 -> readRetainedSlice(1) leaks here
+            0x01, 0x00, 0x01,
+            (byte) 0xAA,              //       1 sentinel content byte (the leaked slice)
+            // ---- malformed sibling SSL TLV: type 0x20, len 1 (< 5) -> throws ----
+            0x20, 0x00, 0x01,
+            (byte) 0xFF               //     pad so readableBytes() >= 4 at the loop re-entry guard
+        };
+        final ByteBuf header = Unpooled.buffer().writeBytes(wire);
+        assertEquals(1, header.refCnt(), "precondition: freshly allocated buffer");
+
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(header));
+        int refCnt = header.refCnt();
+
+        // Regression gate: the fix must return the shared buffer to refCnt 1.
+        assertEquals(1, refCnt,
+            "grandchild TLV ByteBuf leaked on the readNextTLV error path (refCnt should be 1)");
+        assertTrue(header.release(), "buffer should be fully released");
+        assertEquals(0, header.refCnt());
+    }
+
+    /**
+     * Negative control: the SAME nesting (outer SSL -> child SSL -> ALPN grandchild) WITHOUT the
+     * malformed sibling decodes successfully and releases cleanly on both trees. This isolates the
+     * defect to the error path, not the nesting itself.
+     */
+    @Test
+    public void wellFormedNestedHeaderDecodesAndReleasesCleanly() {
+        byte[] wire = {
+            0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+            0x21, 0x11, 0x00, 0x0C,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            0x00, 0x00,
+            // outer SSL TLV: type 0x20, len 17 (client+verify+child, NO malformed sibling)
+            0x20, 0x00, 0x11,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            // child SSL TLV: type 0x20, len 9
+            0x20, 0x00, 0x09,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            // ALPN grandchild: type 0x01, len 1
+            0x01, 0x00, 0x01, (byte) 0xAA
+        };
+        ByteBuf header = Unpooled.buffer().writeBytes(wire);
+
+        HAProxyMessage msg = HAProxyMessage.decodeHeader(header);
+        assertTrue(header.refCnt() > 1, "decode retains slices of the header");
+        assertFalse(msg.tlvs().isEmpty(), "expected the top-level SSL TLV");
+        assertTrue(msg.release(), "message should be fully released");
+        assertEquals(1, header.refCnt(), "no leak on the happy path (only the test's own ref remains)");
+        assertTrue(header.release(), "buffer fully released");
+        assertEquals(0, header.refCnt());
+    }
+
+    @Test
+    public void testEmptyTLVsAtEndOfHeader() throws Exception {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x1A, // 12 bytes of addresses and ports + 14 bytes of TLVs
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                0x20, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, // PP2_TYPE_SSL, client=1, verify=0
+                0x21, 0x00, 0x00, // with an empty PP2_SUBTYPE_SSL_VERSION
+                0x04, 0x00, 0x00  // empty PP2_TYPE_NOOP
+        });
+
+        assertTrue(ch.writeInbound(data));
+        HAProxyMessage msg = ch.readInbound();
+        List<HAProxyTLV> tlvs = msg.tlvs();
+        assertEquals(3, tlvs.size());
+        HAProxySSLTLV ssl = (HAProxySSLTLV) tlvs.get(0);
+        assertEquals(1, ssl.encapsulatedTLVs().size());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, ssl.encapsulatedTLVs().get(0).type());
+        assertEquals(0, ssl.encapsulatedTLVs().get(0).content().readableBytes());
+        assertEquals(HAProxyTLV.Type.OTHER, tlvs.get(2).type());
+        assertEquals(0x04, tlvs.get(2).typeByteValue());
+        assertEquals(0, tlvs.get(2).content().readableBytes());
+        assertTrue(msg.release());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testIncompleteTLVAtEndOfHeader() {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x0F, // 12 bytes of addresses and ports + 3 bytes of TLV
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                0x01, 0x00, 0x01 // PP2_TYPE_ALPN with a length of 1, but no value
+        });
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertFalse(ch.isActive());
     }
 }

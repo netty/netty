@@ -53,6 +53,11 @@
 #define UDP_SEGMENT 103
 #endif
 
+// SO_INQ was added in Linux 6.17. Define it here so we can compile with older kernel headers.
+#ifndef SO_INQ
+#define SO_INQ 84
+#endif
+
 // Add define if NETTY_IO_URING_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
 #ifdef NETTY_IO_URING_BUILD_STATIC
 #define NETTY_JNI_UTIL_BUILD_STATIC
@@ -217,6 +222,21 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
+static jint netty_io_uring_close(JNIEnv* env, jclass clazz, jint fd) {
+    if (close(fd) < 0) {
+        // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and
+        // "assume" everything is fine == we closed the file descriptor.
+        //
+        // For more details see:
+        //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+        //     - https://lwn.net/Articles/576478/
+        if (errno != EINTR) {
+            return -errno;
+        }
+    }
+    return 0;
+}
+
 static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
@@ -277,6 +297,18 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     }
     close(ring_fd);
     return JNI_TRUE;
+}
+
+static jboolean netty_io_uring_is_unix_domain_socket_inq_supported(JNIEnv *env, jclass clazz) {
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) {
+        return JNI_FALSE;
+    }
+
+    int enable = 1;
+    int ret = setsockopt(fd, SOL_SOCKET, SO_INQ, &enable, sizeof(enable));
+    close(fd);
+    return ret == 0 ? JNI_TRUE : JNI_FALSE;
 }
 
 static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) {
@@ -583,6 +615,10 @@ static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
     return sizeof(size_t);
 }
 
+static jint netty_io_uring_sizeofInt(JNIEnv* env, jclass clazz) {
+    return sizeof(int);
+}
+
 static jint netty_io_uring_sizeofIovec(JNIEnv* env, jclass clazz) {
     return sizeof(struct iovec);
 }
@@ -737,6 +773,10 @@ static jint netty_io_uring_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
+static jint netty_io_uring_msgCtrunc(JNIEnv* env, jclass clazz) {
+    return MSG_CTRUNC;
+}
+
 static jint netty_io_uring_cmsgSpace(JNIEnv* env, jclass clazz) {
     return CMSG_SPACE(sizeof(uint16_t));
 }
@@ -800,6 +840,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrUnOffsetofSunPath", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunPath },
   { "maxSunPathLen", "()I", (void *) netty_io_uring_max_sun_path_len },
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
+  { "sizeofInt", "()I", (void *) netty_io_uring_sizeofInt },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},
   { "cmsgSpaceForFd", "()I", (void *) netty_io_uring_cmsgSpace_for_fd},
@@ -829,6 +870,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "iosqeBufferSelect", "()I", (void *) netty_io_uring_BufferSelect },
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
   { "msgFastopen", "()I", (void *) netty_io_uring_msgFastopen },
+  { "msgCtrunc", "()I", (void *) netty_io_uring_msgCtrunc },
   { "solUdp", "()I", (void *) netty_io_uring_solUdp },
   { "solSocket", "()I", (void *) netty_io_uring_solSocket },
   { "udpSegment", "()I", (void *) netty_io_uring_udpSegment },
@@ -848,6 +890,8 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetupSupportsFlags", "(I)Z", (void *) netty_io_uring_setup_supports_flags },
+    {"isUnixDomainSocketInqSupported", "()Z",
+        (void *) netty_io_uring_is_unix_domain_socket_inq_supported },
     {"ioUringSetup", "(III)[J", (void *) netty_io_uring_setup},
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
@@ -858,6 +902,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
+    {"close", "(I)I", (void *) netty_io_uring_close },
     {"registerUnix", "()I", (void *) netty_io_uring_registerUnix },
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
@@ -974,4 +1019,3 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_iouring_native_JNI_OnUnload);
 }
 #endif /* NETTY_IO_URING_BUILD_STATIC */
-

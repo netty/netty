@@ -23,6 +23,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * We can't use {@link IoTransport#DEFAULT} because that breaks leak detection. This base class creates a per-test
  * transport as a substitute.
@@ -37,7 +39,7 @@ abstract class AbstractOcspTest {
 
     @AfterEach
     void stop() {
-        group.shutdownGracefully().syncUninterruptibly();
+        group.shutdownGracefully(100, 1000, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
 
     IoTransport createDefaultTransport() {

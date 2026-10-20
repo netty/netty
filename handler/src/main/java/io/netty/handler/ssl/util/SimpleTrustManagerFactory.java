@@ -27,8 +27,6 @@ import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManagerFactorySpi;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509TrustManager;
 
 /**
  * Helps to implement a custom {@link TrustManagerFactory}.
@@ -133,19 +131,9 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
             TrustManager[] trustManagers = this.trustManagers;
             if (trustManagers == null) {
                 trustManagers = parent.engineGetTrustManagers();
-                wrapIfNeeded(trustManagers);
                 this.trustManagers = trustManagers;
             }
             return trustManagers.clone();
-        }
-
-        private static void wrapIfNeeded(TrustManager[] trustManagers) {
-            for (int i = 0; i < trustManagers.length; i++) {
-                final TrustManager tm = trustManagers[i];
-                if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
-                    trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
-                }
-            }
         }
     }
 }

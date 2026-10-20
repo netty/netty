@@ -41,6 +41,7 @@ import java.nio.ReadOnlyBufferException;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -64,6 +65,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
+import javax.net.ssl.StandardConstants;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
@@ -129,6 +131,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static final SSLEngineResult NEED_WRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_WRAP, 0, 0);
     private static final SSLEngineResult CLOSED_NOT_HANDSHAKING = new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
 
+    // See https://www.rfc-editor.org/rfc/rfc8446#section-4.2.1
+    private static final int TLS1_3_VERSION = 0x0304;
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -155,6 +160,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
     private boolean receivedShutdown;
     private volatile boolean destroyed;
+    // Credentials added via addCredential(); released in shutdown() to balance the retain() in addCredential().
+    private List<OpenSslCredential> engineCredentials;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
     private boolean hasTLSv13Cipher;
@@ -202,7 +209,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     final boolean jdkCompatibilityMode;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
-    private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+    private final OpenSslEngineMap engines;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
     private final OpenSslInternalSession session;
@@ -256,11 +263,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 requestedServerNames = Collections.emptyList();
                             } else {
                                 String name = SSL.getSniHostname(ssl);
-                                requestedServerNames = (name == null || name.isEmpty()) ?
-                                        Collections.emptyList() :
-                                        // Convert to bytes as we do not want to do any strict validation of the
-                                        // SNIHostName while creating it.
-                                        Collections.singletonList(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
+
+                                if (name == null || name.isEmpty()) {
+                                    requestedServerNames = Collections.emptyList();
+                                } else {
+                                    requestedServerNames = Collections.singletonList(toServerName(name));
+                                }
                             }
                         }
                         return requestedServerNames;
@@ -419,8 +427,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // object so we need to retain a reference to the parent context.
         parentContext = context;
 
-        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engines.put(ssl, this);
+        // Register for the SSL* -> engine reverse lookup used by native callbacks; held weakly (see OpenSslEngineMap).
+        engines.add(ssl, this);
 
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
@@ -441,6 +449,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
+    }
+
+    final synchronized boolean isTLSv13() {
+        return !destroyed && SSL.getVersionInt(ssl) == TLS1_3_VERSION;
     }
 
     final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
@@ -594,6 +606,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // the finalizer as well.
             if (engines != null) {
                 engines.remove(ssl);
+            }
+            if (engineCredentials != null) {
+                for (OpenSslCredential credential : engineCredentials) {
+                    credential.release();
+                }
+                engineCredentials = null;
             }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
@@ -2286,10 +2304,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
+    /**
+     * Converts the given hostname to a {@link SNIServerName}. We convert to bytes as we do not want to do any strict
+     * validation of the {@link SNIHostName} while creating it. If the byte constructor still rejects the name we
+     * expose it as a plain {@link SNIServerName} of type host_name instead of failing.
+     */
+    private static SNIServerName toServerName(String hostname) {
+        byte[] encoded = hostname.getBytes(CharsetUtil.UTF_8);
+        try {
+            return new SNIHostName(encoded);
+        } catch (IllegalArgumentException ignored) {
+            return new SNIServerName(StandardConstants.SNI_HOST_NAME, encoded) { };
+        }
+    }
+
     final boolean checkSniHostnameMatch(String hostname) {
         Collection<SNIMatcher> matchers = this.matchers;
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname.getBytes(CharsetUtil.UTF_8));
+            SNIServerName name = toServerName(hostname);
             for (SNIMatcher matcher : matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {
@@ -2346,6 +2378,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             credential.retain();
             try {
                 SSL.addCredential(ssl, pointer.credentialAddress());
+                if (engineCredentials == null) {
+                    engineCredentials = new ArrayList<>();
+                }
+                engineCredentials.add(credential);
             } catch (Exception e) {
                 credential.release();
                 throw new SSLException("Failed to add credential to SSL engine", e);
@@ -2359,6 +2395,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      *
      * <p>This method returns the credential that was ultimately chosen by the TLS handshake.
      * It's useful for introspection after the handshake completes.
+     *
+     * <p><strong>Lifetime warning:</strong> the returned {@link OpenSslCredential} is a
+     * <em>borrowed</em> reference backed by a native pointer owned by BoringSSL. It is only valid
+     * while this engine is alive. Do <em>not</em> retain the returned credential and use it after
+     * {@link #shutdown()} has been called — doing so will access freed native memory.
      *
      * <p>This is a BoringSSL-specific feature.
      *
@@ -2471,6 +2512,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Updated once a new handshake is started and so the SSLSession reused.
         private long lastAccessed = -1;
 
+        private volatile String namedGroup;
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
         private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<String, Object>();
@@ -2635,7 +2677,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     this.cipher = toJavaCipherSuite(cipher, protocol);
                     this.protocol = protocol;
-
+                    try {
+                        String groupName = SSL.getGroupName(ssl);
+                        if (groupName != null) {
+                            // Normalize group name across BoringSSL/OpenSSL versions.
+                            groupName = GroupsConverter.toOpenSsl(groupName);
+                        }
+                        this.namedGroup = groupName;
+                    } catch (Exception e) {
+                        throw new SSLException(e);
+                    }
                     if (clientMode) {
                         if (isEmpty(peerCertificateChain)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
@@ -2705,6 +2756,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
                 }
             }
+        }
+
+        @Override
+        public String getNamedGroup() {
+            return namedGroup;
         }
 
         @Override

@@ -181,7 +181,7 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, KeyStore.getDefaultType(), null, null, null, EMPTY_MAP_ENTRY, null);
+                sessionTimeout, false, false, KeyStore.getDefaultType(), null, null, null, EMPTY_MAP_ENTRY, null);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -194,7 +194,22 @@ public final class OpenSslClientContext extends OpenSslContext {
                          Map.Entry<SslContextOption<?>, Object>[] options,
                          List<OpenSslCredential> credentials)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
+                cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, false, enableOcsp, keyStore,
+                endpointIdentificationAlgorithm, serverNames, resumptionController, options, credentials);
+    }
+
+    OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+                         long sessionCacheSize, long sessionTimeout, boolean startTls, boolean enableOcsp,
+                         String keyStore, String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                         ResumptionController resumptionController,
+                         Map.Entry<SslContextOption<?>, Object>[] options,
+                         List<OpenSslCredential> credentials)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, startTls,
                 endpointIdentificationAlgorithm, enableOcsp, serverNames, resumptionController, options, credentials);
         boolean success = false;
         boolean supportJdkSignatureFallback = isJdkSignatureFallbackEnabled(options);

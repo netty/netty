@@ -31,9 +31,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
@@ -525,7 +525,7 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
         checkNotNull(searchDomains, "searchDomains");
 
-        final List<String> list = new ArrayList<String>(4);
+        final Set<String> domains = new LinkedHashSet<String>(4);
 
         for (String f : searchDomains) {
             if (f == null) {
@@ -533,14 +533,10 @@ public final class DnsNameResolverBuilder {
             }
 
             // Avoid duplicate entries.
-            if (list.contains(f)) {
-                continue;
-            }
-
-            list.add(f);
+            domains.add(f);
         }
 
-        this.searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
+        this.searchDomains = domains.toArray(EmptyArrays.EMPTY_STRINGS);
         return this;
     }
 

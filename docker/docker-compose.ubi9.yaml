@@ -6,11 +6,21 @@ services:
         java_version: "25-zulu"
       context: .
       dockerfile: Dockerfile.ubi9
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:ubi9-5.0
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:ubi9-5.0,mode=max,ignore-error=true
 
   build:
     image: netty:ubi9
 
+  build-affected-only:
+    image: netty:ubi9
+
   build-leak:
+    image: netty:ubi9
+
+  build-leak-affected-only:
     image: netty:ubi9
 
   deploy:
@@ -25,7 +35,13 @@ services:
   build-unsafe-buffer:
     image: netty:ubi9
 
+  build-unsafe-buffer-affected-only:
+    image: netty:ubi9
+
   build-leak-adaptive:
+    image: netty:ubi9
+
+  build-leak-adaptive-affected-only:
     image: netty:ubi9
 
   build-boringssl-snapshot:

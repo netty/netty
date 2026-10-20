@@ -22,12 +22,15 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.*;
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,7 +49,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -77,7 +80,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 RSV3, Unpooled.wrappedBuffer(payload));
@@ -129,7 +132,7 @@ public class PerFrameDeflateDecoderTest {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();

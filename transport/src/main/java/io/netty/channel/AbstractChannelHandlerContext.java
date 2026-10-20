@@ -826,7 +826,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 long pending = 0;
                 try {
                     if (cause == null && (executionMask & MASK_PENDING_OUTBOUND_BYTES) != 0) {
-                        pending = currentPendingBytes((ChannelOutboundHandler) handler());
+                        long saved = currentPendingBytes;
+                        if (saved == -1) {
+                            pending = currentPendingBytes((ChannelOutboundHandler) handler());
+                        } else {
+                            // The handler is removed while one of its callbacks is running. The pipeline still
+                            // accounts for the bytes that were pending when the callback started, not for what
+                            // the handler reports now. Release these and reset the saved value, so the update
+                            // done once the callback returns does not account for them a second time.
+                            pending = saved;
+                            currentPendingBytes = -1;
+                        }
                     }
                 } finally {
                     try {

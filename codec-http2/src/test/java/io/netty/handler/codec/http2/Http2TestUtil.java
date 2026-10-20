@@ -23,13 +23,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
@@ -98,7 +100,7 @@ public final class Http2TestUtil {
      */
     public static byte[] randomBytes(int size) {
         byte[] data = new byte[size];
-        new Random().nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
         return data;
     }
 
@@ -126,8 +128,9 @@ public final class Http2TestUtil {
         HpackEncoder hpackEncoder = new HpackEncoder(false, 16, 0);
         ByteBuf buf = Unpooled.buffer();
         try {
-            hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
+            hpackEncoder.setMaxHeaderTableSize(maxHeaderTableSize);
             hpackEncoder.setMaxHeaderListSize(maxHeaderListSize);
+            hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
         } finally  {
             buf.release();
         }

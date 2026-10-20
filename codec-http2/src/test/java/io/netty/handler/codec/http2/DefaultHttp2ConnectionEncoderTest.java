@@ -319,6 +319,31 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void writeDataFailsStreamWhenFlowControlledQueueUnderDelivers() throws Exception {
+        createStream(STREAM_ID, false);
+        ByteBuf data = wrappedBuffer(new byte[10]);
+        Promise<Void> promise = newPromise();
+        // Include padding so we also cover that dataSize and padding are reset on failure.
+        encoder.writeData(ctx, STREAM_ID, data, 10, false, promise);
+        FlowControlled fc = payloadCaptor.getValue();
+        assertEquals(20, fc.size());
+
+        // Simulate a queued buffer being consumed out from under the queue
+        data.skipBytes(data.readableBytes());
+
+        fc.write(ctx, 20);
+
+        // Expect the stream to fail rather than emitting any frames
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(Http2Exception.class, promise.cause());
+        assertEquals(Http2Error.INTERNAL_ERROR, ((Http2Exception) promise.cause()).error());
+        assertTrue(writtenData.isEmpty());
+        // The frame reports as fully consumed so it is removed and its bytes return to flow control.
+        assertEquals(0, fc.size());
+        assertEquals(0, data.refCnt());
+    }
+
+    @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         writeAllFlowControlledFrames();
         final int streamId = 6;
@@ -656,6 +681,77 @@ public class DefaultHttp2ConnectionEncoderTest {
         Promise<Void> promise = newPromise();
         encoder.writeSettings(ctx, settings, promise);
         verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
+    }
+
+    @Test
+    public void settingsValidationFailureDoesNotConsumeNextSettingsAck() {
+        Http2Settings invalidSettings = new Http2Settings().pushEnabled(true);
+        Promise<Void> failedPromise = newPromise();
+
+        encoder.writeSettings(ctx, invalidSettings, failedPromise);
+
+        assertFalse(failedPromise.isSuccess());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) failedPromise.cause()).error());
+        verify(writer, never()).writeSettings(eq(ctx), eq(invalidSettings), any(Promise.class));
+
+        Http2Settings validSettings = new Http2Settings().initialWindowSize(100);
+        encoder.writeSettings(ctx, validSettings, newPromise());
+
+        assertSame(validSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
+    }
+
+    @Test
+    public void synchronousSettingsWriteFailureDoesNotConsumeNextSettingsAck() {
+        final Promise<Void> failedPromise = newPromise();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) {
+                Promise<Void> promise = invocation.getArgument(2);
+                if (promise == failedPromise) {
+                    promise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
+                } else {
+                    promise.setSuccess(null);
+                }
+                return null;
+            }
+        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(Promise.class));
+
+        encoder.writeSettings(ctx, new Http2Settings().initialWindowSize(100), failedPromise);
+        Http2Settings validSettings = new Http2Settings().initialWindowSize(200);
+        encoder.writeSettings(ctx, validSettings, newPromise());
+
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, failedPromise.cause());
+        assertSame(validSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
+    }
+
+    @Test
+    public void asynchronousSettingsWriteFailurePreservesQueueOrder() {
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) {
+                return null;
+            }
+        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(Promise.class));
+
+        Http2Settings firstSettings = new Http2Settings().initialWindowSize(100);
+        Http2Settings failedSettings = new Http2Settings().initialWindowSize(100);
+        Http2Settings lastSettings = new Http2Settings().initialWindowSize(200);
+        Promise<Void> firstPromise = newPromise();
+        Promise<Void> failedPromise = newPromise();
+        Promise<Void> lastPromise = newPromise();
+
+        encoder.writeSettings(ctx, firstSettings, firstPromise);
+        encoder.writeSettings(ctx, failedSettings, failedPromise);
+        encoder.writeSettings(ctx, lastSettings, lastPromise);
+        failedPromise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
+        firstPromise.setSuccess(null);
+        lastPromise.setSuccess(null);
+
+        assertSame(firstSettings, encoder.pollSentSettings());
+        assertSame(lastSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
     }
 
     @Test

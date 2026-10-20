@@ -307,7 +307,9 @@ public class FixedChannelPool extends SimpleChannelPool {
                 } else {
                     Throwable cause = future.cause();
                     // Check if the exception was not because of we passed the Channel to the wrong pool.
-                    if (!(cause instanceof IllegalArgumentException)) {
+                    // Other failures (for example an IllegalArgumentException thrown by the ChannelPoolHandler)
+                    // must still give back the slot.
+                    if (!(cause instanceof ChannelNotAcquiredFromPoolException)) {
                         decrementAndRunTaskQueue();
                     }
                     promise.setFailure(future.cause());
@@ -415,7 +417,11 @@ public class FixedChannelPool extends SimpleChannelPool {
                 }
 
                 if (future.isSuccess()) {
-                    originalPromise.setSuccess(future.getNow());
+                    Channel channel = future.getNow();
+                    if (!originalPromise.trySuccess(channel)) {
+                        // Promise was completed in the meantime (like cancelled), just release the channel again.
+                        release(channel);
+                    }
                 } else {
                     if (acquired) {
                         decrementAndRunTaskQueue();

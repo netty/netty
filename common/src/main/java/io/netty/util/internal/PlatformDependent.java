@@ -30,6 +30,12 @@ import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.queues.atomic.unpadded.MpscAtomicUnpaddedArrayQueue;
 import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
+import org.jctools.queues.varhandle.MpmcVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscChunkedVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscUnboundedVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscVarHandleArrayQueue;
+import org.jctools.queues.varhandle.SpscLinkedVarHandleQueue;
+import org.jctools.queues.varhandle.unpadded.MpscVarHandleUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
@@ -37,7 +43,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
@@ -51,12 +56,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -72,7 +77,6 @@ import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
 import static io.netty.util.internal.PlatformDependent0.unalignedAccess;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.lang.invoke.MethodType.methodType;
 
 /**
  * Utility that detects various properties specific to the current runtime
@@ -86,12 +90,13 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
-    private static Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
+    private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
     private static final boolean EXPLICIT_NO_PREFER_DIRECT;
     private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
@@ -112,8 +117,6 @@ public final class PlatformDependent {
 
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
-    private static final boolean IS_J9_JVM = isJ9Jvm0();
-    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final int ADDRESS_SIZE = addressSize0();
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
@@ -674,6 +677,10 @@ public final class PlatformDependent {
 
     public static boolean hasVarHandle() {
         return VAR_HANDLE;
+    }
+
+    static boolean hasJctoolsVarHandle() {
+        return javaVersion() >= 11;
     }
 
     /**
@@ -1259,13 +1266,47 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newChunkedMpscQueue(final int chunkSize, final int capacity) {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(chunkSize, capacity)
-                    : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
+            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
+                return new MpscChunkedArrayQueue<T>(chunkSize, capacity);
+            }
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscChunkedQueue(chunkSize, capacity) :
+                    new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
+                return new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE);
+            }
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscUnboundedQueue(MPSC_CHUNK_SIZE) :
+                    new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+        }
+    }
+
+    private static final class VarHandleQueueHolder {
+        static <T> Queue<T> newMpscChunkedQueue(final int chunkSize, final int capacity) {
+            return new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity);
+        }
+
+        static <T> Queue<T> newMpscUnboundedQueue(final int chunkSize) {
+            return new MpscUnboundedVarHandleArrayQueue<T>(chunkSize);
+        }
+
+        static <T> Queue<T> newSpscQueue() {
+            return new SpscLinkedVarHandleQueue<T>();
+        }
+
+        static <T> Queue<T> newFixedMpscQueue(final int capacity) {
+            return new MpscVarHandleArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpscUnpaddedQueue(final int capacity) {
+            return new MpscVarHandleUnpaddedArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpmcQueue(final int capacity) {
+            return new MpmcVarHandleArrayQueue<T>(capacity);
         }
     }
 
@@ -1300,7 +1341,12 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        if (hasUnsafe()) {
+            return new SpscLinkedQueue<T>();
+        }
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newSpscQueue() :
+                new SpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -1308,7 +1354,12 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpscArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscQueue(capacity) :
+                new MpscAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1317,7 +1368,12 @@ public final class PlatformDependent {
      * This should be preferred to {@link #newFixedMpscQueue(int)} when the queue is not to be heavily contended.
      */
     public static <T> Queue<T> newFixedMpscUnpaddedQueue(int capacity) {
-        return hasUnsafe() ? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpscUnpaddedArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscUnpaddedQueue(capacity) :
+                new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**
@@ -1325,7 +1381,12 @@ public final class PlatformDependent {
      * consumers with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpmcQueue(int capacity) {
-        return hasUnsafe() ? new MpmcArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpmcArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpmcQueue(capacity) :
+                new MpmcAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1363,6 +1424,30 @@ public final class PlatformDependent {
     @Deprecated
     public static Random threadLocalRandom() {
         return ThreadLocalRandom.current();
+    }
+
+    public static void splittableRandomNextBytes(SplittableRandom rng, byte[] data) {
+        if (javaVersion() >= 10) {
+            PlatformDependent0.splittableRandomNextBytes(rng, data);
+        } else {
+            int i = 0;
+            int len = data.length;
+            int longs = len >>> 3;
+            while (longs-- > 0) {
+                long val = rng.nextLong();
+                for (int j = 0; j < Long.BYTES; j++) {
+                    data[i++] = (byte) val;
+                    val = val >>> Byte.SIZE;
+                }
+            }
+            if (i < len) {
+                long val = rng.nextLong();
+                for (; i < len; i++) {
+                    data[i++] = (byte) val;
+                    val = val >>> Byte.SIZE;
+                }
+            }
+        }
     }
 
     private static boolean isWindows0() {
@@ -1442,16 +1527,6 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static Pattern getMaxDirectMemorySizeArgPattern() {
-        // Pattern's is immutable so it's always safe published
-        Pattern pattern = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
-        if (pattern == null) {
-            pattern = Pattern.compile("\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
-            MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN =  pattern;
-        }
-        return pattern;
-    }
-
     /**
      * Compute an estimate of the maximum amount of direct memory available to this JVM.
      * <p>
@@ -1468,48 +1543,8 @@ public final class PlatformDependent {
             return maxDirectMemory;
         }
 
-        try {
-            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
-            // Note that we are using reflection because Android doesn't have these classes.
-            ClassLoader systemClassLoader = getSystemClassLoader();
-            Class<?> mgmtFactoryClass = Class.forName(
-                    "java.lang.management.ManagementFactory", true, systemClassLoader);
-            Class<?> runtimeClass = Class.forName(
-                    "java.lang.management.RuntimeMXBean", true, systemClassLoader);
-
-            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-            MethodHandle getRuntime = lookup.findStatic(
-                    mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
-            MethodHandle getInputArguments = lookup.findVirtual(
-                    runtimeClass, "getInputArguments", methodType(List.class));
-            List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
-
-            Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
-
-            for (int i = vmArgs.size() - 1; i >= 0; i --) {
-                Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
-                if (!m.matches()) {
-                    continue;
-                }
-
-                maxDirectMemory = Long.parseLong(m.group(1));
-                switch (m.group(2).charAt(0)) {
-                    case 'k': case 'K':
-                        maxDirectMemory *= 1024;
-                        break;
-                    case 'm': case 'M':
-                        maxDirectMemory *= 1024 * 1024;
-                        break;
-                    case 'g': case 'G':
-                        maxDirectMemory *= 1024 * 1024 * 1024;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            }
-        } catch (Throwable ignored) {
-            // Ignore
+        if (!isAndroid() && !ignoreMaxDirectMemorySize()) {
+            maxDirectMemory = RuntimeJvmArgs.parseMaxDirectMemorySize(maxDirectMemory);
         }
 
         if (maxDirectMemory <= 0) {
@@ -1520,6 +1555,10 @@ public final class PlatformDependent {
         }
 
         return maxDirectMemory;
+    }
+
+    private static boolean ignoreMaxDirectMemorySize() {
+        return SystemPropertyUtil.getBoolean("io.netty.ignoreMaxDirectMemorySize", false);
     }
 
     private static File tmpdir0() {

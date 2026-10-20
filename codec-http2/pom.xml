@@ -176,6 +176,29 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.code-intelligence</groupId>
+      <artifactId>jazzer-junit</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-params</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.junit.platform</groupId>
+          <artifactId>junit-platform-commons</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.junit.platform</groupId>
+          <artifactId>junit-platform-launcher</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>

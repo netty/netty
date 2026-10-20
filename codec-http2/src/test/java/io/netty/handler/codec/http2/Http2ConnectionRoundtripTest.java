@@ -49,9 +49,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -91,7 +91,7 @@ import static org.mockito.Mockito.verify;
  */
 public class Http2ConnectionRoundtripTest {
 
-    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 15;
+    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 30;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -269,7 +269,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(headers),
                 anyInt(), anyShort(), anyBoolean(), eq(0), eq(true));
 
-        bootstrapEnv(1, 2, 2, 0, 0);
+        bootstrapEnv(1, 2, 2, 0, 0, -1);
 
         // Set the maxHeaderListSize to 100 so we may be able to write some headers, but not all. We want to verify
         // that we don't corrupt state if some can be written but not all.
@@ -439,6 +439,29 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                 any(ByteBuf.class));
         verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
+    public void failedSettingsWriteDoesNotCorruptNextSettingsAck() throws Exception {
+        final AtomicReference<Throwable> failedSettingsWriteCause = new AtomicReference<Throwable>();
+        bootstrapEnv(0, 2, 0, 0);
+
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().pushEnabled(true),
+                        serverNewPromise().addListener(
+                            future -> failedSettingsWriteCause.set(future.cause())));
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().initialWindowSize(100),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertInstanceOf(Http2Exception.class, failedSettingsWriteCause.get());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) failedSettingsWriteCause.get()).error());
+        assertEquals(100, http2Server.decoder().flowController().initialWindowSize());
     }
 
     @Test
@@ -811,7 +834,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
-        bootstrapEnv(1, 1, 4, 1, 1);
+        bootstrapEnv(1, 1, 4, 1, 1, -1);
 
         // Don't wait for the server to close streams
         setClientGracefulShutdownTime(0);
@@ -854,7 +877,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 2, 1, 1);
+        bootstrapEnv(1, 1, 2, 1, 1, -1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
@@ -935,7 +958,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 3, 1, 1);
+        bootstrapEnv(1, 1, 3, 1, 1, -1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
@@ -1108,7 +1131,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
         try {
-            bootstrapEnv(numStreams * length, 1, numStreams * 4 + 1 , numStreams);
+            bootstrapEnv(numStreams * length, 1, numStreams * 4 + 1 , numStreams, -1, numStreams);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() throws Http2Exception {
@@ -1154,11 +1177,12 @@ public class Http2ConnectionRoundtripTest {
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
             int requestCountDown, int trailersCountDown) throws Exception {
-        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1);
+        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1, -1);
     }
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
-            int requestCountDown, int trailersCountDown, int goAwayCountDown) throws Exception {
+            int requestCountDown, int trailersCountDown, int goAwayCountDown, long maxConcurrentStreams)
+            throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(settingsAckCount);
@@ -1170,7 +1194,7 @@ public class Http2ConnectionRoundtripTest {
 
         final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1180,17 +1204,20 @@ public class Http2ConnectionRoundtripTest {
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
                                 requestLatch, dataLatch, trailersLatch, goAwayLatch);
-                serverHandlerRef.set(new Http2ConnectionHandlerBuilder()
+                Http2ConnectionHandlerBuilder builder = new Http2ConnectionHandlerBuilder()
                         .server(true)
                         .frameListener(serverFrameCountDown)
-                        .validateHeaders(false)
-                        .build());
+                        .validateHeaders(false);
+                if (maxConcurrentStreams != -1) {
+                    builder.initialSettings(Http2Settings.defaultSettings().maxConcurrentStreams(maxConcurrentStreams));
+                }
+                serverHandlerRef.set(builder.build());
                 p.addLast(serverHandlerRef.get());
                 serverInitLatch.countDown();
             }
         });
 
-        cb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
+        cb.group(new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -1292,7 +1319,7 @@ public class Http2ConnectionRoundtripTest {
      */
     private static ByteBuf randomBytes(int length) {
         final byte[] bytes = new byte[length];
-        new Random().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 }

@@ -67,6 +67,16 @@ public final class HttpConstants {
     public static final byte DOUBLE_QUOTE = '"';
 
     /**
+     * Backslash '\'
+     */
+    public static final byte BACKSLASH = '\\';
+
+    /**
+     * ASCII DEL character code
+     */
+    public static final byte DEL = 0x7F;
+
+    /**
      * Default character set (UTF-8)
      */
     public static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;

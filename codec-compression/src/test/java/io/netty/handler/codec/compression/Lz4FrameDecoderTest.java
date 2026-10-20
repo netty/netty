@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -47,6 +46,44 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     protected EmbeddedChannel createChannel() {
         // Use max limit of 31 MB as we want to test that we reject 32 MB in one of the tests
         return new EmbeddedChannel(new Lz4FrameDecoder(true, 31 * 1024 * 1024));
+    }
+
+    @Test
+    public void testRejectsCompressedDataBeyondDeclaredLength() throws Exception {
+        EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        ByteBuf input = decoder.alloc().buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(1);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x80);
+        input.writeZero(8);
+
+        try {
+            assertThrows(DecompressionException.class, () -> decoder.writeInbound(input));
+        } finally {
+            decoder.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testRejectsDecompressedLengthMismatch() throws Exception {
+        EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        ByteBuf input = decoder.alloc().buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(2);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x10);
+        input.writeByte(0);
+
+        try {
+            assertThrows(DecompressionException.class, () -> decoder.writeInbound(input));
+        } finally {
+            decoder.finishAndReleaseAll();
+        }
     }
 
     @Test

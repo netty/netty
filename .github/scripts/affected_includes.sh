@@ -1,6 +1,6 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
-# Copyright 2021 The Netty Project
+# Copyright 2026 The Netty Project
 #
 # The Netty Project licenses this file to you under the Apache License,
 # version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,20 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
+#
+# Exits with 0 if the given module is part of the build as selected by NETTY_AFFECTED_MODULES
+# (see mvn_affected.sh) and with 1 otherwise.
+#
+# Usage: affected_includes.sh <module>
 set -e
 
-if [ "$#" -lt 2 ]; then
-    echo "Expected branch and maven arguments"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <module>" >&2
     exit 1
 fi
 
-MODULES=$(git diff --name-only "$1" | cut -d '/' -f 1 | sort -u | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}')
-MAVEN_ARGUMENTS=${*:2}
-if [ -z "$MODULES" ]; then
-  echo "No changes detected, skipping build"
-  exit 0
-fi
-echo "Changes detected, start the build"
-echo "./mvnw -pl $MODULES -amd $MAVEN_ARGUMENTS"
-./mvnw -pl "$MODULES" -amd "${@:2}"
-
+case "${NETTY_AFFECTED_MODULES:-ALL}" in
+    ALL) exit 0 ;;
+    NONE) exit 1 ;;
+    *) case ",$NETTY_AFFECTED_MODULES," in *",$1,"*) exit 0 ;; *) exit 1 ;; esac ;;
+esac

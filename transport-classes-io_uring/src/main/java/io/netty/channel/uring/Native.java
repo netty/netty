@@ -51,7 +51,7 @@ final class Native {
             // Just ignore
         }
 
-        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possibility of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
@@ -116,6 +116,7 @@ final class Native {
             NativeStaticallyReferencedJniMethods.sockaddrIn6OffsetofSin6ScopeId();
     static final int IN6_ADDRESS_OFFSETOF_S6_ADDR = NativeStaticallyReferencedJniMethods.in6AddressOffsetofS6Addr();
     static final int SIZEOF_SIZE_T = NativeStaticallyReferencedJniMethods.sizeofSizeT();
+    static final int SIZEOF_INT = NativeStaticallyReferencedJniMethods.sizeofInt();
     static final int SIZEOF_IOVEC = NativeStaticallyReferencedJniMethods.sizeofIovec();
     static final int CMSG_SPACE = NativeStaticallyReferencedJniMethods.cmsgSpace();
     static final int CMSG_SPACE_FOR_FD = NativeStaticallyReferencedJniMethods.cmsgSpaceForFd();
@@ -253,6 +254,7 @@ final class Native {
     static final int IORING_FEAT_NODROP = 1 << 1;
     static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
+    static final int IORING_FEAT_NO_IOWAIT = 1 << 17;
 
     static final int IORING_SQ_NEED_WAKEUP = 1 << 0;
     static final int IORING_SQ_CQ_OVERFLOW = 1 << 1;
@@ -316,6 +318,7 @@ final class Native {
 
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IORING_ENTER_REGISTERED_RING = 1 << 4;
+    static final int IORING_ENTER_NO_IOWAIT = 1 << 7;
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
@@ -323,6 +326,7 @@ final class Native {
     static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
+    static final int MSG_CTRUNC = NativeStaticallyReferencedJniMethods.msgCtrunc();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
     static final int SOL_SOCKET = NativeStaticallyReferencedJniMethods.solSocket();
     static final int UDP_SEGMENT = NativeStaticallyReferencedJniMethods.udpSegment();
@@ -601,6 +605,7 @@ final class Native {
     }
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);
+    static native boolean isUnixDomainSocketInqSupported();
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {
@@ -622,6 +627,12 @@ final class Native {
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);
+
+    /**
+     * Close the given fd, returning {@code 0} on success or the negated {@code errno} on failure. {@code EINTR}
+     * is treated as success, matching {@code FileDescriptor.close()} semantics.
+     */
+    static native int close(int fd);
 
     static int getFd(DefaultFileRegion fileChannel) {
         return getFd0(fileChannel);

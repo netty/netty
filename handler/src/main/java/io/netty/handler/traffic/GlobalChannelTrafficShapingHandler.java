@@ -19,7 +19,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,6 +28,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.AbstractCollection;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -497,13 +497,13 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                         queuesSize.addAndGet(-size);
                         ctx.write(toSend.toSend, toSend.handler);
                     }
-                } else {
+                } else if (!perChannel.messagesQueue.isEmpty()) {
                     queuesSize.addAndGet(-perChannel.queueSize);
+                    ClosedChannelException cause = new ClosedChannelException();
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        if (toSend.toSend instanceof ByteBuf) {
-                            ((ByteBuf) toSend.toSend).release();
-                        }
+                        releaseAndFailQueuedWrite(toSend.toSend, toSend.handler, cause);
                     }
+                    perChannel.queueSize = 0;
                 }
                 perChannel.messagesQueue.clear();
             }

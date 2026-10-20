@@ -240,6 +240,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 Promise<Void> promise = ctx.newPromise();
                 closeSent(promise);
                 handshaker.close(ctx, (CloseWebSocketFrame) frame, promise);
+                // handshaker.close() bypasses this handler's own write()/flush() overrides (it writes
+                // directly on ctx), so the force-close timeout must be armed explicitly here. Doing so
+                // after the close0() write-and-flush attempt above mirrors close()'s ordering and avoids
+                // racing a write that completes synchronously.
+                applyCloseSentTimeout(ctx);
             } else {
                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(f -> ctx.close());
             }

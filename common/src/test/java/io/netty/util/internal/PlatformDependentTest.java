@@ -20,6 +20,7 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
@@ -32,6 +33,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
+
+    @Test
+    public void testVarHandleQueuesWhenUnsafeIsUnavailable() {
+        assumeTrue(!PlatformDependent.hasUnsafe() && PlatformDependent.hasJctoolsVarHandle());
+
+        assertEquals("org.jctools.queues.varhandle.MpscUnboundedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscChunkedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.SpscLinkedVarHandleQueue",
+                PlatformDependent.newSpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscVarHandleArrayQueue",
+                PlatformDependent.newFixedMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.unpadded.MpscVarHandleUnpaddedArrayQueue",
+                PlatformDependent.newFixedMpscUnpaddedQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpmcVarHandleArrayQueue",
+                PlatformDependent.newFixedMpmcQueue(16).getClass().getName());
+    }
+
     @Test
     public void testEqualsConsistentTime() {
         testEquals(new EqualityChecker() {
@@ -116,9 +136,10 @@ public class PlatformDependentTest {
         assertTrue(equalsChecker.equals(bytes1, 2, bytes2, 0, bytes2.length));
         assertTrue(equalsChecker.equals(bytes2, 0, bytes1, 2, bytes2.length));
 
+        SplittableRandom rng = new SplittableRandom(r.nextLong());
         for (int i = 0; i < 1000; ++i) {
             bytes1 = new byte[i];
-            r.nextBytes(bytes1);
+            PlatformDependent.splittableRandomNextBytes(rng, bytes1);
             bytes2 = bytes1.clone();
             assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, bytes1.length));
         }
@@ -127,18 +148,15 @@ public class PlatformDependentTest {
         assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, -1));
     }
 
-    private static char randomCharInByteRange() {
-        return (char) r.nextInt(255 + 1);
-    }
-
     @Test
     public void testHashCodeAscii() {
+        SplittableRandom rng = new SplittableRandom(r.nextLong());
         for (int i = 0; i < 1000; ++i) {
             // byte[] and char[] need to be initialized such that there values are within valid "ascii" range
             byte[] bytes = new byte[i];
             char[] bytesChar = new char[i];
             for (int j = 0; j < bytesChar.length; ++j) {
-                bytesChar[j] = randomCharInByteRange();
+                bytesChar[j] = (char) rng.nextInt(255 + 1);
                 bytes[j] = (byte) (bytesChar[j] & 0xff);
             }
             String string = new String(bytesChar);

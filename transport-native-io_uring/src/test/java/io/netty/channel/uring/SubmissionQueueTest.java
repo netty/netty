@@ -91,6 +91,7 @@ public class SubmissionQueueTest {
         assertFalse(completionQueue.hasCompletions());
         assertEquals(0, completionQueue.process((res, flags, data, cqeExtraData) -> {
             fail("Should not be called");
+            return true;
         }));
 
         // Ensure both return not null and also not segfault.
@@ -149,12 +150,12 @@ public class SubmissionQueueTest {
             assertNotEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
 
             // The completion queue should have only had space for 2 events
-            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> { });
+            int processed = (int) (completionQueue.process((res, flags, udata, extraCqeData) -> true) >>> 32);
             assertEquals(2, processed);
 
             // submit again to ensure we flush the event that did overflow
             submissionQueue.submitAndGetNow();
-            processed = completionQueue.process((res, flags, udata, extraCqeData) -> { });
+            processed = (int) (completionQueue.process((res, flags, udata, extraCqeData) -> true) >>> 32);
             assertEquals(1, processed);
 
             // Everything was processed and so the overflow flag should have been cleared
@@ -226,10 +227,10 @@ public class SubmissionQueueTest {
 
             assertEquals(2, submissionQueue.submitAndGet());
             assertEquals(cqeSize == CqeSize.MIXED ? 3 : 2, completionQueue.count());
-            int processed = completionQueue.process(new CompletionCallback() {
+            long packed = completionQueue.process(new CompletionCallback() {
                 private boolean first = true;
                 @Override
-                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
                     assertEquals(0, res);
                     assertEquals(cqeSize == CqeSize.MIXED && first ? Native.IORING_CQE_F_32 : 0, flags);
                     assertEquals(1, udata);
@@ -241,9 +242,10 @@ public class SubmissionQueueTest {
                         assertNull(extraCqeData);
                     }
                     first = false;
+                    return true;
                 }
             });
-            assertEquals(2, processed);
+            assertEquals(2, (int) (packed >>> 32));
             assertFalse(completionQueue.hasCompletions());
         } finally {
             ringBuffer.close();
@@ -277,7 +279,7 @@ public class SubmissionQueueTest {
                 }
 
                 assertEquals(added, submissionQueue.submitAndGet());
-                int processed = completionQueue.process((res, flags, udata, extraCqeData) -> {
+                long packed = completionQueue.process((res, flags, udata, extraCqeData) -> {
                     assertEquals(0, res);
                     // If there is a filler we should not be notified.
                     assertEquals(0, flags & Native.IORING_CQE_F_SKIP);
@@ -290,8 +292,9 @@ public class SubmissionQueueTest {
                         assertEquals(0, flags);
                         assertNull(extraCqeData);
                     }
+                    return true;
                 });
-                assertEquals(7, processed);
+                assertEquals(7, (int) (packed >>> 32));
                 assertFalse(completionQueue.hasCompletions());
             }
         } finally {

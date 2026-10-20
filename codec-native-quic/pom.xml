@@ -49,10 +49,12 @@
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
-    <!-- Lets use what we use in netty-tcnative-boringssl-static -->
+    <!-- Lets use what we use in netty-tcnative-boringssl-static. Bumped forward from
+         0226f30467f540a3f62ef48d453f93927da199b6 (2025-09-07) to d03dbc3e5d7de44183ff17018af22323af650fbc
+         (2026-05-12): boring 5.x (see quicheBoringVersionReplacement below) unconditionally calls
+         SSL_get_signature_algorithm_used, which BoringSSL only added upstream on 2026-05-12. -->
     <boringsslBranch>main</boringsslBranch>
-    <boringsslCommitSha>0226f30467f540a3f62ef48d453f93927da199b6</boringsslCommitSha>
-
+    <boringsslCommitSha>d03dbc3e5d7de44183ff17018af22323af650fbc</boringsslCommitSha>
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
     <quicheHomeDir>${project.build.directory}/quiche</quicheHomeDir>
@@ -60,7 +62,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>4f347477006bf7f928335d28f05056013f70b87e</quicheCommitSha>
+    <quicheCommitSha>be47c5011215b9f13bad06bd7627d3ae49888a19</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -114,8 +116,8 @@
         </os>
       </activation>
       <properties>
-        <!--  We need 10.13 as minimum to compile quiche and boringssl  -->
-        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
+        <!--  We need 11 as minimum to compile quiche and boringssl  -->
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCflags>-mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
@@ -136,7 +138,7 @@
         <jniLibName>${jniLibPrefix}_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
         <javaModuleNameClassifier>osx.aarch_64</javaModuleNameClassifier>
-        <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
         <extraCflags>-target arm64-apple-macos11</extraCflags>
         <extraCxxflags>-target arm64-apple-macos11</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
@@ -166,11 +168,11 @@
         <jniLibName>${jniLibPrefix}_osx_x86_64</jniLibName>
         <jni.classifier>osx-x86_64</jni.classifier>
         <javaModuleNameClassifier>osx.x86_64</javaModuleNameClassifier>
-        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
-        <extraCflags>-target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
-        <extraCxxflags>-target x86_64-apple-macos10.13</extraCxxflags>
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
+        <extraCflags>-target x86_64-apple-macos11 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
+        <extraCxxflags>-target x86_64-apple-macos11</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
-        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
+        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos11 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
         <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
@@ -616,6 +618,34 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <configuration>
+          <flattenDependencyMode>direct</flattenDependencyMode>
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+          <flattenMode>ossrh</flattenMode>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Also include c files in source jar -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -823,7 +853,8 @@
                           <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
-                          <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                          <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                          <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                         </exec>
                       </then>
                       <else>
@@ -836,7 +867,8 @@
                               <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                               <env key="DEBUG" value="true" />
                               <env key="OPT_LEVEL" value="3" />
-                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                             </exec>
                           </then>
                           <elseif>
@@ -845,7 +877,8 @@
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                                 <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <arg value="${cargoTarget}" />
-                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                                <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                                 <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
@@ -860,7 +893,8 @@
                                 <env key="CFLAGS" value="${extraCflags}" />
                                 <env key="CXXFLAGS" value="${extraCxxflags}" />
                                 <arg value="${cargoTarget}" />
-                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                                <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                                 <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
@@ -872,7 +906,8 @@
                               <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <env key="CFLAGS" value="${extraCflags}" />
                               <env key="CXXFLAGS" value="${extraCxxflags}" />
-                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                               <!-- Lets enable frame-pointers so we can profile better -->
                               <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                               <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />

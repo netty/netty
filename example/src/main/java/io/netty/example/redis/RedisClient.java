@@ -52,7 +52,7 @@ public class RedisClient {
                      ChannelPipeline p = ch.pipeline();
                      p.addLast(new RedisDecoder());
                      p.addLast(new RedisBulkStringAggregator());
-                     p.addLast(new RedisArrayAggregator());
+                     p.addLast(new RedisArrayAggregator(1000000, 1024));
                      p.addLast(new RedisEncoder());
                      p.addLast(new RedisClientHandler());
                  }

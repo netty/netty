@@ -112,12 +112,20 @@ public final class Http2CodecUtil {
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
     /**
      * The assumed minimum value for {@code SETTINGS_MAX_CONCURRENT_STREAMS} as
-     * recommended by the <a herf="https://tools.ietf.org/html/rfc7540#section-6.5.2">HTTP/2 spec</a>.
+     * recommended by the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">HTTP/2 spec</a>.
      */
     public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
     static final int DEFAULT_MAX_SMALL_CONTINUATION_FRAME = 16;
+
+    /**
+     * While the RFC only specified a minimum we should still pick a default which is good enough that most people
+     * no need to adjust it but still be somewhat protected. Let's use the minimum
+     * defined by the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">HTTP/2 spec</a>.
+     */
+    static final int DEFAULT_MAX_CONCURRENT_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
+
     /**
      * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
      * @param maxHeaderListSize

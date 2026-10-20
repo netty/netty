@@ -129,9 +129,13 @@ public final class RedisDecoder extends ByteToMessageDecoder {
                 }
             }
         } catch (RedisCodecException e) {
+            // Let's discard everything
+            in.skipBytes(in.readableBytes());
             resetDecoder();
             throw e;
         } catch (Exception e) {
+            // Let's discard everything
+            in.skipBytes(in.readableBytes());
             resetDecoder();
             throw new RedisCodecException(e);
         }
@@ -169,6 +173,16 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     private boolean decodeLength(ByteBuf in, List<Object> out) throws Exception {
         ByteBuf lineByteBuf = readLine(in);
         if (lineByteBuf == null) {
+            int readableBytes = in.readableBytes();
+            if (readableBytes <= RedisConstants.POSITIVE_LONG_MAX_LENGTH) {
+                // fast-path
+                return false;
+            }
+            boolean isNegative = in.getByte(in.readerIndex()) == '-';
+            int capacity = RedisConstants.POSITIVE_LONG_MAX_LENGTH + (isNegative ? 1 : 0) + 1;
+            if (readableBytes > capacity) {
+                throw new RedisCodecException("too many characters to be a valid RESP Integer: " + readableBytes);
+            }
             return false;
         }
         final long length = parseRedisNumber(lineByteBuf);
@@ -280,6 +294,10 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         final int lfIndex = in.indexOf(in.readerIndex(), in.writerIndex(), (byte) '\n');
         if (lfIndex < 0) {
             return null;
+        }
+        if (lfIndex == in.readerIndex()) {
+            // the line starts with LF, so there is no room for the CR before it
+            throw new RedisCodecException("delimiter: LF without preceding CR (expected: \\r\\n)");
         }
         ByteBuf data = in.readSlice(lfIndex - in.readerIndex() - 1); // `-1` is for CR
         readEndOfLine(in); // validate CR LF

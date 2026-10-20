@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Random;
+import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -58,8 +60,7 @@ class HttpDataTest {
 
     @BeforeAll
     static void setUp() {
-        Random rndm = new Random();
-        rndm.nextBytes(BYTES);
+        ThreadLocalRandom.current().nextBytes(BYTES);
     }
 
     @ParameterizedHttpDataTest

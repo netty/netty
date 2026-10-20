@@ -20,7 +20,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -31,11 +30,13 @@ import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.channel.kqueue.BsdSocket.BSD_SND_LOW_AT_MAX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -43,11 +44,9 @@ public class KQueueSocketChannelConfigTest {
 
     private static EventLoopGroup group;
     private static KQueueSocketChannel ch;
-    private static Random rand;
 
     @BeforeAll
     public static void beforeClass() {
-        rand = new Random();
         group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
     }
 
@@ -72,7 +71,7 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testRandomSndLowAt() {
-        final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(rand.nextInt()));
+        final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(ThreadLocalRandom.current().nextInt()));
         final int actual;
         try {
             ch.config().setOption(KQueueChannelOption.SO_SNDLOWAT, expected);
@@ -106,22 +105,16 @@ public class KQueueSocketChannelConfigTest {
     @Test
     public void testSetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-            ch.config().setOption(ChannelOption.SO_LINGER, 0);
-            fail();
-        } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
-        }
+        ChannelException e = assertThrows(ChannelException.class,
+                () -> ch.config().setOption(ChannelOption.SO_LINGER, 0));
+        assertInstanceOf(ClosedChannelException.class, e.getCause());
     }
 
     @Test
     public void testGetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-            ch.config().getOption(ChannelOption.SO_LINGER);
-            fail();
-        } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
-        }
+        ChannelException e = assertThrows(ChannelException.class,
+                () -> ch.config().getOption(ChannelOption.SO_LINGER));
+        assertInstanceOf(ClosedChannelException.class, e.getCause());
     }
 }

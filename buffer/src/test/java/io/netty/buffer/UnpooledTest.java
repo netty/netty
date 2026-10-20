@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
@@ -33,12 +34,12 @@ import java.util.Map.Entry;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.EmptyArrays.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests channel buffers
@@ -282,6 +283,22 @@ public class UnpooledTest {
     }
 
     @Test
+    public void testWrappedDirectBufferMemoryAddress() {
+        ByteBuffer nioBuffer = ByteBuffer.allocateDirect(16);
+        nioBuffer.position(4).limit(12);
+        ByteBuffer expectedBuffer = nioBuffer.slice();
+        assumeTrue(PlatformDependent.hasDirectByteBufferAddress(expectedBuffer));
+
+        ByteBuf buffer = wrappedBuffer(nioBuffer);
+        try {
+            assertTrue(buffer.hasMemoryAddress());
+            assertEquals(PlatformDependent.directBufferAddress(expectedBuffer), buffer.memoryAddress());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
     public void testSingleWrappedByteBufReleased() {
         ByteBuf buf = buffer(12).writeByte(0);
         ByteBuf wrapped = wrappedBuffer(buf);
@@ -406,85 +423,30 @@ public class UnpooledTest {
     public void testUnmodifiableBuffer() throws Exception {
         ByteBuf buf = unmodifiableBuffer(buffer(16));
 
-        try {
-            buf.discardReadBytes();
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.discardReadBytes());
 
-        try {
-            buf.setByte(0, (byte) 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setByte(0, (byte) 0));
 
-        try {
-            buf.setBytes(0, EMPTY_BUFFER, 0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setBytes(0, EMPTY_BUFFER, 0, 0));
 
-        try {
-            buf.setBytes(0, EMPTY_BYTES, 0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setBytes(0, EMPTY_BYTES, 0, 0));
 
-        try {
-            buf.setBytes(0, ByteBuffer.allocate(0));
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setBytes(0, ByteBuffer.allocate(0)));
 
-        try {
-            buf.setShort(0, (short) 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setShort(0, (short) 0));
 
-        try {
-            buf.setMedium(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setMedium(0, 0));
 
-        try {
-            buf.setInt(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setInt(0, 0));
 
-        try {
-            buf.setLong(0, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setLong(0, 0));
 
         InputStream inputStream = Mockito.mock(InputStream.class);
-        try {
-            buf.setBytes(0, inputStream, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setBytes(0, inputStream, 0));
         Mockito.verifyNoInteractions(inputStream);
 
         ScatteringByteChannel scatteringByteChannel = Mockito.mock(ScatteringByteChannel.class);
-        try {
-            buf.setBytes(0, scatteringByteChannel, 0);
-            fail();
-        } catch (UnsupportedOperationException e) {
-            // Expected
-        }
+        assertThrows(UnsupportedOperationException.class, () -> buf.setBytes(0, scatteringByteChannel, 0));
         Mockito.verifyNoInteractions(scatteringByteChannel);
         buf.release();
     }

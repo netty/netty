@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -52,6 +53,7 @@ import static java.util.Objects.requireNonNull;
  */
 public final class IoUringIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
+    private static final int WAKEUP_CLOSED = 1 << 30;
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
@@ -61,6 +63,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final byte[] inet6AddressArray = new byte[SockaddrIn.IPV6_ADDRESS_LENGTH];
 
     private final AtomicBoolean eventfdAsyncNotify = new AtomicBoolean();
+    private final AtomicInteger wakeupWriters = new AtomicInteger();
     private final FileDescriptor eventfd;
     private final CleanableDirectBuffer eventfdReadBufCleanable;
     private final ByteBuffer eventfdReadBuf;
@@ -69,6 +72,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
     private final IovArray iovArray;
+    private final IovArrayReferenceCollector iovArrayReferenceCollector;
     private final MsgHdrMemoryArray msgHdrMemoryArray;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
@@ -86,6 +90,9 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
     private final ThreadAwareExecutor executor;
+
+    // Caching completion callback to avoid creating a new instance for each poll.
+    private final CompletionCallback completionCallback = this::handle;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -142,6 +149,7 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
+        iovArrayReferenceCollector = new IovArrayReferenceCollector(iovArray);
         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
     }
 
@@ -175,17 +183,18 @@ public final class IoUringIoHandler implements IoHandler {
             submitAndClearNow(submissionQueue);
         }
 
-        int processed;
+        int ioCompletions;
         if (context.shouldReportActiveIoTime()) {
-            // Timer starts after the blocking wait, around the processing of completions.
             long activeIoStartTimeNanos = System.nanoTime();
-            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
             long activeIoEndTimeNanos = System.nanoTime();
             context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } else {
-            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
         }
-        return processed;
+        return ioCompletions;
     }
 
     private boolean needSubmit(int sqFlags) {
@@ -196,25 +205,24 @@ public final class IoUringIoHandler implements IoHandler {
 
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
                                          CompletionCallback callback) {
-        int processed = 0;
-        // Bound the maximum number of times this will loop before we return and so execute some non IO stuff.
-        // 128 here is just some sort of bound and another number might be ok as well.
+        int ioCompletions = 0;
         for (int i = 0; i < 128; i++) {
-            int p = completionQueue.process(callback);
+            long packed = completionQueue.process(callback);
+            int total = (int) (packed >>> 32);
+            ioCompletions += (int) packed;
             int sqFlags = submissionQueue.flags();
             if ((sqFlags & Native.IORING_SQ_CQ_OVERFLOW) != 0) {
                 logger.warn("CompletionQueue overflow detected, consider increasing size: {} ",
                         completionQueue.ringEntries);
             }
-            if (p == 0) {
+            if (total == 0) {
                 if (!needSubmit(sqFlags)) {
                     break;
                 }
                 submitAndClearNow0(submissionQueue);
             }
-            processed += p;
         }
-        return processed;
+        return ioCompletions;
     }
 
     private int submitAndClearNow(SubmissionQueue submissionQueue) {
@@ -274,24 +282,26 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+    private boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
             if (udata == EVENTFD_TOKEN) {
                 handleEventFdRead();
-                return;
+                return false;
             }
             if (udata == RINGFD_TOKEN) {
-                return;
+                return false;
             }
             if (udata >= 0) {
                 handleFastPath(res, flags, udata, extraCqeData);
-                return;
+                return true;
             }
             handleSlowPath(res, flags, udata, extraCqeData);
+            return true;
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
             handleLoopException(throwable);
+            return true;
         }
     }
 
@@ -424,7 +434,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.submitAndGet();
 
         while (completionQueue.hasCompletions()) {
-            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, completionCallback);
             if (submissionQueue.count() > 0) {
                 submissionQueue.submitAndGetNow();
             }
@@ -450,7 +460,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), RINGFD_TOKEN);
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
-        completionQueue.process(this::handle);
+        completionQueue.process(completionCallback);
         for (IoUringBufferRing ioUringBufferRing : registeredIoUringBufferRing.values()) {
             ioUringBufferRing.close();
         }
@@ -479,11 +489,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
                     if (udata == EVENTFD_TOKEN) {
                         eventFdDrained = true;
                     }
-                    IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
+                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -510,6 +520,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
         closeCompleted = true;
         ringBuffer.close();
+        closeWakeupGate();
         try {
             eventfd.close();
         } catch (IOException e) {
@@ -709,9 +720,36 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public void wakeup() {
         if (!executor.isExecutorThread(Thread.currentThread()) &&
-                !eventfdAsyncNotify.getAndSet(true)) {
-            // write to the eventfd which will then trigger an eventfd read completion.
-            Native.eventFdWrite(eventfd.intValue(), 1L);
+            !eventfdAsyncNotify.getAndSet(true)) {
+            // Reserve a writer slot so the event-loop thread cannot close the eventfd while we are in the
+            // middle of eventFdWrite(). If the gate has already been closed (loop is being destroyed),
+            // simply drop the wakeup: there is no loop left to wake up, and writing to a closed (and
+            // possibly recycled) fd would either throw EBADF or, worse, hit an unrelated fd.
+            int s;
+            do {
+                s = wakeupWriters.get();
+                if ((s & WAKEUP_CLOSED) != 0) {
+                    return;
+                }
+            } while (!wakeupWriters.compareAndSet(s, s + 1));
+            try {
+                // write to the eventfd which will then trigger an eventfd read completion.
+                Native.eventFdWrite(eventfd.intValue(), 1L);
+            } finally {
+                wakeupWriters.decrementAndGet();
+            }
+        }
+    }
+
+    private void closeWakeupGate() {
+        int s;
+        do {
+            s = wakeupWriters.get();
+        } while (!wakeupWriters.compareAndSet(s, s | WAKEUP_CLOSED));
+        // Wait for any thread still inside eventFdWrite() to leave. eventFdWrite is a single write(2)
+        // syscall on an eventfd, so this spin is bounded to a few microseconds in practice.
+        while ((wakeupWriters.get() & ~WAKEUP_CLOSED) != 0) {
+            Thread.onSpinWait();
         }
     }
 
@@ -724,9 +762,17 @@ public final class IoUringIoHandler implements IoHandler {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
+            assert iovArray.count() == 0;
         }
-        assert iovArray.count() == 0;
         return iovArray;
+    }
+
+    /**
+     * Returns the {@link IovArrayReferenceCollector} paired with {@link #iovArray()}. A plain getter: callers are
+     * expected to have already called {@link #iovArray()} to make room, so this must not itself submit-and-clear.
+     */
+    IovArrayReferenceCollector iovArrayReferenceCollector() {
+        return iovArrayReferenceCollector;
     }
 
     MsgHdrMemoryArray msgHdrMemoryArray() {

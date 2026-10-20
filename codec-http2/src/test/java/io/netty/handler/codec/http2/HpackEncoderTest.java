@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,10 +53,42 @@ public class HpackEncoderTest {
 
     @Test
     public void testSetMaxHeaderTableSizeToMaxValue() throws Http2Exception {
-        hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+        hpackEncoder = new HpackEncoder(
+            false, Integer.MAX_VALUE, HpackEncoder.HUFF_CODE_THRESHOLD);
+        hpackEncoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
         hpackDecoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
+        hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
         hpackDecoder.decode(0, buf, mockHeaders, true);
-        assertEquals(MAX_HEADER_TABLE_SIZE, hpackDecoder.getMaxHeaderTableSize());
+        assertEquals(128 * 64, hpackDecoder.getMaxHeaderTableSize());
+    }
+
+    @Test
+    public void testSetMaxHeaderTableSizeBelowCap() throws Http2Exception {
+        hpackEncoder.setMaxHeaderTableSize(2048);
+        hpackDecoder.setMaxHeaderTableSize(2048);
+        hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
+        assertEquals(2048, hpackEncoder.getMaxHeaderTableSize());
+        assertEquals(2048, hpackDecoder.getMaxHeaderTableSize());
+
+        buf.clear();
+        hpackEncoder.setMaxHeaderTableSize(0);
+        hpackDecoder.setMaxHeaderTableSize(0);
+        hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
+        assertEquals(0, hpackEncoder.getMaxHeaderTableSize());
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
+    }
+
+    @Test
+    public void testSetMaxHeaderTableSizeCapScalesWithSizeHint() throws Http2Exception {
+        HpackEncoder encoder = new HpackEncoder(false, 16, HpackEncoder.HUFF_CODE_THRESHOLD);
+        encoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
+        assertEquals(16 * 64, encoder.getMaxHeaderTableSize());
+
+        encoder = new HpackEncoder(false, 128, HpackEncoder.HUFF_CODE_THRESHOLD);
+        encoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
+        assertEquals(128 * 64, encoder.getMaxHeaderTableSize());
     }
 
     @Test
@@ -63,7 +96,7 @@ public class HpackEncoderTest {
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
+                hpackEncoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE + 1);
             }
         });
     }
@@ -188,6 +221,33 @@ public class HpackEncoderTest {
     }
 
     @Test
+    public void testMultipleTableResize() throws Http2Exception {
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x").add("k", "y"), 64, 1, 107, 1, 120, 126, 1, 121);
+
+        // Multiple decreases should only emit the final minimum table size update (1000).
+        setMaxTableSize(2000);
+        setMaxTableSize(1000);
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), 63, -55, 7, -65);
+
+        // Shrinking and then increasing multiple times should only emit the minimum (67) and final (1000) sizes.
+        // At 67 bytes, k -> x is evicted while k -> y remains in the table.
+        setMaxTableSize(800);
+        setMaxTableSize(2 * HpackHeaderField.HEADER_ENTRY_OVERHEAD + 3);
+        setMaxTableSize(500);
+        setMaxTableSize(1000);
+
+        // 63, 36 encodes table size 67; 63, -55, 7 encodes table size 1000.
+        // k -> x was evicted so it is encoded as literal with incremental indexing (referencing name k from k -> y),
+        // and k -> y is still in the table so it is encoded by reference.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x").add("k", "y"),
+                63, 36, 63, -55, 7, 126, 1, 120, -65);
+
+        // Subsequent resize should not reuse the previous minimum table size.
+        setMaxTableSize(2000);
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x").add("k", "y"), 63, -79, 15, -66, -65);
+    }
+
+    @Test
     public void testManyHeaderCombinations() throws Http2Exception {
         final Random r = new Random(0);
         for (int i = 0; i < 50000; i++) {
@@ -207,10 +267,16 @@ public class HpackEncoderTest {
     @Test
     public void testSanitization() throws Http2Exception {
         final int headerValueSize = 300;
-        StringBuilder actualHeaderValueBuilder = new StringBuilder();
-        StringBuilder expectedHeaderValueBuilder = new StringBuilder();
+        // Prefix the header values with a legal character.
+        // The first value character has different rules than the rest.
+        StringBuilder actualHeaderValueBuilder = new StringBuilder("a");
+        StringBuilder expectedHeaderValueBuilder = new StringBuilder("a");
 
         for (int i = 0; i < headerValueSize; i++) {
+            if (i <= 255 && HttpHeaderValidationUtil.validateValidHeaderValue("a" + ((char) i)) != -1) {
+                // This is not a legal header value character. Skip it.
+                continue;
+            }
             actualHeaderValueBuilder.append((char) i); // Use the index as the code point value of the character.
             if (i <= 255) {
                 expectedHeaderValueBuilder.append((char) i);
@@ -247,7 +313,7 @@ public class HpackEncoderTest {
     }
 
     private void setMaxTableSize(int maxHeaderTableSize) throws Http2Exception {
-        hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
+        hpackEncoder.setMaxHeaderTableSize(maxHeaderTableSize);
         hpackDecoder.setMaxHeaderTableSize(maxHeaderTableSize);
     }
 

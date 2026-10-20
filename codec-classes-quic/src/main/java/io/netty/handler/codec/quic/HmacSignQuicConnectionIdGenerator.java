@@ -41,7 +41,7 @@ final class HmacSignQuicConnectionIdGenerator implements QuicConnectionIdGenerat
         ObjectUtil.checkPositive(buffer.remaining(), "buffer");
         ObjectUtil.checkInRange(length, 0, maxConnectionIdLength(), "length");
 
-        return Hmac.sign(buffer, length);
+        return Hmac.signCid(buffer, length);
     }
 
     @Override

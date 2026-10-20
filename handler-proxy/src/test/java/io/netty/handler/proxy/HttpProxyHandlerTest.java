@@ -52,9 +52,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
@@ -210,7 +210,7 @@ public class HttpProxyHandlerTest {
         Channel clientChannel = null;
         try {
             group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
-            final LocalAddress addr = new LocalAddress("a");
+            final LocalAddress addr = new LocalAddress(HttpProxyHandlerTest.class);
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
             Future<Channel> sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
@@ -245,7 +245,7 @@ public class HttpProxyHandlerTest {
             clientChannel = cf.get();
             clientChannel.close().sync();
 
-            assertTrue(exception.get() instanceof HttpProxyConnectException);
+            assertInstanceOf(HttpProxyConnectException.class, exception.get());
             HttpProxyConnectException actual = (HttpProxyConnectException) exception.get();
             assertNotNull(actual.headers());
             assertEquals("value", actual.headers().get("name"));

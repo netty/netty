@@ -30,6 +30,8 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -44,6 +46,8 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.util.concurrent.CompletionException;
+import java.io.File;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -316,6 +320,56 @@ public class OpenSslCertificateCompressionTest {
         });
     }
 
+    @Test
+    public void testMaxCertificateListSmallLimitWithCompression() throws Throwable {
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
+        // The uncompressed certificate is larger than the configured limit but smaller than 16 KiB. As limits below
+        // 16 KiB are raised to 16 KiB the handshake must succeed, as it does when no compression is used.
+        X509Bundle bundle = createLargeCertificate(6 * 1024);
+        File certificate = bundle.toTempCertChainPem();
+        File privateKey = bundle.toTempPrivateKeyPem();
+        final SslContext clientSslContext = buildClientContext(
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build(), 4096);
+        final SslContext serverSslContext = buildServerContext(
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build(), certificate, privateKey);
+
+        runCertCompressionTest(clientSslContext, serverSslContext);
+
+        assertCompress(testBrotliAlgoServer);
+        assertDecompress(testBrotliAlgoClient);
+    }
+
+    @Test
+    public void testMaxCertificateListLimitAboveFloorWithCompression() throws Throwable {
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
+        // Limits above 16 KiB must still be enforced for compressed certificates.
+        X509Bundle bundle = createLargeCertificate(20 * 1024);
+        File certificate = bundle.toTempCertChainPem();
+        File privateKey = bundle.toTempPrivateKeyPem();
+        final SslContext clientSslContext = buildClientContext(
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoClient,
+                                OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
+                        .build(), 4096);
+        final SslContext serverSslContext = buildServerContext(
+                OpenSslCertificateCompressionConfig.newBuilder()
+                        .addAlgorithm(testBrotliAlgoServer, OpenSslCertificateCompressionConfig.AlgorithmMode.Compress)
+                        .build(), certificate, privateKey);
+
+        CompletionException ex = Assertions.assertThrows(CompletionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                runCertCompressionTest(clientSslContext, serverSslContext);
+            }
+        });
+        assertInstanceOf(SSLHandshakeException.class, ex.getCause());
+    }
+
     public void runCertCompressionTest(SslContext clientSslContext, SslContext serverSslContext) throws Throwable {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         Promise<Object> clientPromise = group.next().newPromise();
@@ -324,7 +378,7 @@ public class OpenSslCertificateCompressionTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new CertCompressionTestChannelInitializer(serverPromise, serverSslContext));
-            Channel serverChannel = sb.bind(new LocalAddress("testCertificateCompression"))
+            Channel serverChannel = sb.bind(new LocalAddress(OpenSslCertificateCompressionTest.class))
                     .get();
 
             Bootstrap bootstrap = new Bootstrap();
@@ -356,6 +410,16 @@ public class OpenSslCertificateCompressionTest {
                 .build();
     }
 
+    private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig,
+                                          File certificate, File privateKey) throws SSLException {
+        return SslContextBuilder.forServer(certificate, privateKey)
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(SslProtocols.TLS_v1_3)
+                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
+                        compressionConfig)
+                .build();
+    }
+
     private SslContext buildClientContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
         return SslContextBuilder.forClient()
                 .sslProvider(SslProvider.OPENSSL)
@@ -364,6 +428,30 @@ public class OpenSslCertificateCompressionTest {
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
                     compressionConfig)
                 .build();
+    }
+
+    private SslContext buildClientContext(OpenSslCertificateCompressionConfig compressionConfig, int maxCertList)
+            throws SSLException {
+        return SslContextBuilder.forClient()
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(SslProtocols.TLS_v1_3)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS, compressionConfig)
+                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, maxCertList)
+                .build();
+    }
+
+    private static X509Bundle createLargeCertificate(int extensionSize) throws Exception {
+        byte[] extension = new byte[extensionSize];
+        ThreadLocalRandom.current().nextBytes(extension);
+        return new CertificateBuilder()
+                .subject("cn=netty.io")
+                .rsa2048()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, CertificateBuilder.KeyUsage.digitalSignature)
+                .addExtendedKeyUsageServerAuth()
+                .addExtensionOctetString("1.2.840.113635.100.6.2.1", false, extension)
+                .buildSelfSigned();
     }
 
     private void assertCompress(TestCertCompressionAlgo algo) {
@@ -413,6 +501,9 @@ public class OpenSslCertificateCompressionTest {
                     ctx.fireUserEventTriggered(evt);
                 }
             });
+            pipeline.addLast(new SilenceExceptionHandler()
+                    .messageContains("CERT_DECOMPRESSION_FAILED")
+                    .messageContains("TLSV1_ALERT_DECODE_ERROR"));
         }
     }
 

@@ -388,8 +388,8 @@ public final class DateFormatter {
             }
         }
 
-        // terminate trailing token
-        return tokenStart != -1 && parseToken(txt, tokenStart, txt.length());
+        // terminate trailing token at end, not txt.length(), so a substring parse doesn't overrun
+        return tokenStart != -1 && parseToken(txt, tokenStart, end);
     }
 
     private boolean normalizeAndValidate() {

@@ -57,8 +57,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -99,6 +97,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
+    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -118,7 +117,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     static final boolean SERVER_ENABLE_SESSION_TICKET =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
 
-     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+    static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
     static final boolean SERVER_ENABLE_SESSION_CACHE =
@@ -170,7 +169,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean hasTmpDhKeys;
     final String[] groups;
     final boolean enableOcsp;
-    final ConcurrentMap<Long, ReferenceCountedOpenSslEngine> engines = new ConcurrentHashMap<>();
+    final OpenSslEngineMap engines = new OpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
     final List<OpenSslCredential> credentials = new ArrayList<>();
 
@@ -467,7 +466,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateListBytes(maxCertificateList));
             }
 
             // Set the curves / groups if anything is configured.
@@ -506,6 +505,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             default:
                 throw new Error("Unexpected behavior: " + behavior);
         }
+    }
+
+    static int maxCertificateListBytes(int maxCertificateListBytes) {
+        return maxCertificateListBytes > 0 ?
+                Math.max(maxCertificateListBytes, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateListBytes;
     }
 
     private void addCredential(OpenSslCredential credential) throws SSLException {
@@ -574,7 +578,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, executor, resumptionController);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -771,7 +775,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (resumptionController != null) {
                     tm = (X509TrustManager) resumptionController.wrapIfNeeded(tm);
                 }
-                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded(tm);
                 if (useExtendedTrustManager(tm)) {
                     // Wrap the TrustManager to provide a better exception message for users to debug hostname
                     // validation failures.
@@ -880,9 +884,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     abstract static class AbstractCertificateVerifier extends CertificateVerifier {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
 
-        AbstractCertificateVerifier(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+        AbstractCertificateVerifier(OpenSslEngineMap engines) {
             this.engines = engines;
         }
 
@@ -1147,7 +1151,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    private static ReferenceCountedOpenSslEngine retrieveEngine(Map<Long, ReferenceCountedOpenSslEngine> engines,
+    private static ReferenceCountedOpenSslEngine retrieveEngine(OpenSslEngineMap engines,
                                                                 long ssl)
             throws SSLException {
         ReferenceCountedOpenSslEngine engine = engines.get(ssl);
@@ -1160,9 +1164,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class PrivateKeyMethod implements SSLPrivateKeyMethod {
 
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslPrivateKeyMethod keyMethod;
-        PrivateKeyMethod(Map<Long, ReferenceCountedOpenSslEngine> engines, OpenSslPrivateKeyMethod keyMethod) {
+        PrivateKeyMethod(OpenSslEngineMap engines, OpenSslPrivateKeyMethod keyMethod) {
             this.engines = engines;
             this.keyMethod = keyMethod;
         }
@@ -1192,10 +1196,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class AsyncPrivateKeyMethod implements AsyncSSLPrivateKeyMethod {
 
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslAsyncPrivateKeyMethod keyMethod;
 
-        AsyncPrivateKeyMethod(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        AsyncPrivateKeyMethod(OpenSslEngineMap engines,
                               OpenSslAsyncPrivateKeyMethod keyMethod) {
             this.engines = engines;
             this.keyMethod = keyMethod;
@@ -1261,10 +1265,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     private static final class CompressionAlgorithm implements CertificateCompressionAlgo {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslCertificateCompressionAlgorithm compressionAlgorithm;
 
-        CompressionAlgorithm(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        CompressionAlgorithm(OpenSslEngineMap engines,
                              OpenSslCertificateCompressionAlgorithm compressionAlgorithm) {
             this.engines = engines;
             this.compressionAlgorithm = compressionAlgorithm;

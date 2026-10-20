@@ -300,6 +300,7 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
         if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastReadTime = ticker.nanoTime();
             reading = false;
+            firstReaderIdleEvent = firstAllIdleEvent = true;
         }
     }
 
@@ -309,6 +310,7 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     public void resetWriteTimeout() {
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastWriteTime = ticker.nanoTime();
+            firstWriterIdleEvent = firstAllIdleEvent = true;
         }
     }
 

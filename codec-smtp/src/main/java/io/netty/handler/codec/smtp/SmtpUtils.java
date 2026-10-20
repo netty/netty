@@ -56,7 +56,7 @@ final class SmtpUtils {
         }
     }
 
-    private static void validateSMTPParameter(CharSequence parameter) {
+    static void validateSMTPParameter(CharSequence parameter) {
         if (parameter instanceof String) {
             String paramStr = (String) parameter;
             if (paramStr.indexOf('\r') != -1 || paramStr.indexOf('\n') != -1) {

@@ -28,20 +28,23 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.CompletionException;
+import java.util.SplittableRandom;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
-import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
-import static io.netty.util.CharsetUtil.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.NEVER_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.EMPTY_DEFLATE_BLOCK;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,7 +61,7 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                                                               WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload));
 
@@ -88,7 +91,7 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                                                               WebSocketExtension.RSV3 | WebSocketExtension.RSV1,
@@ -119,11 +122,12 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload1 = new byte[100];
-        random.nextBytes(payload1);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        PlatformDependent.splittableRandomNextBytes(rng, payload1);
         byte[] payload2 = new byte[100];
-        random.nextBytes(payload2);
+        PlatformDependent.splittableRandomNextBytes(rng, payload2);
         byte[] payload3 = new byte[100];
-        random.nextBytes(payload3);
+        PlatformDependent.splittableRandomNextBytes(rng, payload3);
 
         BinaryWebSocketFrame frame1 = new BinaryWebSocketFrame(false,
                                                                WebSocketExtension.RSV3,
@@ -182,7 +186,7 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false,
                                                                                           ALWAYS_SKIP));
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         WebSocketFrame binaryFrame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload));
 
@@ -212,7 +216,7 @@ public class PerMessageDeflateEncoderTest {
 
         String textPayload = "not compressed payload";
         byte[] binaryPayload = new byte[101];
-        random.nextBytes(binaryPayload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), binaryPayload);
 
         WebSocketFrame textFrame = new TextWebSocketFrame(textPayload);
         BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(binaryPayload));
@@ -256,10 +260,11 @@ public class PerMessageDeflateEncoderTest {
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
 
         byte[] firstPayload = new byte[200];
-        random.nextBytes(firstPayload);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        PlatformDependent.splittableRandomNextBytes(rng, firstPayload);
 
         byte[] finalPayload = new byte[90];
-        random.nextBytes(finalPayload);
+        PlatformDependent.splittableRandomNextBytes(rng, finalPayload);
 
         BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(firstPayload));
         final ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, 0,
@@ -313,4 +318,72 @@ public class PerMessageDeflateEncoderTest {
         }
     }
 
+    @Test
+    public void testNoContextNextMessageAfterEmptyFinalFragmentIsSelfContained() throws Exception {
+        String text = "Hello world, hello world, hello world!";
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, true));
+        WebSocketFrame[] frames = encodeMessageWithEmptyFinalFragmentThenMessage(encoderChannel, text);
+        frames[0].release();
+        frames[1].release();
+
+        // With no context takeover the peer may use an empty sliding window for every message,
+        // so the second message must decompress on its own.
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
+        decoderChannel.writeInbound(frames[2].content());
+        decoderChannel.writeInbound(DeflateDecoder.FRAME_TAIL.duplicate());
+        ByteBuf uncompressed = decoderChannel.readInbound();
+        assertThat(uncompressed.toString(UTF_8)).isEqualTo(text);
+        uncompressed.release();
+
+        assertFalse(encoderChannel.finish());
+        assertFalse(decoderChannel.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testRoundTripWithEmptyFinalFragment(boolean noContext) throws Exception {
+        String text = "Hello world, hello world, hello world!";
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, noContext));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(noContext, 0));
+
+        StringBuilder messages = new StringBuilder();
+        for (WebSocketFrame frame : encodeMessageWithEmptyFinalFragmentThenMessage(encoderChannel, text)) {
+            decoderChannel.writeInbound(frame);
+            for (;;) {
+                WebSocketFrame decoded = decoderChannel.readInbound();
+                if (decoded == null) {
+                    break;
+                }
+                messages.append(decoded.content().toString(UTF_8));
+                if (decoded.isFinalFragment()) {
+                    messages.append('|');
+                }
+                decoded.release();
+            }
+        }
+        assertThat(messages.toString()).isEqualTo(text + '|' + text + '|');
+
+        assertFalse(encoderChannel.finish());
+        assertFalse(decoderChannel.finish());
+    }
+
+    /**
+     * Encodes a message whose size is not known up front: its content, then an empty final fragment
+     * (<a href="https://tools.ietf.org/html/rfc7692#section-7.2.3.6">RFC 7692, 7.2.3.6</a>). Then it encodes a
+     * second message with the same content.
+     */
+    private static WebSocketFrame[] encodeMessageWithEmptyFinalFragmentThenMessage(
+            EmbeddedChannel encoderChannel, String text) throws Exception {
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, text)));
+        assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(true, 0, Unpooled.EMPTY_BUFFER)));
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(true, 0, text)));
+        WebSocketFrame[] frames = new WebSocketFrame[3];
+        for (int i = 0; i < frames.length; i++) {
+            frames[i] = encoderChannel.readOutbound();
+            assertNotNull(frames[i]);
+        }
+        assertTrue(ByteBufUtil.equals(EMPTY_DEFLATE_BLOCK, frames[1].content()));
+        return frames;
+    }
 }

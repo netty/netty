@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
@@ -114,8 +115,7 @@ public class ByteBufUtilTest {
 
     private static void decodeRandomHexBytes(int len) {
         byte[] b = new byte[len];
-        Random rand = new Random();
-        rand.nextBytes(b);
+        ThreadLocalRandom.current().nextBytes(b);
         String hexDump = ByteBufUtil.hexDump(b);
         for (int i = 0; i <= len; i++) {  // going over sub-strings of various lengths including empty byte[].
             byte[] b2 = Arrays.copyOfRange(b, i, b.length);
@@ -180,12 +180,63 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testIndexOfNeedleWithReaderIndex() {
+        ByteBuf needle = Unpooled.copiedBuffer("abc123", CharsetUtil.US_ASCII);
+        needle.readerIndex(3);
+        ByteBuf haystack = Unpooled.copiedBuffer("ab1123", CharsetUtil.US_ASCII);
+        assertEquals(3, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+
+        needle = Unpooled.copiedBuffer("xab", CharsetUtil.US_ASCII);
+        needle.readerIndex(1);
+        haystack = Unpooled.copiedBuffer("aab", CharsetUtil.US_ASCII);
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    public void testIndexOfMatchesNaiveSearch(int needleReaderIndex) {
+        Random random = new Random(needleReaderIndex);
+        for (int i = 0; i < 10000; i++) {
+            byte[] needleBytes = new byte[2 + random.nextInt(5)];
+            byte[] haystackBytes = new byte[random.nextInt(16)];
+            byte[] prefix = new byte[needleReaderIndex];
+            for (byte[] bytes : Arrays.asList(needleBytes, haystackBytes, prefix)) {
+                for (int j = 0; j < bytes.length; j++) {
+                    bytes[j] = (byte) random.nextInt(3);
+                }
+            }
+            ByteBuf needle = Unpooled.buffer().writeBytes(prefix).writeBytes(needleBytes);
+            needle.readerIndex(prefix.length);
+            ByteBuf haystack = Unpooled.wrappedBuffer(haystackBytes);
+            assertEquals(naiveIndexOf(needleBytes, haystackBytes), ByteBufUtil.indexOf(needle, haystack));
+            needle.release();
+            haystack.release();
+        }
+    }
+
+    private static int naiveIndexOf(byte[] needle, byte[] haystack) {
+        for (int i = 0; i <= haystack.length - needle.length; i++) {
+            int j = 0;
+            while (j < needle.length && haystack[i + j] == needle[j]) {
+                j++;
+            }
+            if (j == needle.length) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Test
     public void equalsBufferSubsections() {
         byte[] b1 = new byte[128];
         byte[] b2 = new byte[256];
-        Random rand = new Random();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -193,24 +244,23 @@ public class ByteBufUtilTest {
         assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
-    private static int random(Random r, int min, int max) {
-        return r.nextInt((max - min) + 1) + min;
+    private static int random(int min, int max) {
+        return ThreadLocalRandom.current().nextInt((max - min) + 1) + min;
     }
 
     @Test
     public void notEqualsBufferSubsections() {
         byte[] b1 = new byte[50];
         byte[] b2 = new byte[256];
-        Random rand = new Random();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
         System.arraycopy(b1, iB1, b2, iB2, length);
         // Randomly pick an index in the range that will be compared and make the value at that index differ between
         // the 2 arrays.
-        int diffIndex = random(rand, iB1, iB1 + length - 1);
+        int diffIndex = random(iB1, iB1 + length - 1);
         ++b1[diffIndex];
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
@@ -219,9 +269,8 @@ public class ByteBufUtilTest {
     public void notEqualsBufferOverflow() {
         byte[] b1 = new byte[8];
         byte[] b2 = new byte[16];
-        Random rand = new Random();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -234,9 +283,8 @@ public class ByteBufUtilTest {
     public void notEqualsBufferUnderflow() {
         final byte[] b1 = new byte[8];
         final byte[] b2 = new byte[16];
-        Random rand = new Random();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -777,10 +825,8 @@ public class ByteBufUtilTest {
         for (int [] range : INVALID_RANGES) {
             ByteBuf buf = buffer(bufferType, 16);
             try {
-                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
-                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
-            } catch (IndexOutOfBoundsException iiobe) {
-                // expected
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]));
             } finally {
                 assertFalse(buf.isReadable());
                 buf.release();
@@ -932,12 +978,8 @@ public class ByteBufUtilTest {
                     {1, 5},
             };
             for (int[] pair : invalidIndexLengthPairs) {
-                try {
-                    ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
-                    fail("Expected IndexOutOfBoundsException");
-                } catch (IndexOutOfBoundsException e) {
-                    // expected
-                }
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII));
             }
         } finally {
             buffer.release();

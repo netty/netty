@@ -49,7 +49,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             DEFAULT_CACHE_SIZE = 20480;
         }
     }
-    private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+    private final OpenSslEngineMap engines;
 
     private final Map<OpenSslSessionId, NativeSslSession> sessions =
             new LinkedHashMap<OpenSslSessionId, NativeSslSession>() {
@@ -74,7 +74,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     private final AtomicInteger sessionTimeout = new AtomicInteger(300);
     private int sessionCounter;
 
-    OpenSslSessionCache(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+    OpenSslSessionCache(OpenSslEngineMap engines) {
         this.engines = engines;
     }
 

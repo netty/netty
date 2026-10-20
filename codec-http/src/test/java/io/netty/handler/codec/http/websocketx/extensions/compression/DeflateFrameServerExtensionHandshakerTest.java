@@ -18,9 +18,10 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         DeflateFrameServerExtensionHandshaker.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 public class DeflateFrameServerExtensionHandshakerTest {
 
@@ -47,8 +49,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
+        assertInstanceOf(PerFrameDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerFrameDeflateEncoder.class, extension.newExtensionEncoder());
     }
 
     @Test
@@ -65,8 +67,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
+        assertInstanceOf(PerFrameDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerFrameDeflateEncoder.class, extension.newExtensionEncoder());
     }
 
     @Test
@@ -86,6 +88,56 @@ public class DeflateFrameServerExtensionHandshakerTest {
 
         // test
         assertNull(extension);
+    }
+
+    @Test
+    public void testCustomWindowAndMemLevel() {
+        DeflateFrameServerExtensionHandshaker handshaker =
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 10, 4, 0);
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.<String, String>emptyMap()));
+
+        assertNotNull(extension);
+        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+        assertInstanceOf(PerFrameDeflateEncoder.class, extension.newExtensionEncoder());
+    }
+
+    @Test
+    public void testWindowSizeOutOfRangeRejected() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 16, 8, 0);
+            }
+        });
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 7, 8, 0);
+            }
+        });
+    }
+
+    @Test
+    public void testMemLevelOutOfRangeRejected() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 15, 10, 0);
+            }
+        });
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 15, 0, 0);
+            }
+        });
     }
 
 }

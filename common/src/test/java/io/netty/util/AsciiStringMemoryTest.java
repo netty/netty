@@ -15,15 +15,15 @@
  */
 package io.netty.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
-
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Test the underlying memory methods for the {@link AsciiString} class.
@@ -36,14 +36,13 @@ public class AsciiStringMemoryTest {
     private int length = 100;
     private AsciiString aAsciiString;
     private AsciiString bAsciiString;
-    private final Random r = new Random();
 
     @BeforeEach
     public void setup() {
         a = new byte[128];
         b = new byte[256];
-        r.nextBytes(a);
-        r.nextBytes(b);
+        ThreadLocalRandom.current().nextBytes(a);
+        ThreadLocalRandom.current().nextBytes(b);
         aOffset = 22;
         bOffset = 53;
         length = 100;

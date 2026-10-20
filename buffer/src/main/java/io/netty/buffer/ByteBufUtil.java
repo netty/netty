@@ -326,15 +326,16 @@ public final class ByteBufUtil {
     }
 
     private static long maxSuf(ByteBuf x, int m, int start, boolean isSuffix) {
+        // j, k, ms and p are relative to start (the reader index of the needle), like the indexes in indexOf(...)
         int p = 1;
         int ms = -1;
-        int j = start;
+        int j = 0;
         int k = 1;
         byte a;
         byte b;
         while (j + k < m) {
-            a = x.getByte(j + k);
-            b = x.getByte(ms + k);
+            a = x.getByte(start + j + k);
+            b = x.getByte(start + ms + k);
             boolean suffix = isSuffix ? a < b : a > b;
             if (suffix) {
                 j += k;
@@ -1514,7 +1515,7 @@ public final class ByteBufUtil {
     private static final class HexUtil {
 
         private static final char[] BYTE2CHAR = new char[256];
-        private static final char[] HEXDUMP_TABLE = new char[256 * 4];
+        private static final char[] HEXDUMP_TABLE = new char[256 * 2];
         private static final String[] HEXPADDING = new String[16];
         private static final String[] HEXDUMP_ROWPREFIXES = new String[65536 >>> 4];
         private static final String[] BYTE2HEX = new String[256];

@@ -277,7 +277,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected final void removeReadOp() {
-        IoRegistration registration = registration();
+        // Read the field directly as the channel may have been deregistered concurrently (setting
+        // registration to null) after the isRegistered() check in clearReadPending() but before the
+        // clearReadPendingRunnable is executed on the EventLoop. See https://github.com/netty/netty/issues/17103
+        IoRegistration registration = AbstractNioChannel.this.registration;
+
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104

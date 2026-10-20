@@ -54,12 +54,13 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.net.IDN;
 import java.net.Inet4Address;
@@ -78,6 +79,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -97,8 +99,8 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
+    private static final String DOT_LOCALHOST = '.' + LOCALHOST;
     private static final String WINDOWS_HOST_NAME;
-    private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
             {DnsRecordType.A};
@@ -124,6 +126,26 @@ public class DnsNameResolver extends InetNameResolver {
         }
     };
 
+    /**
+     * System property to control RFC 6761 localhost resolution.
+     * <p>
+     * When {@code true} (the default), {@code localhost} and {@code *.localhost}
+     * are resolved to the loopback address without querying DNS servers. When
+     * {@code false}, only the pre-#16749 rules apply (Windows {@code localhost}
+     * and the Windows machine hostname). Set to {@code false} when
+     * {@code *.localhost} hostnames must resolve via DNS to non-loopback
+     * addresses.
+     *
+     * @see <a href="https://github.com/netty/netty/issues/16744">Issue 16744</a>
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc6761.html#section-6.3">RFC 6761</a>
+     */
+    private static final String RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY =
+            "io.netty.resolver.dns.resolveLocalhostWithoutDns";
+
+    /** The runtime value of {@link #RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY}. */
+    @VisibleForTesting
+    static boolean resolveLocalhostWithoutDns;
+
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
     private static final UnixResolverOptions DEFAULT_OPTIONS;
@@ -131,18 +153,14 @@ public class DnsNameResolver extends InetNameResolver {
     static {
         if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
             DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_ONLY;
-            LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
         } else {
             if (NetUtil.isIpV6AddressesPreferred()) {
                 DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV6_PREFERRED;
-                LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
             } else {
                 DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_PREFERRED;
-                LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
         logger.debug("Default ResolvedAddressTypes: {}", DEFAULT_RESOLVE_ADDRESS_TYPES);
-        logger.debug("Localhost address: {}", LOCALHOST_ADDRESS);
 
         String hostName;
         try {
@@ -173,6 +191,12 @@ public class DnsNameResolver extends InetNameResolver {
         }
         DEFAULT_OPTIONS = options;
         logger.debug("Default {}", DEFAULT_OPTIONS);
+
+        resolveLocalhostWithoutDns =
+                SystemPropertyUtil.getBoolean(RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY, true);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {}", RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY, resolveLocalhostWithoutDns);
+        }
     }
 
     /**
@@ -688,7 +712,7 @@ public class DnsNameResolver extends InetNameResolver {
             return null;
         }
         InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-        return address == null && isLocalWindowsHost(hostname) ? LOCALHOST_ADDRESS : address;
+        return address == null && isLocalHostAddress(hostname)? getLocalHostAddress() : address;
     }
 
     private List<InetAddress> resolveHostsFileEntries(String hostname) {
@@ -701,23 +725,63 @@ public class DnsNameResolver extends InetNameResolver {
                     .addresses(hostname, resolvedAddressTypes);
         } else {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            addresses = address != null ? Collections.singletonList(address) : null;
+            addresses = address != null? Collections.singletonList(address) : null;
         }
-        return addresses == null && isLocalWindowsHost(hostname) ?
-                Collections.singletonList(LOCALHOST_ADDRESS) : addresses;
+        return addresses == null && isLocalHostAddress(hostname)?
+                Collections.singletonList(getLocalHostAddress()) : addresses;
     }
 
     /**
-     * Checks whether the given hostname is the localhost/host (computer) name on Windows OS.
-     * Windows OS removed the localhost/host (computer) name information from the hosts file in the later versions
-     * and such hostname cannot be resolved from hosts file.
-     * See https://github.com/netty/netty/issues/5386
-     * See https://github.com/netty/netty/issues/11142
+     * Checks whether the given hostname refers to the current computer. This is the case for:
+     * <ul>
+     *     <li>localhost.</li>
+     *     <li>any domain within .localhost.</li>
+     *     <li>the hostname of the local computer on Windows</li>
+     * </ul>
+     * <p>
+     * According to RFC 6761 Section 6.3, localhost and subdomains of localhost should be resolved to the loopback
+     * address by name resolution libraries without querying DNS servers. The hostname of the local machine can usually
+     * be resolved from the hosts file, but on Windows, this is no longer possible.
+     * <p>
+     * RFC 6761 behavior for {@code localhost} and {@code *.localhost} can be
+     * disabled via the {@code io.netty.resolver.dns.resolveLocalhostWithoutDns}
+     * system property.
+     *
+     * @param hostname the hostname that's being looked up
+     * @return true if the hostname should point to the loopback address. False otherwise.
+     * @see <a href="https://github.com/netty/netty/issues/5386">Issue 5386</a>
+     * @see <a href="https://github.com/netty/netty/issues/11142">Issue 11142</a>
+     * @see <a href="https://github.com/netty/netty/issues/16744">Issue 16744</a>
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc6761.html#section-6.3">RFC 6761</a>
      */
-    private static boolean isLocalWindowsHost(String hostname) {
-        return PlatformDependent.isWindows() &&
-                (LOCALHOST.equalsIgnoreCase(hostname) ||
-                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
+    private static boolean isLocalHostAddress(String hostname) {
+        if (PlatformDependent.isWindows() && WINDOWS_HOST_NAME != null &&
+            WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)) {
+            return true;
+        }
+
+        if (!resolveLocalhostWithoutDns) {
+            return PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname);
+        }
+
+        if (hostname.endsWith(".")) {
+            hostname = hostname.substring(0, hostname.length() - 1);
+        }
+        return hostname.equalsIgnoreCase(LOCALHOST)
+                || hostname.toLowerCase(Locale.US).endsWith(DOT_LOCALHOST);
+    }
+
+    private InetAddress getLocalHostAddress() {
+        switch (resolvedAddressTypes) {
+        case IPV4_ONLY:
+        case IPV4_PREFERRED:
+            return NetUtil.LOCALHOST4;
+        case IPV6_ONLY:
+        case IPV6_PREFERRED:
+            return NetUtil.LOCALHOST6;
+        default:
+            throw new IllegalStateException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
+        }
     }
 
     /**
@@ -1163,12 +1227,16 @@ public class DnsNameResolver extends InetNameResolver {
                                       int ndots,
                                       SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
         List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
-                && !StringUtil.endsWith(hostname, '.')) {
+        boolean resolvedWithSearchDomains = searchDomains != null && ndots > 0 && !StringUtil.endsWith(hostname, '.');
+        if (!hasEntries(cachedEntries) && resolvedWithSearchDomains) {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
-                cachedEntries = resolveCache.get(initialHostname, additionals);
-                if (hasEntries(cachedEntries)) {
+                final List<? extends DnsCacheEntry> entries = resolveCache.get(initialHostname, additionals);
+                // Only a positive cache entry lets us draw a conclusion about the bare hostname. A negative entry
+                // just means that this specific search domain permutation does not exist, which must neither
+                // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
+                if (hasEntries(entries) && entries.get(0).cause() == null) {
+                    cachedEntries = entries;
                     break;
                 }
             }
@@ -1328,20 +1396,17 @@ public class DnsNameResolver extends InetNameResolver {
                 return executor().newFailedFuture(e);
             }
         } else {
-            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> p = executor().newPromise();
-            f.addListener((FutureListener<Channel>) f1 -> {
+            f.addListener(f1 -> {
                 if (f1.isSuccess()) {
-                    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
-                            f1.getNow(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                    // doQuery(...) completes and returns the caller's own promise, so just run the query
+                    // against it and return that same promise below; no separate promise to bridge is needed.
+                    doQuery(f1.getNow(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                             additionalsArray, true, promise);
-                    PromiseNotifier.cascade(qf, p);
                 } else {
-                    UnknownHostException e = toException(f1, question.name(), question, additionalsArray);
-                    promise.setFailure(e);
-                    p.setFailure(e);
+                    promise.tryFailure(toException(f1, question.name(), question, additionalsArray));
                 }
             });
-            return p;
+            return cast(promise);
         }
     }
 
@@ -1388,7 +1453,11 @@ public class DnsNameResolver extends InetNameResolver {
 
                         // Retain the result as the listener on the promise is responsible to release it.
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed, so nobody will release the result;
+                            // release the reference we just retained to avoid leaking it.
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
                         Throwable cause = f.cause();
                         if (isTimeoutError(cause)) {
@@ -1397,7 +1466,7 @@ public class DnsNameResolver extends InetNameResolver {
                         } else {
                             // Notify the observer and after that the promise
                             queryLifecycleObserver.queryFailed(cause);
-                            promise.setFailure(cause);
+                            promise.tryFailure(cause);
                         }
                     }
                 });
@@ -1425,11 +1494,16 @@ public class DnsNameResolver extends InetNameResolver {
                         AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
                                 (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed; release the reference we retained
+                            // (the one held by newPromise is released by RELEASE_LISTENER below).
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
-                        promise.setFailure(f.cause());
+                        promise.tryFailure(f.cause());
                     }
 
+                    // Always release newPromise's own reference, even if the hand-off above failed.
                     p.addListener(RELEASE_LISTENER);
                 });
 

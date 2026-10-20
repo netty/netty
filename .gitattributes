@@ -1,2 +1,6 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
 * text=auto
+
+# The jextract plugin prepends this header verbatim to generated sources; keep it LF so the prepended
+# header never mixes CRLF into an LF body and regeneration stays byte-for-byte reproducible.
+jextract-maven-plugin/src/main/resources/io/netty/build/jextract/license-header.txt text eol=lf

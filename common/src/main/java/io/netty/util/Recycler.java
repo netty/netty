@@ -435,6 +435,10 @@ public abstract class Recycler<T> {
     }
 
     private static final class GuardedLocalPool<T> extends LocalPool<DefaultHandle<T>, T> {
+        static {
+            // Eagerly initiate DefaultHandle class-loading.
+            int ignore = DefaultHandle.STATE_AVAILABLE;
+        }
 
         GuardedLocalPool(int maxCapacity) {
             super(maxCapacity);
