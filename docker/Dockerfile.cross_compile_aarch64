@@ -48,6 +48,9 @@ ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk/"
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
+# Refresh the CA bundle so wget can verify the TLS chain of the download hosts.
+RUN yum update -y ca-certificates
+
 # Install aarch64 gcc 10.2 toolchain
 RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/binrel/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && \
   tar xf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && rm -f gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
