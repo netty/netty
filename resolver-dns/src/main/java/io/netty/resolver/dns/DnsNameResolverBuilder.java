@@ -79,6 +79,8 @@ public final class DnsNameResolverBuilder {
 
     private int maxNumConsolidation;
     private DnsNameResolverChannelStrategy datagramChannelStrategy = DnsNameResolverChannelStrategy.ChannelPerResolver;
+    private boolean caseRandomizationEnabled;
+    private boolean dnsCookiesEnabled;
 
     /**
      * Creates a new builder.
@@ -656,6 +658,42 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Enables or disables the randomization of the case of the name in the questions of UDP queries, also known as
+     * "0x20". The response is only accepted if it echoes the name with exactly the same case, which adds entropy
+     * that an off-path attacker needs to guess in order to spoof a response, on top of the query id and the source
+     * port. See <a href="https://tools.ietf.org/html/rfc5452#section-9.2">RFC 5452</a>.
+     * <p>
+     * Some nameservers do not preserve the case of the name in their responses. Queries to these will time out
+     * if this is enabled. This is disabled by default.
+     *
+     * @param caseRandomizationEnabled {@code true} if the case of the name should be randomized.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder caseRandomizationEnabled(boolean caseRandomizationEnabled) {
+        this.caseRandomizationEnabled = caseRandomizationEnabled;
+        return this;
+    }
+
+    /**
+     * Enables or disables the sending of a random client cookie with every UDP query, as defined by
+     * <a href="https://tools.ietf.org/html/rfc7873">RFC 7873</a>. A response is rejected if it carries a cookie
+     * that does not echo the client cookie. Once a nameserver was seen to echo the client cookie, responses from it
+     * that omit the cookie are rejected as well.
+     * <p>
+     * The cookie is part of the OPT record, so this has no effect on queries that do not include one, which is the
+     * case if {@link #optResourceEnabled(boolean)} is {@code false} or if the query already has an OPT record.
+     * Nameservers that require a valid server cookie and so answer with {@code BADCOOKIE} are not supported.
+     * This is disabled by default.
+     *
+     * @param dnsCookiesEnabled {@code true} if DNS cookies should be used.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder dnsCookiesEnabled(boolean dnsCookiesEnabled) {
+        this.dnsCookiesEnabled = dnsCookiesEnabled;
+        return this;
+    }
+
+    /**
      * Returns a new {@link DnsNameResolver} instance.
      *
      * @return a {@link DnsNameResolver}
@@ -709,7 +747,9 @@ public final class DnsNameResolverBuilder {
                 decodeIdn,
                 completeOncePreferredResolved,
                 maxNumConsolidation,
-                datagramChannelStrategy);
+                datagramChannelStrategy,
+                caseRandomizationEnabled,
+                dnsCookiesEnabled);
     }
 
     /**
@@ -780,6 +820,8 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.localAddress(localAddress);
         copiedBuilder.consolidateCacheSize(maxNumConsolidation);
         copiedBuilder.datagramChannelStrategy(datagramChannelStrategy);
+        copiedBuilder.caseRandomizationEnabled(caseRandomizationEnabled);
+        copiedBuilder.dnsCookiesEnabled(dnsCookiesEnabled);
         return copiedBuilder;
     }
 }
