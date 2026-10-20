@@ -310,23 +310,76 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testCodecExceptionForNotFinEmptyFrame() {
-        final EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
+    public void testEmptyNotFinFirstFragmentKeepsRsv1() {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
-        final TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
+        // https://tools.ietf.org/html/rfc7692#section-6: the first fragment of a compressed message has RSV1 set,
+        // even if its payload is empty.
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, "")));
+        TextWebSocketFrame frame = encoderChannel.readOutbound();
+        assertFalse(frame.isFinalFragment());
+        assertEquals(WebSocketExtension.RSV1, frame.rsv());
+        assertFalse(frame.content().isReadable());
+        frame.release();
 
-        try {
-            assertThrows(EncoderException.class, new Executable() {
-                @Override
-                public void execute() {
-                    encoderChannel.writeOutbound(emptyNotFinFrame);
+        assertFalse(encoderChannel.finish());
+    }
+
+    @Test
+    public void testEmptyNotFinContinuationFragmentDoesNotSetRsv1() {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
+
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, "Hello")));
+        assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(false, 0, Unpooled.EMPTY_BUFFER)));
+        ((WebSocketFrame) encoderChannel.readOutbound()).release();
+
+        // https://tools.ietf.org/html/rfc7692#section-6: non-first fragments must not have RSV1 set.
+        ContinuationWebSocketFrame frame = encoderChannel.readOutbound();
+        assertFalse(frame.isFinalFragment());
+        assertEquals(0, frame.rsv());
+        assertFalse(frame.content().isReadable());
+        frame.release();
+
+        assertFalse(encoderChannel.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testRoundTripWithEmptyNotFinFragments(boolean noContext) {
+        String text = "Hello world, hello world, hello world!";
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, noContext));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(noContext, 0));
+
+        // Empty first fragment, content, empty middle fragment, content, final fragment. Then a second message.
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, Unpooled.EMPTY_BUFFER)));
+        assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(false, 0, text)));
+        assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(false, 0, Unpooled.EMPTY_BUFFER)));
+        assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(true, 0, text)));
+        assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(true, 0, text)));
+
+        StringBuilder messages = new StringBuilder();
+        for (;;) {
+            WebSocketFrame encoded = encoderChannel.readOutbound();
+            if (encoded == null) {
+                break;
+            }
+            decoderChannel.writeInbound(encoded);
+            for (;;) {
+                WebSocketFrame decoded = decoderChannel.readInbound();
+                if (decoded == null) {
+                    break;
                 }
-            });
-        } finally {
-            // EmptyByteBuf buffer
-            assertFalse(emptyNotFinFrame.release());
-            assertFalse(encoderChannel.finish());
+                messages.append(decoded.content().toString(UTF_8));
+                if (decoded.isFinalFragment()) {
+                    messages.append('|');
+                }
+                decoded.release();
+            }
         }
+        assertThat(messages.toString()).isEqualTo(text + text + '|' + text + '|');
+
+        assertFalse(encoderChannel.finish());
+        assertFalse(decoderChannel.finish());
     }
 
     @Test
