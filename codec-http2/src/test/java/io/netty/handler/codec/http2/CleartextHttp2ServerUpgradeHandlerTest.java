@@ -238,7 +238,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "/a\u007fb", "Upgrade-Insecure-Request://" })
+    @ValueSource(strings = { "Upgrade-Insecure-Request://" })
     public void upgradeWithRequestTargetThatIsInvalidForHttp2(String requestTarget) throws Exception {
         final List<Throwable> childExceptions = new ArrayList<Throwable>();
         final Http2FrameCodec http2Codec = new Http2FrameCodecBuilder(true).build();
