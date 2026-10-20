@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,6 +39,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
@@ -233,6 +237,79 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertInstanceOf(PriorKnowledgeUpgradeEvent.class, userEvents.get(0));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "/a\u007fb", "Upgrade-Insecure-Request://" })
+    public void upgradeWithRequestTargetThatIsInvalidForHttp2(String requestTarget) throws Exception {
+        final List<Throwable> childExceptions = new ArrayList<Throwable>();
+        final Http2FrameCodec http2Codec = new Http2FrameCodecBuilder(true).build();
+        final ChannelInitializer<Channel> streamInitializer = new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        childExceptions.add(cause);
+                    }
+                });
+            }
+        };
+        final Http2MultiplexHandler multiplexHandler = new Http2MultiplexHandler(streamInitializer, streamInitializer);
+        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new Http2ServerUpgradeCodec(http2Codec, multiplexHandler);
+            }
+        };
+        HttpServerCodec httpServerCodec = new HttpServerCodec();
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
+        channel = new EmbeddedChannel(new CleartextHttp2ServerUpgradeHandler(
+                httpServerCodec, upgradeHandler, http2Codec));
+
+        String upgradeString = "GET " + requestTarget + " HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
+        assertFalse(channel.writeInbound(Unpooled.copiedBuffer(upgradeString, CharsetUtil.ISO_8859_1)));
+        channel.checkException();
+
+        // The request can not be converted to HTTP/2 headers, so the upgraded stream must be reset.
+        assertEquals(1, childExceptions.size());
+        Http2Exception.StreamException streamException =
+                assertInstanceOf(Http2Exception.StreamException.class, childExceptions.get(0));
+        assertEquals(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, streamException.streamId());
+        assertSame(Http2Error.PROTOCOL_ERROR, streamException.error());
+        assertInstanceOf(IllegalArgumentException.class, streamException.getCause());
+        assertEquals(0, http2Codec.connection().numActiveStreams());
+
+        ByteBuf responseBuffer = channel.readOutbound();
+        assertTrue(responseBuffer.toString(CharsetUtil.US_ASCII).startsWith("HTTP/1.1 101 Switching Protocols"));
+        responseBuffer.release();
+
+        CompositeByteBuf frames = Unpooled.compositeBuffer();
+        for (;;) {
+            ByteBuf buf = channel.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            frames.addComponent(true, buf);
+        }
+        final List<Long> rstStreams = new ArrayList<Long>();
+        try {
+            new DefaultHttp2FrameReader().readFrame(null, frames, new Http2FrameAdapter() {
+                @Override
+                public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
+                    assertEquals(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, streamId);
+                    rstStreams.add(errorCode);
+                }
+            });
+        } finally {
+            frames.release();
+        }
+        assertEquals(1, rstStreams.size());
+        assertSame(Http2Error.PROTOCOL_ERROR, Http2Error.valueOf(rstStreams.get(0)));
+    }
+
     private static ByteBuf settingsFrameBuf() {
         ByteBuf settingsFrame = Unpooled.buffer();
         settingsFrame.writeMedium(12); // Payload length
@@ -249,6 +326,50 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     private static Http2Settings expectedSettings() {
         return new Http2Settings().maxConcurrentStreams(100).initialWindowSize(65535);
+    }
+
+    @Test
+    public void upgradeAfterChannelClosed() {
+        final List<Throwable> exceptions = new ArrayList<Throwable>();
+        HttpServerCodec httpServerCodec = new HttpServerCodec();
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec,
+                new UpgradeCodecFactory() {
+                    @Override
+                    public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                        return new Http2ServerUpgradeCodec(Http2FrameCodecBuilder.forServer().build(),
+                                new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                        exceptions.add(cause);
+                                    }
+                                });
+                    }
+                }, 1024);
+        channel = new EmbeddedChannel(new CleartextHttp2ServerUpgradeHandler(
+                httpServerCodec, upgradeHandler, Http2FrameCodecBuilder.forServer().build()));
+
+        // The first request is too large, so the server responds with 413 and closes the channel. The pipelined
+        // upgrade request is still decoded and handled after the channel was closed.
+        StringBuilder request = new StringBuilder("POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Upgrade: h2c\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 2000\r\n\r\n");
+        for (int i = 0; i < 2000; i++) {
+            request.append('x');
+        }
+        request.append("GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+
+        channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII));
+        assertFalse(channel.isOpen());
+
+        // The upgrade fails because the channel is closed, which must be the only exception.
+        assertEquals(1, exceptions.size());
+        assertInstanceOf(Http2Exception.class, exceptions.get(0));
     }
 
     private void validateClearTextUpgrade(String upgradeString) {

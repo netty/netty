@@ -676,6 +676,29 @@ public class HttpPostRequestDecoderTest {
         }
     }
 
+    // https://github.com/netty/netty/issues/12295
+    @Test
+    public void testDecodeContentDispositionEndingWithSemicolon() {
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+        final String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"image.jpg\";\r\n" +
+                "\r\n" +
+                "foo\r\n" +
+                "--" + boundary + "--";
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost", Unpooled.wrappedBuffer(body.getBytes()));
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        final DefaultHttpDataFactory factory = new DefaultHttpDataFactory(false);
+        try {
+            HttpPostRequestDecoder.ErrorDataDecoderException e = assertThrows(
+                    HttpPostRequestDecoder.ErrorDataDecoderException.class,
+                    () -> new HttpPostRequestDecoder(factory, req));
+            assertInstanceOf(ArrayIndexOutOfBoundsException.class, e.getCause());
+        } finally {
+            assertTrue(req.release());
+        }
+    }
+
     // https://github.com/netty/netty/pull/7265
     @Test
     public void testDecodeMalformedBadCharsetContentDispositionFieldParameters() throws Exception {

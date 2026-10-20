@@ -221,6 +221,9 @@ final class AdaptivePoolingAllocator {
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
+        if (PlatformDependent.isJfrEnabled()) {
+            JfrEventRegistration.init();
+        }
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
@@ -1588,6 +1591,8 @@ final class AdaptivePoolingAllocator {
 
     static class Chunk implements ChunkInfo {
         protected final AbstractByteBuf delegate;
+        // the delegate's memory address, or 0 when it has none: it doesn't change while the chunk is in use
+        final long delegateMemoryAddress;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
@@ -1600,6 +1605,7 @@ final class AdaptivePoolingAllocator {
         Chunk() {
             // Constructor only used by the MAGAZINE_FREED sentinel.
             delegate = null;
+            delegateMemoryAddress = 0L;
             magazine = null;
             allocator = null;
             capacity = 0;
@@ -1608,6 +1614,7 @@ final class AdaptivePoolingAllocator {
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
+            delegateMemoryAddress = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0L;
             this.pooled = pooled;
             capacity = delegate.capacity();
             attachToMagazine(magazine);
@@ -2149,6 +2156,9 @@ final class AdaptivePoolingAllocator {
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
         private AbstractByteBuf rootParent;
+        // this buffer's memory address, from the root buffer's address that its chunk computed, or 0 when the root
+        // buffer has none, see _memoryAddress()
+        private long memoryAddress;
         Chunk chunk;
         private int length;
         private int maxFastCapacity;
@@ -2171,6 +2181,8 @@ final class AdaptivePoolingAllocator {
             setIndex0(readerIndex, writerIndex);
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
+            // the chunk's delegate is the root buffer
+            memoryAddress = hasMemoryAddress ? wrapped.delegateMemoryAddress + startIndex : 0L;
             rootParent = unwrapped;
             tmpNioBuf = null;
 
@@ -2279,13 +2291,18 @@ final class AdaptivePoolingAllocator {
         @Override
         public long memoryAddress() {
             ensureAccessible();
+            if (!hasMemoryAddress) {
+                throw new UnsupportedOperationException();
+            }
             return _memoryAddress();
         }
 
         @Override
         long _memoryAddress() {
-            AbstractByteBuf root = rootParent;
-            return root != null ? root._memoryAddress() + startIndex : 0L;
+            // Use the address kept at init() instead of asking the root buffer, which would check its accessibility
+            // on every call. The root stays accessible while this buffer holds a segment of its chunk. The address is
+            // 0 when the root buffer has none, and after deallocation.
+            return memoryAddress;
         }
 
         @Override
@@ -2467,6 +2484,15 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+            if (PlatformDependent.hasUnsafe() && hasMemoryAddress) {
+                // Copies from a source with a memory address or an array without an NIO buffer view of the source,
+                // which src.nioBuffer(...) below would allocate for each copy from a buffer of another kind, such
+                // as a slice or a buffer of another allocator. Without Unsafe, a direct buffer can still have a
+                // memory address (Java 25+), but the copy needs Unsafe; checking hasUnsafe() first lets the JIT
+                // drop this branch then.
+                UnsafeByteBufUtil.setBytes(this, _memoryAddress() + index, index, src, srcIndex, length);
+                return this;
+            }
             checkIndex(index, length);
             if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
                 AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
@@ -2670,6 +2696,8 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
+            memoryAddress = 0L;
+            hasMemoryAddress = false;
             handle.unguardedRecycle(this);
         }
     }

@@ -196,7 +196,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     .channelId(channel.id())
                     .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder(maxAllocation))
+                    .handlers(BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation))
                     .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
