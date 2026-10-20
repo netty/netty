@@ -45,7 +45,8 @@ public class IovArrayReferenceCollectorTest {
         ByteBuf third = Unpooled.directBuffer().writeZero(1);
         try {
             iovArray.maxCount(2);
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector();
+            collector.setIovArray(iovArray);
             collector.reset();
 
             assertTrue(collector.processMessage(first));
@@ -70,7 +71,8 @@ public class IovArrayReferenceCollectorTest {
         CompositeByteBuf buffer = Unpooled.compositeBuffer(2);
         buffer.addComponents(true, Unpooled.directBuffer().writeZero(1), Unpooled.directBuffer().writeZero(1));
         try {
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector();
+            collector.setIovArray(iovArray);
             collector.reset();
 
             assertFalse(collector.processMessage(buffer));
@@ -90,7 +92,8 @@ public class IovArrayReferenceCollectorTest {
         ByteBuf second = Unpooled.directBuffer().writeZero(1);
         try {
             iovArray.maxBytes(1);
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector();
+            collector.setIovArray(iovArray);
             collector.reset();
 
             assertTrue(collector.processMessage(first));
@@ -113,7 +116,8 @@ public class IovArrayReferenceCollectorTest {
         ByteBuf third = Unpooled.directBuffer().writeZero(1);
         ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
         try {
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector();
+            collector.setIovArray(iovArray);
 
             // First write fills the collector up to a high water mark of 3 entries.
             collector.reset();
