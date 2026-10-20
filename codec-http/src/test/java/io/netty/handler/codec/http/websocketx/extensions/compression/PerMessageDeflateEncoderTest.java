@@ -304,7 +304,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testEmptyNotFinFirstFragmentKeepsRsv1() {
+    public void testEmptyNotFinFirstFragmentKeepsRsv1() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         // https://tools.ietf.org/html/rfc7692#section-6: the first fragment of a compressed message has RSV1 set,
@@ -320,7 +320,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testEmptyNotFinContinuationFragmentDoesNotSetRsv1() {
+    public void testEmptyNotFinContinuationFragmentDoesNotSetRsv1() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, "Hello")));
@@ -339,7 +339,7 @@ public class PerMessageDeflateEncoderTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    public void testRoundTripWithEmptyNotFinFragments(boolean noContext) {
+    public void testRoundTripWithEmptyNotFinFragments(boolean noContext) throws Exception {
         String text = "Hello world, hello world, hello world!";
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, noContext));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(noContext, 0));
