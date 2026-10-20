@@ -28,6 +28,7 @@
 # The hash only protects against the script changing unnoticed, it does not make a malicious script safe.
 # ----------------------------------------------------------------------------
 
+set -euo pipefail
 SDKMAN_INSTALL_URL="https://beta.sdkman.io?ci=true"
 DOCKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
