@@ -508,8 +508,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     neverRegistered = false;
                     registered = true;
 
-                    handler.success(null);
+                    // Fire channelRegistered before notifying the handler. This ensures ChannelInitializer
+                    // implementations (which do the initialization once the Channel is registered) have set up the
+                    // pipeline before the user is notified and so may start to fire events / operations through it.
                     pipeline.fireChannelRegistered();
+                    handler.success(null);
                     // Only fire a channelActive if the channel has never been registered. This prevents firing
                     // multiple channel actives if the channel is deregistered and re-registered.
                     if (isActive()) {

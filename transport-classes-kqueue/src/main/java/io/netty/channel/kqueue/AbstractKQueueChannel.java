@@ -177,6 +177,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // affected another channel that re-used the fd.
             return;
         }
+        IoRegistration registration = this.registration;
+        if (registration == null) {
+            // Not registered yet. The filters will be submitted as part of doRegister(...) once the registration
+            // is done.
+            return;
+        }
         try {
             registration.submit(ops);
         } catch (Exception e) {
