@@ -208,6 +208,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         if (isSendmsgZcSupported() && current != null && config.shouldWriteZeroCopy(current.readableBytes())) {
             IoUringIoHandler handler = registration().attachment();
 
+            // Obtain the MsgHdrMemoryArray before filling the iovecs: it may submit and clear the iovArray, which
+            // must not happen once the iovecs of this write are filled but their SQE is not queued yet.
+            MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
             IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
@@ -230,7 +233,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                 long iovArrayAddress = iovArray.memoryAddress(offset);
                 int iovArrayLength = iovArray.count() - offset;
 
-                MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
                 MsgHdrMemory hdr = msgHdrArray.nextHdr();
                 assert hdr != null;
                 hdr.set(iovArrayAddress, iovArrayLength);
