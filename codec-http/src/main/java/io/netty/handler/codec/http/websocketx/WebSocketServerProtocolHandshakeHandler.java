@@ -16,17 +16,25 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
@@ -65,6 +73,11 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             try {
+                if (!isOriginAllowed(req)) {
+                    // Do this before anything else so no upgrade response is ever written.
+                    sendForbiddenResponse(ctx);
+                    return;
+                }
                 final boolean isSecure = ctx.pipeline().get(SslHandler.class) != null;
                 final String host = req.headers().get(HttpHeaderNames.HOST);
                 final WebSocketServerHandshaker handshaker = WebSocketServerHandshakerFactory.resolveHandshaker(
@@ -108,6 +121,28 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         } else {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    private boolean isOriginAllowed(HttpRequest req) {
+        Set<String> allowedOrigins = serverConfig.allowedOrigins();
+        if (allowedOrigins.isEmpty()) {
+            return true;
+        }
+        // Every Origin header value must be allowed, a missing header means the request did not come from a browser.
+        for (String origin : req.headers().getAll(HttpHeaderNames.ORIGIN)) {
+            if (!allowedOrigins.contains(origin.trim().toLowerCase(Locale.ROOT))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void sendForbiddenResponse(ChannelHandlerContext ctx) {
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, ctx.alloc().buffer(0));
+        setContentLength(res, 0);
+        setKeepAlive(res, false);
+        ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
     }
 
     private boolean isWebSocketPath(HttpRequest req) {
