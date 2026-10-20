@@ -310,22 +310,23 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testCodecExceptionForNotFinEmptyFrame() {
-        final EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
+    public void testEmptyNotFinalFragment() {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
-        final TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
+        TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
 
         try {
-            assertThrows(EncoderException.class, new Executable() {
-                @Override
-                public void execute() {
-                    encoderChannel.writeOutbound(emptyNotFinFrame);
-                }
-            });
-        } finally {
-            // EmptyByteBuf buffer
-            assertFalse(emptyNotFinFrame.release());
+            assertTrue(encoderChannel.writeOutbound(emptyNotFinFrame));
+            TextWebSocketFrame encodedFrame = encoderChannel.readOutbound();
+            assertNotNull(encodedFrame);
+            assertFalse(encodedFrame.isFinalFragment());
+            assertEquals(WebSocketExtension.RSV1, encodedFrame.rsv());
+            assertTrue(ByteBufUtil.equals(EMPTY_DEFLATE_BLOCK, encodedFrame.content()));
+            // Unreleasable buffer
+            assertFalse(encodedFrame.release());
             assertFalse(encoderChannel.finish());
+        } finally {
+            assertFalse(emptyNotFinFrame.release());
         }
     }
 

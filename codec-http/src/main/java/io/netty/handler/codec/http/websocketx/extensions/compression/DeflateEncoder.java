@@ -104,17 +104,18 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         final ByteBuf compressedContent;
         if (msg.content().isReadable()) {
             compressedContent = compressContent(ctx, msg);
-        } else if (msg.isFinalFragment()) {
-            // Set empty DEFLATE block manually for unknown buffer size
+        } else {
+            // Empty frame — set empty DEFLATE block manually for unknown buffer size.
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
+            // This covers both final and non-final empty fragments so the encoder
+            // behaves symmetrically with DeflateDecoder, which already accepts empty
+            // non-final fragments. See https://github.com/netty/netty/issues/17784
             compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
-            if (noContext) {
+            if (msg.isFinalFragment() && noContext) {
                 // The message ends here, so the next one must start with an empty sliding window,
                 // as when the final fragment has content (see compressContent(...)).
                 cleanup();
             }
-        } else {
-            throw new CodecException("cannot compress content buffer");
         }
 
         final WebSocketFrame outMsg;
