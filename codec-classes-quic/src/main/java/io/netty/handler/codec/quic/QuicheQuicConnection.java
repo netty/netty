@@ -57,7 +57,15 @@ final class QuicheQuicConnection {
     private final ByteBuffer sendInfoBuffer1;
     private final ByteBuffer sendInfoBuffer2;
 
-    private long connection;
+    private volatile long connection;
+
+    // Number of SSL tasks that are currently running (possibly on a different Thread than the EventLoop).
+    // Guarded by this.
+    private int runningSslTasks;
+
+    // Set if free() was called while SSL tasks were still running. The native memory is then released once the last
+    // running task completed. Guarded by this for writes.
+    private volatile boolean freePending;
 
     QuicheQuicConnection(long connection, long ssl, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
         assert connection != -1;
@@ -90,13 +98,20 @@ final class QuicheQuicConnection {
     }
 
     boolean isFreed() {
-        return connection == -1;
+        // If a free is pending the connection must not be used anymore by the caller.
+        return connection == -1 || freePending;
     }
 
     private void free(boolean closeLeakTracker) {
         boolean release = false;
         synchronized (this) {
             if (connection != -1) {
+                if (runningSslTasks > 0) {
+                    // An SSL task is still using the native SSL object, we must not release it now. The last running
+                    // task will do so once it completed.
+                    freePending = true;
+                    return;
+                }
                 try {
                     BoringSSL.SSL_cleanup(ssl);
                     Quiche.quiche_conn_free(connection);
@@ -121,7 +136,7 @@ final class QuicheQuicConnection {
     Runnable sslTask() {
         final Runnable task;
         synchronized (this) {
-            if (connection != -1) {
+            if (connection != -1 && !freePending) {
                 task = BoringSSL.SSL_getTask(ssl);
             } else {
                 task = null;
@@ -132,11 +147,26 @@ final class QuicheQuicConnection {
         }
 
         return () -> {
-            if (connection == -1) {
-                return;
+            synchronized (this) {
+                if (connection == -1 || freePending) {
+                    return;
+                }
+                // Prevent free() from releasing the native memory while the task is running. We can't hold the
+                // monitor while running the task as it might block for a long time and free() is called from the
+                // EventLoop.
+                runningSslTasks++;
             }
-
-            task.run();
+            try {
+                task.run();
+            } finally {
+                boolean free;
+                synchronized (this) {
+                    free = --runningSslTasks == 0 && freePending;
+                }
+                if (free) {
+                    free(true);
+                }
+            }
         };
     }
 
