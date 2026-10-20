@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1055,7 +1056,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (promise == null) {
                 ctx.close();
             } else {
-                ctx.close(promise);
+                // Don't pass the original promise to close(...): it may have been completed by someone else while we
+                // waited for the active streams, and close(...) would then fail with an IllegalArgumentException.
+                // Close with a new promise and notify the original one with trySuccess()/tryFailure(), without
+                // logging if it was already completed. A cancelled original promise is propagated to the new one,
+                // so the channel is not closed in that case, like before.
+                ctx.close(PromiseNotifier.cascade(false, ctx.newPromise(), promise));
             }
         }
     }
