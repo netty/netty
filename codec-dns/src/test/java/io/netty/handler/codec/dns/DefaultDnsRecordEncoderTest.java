@@ -22,10 +22,12 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetAddress;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultDnsRecordEncoderTest {
 
@@ -63,6 +65,47 @@ public class DefaultDnsRecordEncoderTest {
             out.release();
             expectedBuf.release();
         }
+    }
+
+    @Test
+    public void testEncodeOptCookie() throws Exception {
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        byte[] cookie = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        DnsOptCookieRecord record = new DefaultDnsOptCookieRecord(1232, cookie);
+        ByteBuf out = Unpooled.buffer();
+        ByteBuf expectedBuf = Unpooled.buffer();
+        try {
+            expectedBuf.writeByte(0); // root name
+            expectedBuf.writeShort(DnsRecordType.OPT.intValue());
+            expectedBuf.writeShort(1232);
+            expectedBuf.writeInt(0);
+            expectedBuf.writeShort(12); // RDLENGTH
+            expectedBuf.writeShort(10); // OPTION-CODE
+            expectedBuf.writeShort(8); // OPTION-LENGTH
+            expectedBuf.writeBytes(cookie);
+
+            encoder.encodeRecord(record, out);
+            assertEquals(expectedBuf, out);
+        } finally {
+            out.release();
+            expectedBuf.release();
+        }
+    }
+
+    @Test
+    public void testOptCookieRequiresEightBytes() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultDnsOptCookieRecord(1232, new byte[7]);
+            }
+        });
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultDnsOptCookieRecord(1232, new byte[16]);
+            }
+        });
     }
 
     @Test

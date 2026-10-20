@@ -31,6 +31,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.ocsp.OcspTestUtil.CertAndKey;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OcspServerCertificateValidatorTest {
+
+    @Test
+    void defaultResolverUsesSecondFactorDefences() {
+        DnsNameResolver resolver = OcspServerCertificateValidator.createDefaultResolver(IoTransport.DEFAULT);
+        try {
+            assertTrue(resolver.isCaseRandomizationEnabled());
+            assertTrue(resolver.isDnsCookiesEnabled());
+        } finally {
+            resolver.close();
+        }
+    }
 
     /**
      * Full round trip against a local TLS server whose certificate points at a local OCSP responder: a good

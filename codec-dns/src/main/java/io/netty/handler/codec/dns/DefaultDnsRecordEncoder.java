@@ -41,7 +41,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     private static final Class<?>[] SUPPORTED_MESSAGES = new Class<?>[] {
             DnsQuestion.class, DnsPtrRecord.class,
-            DnsOptEcsRecord.class, DnsOptPseudoRecord.class, DnsRawRecord.class };
+            DnsOptEcsRecord.class, DnsOptCookieRecord.class, DnsOptPseudoRecord.class, DnsRawRecord.class };
 
     @Override
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
@@ -51,6 +51,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodePtrRecord((DnsPtrRecord) record, out);
         } else if (record instanceof DnsOptEcsRecord) {
             encodeOptEcsRecord((DnsOptEcsRecord) record, out);
+        } else if (record instanceof DnsOptCookieRecord) {
+            encodeOptCookieRecord((DnsOptCookieRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
             encodeOptPseudoRecord((DnsOptPseudoRecord) record, out);
         } else if (record instanceof DnsRawRecord) {
@@ -81,6 +83,22 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
         out.writeShort(0);
+    }
+
+    private void encodeOptCookieRecord(DnsOptCookieRecord record, ByteBuf out) throws Exception {
+        byte[] clientCookie = record.clientCookie();
+        if (clientCookie.length != DnsOptCookieRecord.CLIENT_COOKIE_LENGTH) {
+            throw new IllegalArgumentException("clientCookie.length: " + clientCookie.length +
+                    " (expected: " + DnsOptCookieRecord.CLIENT_COOKIE_LENGTH + ')');
+        }
+        encodeRecord0(record, out);
+
+        out.writeShort(2 + // OPTION-CODE
+                2 + // OPTION-LENGTH
+                clientCookie.length); // RDLENGTH
+        out.writeShort(DnsOptCookieRecord.OPTION_CODE);
+        out.writeShort(clientCookie.length);
+        out.writeBytes(clientCookie);
     }
 
     private void encodeOptEcsRecord(DnsOptEcsRecord record, ByteBuf out) throws Exception {
