@@ -83,6 +83,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         super(WebSocketVersion.V00, webSocketURL, subprotocols, decoderConfig);
     }
 
+    WebSocketServerHandshaker00(boolean isSecure, String host, String path,
+                                String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V00, isSecure, host, path, subprotocols, decoderConfig);
+    }
+
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
