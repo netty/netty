@@ -280,17 +280,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     /**
-     * Returns {@code true} if {@code stream} is an established CONNECT tunnel, i.e. an ordinary CONNECT request
-     * (RFC 9113, 8.5) that was answered with a successful (2xx) response. From this point on, RFC 9113, 8.5
-     * forbids any further HEADERS frame on the stream.
-     */
-    private static boolean isConnectTunnelEstablished(Http2Stream stream) {
-        return stream instanceof DefaultHttp2Connection.DefaultStream &&
-                ((DefaultHttp2Connection.DefaultStream) stream).isConnectStream() &&
-                ((DefaultHttp2Connection.DefaultStream) stream).isSuccessfulResponse();
-    }
-
-    /**
      * Validates that an initial request or response HEADERS frame, or a PUSH_PROMISE field block (which always
      * carries a request header set, per <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.4.1">
      * RFC 9113, 8.4.1</a>), carries the mandatory pseudo-header fields, as required by
@@ -482,19 +471,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
                 }
                 if (connection.isServer()) {
-                    if (Http2CodecUtil.isOrdinaryConnect(headers) &&
-                            stream instanceof DefaultHttp2Connection.DefaultStream) {
+                    if (Http2CodecUtil.isOrdinaryConnect(headers)) {
                         // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so
                         // that, combined with a successful response, any HEADERS frame received once the tunnel
                         // is established can be rejected as a stream error below.
-                        ((DefaultHttp2Connection.DefaultStream) stream).connectStream();
+                        stream.setProperty(Http2CodecUtil.CONNECT_STREAM_KEY, Boolean.TRUE);
                     }
                 } else if (!isInformational &&
-                        HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS &&
-                        stream instanceof DefaultHttp2Connection.DefaultStream) {
+                        HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
                     // Remember that this stream's (final) response was successful; combined with the request
                     // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
-                    ((DefaultHttp2Connection.DefaultStream) stream).successfulResponse();
+                    stream.setProperty(Http2CodecUtil.SUCCESSFUL_RESPONSE_KEY, Boolean.TRUE);
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
@@ -513,7 +500,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             } else {
                 // Once a CONNECT tunnel is established (RFC 9113, 8.5) -- an ordinary CONNECT request answered
                 // with a successful response -- no further HEADERS frame is permitted on the stream.
-                if (isConnectTunnelEstablished(stream)) {
+                if (Http2CodecUtil.isConnectTunnelEstablished(stream)) {
                     throw streamError(stream.id(), PROTOCOL_ERROR,
                             "Received HEADERS frame on stream %d after the CONNECT tunnel was established; only " +
                             "DATA and stream management frames are permitted (RFC 9113, 8.5)", stream.id());

@@ -51,9 +51,9 @@ import static org.mockito.Mockito.when;
  * <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.5">RFC 9113, 8.5</a>: once an ordinary CONNECT
  * request has been answered with a successful (2xx) response, no further HEADERS frame is permitted on that
  * stream. Unlike {@link DefaultHttp2ConnectionDecoderTest}, this uses a real {@link DefaultHttp2Connection} and
- * {@link DefaultHttp2ConnectionEncoder} so that the state the decoder relies on -- tracked directly on
- * {@link DefaultHttp2Connection.DefaultStream}, set by the encoder when it writes the request/response and read
- * by the decoder via an {@code instanceof} check -- is actually exercised, rather than a mock standing in for it.
+ * {@link DefaultHttp2ConnectionEncoder} so that the state the decoder relies on -- tracked in stream
+ * properties, set by the encoder when it writes the request/response and read by the decoder -- is actually
+ * exercised, rather than a mock standing in for it.
  */
 public class Http2ConnectTunnelTest {
     private static final int STREAM_ID = 3;

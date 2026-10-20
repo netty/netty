@@ -166,6 +166,29 @@ public final class Http2CodecUtil {
     }
 
     /**
+     * Stream property that is set (to {@link Boolean#TRUE}) once a stream's request is known to be an ordinary
+     * CONNECT request (RFC 9113, 8.5), whether it was written by the encoder (client side) or decoded by the decoder
+     * (server side).
+     */
+    static final Http2Connection.PropertyKey CONNECT_STREAM_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
+
+    /**
+     * Stream property that is set (to {@link Boolean#TRUE}) once a stream's final response is known to have used a
+     * successful (2xx) status code, whether it was written by the encoder (server side) or decoded by the decoder
+     * (client side). Combined with {@link #CONNECT_STREAM_KEY} this means the CONNECT tunnel is established.
+     */
+    static final Http2Connection.PropertyKey SUCCESSFUL_RESPONSE_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
+
+    /**
+     * Returns {@code true} if {@code stream} is an established CONNECT tunnel, i.e. an ordinary CONNECT request
+     * (RFC 9113, 8.5) that was answered with a successful (2xx) response. From this point on, RFC 9113, 8.5
+     * forbids any further HEADERS frame on the stream.
+     */
+    static boolean isConnectTunnelEstablished(Http2Stream stream) {
+        return stream.getProperty(CONNECT_STREAM_KEY) != null && stream.getProperty(SUCCESSFUL_RESPONSE_KEY) != null;
+    }
+
+    /**
      * Returns {@code true} if {@code headers} represent an ordinary CONNECT request as defined by
      * <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.5">RFC 9113, 8.5</a>, i.e. a request whose
      * {@code :method} is {@code CONNECT} and which does not carry a {@code :protocol} pseudo-header field (which
