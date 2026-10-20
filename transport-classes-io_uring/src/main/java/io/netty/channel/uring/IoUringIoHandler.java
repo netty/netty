@@ -769,7 +769,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     IovArray iovArray() {
-        if (!iovArray.hasRoom()) {
+        if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
             // Without anything to submit all the entries were submitted already, so they can be reused too.

@@ -40,14 +40,14 @@ public class IoUringSharedIovArrayTest {
             }
             assertFalse(first.add(buf, 0, 1));
 
-            assertTrue(shared.hasRoom());
+            assertFalse(shared.isFull());
             IovArray second = shared.next();
             assertEquals(0, second.count());
             for (int i = 0; i < Limits.IOV_MAX; i++) {
                 assertTrue(second.add(buf, 0, 1));
             }
             assertEquals(first.memoryAddress(Limits.IOV_MAX), second.memoryAddress(0));
-            assertFalse(shared.hasRoom());
+            assertTrue(shared.isFull());
         } finally {
             buf.release();
             shared.release();

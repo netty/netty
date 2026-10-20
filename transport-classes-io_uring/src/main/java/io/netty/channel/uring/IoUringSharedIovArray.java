@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IovArray;
-import io.netty.channel.unix.Limits;
 import io.netty.util.internal.CleanableDirectBuffer;
 
 /**
@@ -50,10 +49,10 @@ final class IoUringSharedIovArray {
     }
 
     /**
-     * Returns {@code true} if the next write can still add {@code IOV_MAX} entries.
+     * Returns {@code true} if the next write can not add any entry.
      */
-    boolean hasRoom() {
-        return numEntries - nextStart() >= Math.min(Limits.IOV_MAX, numEntries);
+    boolean isFull() {
+        return nextStart() == numEntries;
     }
 
     /**
