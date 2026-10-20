@@ -20,10 +20,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -39,6 +40,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private final boolean validateHeaders;
     private int currentStreamId;
+    private boolean discardContent;
     private HttpScheme httpScheme;
 
     protected HttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
@@ -113,20 +115,30 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                 // Convert and write the headers.
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
-                if (msg instanceof FullHttpResponse &&
-                        ((FullHttpResponse) msg).status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                if (msg instanceof HttpResponse &&
+                        ((HttpResponse) msg).status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                     // An informational response is only a HEADERS frame without END_STREAM, the final response
-                    // follows on the same stream (RFC 9113, 8.1).
+                    // follows on the same stream (RFC 9113, 8.1). Like HttpResponseEncoder, drop the
+                    // Content-Length header and the content: of a FullHttpResponse, or of a HttpResponse up to
+                    // and including the next LastHttpContent.
+                    http2Headers.remove(HttpHeaderNames.CONTENT_LENGTH);
                     writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers, false,
                             promiseAggregator);
+                    discardContent = !(msg instanceof LastHttpContent);
                     return;
                 }
+                discardContent = false;
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
                 writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers,
                         endStream, promiseAggregator);
             }
 
             if (!endStream && msg instanceof HttpContent) {
+                if (discardContent) {
+                    // Content of an informational response, released below.
+                    discardContent = !(msg instanceof LastHttpContent);
+                    return;
+                }
                 boolean isLastContent = false;
                 HttpHeaders trailers = EmptyHttpHeaders.INSTANCE;
                 Http2Headers http2Trailers = EmptyHttp2Headers.INSTANCE;
