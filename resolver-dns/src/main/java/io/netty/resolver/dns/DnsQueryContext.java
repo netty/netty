@@ -178,6 +178,7 @@ abstract class DnsQueryContext {
             IllegalStateException e = new IllegalStateException("query ID space exhausted: " + question());
             finishFailure("failed to send a query via " + protocol(), e, false);
             queryLifecycleObserver.queryWritten(nameServerAddr, channel.newFailedFuture(e));
+            return;
         }
 
         // Ensure we remove the id from the QueryContextManager once the query completes.

@@ -24,6 +24,7 @@
 # Report directories
 /reports
 */reports
+.github/ghsa
 
 # Mac-specific directory that no other operating system needs.
 .DS_Store
@@ -37,7 +38,6 @@ replay_pid*.log
 *.threads
 
 dependency-reduced-pom.xml
-
 */.unison.*
 
 # exclude mainframer files

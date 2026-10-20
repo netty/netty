@@ -47,7 +47,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
 
     /**
      * Create a new instance.
-     * @param validateHeaders {@code true} to validate the contents of each header name.
+     * @param validateHeaders {@code true} to validate the contents of each header name and value.
      * @param nameValuePairs An array of the structure {@code [<name,value>,<name,value>,...]}.
      *                      A copy will <strong>NOT</strong> be made of this array. If the contents of this array
      *                      may be modified externally you are responsible for passing in a copy.
@@ -67,8 +67,10 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
     }
 
     private static void validateHeaders(CharSequence... keyValuePairs) {
+        DefaultHttpHeadersFactory factory = DefaultHttpHeadersFactory.headersFactory();
         for (int i = 0; i < keyValuePairs.length; i += 2) {
-            DefaultHttpHeadersFactory.headersFactory().getNameValidator().validateName(keyValuePairs[i]);
+            factory.getNameValidator().validateName(keyValuePairs[i]);
+            factory.getValueValidator().validate(keyValuePairs[i + 1]);
         }
     }
 

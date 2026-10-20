@@ -317,6 +317,30 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void validateRequiredPseudoHeadersOptionRejectsMalformedRequest() throws Exception {
+        // Verify the builder option is propagated into the decoder end-to-end.
+        setUp(Http2FrameCodecBuilder.forServer().validateRequiredPseudoHeaders(true), new Http2Settings());
+
+        Http2Headers malformed = new DefaultHttp2Headers().method(HttpMethod.GET.asciiName());
+        frameInboundWriter.writeInboundHeaders(3, malformed, 31, false);
+
+        // The malformed request (no :scheme/:path) must be rejected with a PROTOCOL_ERROR stream error.
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
+        // It must not be delivered as a HEADERS frame.
+        Object msg;
+        while ((msg = inboundHandler.readInboundMessageOrUserEvent()) != null) {
+            assertFalse(msg instanceof Http2HeadersFrame);
+            ReferenceCountUtil.release(msg);
+        }
+    }
+
+    @Test
     public void receiveRstStream() throws Exception {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 

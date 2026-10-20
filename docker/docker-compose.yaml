@@ -37,6 +37,29 @@ services:
       ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
 
+  # Same as "build" but only builds and tests the modules affected by a change, as given by the
+  # NETTY_AFFECTED_MODULES environment variable (see .github/scripts/mvn_affected.sh). Behaves like "build"
+  # when it is not set to a list of modules.
+  build-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: '/bin/bash -cl "
+      ./.github/scripts/mvn_affected.sh -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true &&
+      if ./.github/scripts/affected_includes.sh testsuite-shading; then
+        cd testsuite-shading &&
+        ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true;
+      fi
+    "'
+
+  # Build just what netty-codec-native-quic needs, and install it so the musl verification legs
+  # can pick the jars out of ~/.m2. `build` above runs the whole reactor plus its tests, which is
+  # far more than a load check needs.
+  build-native-quic:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -pl codec-native-quic -am clean install -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
   deploy:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp clean deploy -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
@@ -64,6 +87,14 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.includeOio=true -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
+  # Same as "build-with-oio-testsuite" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-with-oio-testsuite-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -B -ntp -Pboringssl clean install -Dio.netty.testsuite.includeOio=true -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
   build-boringssl-static:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
@@ -76,6 +107,14 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
+  # Same as "build-leak-pooled" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-leak-pooled-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
   build-boringssl-snapshot:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
@@ -83,6 +122,14 @@ services:
   build-boringssl-static-jdk8-tests:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,jdk8-tests,\!testsuite-jpms clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
+
+  # Same as "build-boringssl-static-jdk8-tests" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-boringssl-static-jdk8-tests-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -B -ntp -Pboringssl,jdk8-tests,\!testsuite-jpms clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
 
   shell:
     <<: *common

@@ -240,7 +240,10 @@ public class InboundHttp2ToHttpAdapterTest {
     @Test
     public void clientRequestSingleHeaderNonAsciiShouldThrow() throws Exception {
         boostrapEnv(1, 1, 1);
-        final Http2Headers http2Headers = new DefaultHttp2Headers()
+        // Disable validation on the client side so the non-ASCII header name reaches the wire; the
+        // server-side validation (RFC 9113 §8.2.1 requires field names to be valid HTTP/1.1 tokens)
+        // then rejects it, which surfaces as a stream error.
+        final Http2Headers http2Headers = new DefaultHttp2Headers(false)
                 .method(new AsciiString("GET"))
                 .scheme(new AsciiString("https"))
                 .authority(new AsciiString("example.org"))

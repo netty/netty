@@ -91,8 +91,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      */
     @Deprecated
     default Long getOrDefault(long key, long defaultValue) {
-        final Long val = get(key);
-        return val == null ? defaultValue : val;
+       return settings().getOrDefault(key, defaultValue);
     }
 
     /**

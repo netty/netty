@@ -69,12 +69,14 @@ import org.junit.jupiter.api.function.Executable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -579,11 +581,11 @@ public class SslHandlerTest {
         assertTrue(channel.finishAndReleaseAll());
 
         SslCompletionEvent evt = events.take();
-        assertTrue(evt instanceof SslHandshakeCompletionEvent);
+        assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
         assertInstanceOf(ClosedChannelException.class, evt.cause());
 
         evt = events.take();
-        assertTrue(evt instanceof SslCloseCompletionEvent);
+        assertInstanceOf(SslCloseCompletionEvent.class, evt);
         assertInstanceOf(ClosedChannelException.class, evt.cause());
         assertTrue(events.isEmpty());
     }
@@ -627,6 +629,8 @@ public class SslHandlerTest {
                               }
                           }
                       });
+                      ch.pipeline().addLast(new SilenceExceptionHandler()
+                              .rootCauseInstanceOf(NotSslRecordException.class));
                   }
                 });
 
@@ -647,12 +651,12 @@ public class SslHandlerTest {
                     }
                 });
 
-            serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).sync().channel();
+            serverChannel = sb.bind(new LocalAddress(SslHandlerTest.class)).sync().channel();
             clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
             latch.await();
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslHandshakeCompletionEvent);
+            assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
             assertInstanceOf(SSLException.class, evt.cause());
 
             ChannelFuture future = (ChannelFuture) events.take();
@@ -665,7 +669,7 @@ public class SslHandlerTest {
 
             latch2.await();
             evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslCloseCompletionEvent);
+            assertInstanceOf(SslCloseCompletionEvent.class, evt);
             assertInstanceOf(ClosedChannelException.class, evt.cause());
             assertTrue(events.isEmpty());
         } finally {
@@ -776,6 +780,8 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     });
             sc = sb.bind(address).syncUninterruptibly().channel();
@@ -794,6 +800,8 @@ public class SslHandlerTest {
                             // This will happen if the channel was closed in the meantime.
                             sslHandlerRef.set(handler);
                             ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SignatureException.class));
                         }
                     });
             cc = b.connect(sc.localAddress()).syncUninterruptibly().channel();
@@ -1528,6 +1536,8 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(CertificateException.class));
                         }
                     }).connect(sc.localAddress());
             future.syncUninterruptibly();
@@ -1636,6 +1646,8 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(serverSslHandler);
                             ch.pipeline().addLast(new SslEventHandler(serverEvent));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
@@ -1648,6 +1660,8 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
                             ch.pipeline().addLast(new SslEventHandler(clientEvent));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     }).connect(sc.localAddress());
             cc = future.syncUninterruptibly().channel();

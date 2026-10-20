@@ -17,6 +17,7 @@ package io.netty.util.test;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.testkit.engine.EngineExecutionResults;
 import org.junit.platform.testkit.engine.EngineTestKit;
 
@@ -33,6 +34,27 @@ class LeakPresenceExtensionTest {
         results.containerEvents().failed().assertThatEvents().isEmpty();
         results.testEvents().failed().assertThatEvents().isEmpty();
         results.testEvents().succeeded().assertThatEvents().hasSize(2);
+    }
+
+    @Test
+    void explicitExtensionTestIsSkippedWhenLeakPresenceDetectionIsDisabled() {
+        String previous = System.getProperty(LeakPresenceExtension.LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY);
+        System.setProperty(LeakPresenceExtension.LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY, "true");
+        try {
+            EngineExecutionResults results = EngineTestKit.engine("junit-jupiter")
+                    .selectors(selectClass(ExplicitExtensionTest.class))
+                    .execute();
+
+            results.containerEvents().failed().assertThatEvents().isEmpty();
+            results.containerEvents().skipped().assertThatEvents().hasSize(1);
+            results.testEvents().succeeded().assertThatEvents().isEmpty();
+        } finally {
+            if (previous == null) {
+                System.clearProperty(LeakPresenceExtension.LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY);
+            } else {
+                System.setProperty(LeakPresenceExtension.LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY, previous);
+            }
+        }
     }
 
     @Test
@@ -68,6 +90,13 @@ class LeakPresenceExtensionTest {
     static class InheritedChildTest extends InheritedParentTest {
         @Test
         void childTest() {
+        }
+    }
+
+    @ExtendWith(LeakPresenceExtension.class)
+    static class ExplicitExtensionTest {
+        @Test
+        void test() {
         }
     }
 }

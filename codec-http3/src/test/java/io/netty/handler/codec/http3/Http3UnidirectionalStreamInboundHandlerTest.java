@@ -52,7 +52,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
 
     private void setup(boolean server) {
         parent = new EmbeddedQuicChannel(server);
-        qpackEncoder = new QpackEncoder();
+        qpackEncoder = new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE);
         qpackDecoder = new QpackDecoder(0, 0);
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, null, qpackEncoder,
                 remoteControlStreamHandler);

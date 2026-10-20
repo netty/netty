@@ -28,6 +28,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -578,6 +579,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     abstract void submitWrite(
             ChannelHandlerContext ctx, Object msg, long size, long delay, long now, ChannelPromise promise);
+
+    /**
+     * Releases the given {@code msg} and fails the given {@code promise} with the supplied {@code cause}.
+     */
+    static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise, Throwable cause) {
+        ReferenceCountUtil.safeRelease(msg);
+        promise.tryFailure(cause);
+    }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

@@ -272,6 +272,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                                   int smallCacheSize, int normalCacheSize,
                                   boolean useCacheForAllThreads, int directMemoryCacheAlignment) {
         super(preferDirect);
+        if (PlatformDependent.isJfrEnabled()) {
+            JfrEventRegistration.init();
+        }
         threadCache = new PoolThreadLocalCache(useCacheForAllThreads);
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -360,7 +363,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
-        if (maxOrder > 14) {
+        if (maxOrder < 0 || maxOrder > 14) {
             throw new IllegalArgumentException("maxOrder: " + maxOrder + " (expected: 0-14)");
         }
 

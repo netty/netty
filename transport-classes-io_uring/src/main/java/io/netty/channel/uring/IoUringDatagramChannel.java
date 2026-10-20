@@ -471,6 +471,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            IoUringIoHandler ioUringIoHandler = registration().attachment();
+            int submissionQueueRemaining = ioUringIoHandler.submitIfFullAndGetRemaining();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             assert readBuffer == null;
             readBuffer = byteBuf;
@@ -480,7 +482,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int datagramSize = ((IoUringDatagramChannelConfig) config()).getMaxDatagramPayloadSize();
 
             int numDatagram = datagramSize == 0 ? 1 : Math.max(1, byteBuf.writableBytes() / datagramSize);
-
+            numDatagram = Math.min(Math.min(submissionQueueRemaining, recvmsgHdrs.capacity()), numDatagram);
             int scheduled = scheduleRecvmsg(byteBuf, numDatagram, datagramSize);
             if (scheduled == 0) {
                 // We could not schedule any recvmmsg so we need to release the buffer as there will be no
@@ -495,12 +497,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int writable = byteBuf.writableBytes();
             long bufferAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
             if (numDatagram <= 1) {
-                return scheduleRecvmsg0(bufferAddress, writable, true) ? 1 : 0;
+                return scheduleRecvmsg0(bufferAddress, writable, true, false) ? 1 : 0;
             }
             int i = 0;
             // Add multiple IORING_OP_RECVMSG to the submission queue. This basically emulates recvmmsg(...)
             for (; i < numDatagram && writable >= datagramSize; i++) {
-                if (!scheduleRecvmsg0(bufferAddress, datagramSize, i == 0)) {
+                if (!scheduleRecvmsg0(bufferAddress, datagramSize, i == 0, i + 1 < numDatagram)) {
                     break;
                 }
                 bufferAddress += datagramSize;
@@ -509,7 +511,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             return i;
         }
 
-        private boolean scheduleRecvmsg0(long bufferAddress, int bufferLength, boolean first) {
+        private boolean scheduleRecvmsg0(long bufferAddress, int bufferLength, boolean first, boolean more) {
             MsgHdrMemory msgHdrMemory = recvmsgHdrs.nextHdr();
             if (msgHdrMemory == null) {
                 // We can not continue reading before we did not submit the recvmsg(s) and received the results.
@@ -519,11 +521,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
+            int sqeFlags = more ? Native.IOSQE_HARDLINK : 0;
             IoRegistration registration = registration();
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(
-                    fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
+                    fd, (byte) sqeFlags, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
@@ -535,18 +538,26 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            ChannelOutboundBuffer outboundBuffer = outboundBuffer();
-
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
+            // data is the MsgHdrMemoryArray index that scheduleSendmsg(...) submitted, so it is always within
+            // [0, sendmsgHdrs.capacity()) (256) and never uses the overflow id range. Narrowing to int is safe.
+            assert data >= 0 && data < sendmsgHdrs.capacity();
+            int idx = (int) data;
             // Reset the id as this write was completed and so don't need to be cancelled later.
-            sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
-            sendmsgResArray[data] = res;
+            sendmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
+            sendmsgResArray[idx] = res;
             // Store the result so we can handle it as soon as we have no outstanding writes anymore.
             if (outstanding == 0) {
                 // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer
                 boolean writtenSomething = false;
                 int numWritten = sendmsgHdrs.length();
                 sendmsgHdrs.clear();
+                ChannelOutboundBuffer outboundBuffer = outboundBuffer();
+                if (outboundBuffer == null) {
+                    // The completion may arrive after close() or shutdownOutput() already dropped the
+                    // outbound buffer.
+                    return true;
+                }
                 for (int i = 0; i < numWritten; i++) {
                     writtenSomething |= removeFromOutboundBuffer(
                             outboundBuffer, sendmsgResArray[i], "io_uring sendmsg");
@@ -574,7 +585,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        void connectComplete(byte op, int res, int flags, short data) {
+        void connectComplete(byte op, int res, int flags, long data) {
             if (res >= 0) {
                 connected = true;
             }
@@ -612,11 +623,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 segmentSize = 0;
             }
 
-            long bufferAddress = IoUring.memoryAddress(data);
-            return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
+            long bufferAddress = IoUring.memoryAddress(data) + data.readerIndex();
+            return scheduleSendmsg(data, remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
         }
 
-        private boolean scheduleSendmsg(InetSocketAddress remoteAddress, long bufferAddress,
+        private boolean scheduleSendmsg(ByteBuf data, InetSocketAddress remoteAddress, long bufferAddress,
                                         int bufferLength, int segmentSize, boolean first) {
             MsgHdrMemory hdr = sendmsgHdrs.nextHdr();
             if (hdr == null) {
@@ -630,10 +641,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IoRegistration registration = registration();
             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
+            short opsId = hdr.idx();
+            // The id is the MsgHdrMemoryArray index, which that array allocates and recycles itself.
+            writeTracker.recordForeign(opsId, ops.opcode(), data);
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
                 sendmsgHdrs.restoreNextHdr(hdr);
+                writeTracker.abandon(opsId, ops.opcode());
                 return false;
             }
             sendmsgHdrs.setId(hdr.idx(), id);

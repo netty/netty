@@ -36,6 +36,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
@@ -178,6 +179,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
             }
         } else {
             trustManager = chooseTrustManager(trustManagerFactory);
+        }
+        if (this.endpointIdentificationAlgorithm != null && !this.endpointIdentificationAlgorithm.isEmpty() &&
+            !(trustManager instanceof X509ExtendedTrustManager)) {
+            throw new UnsupportedOperationException(
+                "Endpoint identification algorithm '" + this.endpointIdentificationAlgorithm + "' is " +
+                    "configured but the trust manager does not support extended trust manager verification. " +
+                    "Please provide an X509ExtendedTrustManager.");
         }
         final X509ExtendedKeyManager keyManager;
         if (keyManagerFactory == null) {

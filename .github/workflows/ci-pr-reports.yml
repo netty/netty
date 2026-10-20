@@ -52,8 +52,9 @@ jobs:
           - setup: windows-x86_64-java11-boringssl
     continue-on-error: ${{ matrix.ignore-if-missing }}
     steps:
+      # Pinned to v24
       - name: Download Artifacts
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: ${{ github.event.workflow_run.workflow_id }}
@@ -61,8 +62,9 @@ jobs:
           commit: ${{ github.event.workflow_run.head_commit.id }}
           # File location set in ci-pr.yml and must be coordinated.
           name: test-results-${{ matrix.setup }}
+      # Pinned to v1.13.0
       - name: Publish Test Report
-        uses: scacap/action-surefire-report@v1.7.3
+        uses: scacap/action-surefire-report@c38a2d74b9840ae8950a4387ae02b637421d0f39
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           report_paths: '**/target/surefire-reports/TEST-*.xml'

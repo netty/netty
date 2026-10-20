@@ -33,6 +33,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -45,7 +46,9 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -199,39 +202,48 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    private static final int MAX_PENDING_TASKS = 1024;
+
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
+        final AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicBoolean loopStarted = new AtomicBoolean();
+        final Runnable task = () -> {
+            // NOOP
         };
         // Just run often enough to trigger it normally.
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 250; i++) {
             EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
             final EventLoop loop = group.next();
+            final SingleThreadEventExecutor executor = (SingleThreadEventExecutor) loop;
 
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        for (;;) {
-                            loop.execute(task);
+            Thread t = new Thread(() -> {
+                try {
+                    for (;;) {
+                        loop.execute(task);
+                        loopStarted.set(true);
+                        // Don't let the queue grow without bounds if the producer is faster than the event loop,
+                        // otherwise we may run into an OutOfMemoryError. Keep it non-empty so we still race with
+                        // the task removal on shutdown.
+                        while (executor.pendingTasks() > MAX_PENDING_TASKS && !executor.isShuttingDown()) {
+                            Thread.yield();
                         }
-                    } catch (Throwable cause) {
-                        error.set(cause);
                     }
+                } catch (Throwable cause) {
+                    error.set(cause);
                 }
             });
             t.start();
+            do {
+                Thread.yield();
+            } while (!loopStarted.get());
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
             assertInstanceOf(RejectedExecutionException.class, error.get());
             error.set(null);
+            loopStarted.set(false);
         }
     }
 

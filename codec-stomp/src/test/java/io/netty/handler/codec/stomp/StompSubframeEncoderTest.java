@@ -18,15 +18,19 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.EncoderException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.stomp.StompTestConstants.SEND_FRAME_UTF8;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -124,13 +128,44 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
+    void mustRejectNulCharacterInHeaders() {
+        // The NUL character has no escape and is always rejected.
+        StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
+        frame1.headers()
+                .add("header\0", "value");
+        assertThatThrownBy(() -> channel.writeOutbound(frame1))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
+
+        StompFrame frame2 = new DefaultStompFrame(StompCommand.CONNECT);
+        frame2.headers()
+                .add("header", "value\0");
+        assertThatThrownBy(() -> channel.writeOutbound(frame2))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
+    }
+
+    @Test
+    void mustRejectEmptyHeaderNames() {
+        StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
+        frame1.headers()
+                .add("", "value");
+        assertThatThrownBy(() -> channel.writeOutbound(frame1))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty header name");
+    }
+
+    @Test
     void testNotEscapeStompHeadersForConnectCommand() {
         String expectedStompFrame = "CONNECT\n"
-                + "colonHeaderName-::colonHeaderValue-:\n"
+                + "backslashHeaderName-\\:backslashHeaderValue-\\\n"
                 + '\n' + '\0';
         StompFrame connectFrame = new DefaultStompFrame(StompCommand.CONNECT);
         connectFrame.headers()
-                  .add("colonHeaderName-:", "colonHeaderValue-:");
+                  .add("backslashHeaderName-\\", "backslashHeaderValue-\\");
 
         assertTrue(channel.writeOutbound(connectFrame));
 
@@ -142,14 +177,34 @@ public class StompSubframeEncoderTest {
         assertTrue(stompBuffer.release());
     }
 
+    @ParameterizedTest
+    @ValueSource(chars = {'\r', '\n', '\0', ':'})
+    void mustRejectIllegalCharsInConnectCommandHeaders(char illegalChar) {
+        StompFrame connectFrame1 = new DefaultStompFrame(StompCommand.CONNECT);
+        connectFrame1.headers()
+                .add("header" + illegalChar, "value");
+        assertThatThrownBy(() -> channel.writeOutbound(connectFrame1))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
+
+        StompFrame connectFrame2 = new DefaultStompFrame(StompCommand.CONNECT);
+        connectFrame2.headers()
+                .add("header", "value" + illegalChar);
+        assertThatThrownBy(() -> channel.writeOutbound(connectFrame2))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
+    }
+
     @Test
     void testNotEscapeStompHeadersForConnectedCommand() {
         String expectedStompFrame = "CONNECTED\n"
-                                    + "colonHeaderName-::colonHeaderValue-:\n"
+                                    + "backslashHeaderName-\\:backslashHeaderValue-\\\n"
                                     + '\n' + '\0';
         StompFrame connectedFrame = new DefaultStompFrame(StompCommand.CONNECTED);
         connectedFrame.headers()
-                    .add("colonHeaderName-:", "colonHeaderValue-:");
+                    .add("backslashHeaderName-\\", "backslashHeaderValue-\\");
 
         assertTrue(channel.writeOutbound(connectedFrame));
 
@@ -159,5 +214,25 @@ public class StompSubframeEncoderTest {
 
         assertEquals(expectedStompFrame, stompBuffer.toString(StandardCharsets.UTF_8));
         assertTrue(stompBuffer.release());
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {'\r', '\n', '\0', ':'})
+    void mustRejectIllegalCharsInConnectedCommandHeaders(char illegalChar) {
+        StompFrame connectedFrame1 = new DefaultStompFrame(StompCommand.CONNECTED);
+        connectedFrame1.headers()
+                .add("header" + illegalChar, "name");
+        assertThatThrownBy(() -> channel.writeOutbound(connectedFrame1))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
+
+        StompFrame connectedFrame2 = new DefaultStompFrame(StompCommand.CONNECTED);
+        connectedFrame2.headers()
+                .add("header", "name" + illegalChar);
+        assertThatThrownBy(() -> channel.writeOutbound(connectedFrame2))
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("illegal character");
     }
 }

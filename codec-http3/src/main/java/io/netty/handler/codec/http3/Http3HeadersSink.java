@@ -17,7 +17,9 @@ package io.netty.handler.codec.http3;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.AsciiString;
 
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.AUTHORITY;
@@ -74,6 +76,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
             // Validate that all mandatory pseudo-headers are included.
             if (request) {
+                validateAuthorityAndHost();
                 CharSequence method = headers.method();
                 // fast-path
                 if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
@@ -133,6 +136,30 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                 if (receivedPseudoHeaders != STATUS.getFlag()) {
                     throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                 }
+            }
+        }
+    }
+
+    /**
+     * https://www.rfc-editor.org/rfc/rfc9114#section-4.3.1
+     * the request MUST contain either an :authority pseudo-header field or a Host header field.
+     * If both fields are present, they MUST contain the same value.
+     * https://datatracker.ietf.org/doc/html/rfc9110#section-5.3
+     * a sender MUST NOT generate multiple field lines with the same name ...
+     * unless that field's definition allows ... a comma-separated list
+     */
+    private void validateAuthorityAndHost() {
+        if (!headers.contains(HttpHeaderNames.HOST)) {
+            return;
+        }
+        CharSequence authority = headers.authority();
+        List<CharSequence> hosts = headers.getAll(HttpHeaderNames.HOST);
+        CharSequence expected = authority != null ? authority : hosts.get(0);
+        for (int i = 0; i < hosts.size(); i++) {
+            if (!AsciiString.contentEqualsIgnoreCase(expected, hosts.get(i))) {
+                throw new Http3HeadersValidationException(authority != null ?
+                        "Conflicting ':authority' pseudo-header and 'host' header field." :
+                        "Conflicting 'host' header fields.");
             }
         }
     }

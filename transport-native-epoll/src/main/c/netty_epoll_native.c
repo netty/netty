@@ -567,12 +567,11 @@ static void init_packet(JNIEnv* env, jobject packet, struct msghdr* msg, int len
     init_packet_address(env, packet, (struct sockaddr_storage*) msg->msg_name, packetSenderAddrFieldId, packetSenderAddrLenFieldId, packetSenderScopeIdFieldId, packetSenderPortFieldId);
 
     struct cmsghdr *cmsg = NULL;
-    uint16_t gso_size = 0;
-    uint16_t *gsosizeptr = NULL;
+    int gso_size = 0;
     for (cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg)) {
        if (cmsg->cmsg_level == SOL_UDP && cmsg->cmsg_type == UDP_GRO) {
-           gsosizeptr = (uint16_t *) CMSG_DATA(cmsg);
-           gso_size = *gsosizeptr;
+           // The kernel reports the segment size as an int
+           gso_size = *((int *) CMSG_DATA(cmsg));
        }
 #ifdef IP_RECVORIGDSTADDR
        else if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {
@@ -588,7 +587,7 @@ static jint netty_epoll_native_recvmsg0(JNIEnv* env, jclass clazz, jint fd, jboo
     struct sockaddr_storage sock_address;
     int addrSize = sizeof(sock_address);
     // Enough space for GRO and IP_RECVORIGDSTADDR
-    char control[CMSG_SPACE(sizeof(uint16_t)) + sizeof(struct sockaddr_storage)] = { 0 };
+    char control[CMSG_SPACE(sizeof(int)) + sizeof(struct sockaddr_storage)] = { 0 };
     msg.msg_name = &sock_address;
     msg.msg_namelen = (socklen_t) addrSize;
     msg.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
@@ -615,15 +614,11 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
     int addrSize = sizeof(addr);
     memset(addr, 0, addrSize);
     int storageSize = sizeof(struct sockaddr_storage);
-    char* cntrlbuf = NULL;
-
-#ifdef IP_RECVORIGDSTADDR
-    int readLocalAddr = 0;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
-            &readLocalAddr, sizeof(readLocalAddr)) != -1 && readLocalAddr != 0) {
-        cntrlbuf = malloc(sizeof(char) * storageSize * len);
+    int controlSize = CMSG_SPACE(sizeof(int)) + storageSize;
+    char* controls = malloc(controlSize * len);
+    if (controls == NULL) {
+        return -ENOMEM;
     }
-#endif // IP_RECVORIGDSTADDR
 
     int i;
 
@@ -632,6 +627,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         if (packet == NULL) {
             // This should never happen but just handle it and return early. This way if GetObjectArrayElement(...)
             // did put an exception on the stack we will see it and not crash.
+            free(controls);
             return -1;
         }
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
@@ -640,10 +636,8 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         msg[i].msg_hdr.msg_name = addr + i;
         msg[i].msg_hdr.msg_namelen = (socklen_t) storageSize;
 
-        if (cntrlbuf != NULL) {
-            msg[i].msg_hdr.msg_control =  cntrlbuf + i * storageSize;
-            msg[i].msg_hdr.msg_controllen = storageSize;
-        }
+        msg[i].msg_hdr.msg_control = controls + i * controlSize;
+        msg[i].msg_hdr.msg_controllen = controlSize;
     }
 
     ssize_t res;
@@ -661,8 +655,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
             init_packet(env, packet, &msg[i].msg_hdr, msg[i].msg_len);
         }
     }
-    // Free the control message buffer if needed.
-    free(cntrlbuf);
+    free(controls);
 
     if (res < 0) {
         return -err;
@@ -837,7 +830,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     }
     memset(dynamicMethods, 0, size);
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
-    
+
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(IZ[L", dynamicTypeName,  dynamicMethod->signature, error);

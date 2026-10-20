@@ -22,6 +22,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -177,6 +179,26 @@ public class SnappyFrameDecoderTest {
         actual.release();
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "false, 0", "false, 1", "false, 2", "false, 3", "false, 4",
+            "true, 0", "true, 1", "true, 2", "true, 3", "true, 4"
+    })
+    public void testCompressedDataWithTooShortChunkLengthThrowsException(
+            boolean validateChecksums, int chunkLength) {
+        assertInvalidChunkLength(validateChecksums, (byte) 0x00, chunkLength);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "false, 0", "false, 1", "false, 2", "false, 3",
+            "true, 0", "true, 1", "true, 2", "true, 3"
+    })
+    public void testUncompressedDataWithTooShortChunkLengthThrowsException(
+            boolean validateChecksums, int chunkLength) {
+        assertInvalidChunkLength(validateChecksums, (byte) 0x01, chunkLength);
+    }
+
     // The following two tests differ in only the checksum provided for the literal
     // uncompressed string "netty"
 
@@ -218,6 +240,37 @@ public class SnappyFrameDecoderTest {
 
             expected.release();
             actual.release();
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    private static void assertInvalidChunkLength(boolean validateChecksums, byte chunkType, int chunkLength) {
+        final EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(validateChecksums));
+        try {
+            final ByteBuf in = channel.alloc().buffer(14 + chunkLength);
+
+            // Snappy stream identifier chunk: type 0xff, 3-byte little-endian length 6, payload "sNaPpY".
+            in.writeByte(0xff);
+            in.writeMediumLE(6);
+            in.writeByte('s');
+            in.writeByte('N');
+            in.writeByte('a');
+            in.writeByte('P');
+            in.writeByte('p');
+            in.writeByte('Y');
+
+            // Invalid data chunk header: caller-supplied type and too-short 3-byte little-endian length.
+            in.writeByte(chunkType);
+            in.writeMediumLE(chunkLength);
+            in.writeZero(chunkLength);
+
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() {
+                    channel.writeInbound(in);
+                }
+            });
         } finally {
             channel.finishAndReleaseAll();
         }

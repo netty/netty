@@ -45,6 +45,7 @@ public interface IoHandler {
      *
      * @param  context  the {@link IoHandlerContext}.
      * @return          the number of {@link IoHandle} for which I/O was handled.
+     *                  Internal events such as wakeups and timer expirations must not be included in this count.
      */
     int run(IoHandlerContext context);
 

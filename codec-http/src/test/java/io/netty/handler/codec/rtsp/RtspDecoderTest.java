@@ -21,11 +21,14 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test cases for RTSP decoder.
@@ -61,12 +64,29 @@ public class RtspDecoderTest {
 
         HttpObject res1 = ch.readInbound();
         assertNotNull(res1);
-        assertTrue(res1 instanceof FullHttpRequest);
+        assertInstanceOf(FullHttpRequest.class, res1);
         ((FullHttpRequest) res1).release();
 
         HttpObject res2 = ch.readInbound();
         assertNotNull(res2);
-        assertTrue(res2 instanceof FullHttpResponse);
+        assertInstanceOf(FullHttpResponse.class, res2);
         ((FullHttpResponse) res2).release();
+    }
+
+    @Test
+    public void testRejectsTrailingNulInMethodName() {
+        byte[] data = ("PLAY\u0000 rtsp://172.20.184.218:554/stream RTSP/1.0\r\n"
+            + "CSeq: 1\r\n\r\n")
+            .getBytes(CharsetUtil.ISO_8859_1);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new RtspDecoder());
+        ch.writeInbound(Unpooled.wrappedBuffer(data));
+
+        HttpObject res = ch.readInbound();
+        assertNotNull(res);
+        HttpRequest req = assertInstanceOf(HttpRequest.class, res);
+        assertFalse(req.decoderResult().isSuccess());
+
+        ch.finishAndReleaseAll();
     }
 }

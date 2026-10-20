@@ -392,24 +392,40 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @SuppressWarnings("unchecked")
     private <T extends ChannelHandler> T removeIfExists(ChannelHandlerContext ctx) {
-        if (ctx == null) {
+        if (ctx == null || !tryRemove((AbstractChannelHandlerContext) ctx)) {
             return null;
         }
-        return (T) remove((AbstractChannelHandlerContext) ctx).handler();
+        return (T) ctx.handler();
     }
 
     private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
+        if (!tryRemove(ctx)) {
+            // The context was removed or replaced concurrently after it was looked up.
+            throw new NoSuchElementException(ctx.name());
+        }
+        return ctx;
+    }
+
+    /**
+     * Removes the given context from the pipeline and schedules the call of
+     * {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)}.
+     *
+     * @return {@code false} if the context was not part of the pipeline anymore, in which case nothing is done.
+     */
+    private boolean tryRemove(final AbstractChannelHandlerContext ctx) {
         assert ctx != head && ctx != tail;
 
         synchronized (this) {
-            atomicRemoveFromHandlerList(ctx);
+            if (!atomicRemoveFromHandlerList(ctx)) {
+                return false;
+            }
 
             // If the registered is false it means that the channel was not registered on an eventloop yet.
             // In this case we remove the context from the pipeline and add a task that will call
             // ChannelHandler.handlerRemoved(...) once the channel is registered.
             if (!registered) {
                 callHandlerCallbackLater(ctx, false);
-                return ctx;
+                return true;
             }
 
             EventExecutor executor = ctx.executor();
@@ -420,21 +436,38 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         callHandlerRemoved0(ctx);
                     }
                 });
-                return ctx;
+                return true;
             }
         }
         callHandlerRemoved0(ctx);
-        return ctx;
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if the given context is still linked into the pipeline. A removed context keeps its
+     * {@code prev} and {@code next} pointers (and a replaced context points to its replacement), so the check must
+     * be done by looking at the neighbour.
+     */
+    private boolean isLinked(AbstractChannelHandlerContext ctx) {
+        assert Thread.holdsLock(this);
+        return ctx.prev.next == ctx;
     }
 
     /**
      * Method is synchronized to make the handler removal from the double linked list atomic.
+     *
+     * @return {@code false} if the context was already removed or replaced, in which case the list is not modified.
      */
-    private synchronized void atomicRemoveFromHandlerList(AbstractChannelHandlerContext ctx) {
+    private synchronized boolean atomicRemoveFromHandlerList(AbstractChannelHandlerContext ctx) {
+        if (!isLinked(ctx)) {
+            // Unlinking the context again would link its stale neighbours back into the pipeline.
+            return false;
+        }
         AbstractChannelHandlerContext prev = ctx.prev;
         AbstractChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
+        return true;
     }
 
     @Override
@@ -477,6 +510,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            if (!isLinked(ctx)) {
+                // The context was removed or replaced concurrently after it was looked up.
+                throw new NoSuchElementException(ctx.name());
+            }
             checkMultiplicity(newHandler);
             if (newName == null) {
                 newName = generateName(newHandler);
@@ -559,8 +596,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                atomicRemoveFromHandlerList(ctx);
-                ctx.callHandlerRemoved();
+                // If handlerAdded(...) already removed or replaced the handler, whoever did that is responsible for
+                // calling handlerRemoved(...).
+                if (atomicRemoveFromHandlerList(ctx)) {
+                    ctx.callHandlerRemoved();
+                }
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -837,8 +877,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             final EventExecutor executor = ctx.executor();
             if (inEventLoop || executor.inEventLoop(currentThread)) {
-                atomicRemoveFromHandlerList(ctx);
-                callHandlerRemoved0(ctx);
+                // Skip a context that a handlerRemoved(...) callback already removed or replaced.
+                if (atomicRemoveFromHandlerList(ctx)) {
+                    callHandlerRemoved0(ctx);
+                }
             } else {
                 final AbstractChannelHandlerContext finalCtx = ctx;
                 executor.execute(new Runnable() {

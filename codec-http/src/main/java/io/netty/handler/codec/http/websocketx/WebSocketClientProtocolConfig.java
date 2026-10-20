@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.URI;
 
+import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS;
 import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT_HANDSHAKE_TIMEOUT_MILLIS;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
@@ -193,7 +194,7 @@ public final class WebSocketClientProtocolConfig {
                 WebSocketCloseStatus.NORMAL_CLOSURE,
                 DEFAULT_DROP_PONG_FRAMES,
                 DEFAULT_HANDSHAKE_TIMEOUT_MILLIS,
-                -1,
+                DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS,
                 false,
                 DEFAULT_GENERATE_ORIGIN_HEADER,
                 DEFAULT_WITH_UTF8_VALIDATOR);

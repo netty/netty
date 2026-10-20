@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -58,9 +61,9 @@ public class IoUringBufferRingTest {
         try {
             int ringFd = ringBuffer.fd();
             long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, 4, (short) 1, 0);
-            assumeTrue(
-                    ioUringBufRingAddr > 0,
-                    "ioUringSetupBufRing result must great than 0, but now result is " + ioUringBufRingAddr);
+            assertThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must great than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
             int freeRes = Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, (short) 1);
             assertEquals(
                     0,
@@ -144,7 +147,7 @@ public class IoUringBufferRingTest {
                 .channel(IoUringSocketChannel.class)
                 .handler(new ChannelInboundHandlerAdapter());
         ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
-        assumeTrue(channelFuture.isSuccess());
+        assertTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.channel();
 
         //is provider buffer read?
@@ -182,8 +185,8 @@ public class IoUringBufferRingTest {
     @EnabledIf("recvsendBundleEnabled")
     public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws InterruptedException {
         // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
-        assumeTrue(IoUring.isRecvMultishotEnabled(),
-                "Only yields expected test results when using multishot atm");
+        assumeTrue(IoUring.isRecvMultishotEnabled());
+
         if (incremental) {
             assumeTrue(IoUring.isRegisterBufferRingIncSupported());
         }
@@ -219,7 +222,7 @@ public class IoUringBufferRingTest {
                 .channel(IoUringSocketChannel.class)
                 .handler(new ChannelInboundHandlerAdapter());
         ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
-        assumeTrue(channelFuture.isSuccess());
+        assertTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.channel();
 
         // Create a buffer that will span multiple buffers that are used out of the buffer ring.
@@ -246,6 +249,133 @@ public class IoUringBufferRingTest {
         } finally {
             writeBuffer.release();
             received.release();
+        }
+    }
+
+    @Test
+    public void testUseBufferClampsReadLargerThanEntryCapacity() throws Exception {
+        // Regression test for a bundle completion (IORING_RECVSEND_BUNDLE) reporting a total byte count
+        // that spans more than a single ring entry can hold: useBuffer(...) must clamp instead of throwing
+        // an IndexOutOfBoundsException, leaving the remainder for the caller to fetch from the next bid.
+        int entrySize = 8;
+        short entries = 4;
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        try {
+            int ringFd = ringBuffer.fd();
+            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, entries, (short) 1, 0);
+            assumeThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must be greater than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
+            IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
+                    Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
+                    entries, 2, (short) 1, false,
+                    new IoUringFixedBufferRingAllocator(entrySize), false);
+            bufferRing.initialize();
+            // close() unregisters the ring and releases the buffers it still owns; unregistering by hand
+            // leaks every entry that initialize() filled but the test did not use.
+            try {
+                int bundleTotal = entrySize * 2 + 1;
+                ByteBuf buffer = bufferRing.useBuffer((short) 0, bundleTotal, true);
+                try {
+                    assertEquals(entrySize, buffer.readableBytes());
+                } finally {
+                    buffer.release();
+                }
+            } finally {
+                bufferRing.close();
+            }
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
+    @Test
+    public void testNextBidWrapsCorrectlyWithNonPowerOfTwoAllocatedBuffers() throws Exception {
+        // Regression test: allocatedBuffers grows by batchSize increments and so is not guaranteed to be a
+        // power of two (e.g. ringSize=16, batchSize=4 goes 4 -> 8 -> 12 -> 16). nextBid(...) must wrap using
+        // the real allocated buffer count and not a bitmask, which is only correct for power-of-two counts.
+        short entries = 16;
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        try {
+            int ringFd = ringBuffer.fd();
+            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, entries, (short) 1, 0);
+            assumeThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must be greater than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
+            IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
+                    Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
+                    entries, 4, (short) 1, false,
+                    new IoUringFixedBufferRingAllocator(64), false);
+            try {
+                bufferRing.initialize();
+                assertEquals(4, bufferRing.allocatedBuffers());
+
+                assertEquals((short) 4, bufferRing.nextBid((short) 3, 12));
+                assertEquals((short) 0, bufferRing.nextBid((short) 11, 12));
+            } finally {
+                // Releases the outstanding buffers and unregisters the ring.
+                bufferRing.close();
+            }
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
+    @Test
+    public void testNextBidUsesAllocatedBuffersSnapshotBeforeRingGrowsMidBundle() throws Exception {
+        // Regression test: useBuffer(...) can grow the ring (change allocatedBuffers) as a side effect once the
+        // last currently-posted buffer is consumed. When walking a multi-entry RECVSEND_BUNDLE completion, the
+        // wrap-around for the *next* bid must be computed using the ring size as it was before that growth (i.e.
+        // as the kernel observed it when producing the bundle), not the grown size, or the caller will jump to
+        // the wrong ring slot. See AbstractIoUringStreamChannel, which snapshots allocatedBuffers() before
+        // calling useBuffer(...) and passes it to nextBid(...) afterwards.
+        short entries = 16;
+        int batchSize = 8;
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        try {
+            int ringFd = ringBuffer.fd();
+            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, entries, (short) 1, 0);
+            assumeThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must be greater than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
+            IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
+                    Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
+                    entries, batchSize, (short) 1, false,
+                    new IoUringFixedBufferRingAllocator(64), true);
+            try {
+                bufferRing.initialize();
+                assertEquals(8, bufferRing.allocatedBuffers());
+
+                // Simulate the ENOBUFS handling in AbstractIoUringStreamChannel: signal that we should expand
+                // the ring the next time all currently posted buffers have been consumed.
+                assertTrue(bufferRing.expand());
+
+                // Consume bids 0..6, mimicking a bundle that walks through (almost) a whole lap of the ring.
+                for (short bid = 0; bid < 7; bid++) {
+                    bufferRing.useBuffer(bid, 1, false).release();
+                    assertEquals(8, bufferRing.allocatedBuffers());
+                }
+
+                // This is exactly what AbstractIoUringStreamChannel does: snapshot the ring size *before*
+                // calling useBuffer(...) for the last bid of the bundle.
+                int allocatedBuffersBeforeUseBuffer = bufferRing.allocatedBuffers();
+                assertEquals(8, allocatedBuffersBeforeUseBuffer);
+
+                // Consuming the last (8th) posted buffer causes the ring to grow, since we called expand() above.
+                bufferRing.useBuffer((short) 7, 1, false).release();
+                assertEquals(16, bufferRing.allocatedBuffers());
+
+                // Using the pre-growth snapshot gives the correct wrap-around: bid 7 was the last of the
+                // original 8 posted buffers, so the bundle continues at bid 0.
+                assertEquals((short) 0, bufferRing.nextBid((short) 7, allocatedBuffersBeforeUseBuffer));
+                // Using the already-grown size (the bug this guards against) would incorrectly jump to bid 8,
+                // a slot that was never part of this bundle and belongs to a buffer the kernel never touched.
+                assertEquals((short) 8, bufferRing.nextBid((short) 7, bufferRing.allocatedBuffers()));
+            } finally {
+                bufferRing.close();
+            }
+        } finally {
+            ringBuffer.close();
         }
     }
 

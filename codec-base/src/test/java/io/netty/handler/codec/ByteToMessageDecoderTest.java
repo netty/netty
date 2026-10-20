@@ -43,8 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ByteToMessageDecoderTest {
 
@@ -427,14 +427,11 @@ public class ByteToMessageDecoderTest {
             }
         }.writeZero(1);
         ByteBuf in = Unpooled.buffer().writeZero(12);
-        try {
-            ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
-            fail();
-        } catch (Error expected) {
-            assertSame(error, expected);
-            assertEquals(0, in.refCnt());
-            cumulation.release();
-        }
+        Error expected = assertThrows(Error.class, () ->
+                ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in));
+        assertSame(error, expected);
+        assertEquals(0, in.refCnt());
+        cumulation.release();
     }
 
     private static final class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {

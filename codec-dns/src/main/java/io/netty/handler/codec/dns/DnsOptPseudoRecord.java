@@ -34,8 +34,14 @@ public interface DnsOptPseudoRecord extends DnsRecord {
     int version();
 
     /**
-     * Returns the {@code flags} which includes {@code DO} and {@code Z} which is encoded
-     * into {@link DnsOptPseudoRecord#timeToLive()}.
+     * Returns the 16-bit {@code flags} field which is encoded into the lower 16 bits of
+     * {@link DnsOptPseudoRecord#timeToLive()}, as laid out by
+     * <a href="https://tools.ietf.org/html/rfc6891#section-6.1.3">RFC 6891</a>.
+     * <p>
+     * {@code DO}, defined by <a href="https://tools.ietf.org/html/rfc3225#section-3">RFC 3225</a>, is the
+     * most significant bit of that field, so {@code (flags() & 0x8000) != 0} tests for {@code DNSSEC OK}.
+     * Further bits are assigned by the IANA {@code EDNS Header Flags} registry; the remaining bits are
+     * {@code Z}, which senders set to zero and receivers ignore.
      */
     int flags();
 }

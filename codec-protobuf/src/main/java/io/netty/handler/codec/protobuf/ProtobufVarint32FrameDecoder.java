@@ -139,8 +139,13 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     }
 
     private static int readRawVarint40(ByteBuf buffer, int wholeOrMore) {
-        byte lastByte;
-        if (buffer.readableBytes() == 4 || (lastByte = buffer.getByte(buffer.readerIndex() + 4)) < 0) {
+        if (buffer.readableBytes() == 4) {
+            // The first 4 bytes all have the continuation bit set, but the 5th byte did not arrive yet.
+            // Leave the readerIndex untouched so the caller waits for more data.
+            return 0;
+        }
+        byte lastByte = buffer.getByte(buffer.readerIndex() + 4);
+        if (lastByte < 0) {
             throw new CorruptedFrameException("malformed varint.");
         }
         buffer.skipBytes(5);
@@ -178,6 +183,9 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         if ((tmp = buffer.readByte()) >= 0) {
             return result | tmp << 14;
         }
-        return result | (tmp & 127) << 14;
+        // All 3 readable bytes have the continuation bit set, which means at least one more byte is needed to
+        // complete the varint. We only end up here if less than 4 bytes were readable, so wait for more data.
+        buffer.resetReaderIndex();
+        return 0;
     }
 }

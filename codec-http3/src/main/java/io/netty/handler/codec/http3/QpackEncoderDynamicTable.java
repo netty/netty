@@ -69,7 +69,7 @@ final class QpackEncoderDynamicTable {
     /**
      * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-maximum-dynamic-table-capac">
      *     Maximum capacity of the table</a>. This is set once based on the
-     *     {@link Http3SettingsFrame#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} received by the remote peer.
+     *     {@link Http3SettingIdentifier#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} received by the remote peer.
      */
     private long maxTableCapacity = -1;
 
@@ -347,6 +347,18 @@ final class QpackEncoderDynamicTable {
             }
         }
         throw new IllegalArgumentException("Index " + idx + " not found");
+    }
+
+    /**
+     * Returns {@code true} if the decoder acknowledged the entry at the passed {@code idx}, which means it can be
+     * referenced in a field section without blocking the stream.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count">known received count</a>.
+     *
+     * @param idx of the entry.
+     * @return {@code true} if the entry was acknowledged by the decoder.
+     */
+    boolean isKnownReceived(int idx) {
+        return idx <= knownReceived.index;
     }
 
     boolean requiresDuplication(int idx, long size) {

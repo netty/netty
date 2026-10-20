@@ -84,7 +84,9 @@ import java.util.function.IntConsumer;
 @UnstableApi
 final class AdaptivePoolingAllocator {
     private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
-    private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
+    private static final boolean IS_LOW_MEM = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.lowMemory",
+            Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD);
 
     /**
      * Whether the IS_LOW_MEM setting should disable thread-local magazines.
@@ -133,6 +135,27 @@ final class AdaptivePoolingAllocator {
 
     static final int CHUNK_PURGE_THRESHOLD = Math.max(1, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkPurgeThreshold", 3));
+
+    /**
+     * Per-size-class upper bound (in bytes) on the thread-local chunk cache.
+     * When a size class cache holds this many bytes worth of chunks,
+     * further offers are rejected and the chunk is marked for immediate deallocation.
+     * Chunks already in the cache are only evicted by the purge mechanism (they must be full and idle for
+     * {@link #CHUNK_PURGE_THRESHOLD} consecutive purge cycles).
+     */
+    static final int THREAD_LOCAL_CACHE_MAX_BYTES = Math.max(1, SystemPropertyUtil.getInt(
+            "io.netty.allocator.threadLocalChunkCacheMaxBytes", 8 * 1024 * 1024));
+
+    /**
+     * Per-size-class lower bound (in bytes) on the thread-local chunk cache.
+     * The purge mechanism will not evict chunks below this retention floor, even if they are full and idle.
+     * Clamped to {@link #THREAD_LOCAL_CACHE_MAX_BYTES} if the configured value exceeds it.
+     * When equal to {@link #THREAD_LOCAL_CACHE_MAX_BYTES}, purge eviction is effectively disabled.
+     */
+    static final int THREAD_LOCAL_CACHE_MIN_BYTES = Math.min(THREAD_LOCAL_CACHE_MAX_BYTES,
+            Math.max(1, SystemPropertyUtil.getInt(
+                    "io.netty.allocator.threadLocalChunkCacheMinBytes",
+                    THREAD_LOCAL_CACHE_MAX_BYTES / 2)));
 
     /**
      * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
@@ -198,6 +221,9 @@ final class AdaptivePoolingAllocator {
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
+        if (PlatformDependent.isJfrEnabled()) {
+            JfrEventRegistration.init();
+        }
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
@@ -522,7 +548,8 @@ final class AdaptivePoolingAllocator {
     // 2. EVICTION: idle chunks with epoch > CHUNK_PURGE_THRESHOLD are evicted (markToDeallocate).
     //    Eviction is immediate — all segments are in, no outstanding references.
     //    Non-idle chunks are never evicted (deallocation would be deferred, not immediate).
-    //    At least CHUNK_REUSE_QUEUE chunks are always retained (retention floor).
+    //    A retention floor prevents over-eviction: CHUNK_REUSE_QUEUE for the shared cache,
+    //    purgeRetentionFloor (from THREAD_LOCAL_CACHE_MIN_BYTES) for the thread-local cache.
     //
     // 3. SCAN RESET: scanForCapacity resets purgeEpoch = 0 on the chunk it picks. The scan
     //    knows the chunk is being used. The chunk gets allocated from, becomes non-idle, and
@@ -538,8 +565,9 @@ final class AdaptivePoolingAllocator {
     //    Shared: approximate, converges over multiple cycles (FIFO queue ordering,
     //    LRU preference in scan, retained counter in purge).
     abstract static class SizeClassedChunkCache implements ChunkCache {
-        static SizeClassedChunkCache create(boolean isThreadLocal) {
-            return isThreadLocal ? new ThreadLocalSizeClassedChunkCache() : new SharedSizeClassedChunkCache();
+        static SizeClassedChunkCache create(boolean isThreadLocal, int chunkSize) {
+            return isThreadLocal ? new ThreadLocalSizeClassedChunkCache(chunkSize) :
+                    new SharedSizeClassedChunkCache();
         }
 
         @Override
@@ -636,7 +664,7 @@ final class AdaptivePoolingAllocator {
      *              notEmptyCount=2, count=6
      * </pre>
      * Idle chunks ({@code remainingCapacity == capacity}) age via purgeEpoch and are evicted
-     * past threshold, but at least {@link #CHUNK_REUSE_QUEUE} chunks are always retained.
+     * past threshold, but at least {@code purgeRetentionFloor} chunks are always retained.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
         SizeClassedChunk[] chunks; // package-private for testing
@@ -645,10 +673,15 @@ final class AdaptivePoolingAllocator {
         int count;
         int notEmptyCount;
         private long purgeBudget;
+        final int maxCachedChunks; // package-private for testing
+        final int purgeRetentionFloor; // package-private for testing
 
-        ThreadLocalSizeClassedChunkCache() {
+        ThreadLocalSizeClassedChunkCache(int chunkSize) {
             chunks = new SizeClassedChunk[8];
             purgeBudget = CHUNK_PURGE_POLLS_THREAD_LOCAL;
+            maxCachedChunks = Math.max(1, THREAD_LOCAL_CACHE_MAX_BYTES / chunkSize);
+            purgeRetentionFloor = Math.min(maxCachedChunks,
+                    Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize));
         }
 
         @Override
@@ -709,7 +742,7 @@ final class AdaptivePoolingAllocator {
                 if (chunk.purgeEpoch > 0) {
                     assert chunk.hasFullCapacity();
                     chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
+                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > purgeRetentionFloor) {
                         chunk.markToDeallocate();
                         chunks[readIdx] = null;
                         survivors--;
@@ -787,6 +820,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public boolean offerChunk(Chunk chunk) {
+            if (count >= maxCachedChunks) {
+                return false;
+            }
             if (count == chunks.length) {
                 SizeClassedChunk[] newChunks = new SizeClassedChunk[chunks.length * 2];
                 for (int i = 0; i < count; i++) {
@@ -884,7 +920,7 @@ final class AdaptivePoolingAllocator {
     static final class SharedSizeClassedChunkCache extends SizeClassedChunkCache {
         // Must exceed CHUNK_REUSE_QUEUE (the retention floor) to leave room for burst absorption.
         // TODO replace with an unbounded concurrent collection once available.
-        private static final int SHARED_CACHE_CAPACITY = Math.max(128, CHUNK_REUSE_QUEUE * 2);
+        private static final int SHARED_CACHE_CAPACITY = Math.max(16, CHUNK_REUSE_QUEUE * 2);
         private final Queue<SizeClassedChunk> queue;
         private final AtomicLong purgeBudget;
         private final ArrayList<SizeClassedChunk> deferredBuffer = new ArrayList<>();
@@ -1088,25 +1124,14 @@ final class AdaptivePoolingAllocator {
 
             int size = chunks.size();
             while (size > CHUNK_REUSE_QUEUE) {
-                // Deallocate the chunk with the fewest incoming references.
                 int key = -1;
                 Chunk toDeallocate = null;
                 for (IntEntry<Chunk> entry : chunks) {
                     Chunk candidate = entry.getValue();
-                    if (candidate != null) {
-                        if (toDeallocate == null) {
-                            toDeallocate = candidate;
-                            key = entry.getKey();
-                        } else {
-                            int candidateRefCnt = RefCnt.refCnt(candidate.refCnt);
-                            int toDeallocateRefCnt = RefCnt.refCnt(toDeallocate.refCnt);
-                            if (candidateRefCnt < toDeallocateRefCnt ||
-                                    candidateRefCnt == toDeallocateRefCnt &&
-                                            candidate.capacity() < toDeallocate.capacity()) {
-                                toDeallocate = candidate;
-                                key = entry.getKey();
-                            }
-                        }
+                    if (candidate != null && RefCnt.refCnt(candidate.refCnt) == 1) {
+                        toDeallocate = candidate;
+                        key = entry.getKey();
+                        break;
                     }
                 }
                 if (toDeallocate == null) {
@@ -1174,7 +1199,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ChunkCache createChunkCache(boolean isThreadLocal) {
-            return SizeClassedChunkCache.create(isThreadLocal);
+            return SizeClassedChunkCache.create(isThreadLocal, chunkSize);
         }
     }
 
@@ -1566,6 +1591,8 @@ final class AdaptivePoolingAllocator {
 
     static class Chunk implements ChunkInfo {
         protected final AbstractByteBuf delegate;
+        // the delegate's memory address, or 0 when it has none: it doesn't change while the chunk is in use
+        final long delegateMemoryAddress;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
@@ -1578,6 +1605,7 @@ final class AdaptivePoolingAllocator {
         Chunk() {
             // Constructor only used by the MAGAZINE_FREED sentinel.
             delegate = null;
+            delegateMemoryAddress = 0L;
             magazine = null;
             allocator = null;
             capacity = 0;
@@ -1586,6 +1614,7 @@ final class AdaptivePoolingAllocator {
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
+            delegateMemoryAddress = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0L;
             this.pooled = pooled;
             capacity = delegate.capacity();
             attachToMagazine(magazine);
@@ -2127,6 +2156,9 @@ final class AdaptivePoolingAllocator {
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
         private AbstractByteBuf rootParent;
+        // this buffer's memory address, from the root buffer's address that its chunk computed, or 0 when the root
+        // buffer has none, see _memoryAddress()
+        private long memoryAddress;
         Chunk chunk;
         private int length;
         private int maxFastCapacity;
@@ -2149,6 +2181,8 @@ final class AdaptivePoolingAllocator {
             setIndex0(readerIndex, writerIndex);
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
+            // the chunk's delegate is the root buffer
+            memoryAddress = hasMemoryAddress ? wrapped.delegateMemoryAddress + startIndex : 0L;
             rootParent = unwrapped;
             tmpNioBuf = null;
 
@@ -2257,13 +2291,18 @@ final class AdaptivePoolingAllocator {
         @Override
         public long memoryAddress() {
             ensureAccessible();
+            if (!hasMemoryAddress) {
+                throw new UnsupportedOperationException();
+            }
             return _memoryAddress();
         }
 
         @Override
         long _memoryAddress() {
-            AbstractByteBuf root = rootParent;
-            return root != null ? root._memoryAddress() + startIndex : 0L;
+            // Use the address kept at init() instead of asking the root buffer, which would check its accessibility
+            // on every call. The root stays accessible while this buffer holds a segment of its chunk. The address is
+            // 0 when the root buffer has none, and after deallocation.
+            return memoryAddress;
         }
 
         @Override
@@ -2427,7 +2466,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         protected void _setLongLE(int index, long value) {
-            rootParent().setLongLE(idx(index), value);
+            rootParent()._setLongLE(idx(index), value);
         }
 
         @Override
@@ -2437,7 +2476,7 @@ final class AdaptivePoolingAllocator {
                 ByteBuffer dstBuffer = rootParent()._internalNioBuffer();
                 PlatformDependent.absolutePut(dstBuffer, idx(index), src, srcIndex, length);
             } else {
-                ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+                ByteBuffer tmp = (ByteBuffer) internalNioBuffer().position(index);
                 tmp.put(src, srcIndex, length);
             }
             return this;
@@ -2445,6 +2484,15 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+            if (PlatformDependent.hasUnsafe() && hasMemoryAddress) {
+                // Copies from a source with a memory address or an array without an NIO buffer view of the source,
+                // which src.nioBuffer(...) below would allocate for each copy from a buffer of another kind, such
+                // as a slice or a buffer of another allocator. Without Unsafe, a direct buffer can still have a
+                // memory address (Java 25+), but the copy needs Unsafe; checking hasUnsafe() first lets the JIT
+                // drop this branch then.
+                UnsafeByteBufUtil.setBytes(this, _memoryAddress() + index, index, src, srcIndex, length);
+                return this;
+            }
             checkIndex(index, length);
             if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
                 AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
@@ -2464,6 +2512,9 @@ final class AdaptivePoolingAllocator {
         public ByteBuf setBytes(int index, ByteBuffer src) {
             int length = src.remaining();
             checkIndex(index, length);
+            if (src == tmpNioBuf) {
+                src = src.duplicate();
+            }
             ByteBuffer tmp = internalNioBuffer();
             if (PlatformDependent.javaVersion() >= 16) {
                 int offset = src.position();
@@ -2490,16 +2541,18 @@ final class AdaptivePoolingAllocator {
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
+            checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf);
         }
 
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
+            checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf, position);
         }
 
@@ -2643,6 +2696,8 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
+            memoryAddress = 0L;
+            hasMemoryAddress = false;
             handle.unguardedRecycle(this);
         }
     }

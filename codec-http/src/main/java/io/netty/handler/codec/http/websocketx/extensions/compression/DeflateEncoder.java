@@ -41,8 +41,11 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
+    static final int DEFAULT_MEM_LEVEL = 8;
+
     private final int compressionLevel;
     private final int windowSize;
+    private final int memLevel;
     private final boolean noContext;
     private final WebSocketExtensionFilter extensionEncoderFilter;
 
@@ -57,8 +60,22 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
      */
     DeflateEncoder(int compressionLevel, int windowSize, boolean noContext,
                    WebSocketExtensionFilter extensionEncoderFilter) {
+        this(compressionLevel, windowSize, DEFAULT_MEM_LEVEL, noContext, extensionEncoderFilter);
+    }
+
+    /**
+     * Constructor
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize maximum size of the window compressor buffer.
+     * @param memLevel internal compression state memory level (1..9).
+     * @param noContext true to disable context takeover.
+     * @param extensionEncoderFilter extension encoder filter.
+     */
+    DeflateEncoder(int compressionLevel, int windowSize, int memLevel, boolean noContext,
+                   WebSocketExtensionFilter extensionEncoderFilter) {
         this.compressionLevel = compressionLevel;
         this.windowSize = windowSize;
+        this.memLevel = memLevel;
         this.noContext = noContext;
         this.extensionEncoderFilter = checkNotNull(extensionEncoderFilter, "extensionEncoderFilter");
     }
@@ -91,6 +108,11 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             // Set empty DEFLATE block manually for unknown buffer size
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
             compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
+            if (noContext) {
+                // The message ends here, so the next one must start with an empty sliding window,
+                // as when the final fragment has content (see compressContent(...)).
+                cleanup();
+            }
         } else {
             throw new CodecException("cannot compress content buffer");
         }
@@ -119,7 +141,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         if (encoder == null) {
             encoder = EmbeddedChannel.builder()
                     .handlers(ZlibCodecFactory.newZlibEncoder(
-                            ZlibWrapper.NONE, compressionLevel, windowSize, 8))
+                            ZlibWrapper.NONE, compressionLevel, windowSize, memLevel))
                     .build();
         }
 

@@ -41,6 +41,7 @@ class DefaultHttp3SettingsFrameTest {
 
         assertNotNull(frame.settings());
         assertFalse(frame.iterator().hasNext());
+        assertNull(frame.settings().qpackMaxTableCapacity());
         assertNull(frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id()));
     }
 
@@ -48,12 +49,17 @@ class DefaultHttp3SettingsFrameTest {
     void testPutAndGetDelegatesToSettings() {
         DefaultHttp3SettingsFrame frame = new DefaultHttp3SettingsFrame();
 
-        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 256L);
-        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 8L);
-
+        frame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 256L);
         assertEquals(256L, frame.settings().qpackMaxTableCapacity());
+
+        frame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 8L);
         assertEquals(8L, frame.settings().qpackBlockedStreams());
-        assertEquals(8L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
+
+        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 512L);
+        assertEquals(512L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id()));
+
+        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 16L);
+        assertEquals(16L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
     }
 
     @Test
@@ -73,6 +79,7 @@ class DefaultHttp3SettingsFrameTest {
         // Modify settings externally and verify frame sees update
         settings.qpackBlockedStreams(3);
         assertEquals(3L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
+        assertEquals(3L, frame.settings().qpackBlockedStreams());
     }
 
     @Test

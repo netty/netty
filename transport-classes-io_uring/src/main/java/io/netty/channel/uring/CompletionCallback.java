@@ -27,8 +27,8 @@ interface CompletionCallback {
      * @param extraCqeData  the extra data for the CQE. This will only be non-null of the ring was setup with
      *                      {@code IORING_SETUP_CQE32} or {@code IORING_SETUP_CQE_MIXED} and {@code IORING_CQE_F_32} is
      *                      set in {@code flags}.
-     * @return              {@code true} if we more data (in a loop) can be handled be this callback, {@code false}
-     *                      otherwise.
+     * @return              {@code true} if this completion represents a real I/O event that should be counted,
+     *                      {@code false} for internal completions (e.g. eventfd, ring fd).
      */
-    void handle(int res, int flags, long udata, ByteBuffer extraCqeData);
+    boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData);
 }

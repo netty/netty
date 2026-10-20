@@ -178,103 +178,6 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunkedWithValidUncommonPatterns() {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
-                                              CharsetUtil.US_ASCII));
-
-        HttpResponse res = ch.readInbound();
-        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
-        assertEquals(HttpResponseStatus.OK, res.status());
-
-        byte[] data = new byte[1];
-        for (int i = 0; i < data.length; i++) {
-            data[i] = (byte) i;
-        }
-
-        // leading whitespace, trailing whitespace
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + " \r\n",
-                                                          CharsetUtil.US_ASCII)));
-        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
-        HttpContent content = ch.readInbound();
-        assertEquals(data.length, content.content().readableBytes());
-
-        byte[] decodedData = new byte[data.length];
-        content.content().readBytes(decodedData);
-        assertArrayEquals(data, decodedData);
-        content.release();
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-
-        // leading whitespace, trailing semicolon
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + ";\r\n",
-                                                          CharsetUtil.US_ASCII)));
-        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
-        content = ch.readInbound();
-        assertEquals(data.length, content.content().readableBytes());
-
-        decodedData = new byte[data.length];
-        content.content().readBytes(decodedData);
-        assertArrayEquals(data, decodedData);
-        content.release();
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-
-        // Write the last chunk.
-        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
-
-        // Ensure the last chunk was decoded.
-        LastHttpContent lastContent = ch.readInbound();
-        assertFalse(lastContent.content().isReadable());
-        lastContent.release();
-
-        ch.finish();
-        assertNull(ch.readInbound());
-    }
-
-    @Test
-    public void testResponseChunkedWithControlChars() {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
-                                              CharsetUtil.US_ASCII));
-
-        HttpResponse res = ch.readInbound();
-        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
-        assertEquals(HttpResponseStatus.OK, res.status());
-
-        byte[] data = new byte[1];
-        for (int i = 0; i < data.length; i++) {
-            data[i] = (byte) i;
-        }
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + " \r\n",
-                                                          CharsetUtil.US_ASCII)));
-        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
-        HttpContent content = ch.readInbound();
-        assertEquals(data.length, content.content().readableBytes());
-
-        byte[] decodedData = new byte[data.length];
-        content.content().readBytes(decodedData);
-        assertArrayEquals(data, decodedData);
-        content.release();
-
-        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
-
-        // Write the last chunk.
-        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
-
-        // Ensure the last chunk was decoded.
-        LastHttpContent lastContent = ch.readInbound();
-        assertFalse(lastContent.content().isReadable());
-        lastContent.release();
-
-        assertFalse(ch.finish());
-        assertNull(ch.readInbound());
-    }
-
-    @Test
     public void testResponseDisallowPartialChunks() {
         HttpResponseDecoder decoder = new HttpResponseDecoder(
             HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
@@ -1373,6 +1276,49 @@ public class HttpResponseDecoderTest {
         assertFalse(content.decoderResult().isSuccess());
         assertThat(content.decoderResult().cause()).hasMessageContaining("Chunk size overflow");
         content.release();
+        assertFalse(channel.finish());
+    }
+
+    @ParameterizedTest(name = "[{index}] '{arguments}'")
+    @ValueSource(strings = {
+        "",
+        "5 ",
+        " 5",
+        "5 c",
+        "5 x",
+        "5 c;foo=bar",
+        "  5 c",
+        "  5 x",
+        "  5 c;foo=bar",
+    })
+    public void mustRejectChunkSizeWithIllegalWhitespaceOrExtraTokens(String chunkSizeLine) {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "\r\n" +
+            chunkSizeLine + "\r\n" + // malformed chunk size
+            "GPOST\r\n" +
+            "0\r\n" +
+            "\r\n" +
+            "HTTP/1.1 200 smuggled\r\n" +
+            "Host: example\r\n" +
+            "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+
+        // The response headers parse fine.
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertThat(response.protocolVersion()).isEqualTo(HttpVersion.HTTP_1_1);
+        assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+
+        // But the malformed chunk-size line must be rejected, not truncated at the whitespace.
+        HttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isFailure());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("chunk size");
+        content.release();
+
+        // Nothing after the failed chunk may be surfaced as a second, smuggled response.
         assertFalse(channel.finish());
     }
 

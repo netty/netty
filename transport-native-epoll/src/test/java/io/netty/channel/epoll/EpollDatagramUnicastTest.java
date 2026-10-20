@@ -66,7 +66,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     }
 
     public void testSendSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSegmentedDatagramPacket(sb, cb, false, false);
+        testSegmentedDatagramPacket(sb, cb, false, false, false);
     }
 
     @Test
@@ -80,7 +80,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     }
 
     public void testSendSegmentedDatagramPacketComposite(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSegmentedDatagramPacket(sb, cb, true, false);
+        testSegmentedDatagramPacket(sb, cb, true, false, false);
     }
 
     @Test
@@ -94,7 +94,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     }
 
     public void testSendAndReceiveSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSegmentedDatagramPacket(sb, cb, false, true);
+        testSegmentedDatagramPacket(sb, cb, false, true, false);
     }
 
     @Test
@@ -108,11 +108,26 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     }
 
     public void testSendAndReceiveSegmentedDatagramPacketComposite(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testSegmentedDatagramPacket(sb, cb, true, true);
+        testSegmentedDatagramPacket(sb, cb, true, true, false);
     }
 
-    private void testSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite, boolean gro)
+    @Test
+    public void testSendAndReceiveSegmentedDatagramPacketWithScatteringRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testSendAndReceiveSegmentedDatagramPacketWithScatteringRead(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testSendAndReceiveSegmentedDatagramPacketWithScatteringRead(Bootstrap sb, Bootstrap cb)
             throws Throwable {
+        testSegmentedDatagramPacket(sb, cb, false, true, true);
+    }
+
+    private void testSegmentedDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite, boolean gro,
+            boolean scatteringRead) throws Throwable {
         if (!(cb.group() instanceof IoEventLoopGroup &&
                 ((IoEventLoopGroup) cb.group()).isIoType(EpollIoHandler.class))) {
             // Only supported for the native epoll transport.
@@ -147,7 +162,13 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 // Enable GRO and also ensure we can read everything with one read as otherwise
                 // we will drop things on the floor.
                 sb.option(EpollChannelOption.UDP_GRO, true);
-                sb.option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(bufferCapacity));
+                if (scatteringRead) {
+                    // Room for two batches, so the batch is read with recvmmsg instead of recvmsg.
+                    sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, bufferCapacity);
+                    sb.option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(2 * bufferCapacity));
+                } else {
+                    sb.option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(bufferCapacity));
+                }
             }
             sc = sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
                 @Override
@@ -161,7 +182,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
             if (sc instanceof EpollDatagramChannel) {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));
             }
-            InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
+            InetSocketAddress addr = convertAnyAddress((InetSocketAddress) sc.localAddress());
             final ByteBuf buffer;
             if (composite) {
                 CompositeByteBuf compositeBuffer = Unpooled.compositeBuffer();
