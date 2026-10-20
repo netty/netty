@@ -706,26 +706,6 @@ public class DefaultHttp2ConnectionDecoderTest {
     // successful response, which this file's mocked Http2ConnectionEncoder cannot provide.
 
     @Test
-    public void headersAfterExtendedConnectStillAllowedAsTrailersWhenEnabled() throws Exception {
-        when(connection.isServer()).thenReturn(true);
-        Http2FrameListener dec = strictDecode();
-
-        // Extended CONNECT (RFC 8441), identified by :protocol, is not a tunnel under RFC 9113, 8.5 and must
-        // keep allowing a normal trailing HEADERS frame.
-        Http2Headers connect = new DefaultHttp2Headers().method("CONNECT").scheme("https")
-                .authority("example.org").path("/chat");
-        connect.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
-        dec.onHeadersRead(ctx, STREAM_ID, connect, 0, false);
-
-        when(stream.isHeadersSent()).thenReturn(true);
-
-        Http2Headers trailers = new DefaultHttp2Headers().add("x-trailer", "value");
-        dec.onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(trailers), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
-    }
-
-    @Test
     public void responseMissingStatusRejectedWhenEnabled() throws Exception {
         // isServer() defaults to false, so inbound HEADERS are treated as a response.
         assertThat(assertHeadersRejected(strictDecode(), EmptyHttp2Headers.INSTANCE, true).getMessage())

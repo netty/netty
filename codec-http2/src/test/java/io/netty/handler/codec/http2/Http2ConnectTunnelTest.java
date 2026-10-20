@@ -193,6 +193,27 @@ public class Http2ConnectTunnelTest {
     }
 
     @Test
+    public void trailersAfterSuccessfulExtendedConnectAreStillAllowed() throws Exception {
+        Http2FrameListener dec = decode();
+
+        // Extended CONNECT (RFC 8441), identified by :protocol, is not a tunnel under RFC 9113, 8.5 and must
+        // keep allowing a normal trailing HEADERS frame even after a successful response.
+        Http2Headers connectRequest = new DefaultHttp2Headers().method("CONNECT").scheme("https")
+                .authority("example.org").path("/chat");
+        connectRequest.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        dec.onHeadersRead(ctx, STREAM_ID, connectRequest, 0, false);
+
+        // The (local) server accepts the request with a successful response.
+        Http2Headers response = new DefaultHttp2Headers().status("200");
+        encoder.writeHeaders(ctx, STREAM_ID, response, 0, false, ctx.newPromise());
+
+        Http2Headers trailers = new DefaultHttp2Headers().add("x-trailer", "value");
+        dec.onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(trailers), eq(0),
+                eq(Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
+    @Test
     public void headersAfterConnectTunnelEstablishedAreRejectedOnClientSide() throws Exception {
         // The inverse direction from headersAfterConnectTunnelEstablishedAreRejected: this endpoint is the
         // client, so it writes the ordinary CONNECT request itself (rather than decoding one) and decodes the
