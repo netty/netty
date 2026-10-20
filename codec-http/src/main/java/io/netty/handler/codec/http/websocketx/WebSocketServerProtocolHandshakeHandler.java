@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -64,9 +63,10 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
             }
 
             try {
+                final boolean isSecure = ctx.pipeline().get(SslHandler.class) != null;
+                final String host = req.headers().get(HttpHeaderNames.HOST);
                 final WebSocketServerHandshaker handshaker = WebSocketServerHandshakerFactory.resolveHandshaker(
-                        req,
-                        getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
+                        req, isSecure, host, serverConfig.websocketPath(),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
                 final Promise<Void> localHandshakePromise = handshakePromise;
                 if (handshaker == null) {
@@ -123,16 +123,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
             return nextUri == '/' || nextUri == '?';
         }
         return true;
-    }
-
-    private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {
-        String protocol = "ws";
-        if (cp.get(SslHandler.class) != null) {
-            // SSL in use so use Secure WebSockets
-            protocol = "wss";
-        }
-        String host = req.headers().get(HttpHeaderNames.HOST);
-        return protocol + "://" + host + path;
     }
 
     private void applyHandshakeTimeout() {
