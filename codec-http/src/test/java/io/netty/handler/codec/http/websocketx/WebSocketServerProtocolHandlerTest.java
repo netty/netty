@@ -87,6 +87,84 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testAllowedOriginAccepted() {
+        EmbeddedChannel ch = createChannel(originConfig("https://other.example.com", "HTTP://Example.com"),
+                new MockOutboundHandler());
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testNotAllowedOriginRejected() {
+        EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(FORBIDDEN, response.status());
+        response.release();
+        assertNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
+        assertFalse(ch.isOpen());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testNotAllowedOriginRejectedNonFull() {
+        EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
+        FullHttpRequest fullRequest = (FullHttpRequest) WebSocketRequestBuilder.successful();
+        HttpRequest request = new DefaultHttpRequest(fullRequest.protocolVersion(), fullRequest.method(),
+                fullRequest.uri(), fullRequest.headers().copy());
+        fullRequest.release();
+        // The channel is closed once the request head was rejected, so the rest of the request is never delivered.
+        ch.writeInbound(request);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(FORBIDDEN, response.status());
+        response.release();
+        assertFalse(ch.isOpen());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testNotAllowedOriginAmongMultipleHeadersRejected() {
+        EmbeddedChannel ch = createChannel(originConfig("http://example.com"), new MockOutboundHandler());
+        HttpRequest request = WebSocketRequestBuilder.successful();
+        request.headers().add(HttpHeaderNames.ORIGIN, "http://evil.example.com");
+        ch.writeInbound(request);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(FORBIDDEN, response.status());
+        response.release();
+        assertFalse(ch.isOpen());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testMissingOriginNotRejected() {
+        EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
+        HttpRequest request = WebSocketRequestBuilder.successful();
+        request.headers().remove(HttpHeaderNames.ORIGIN);
+        ch.writeInbound(request);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+        assertFalse(ch.finish());
+    }
+
+    private static WebSocketServerProtocolConfig originConfig(String... allowedOrigins) {
+        return WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
+                .sendCloseFrame(null)
+                .allowedOrigins(allowedOrigins)
+                .build();
+    }
+
+    @Test
     public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
