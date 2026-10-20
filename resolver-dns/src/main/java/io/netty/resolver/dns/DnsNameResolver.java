@@ -279,6 +279,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean decodeIdn;
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
     private final boolean completeOncePreferredResolved;
+    // null if neither case randomization nor DNS cookies are enabled.
+    private final DnsQueryProtection queryProtection;
     private final DnsResolveChannelProvider resolveChannelProvider;
     private final Bootstrap socketBootstrap;
     private final boolean retryWithTcpOnTimeout;
@@ -391,7 +393,8 @@ public class DnsNameResolver extends InetNameResolver {
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider),
-             searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver);
+             searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver,
+             false, false);
     }
 
     @SuppressWarnings("deprecation")
@@ -420,6 +423,41 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn,
             boolean completeOncePreferredResolved,
             int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        this(eventLoop, channelFactory, socketChannelFactory, retryWithTcpOnTimeout, resolveCache, cnameCache,
+                authoritativeDnsServerCache, localAddress, dnsQueryLifecycleObserverFactory, queryTimeoutMillis,
+                resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize,
+                optResourceEnabled, hostsFileEntriesResolver, dnsServerAddressStreamProvider,
+                queryDnsServerAddressStream, searchDomains, ndots, decodeIdn, completeOncePreferredResolved,
+                maxNumConsolidation, datagramChannelStrategy, false, false);
+    }
+
+    @SuppressWarnings("deprecation")
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            ChannelFactory<? extends SocketChannel> socketChannelFactory,
+            boolean retryWithTcpOnTimeout,
+            final DnsCache resolveCache,
+            final DnsCnameCache cnameCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            SocketAddress localAddress,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            final int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            DnsServerAddressStream queryDnsServerAddressStream,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn,
+            boolean completeOncePreferredResolved,
+            int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy,
+            boolean caseRandomizationEnabled, boolean dnsCookiesEnabled) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis >= 0
             ? queryTimeoutMillis
@@ -446,6 +484,8 @@ public class DnsNameResolver extends InetNameResolver {
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;
         this.retryWithTcpOnTimeout = retryWithTcpOnTimeout;
+        this.queryProtection = caseRandomizationEnabled || dnsCookiesEnabled ?
+                new DnsQueryProtection(caseRandomizationEnabled, dnsCookiesEnabled) : null;
         if (socketChannelFactory == null) {
             socketBootstrap = null;
         } else {
@@ -671,6 +711,21 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public int maxPayloadSize() {
         return maxPayloadSize;
+    }
+
+    /**
+     * Returns {@code true} if the case of the name in the questions of UDP queries is randomized ("0x20").
+     */
+    public boolean isCaseRandomizationEnabled() {
+        return queryProtection != null && queryProtection.isCaseRandomizationEnabled();
+    }
+
+    /**
+     * Returns {@code true} if a client cookie as defined by RFC 7873 is sent with UDP queries and validated in the
+     * responses.
+     */
+    public boolean isDnsCookiesEnabled() {
+        return queryProtection != null && queryProtection.isCookiesEnabled();
     }
 
     /**
@@ -1531,7 +1586,7 @@ public class DnsNameResolver extends InetNameResolver {
         DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, nameServerAddr,
                 queryContextManager, queryLifecycleObserver, payloadSize,
                 isRecursionDesired(), queryTimeoutMillis(), question, additionals,
-                promise, socketBootstrap, retryWithTcpOnTimeout);
+                promise, socketBootstrap, retryWithTcpOnTimeout, queryProtection);
         queryContext.writeQuery(flush);
     }
 
