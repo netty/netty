@@ -458,6 +458,22 @@ public class DnsNameResolverTest {
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveWithCaseRandomizationAndCookies(DnsNameResolverChannelStrategy strategy) throws Exception {
+        DnsNameResolver resolver = newResolver(strategy, ResolvedAddressTypes.IPV4_ONLY)
+                .caseRandomizationEnabled(true)
+                .dnsCookiesEnabled(true)
+                .build();
+        try {
+            assertTrue(resolver.isCaseRandomizationEnabled());
+            assertTrue(resolver.isDnsCookiesEnabled());
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_A, AAAA);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testResolveAAAAorA(DnsNameResolverChannelStrategy strategy) throws Exception {
         DnsNameResolver resolver = newResolver(strategy, ResolvedAddressTypes.IPV6_PREFERRED).build();
         try {

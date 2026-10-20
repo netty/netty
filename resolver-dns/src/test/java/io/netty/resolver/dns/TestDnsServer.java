@@ -322,7 +322,9 @@ class TestDnsServer extends DnsServer {
         @Override
         public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
             String name = questionRecord.getDomainName();
-            if (domains.contains(name)) {
+            // Like a real nameserver match the name case-insensitively, but echo it with the case it was asked with
+            // so we also work with 0x20 case randomization.
+            if (domains.contains(name.toLowerCase(Locale.ROOT))) {
                 Map<String, Object> attr = new HashMap<String, Object>();
                 switch (questionRecord.getRecordType()) {
                     case A:
