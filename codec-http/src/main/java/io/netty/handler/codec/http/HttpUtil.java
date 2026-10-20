@@ -106,14 +106,11 @@ public final class HttpUtil {
         int lenBytes = token.length();
         for (int i = 0; i < lenBytes; i++) {
             char ch = token.charAt(i);
-            // this is to help AOT compiled code which cannot profile the switch
-            if (ch <= ' ') {
-                switch (ch) {
-                    case '\n':
-                    case '\r':
-                    case ' ':
-                        return false;
-                }
+            // Reject all control characters (0x00-0x1F), SP (0x20) and DEL (0x7F).
+            // Lenient parsers may treat any of these (e.g. HTAB, VT, FF, bare CR) as separators in the start line,
+            // and C-string based parsers will truncate at NUL.
+            if (ch <= ' ' || ch == 0x7F) {
+                return false;
             }
         }
         return true;
