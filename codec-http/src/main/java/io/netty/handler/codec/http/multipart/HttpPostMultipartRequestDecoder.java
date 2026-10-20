@@ -765,6 +765,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
                             throw new ErrorDataDecoderException(e);
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            throw new ErrorDataDecoderException(e);
                         }
                         currentFieldAttributes.put(attribute.getName(), attribute);
                     }
