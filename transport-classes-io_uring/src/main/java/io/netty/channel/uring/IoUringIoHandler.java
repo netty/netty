@@ -71,7 +71,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final CleanableDirectBuffer timeoutMemoryCleanable;
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
-    private final IovArray iovArray;
+    private final IoUringSharedIovArray iovArray;
     private final IovArrayReferenceCollector iovArrayReferenceCollector;
     private final MsgHdrMemoryArray msgHdrMemoryArray;
     private long eventfdReadSubmitted;
@@ -148,8 +148,8 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(KERNEL_TIMESPEC_SIZE);
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
-        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
-        iovArrayReferenceCollector = new IovArrayReferenceCollector(iovArray);
+        iovArrayReferenceCollector = new IovArrayReferenceCollector();
+        iovArray = new IoUringSharedIovArray(IoUring.NUM_ELEMENTS_IOVEC);
         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
     }
 
@@ -769,12 +769,15 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     IovArray iovArray() {
-        if (iovArray.isFull()) {
+        if (!iovArray.hasRoom()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
-            assert iovArray.count() == 0;
+            // Without anything to submit all the entries were submitted already, so they can be reused too.
+            iovArray.clear();
         }
-        return iovArray;
+        IovArray next = iovArray.next();
+        iovArrayReferenceCollector.setIovArray(next);
+        return next;
     }
 
     /**
