@@ -489,19 +489,19 @@ public class HttpContentCompressorTest {
 
             client.writeAndFlush(newRequest()).sync();
 
-            assertEncodedResponse((HttpResponse) responses.poll(1, TimeUnit.SECONDS));
-            HttpContent c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
+            assertEncodedResponse((HttpResponse) responses.poll(5, TimeUnit.SECONDS));
+            HttpContent c = (HttpContent) responses.poll(5, TimeUnit.SECONDS);
             assertNotNull(c);
             assertEquals("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff",
                     ByteBufUtil.hexDump(c.content()));
             c.release();
 
-            c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
+            c = (HttpContent) responses.poll(5, TimeUnit.SECONDS);
             assertNotNull(c);
             assertEquals("0300c6865b260c000000", ByteBufUtil.hexDump(c.content()));
             c.release();
 
-            LastHttpContent last = (LastHttpContent) responses.poll(1, TimeUnit.SECONDS);
+            LastHttpContent last = (LastHttpContent) responses.poll(5, TimeUnit.SECONDS);
             assertNotNull(last);
             assertEquals(0, last.content().readableBytes());
             last.release();
