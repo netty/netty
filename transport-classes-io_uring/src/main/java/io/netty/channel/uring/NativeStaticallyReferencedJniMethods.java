@@ -54,6 +54,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockaddrUnOffsetofSunPath();
     static native int maxSunPathLen();
     static native int sizeofSizeT();
+    static native int sizeofInt();
     static native int sizeofIovec();
     static native int iovecOffsetofIovBase();
     static native int iovecOffsetofIovLen();
@@ -74,10 +75,12 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioringEnterGetevents();
     static native int iosqeAsync();
     static native int iosqeLink();
+    static native int iosqeHardlink();
     static native int iosqeDrain();
     static native int msgDontwait();
     static native int iosqeBufferSelect();
     static native int msgFastopen();
+    static native int msgCtrunc();
     static native int cmsgSpace();
     static native int cmsgSpaceForFd();
     static native int cmsgLen();

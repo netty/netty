@@ -33,4 +33,35 @@ final class SocksCommonTestUtils {
         msg.encodeAsByteBuf(buf);
         embedder.writeInbound(buf);
     }
+
+    /**
+     * Returns a domain name of exactly {@code length} characters made of labels of at most 63 characters.
+     */
+    static String domainOfLength(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        while (sb.length() < length) {
+            int remaining = length - sb.length();
+            if (sb.length() > 0) {
+                sb.append('.');
+                remaining--;
+            }
+            int label = Math.min(63, remaining);
+            if (remaining - label == 1) {
+                // Never leave room for only a trailing dot.
+                label--;
+            }
+            for (int i = 0; i < label; i++) {
+                sb.append('a');
+            }
+        }
+        return sb.toString();
+    }
+
+    static String asciiStringOfLength(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append((char) ('a' + i % 26));
+        }
+        return sb.toString();
+    }
 }

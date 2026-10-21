@@ -1,0 +1,80 @@
+/*
+ * Copyright 2025 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.compression;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+public class Bzip2DecompressorTest extends AbstractDecompressorTest {
+    @Override
+    protected ChannelHandler createCompressor() {
+        return new Bzip2Encoder();
+    }
+
+    @Override
+    protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
+        return Bzip2Decompressor.builder();
+    }
+
+    @Test
+    public void endOfInputFailsOnTruncatedStream() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 'B', 'Z', 'h', '1' }));
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::endOfInput);
+        }
+    }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange())),
+                    "incorrect selector index");
+        }
+    }
+
+    /**
+     * Regression test: a Huffman code length read in {@code RECEIVE_HUFFMAN_LENGTH} was never
+     * validated against the 1..23 range before being stored and later used to index the per-table
+     * code-base array (sized for lengths up to 23), so a crafted stream could trigger an
+     * {@link ArrayIndexOutOfBoundsException} instead of a clean {@link DecompressionException}.
+     */
+    @Test
+    public void testCodeLengthOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange())),
+                    "Bzip2 block Huffman code length not in range");
+        }
+    }
+}

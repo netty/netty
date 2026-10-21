@@ -24,9 +24,10 @@ import org.junit.jupiter.api.Test;
 import java.net.UnknownHostException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocksCmdRequestDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdRequestDecoderTest.class);
@@ -42,7 +43,7 @@ public class SocksCmdRequestDecoderTest {
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         if (msg.addressType() == SocksAddressType.UNKNOWN) {
-            assertTrue(embedder.readInbound() instanceof UnknownSocksRequest);
+            assertInstanceOf(UnknownSocksRequest.class, embedder.readInbound());
         } else {
             msg = embedder.readInbound();
             assertSame(msg.cmdType(), cmdType);
@@ -51,6 +52,7 @@ public class SocksCmdRequestDecoderTest {
             assertEquals(msg.port(), port);
         }
         assertNull(embedder.readInbound());
+        assertFalse(embedder.finish());
     }
 
     @Test
@@ -109,6 +111,21 @@ public class SocksCmdRequestDecoderTest {
         int port = 80;
         for (SocksCmdType cmdType : SocksCmdType.values()) {
             testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksAddressType.UNKNOWN, host, port);
+        }
+    }
+
+    /**
+     * The domain length octet is unsigned; lengths in [0x80, 0xFF] sign-extend to a negative Java
+     * {@code byte}, so a decoder that reads them with {@link io.netty.buffer.ByteBuf#readByte()}
+     * fails on spec-legal domain names of 128 to 255 characters.
+     */
+    @Test
+    public void testCmdRequestDecoderLongDomain() {
+        String[] hosts = {SocksCommonTestUtils.domainOfLength(128), SocksCommonTestUtils.domainOfLength(255)};
+        for (SocksCmdType cmdType : SocksCmdType.values()) {
+            for (String host : hosts) {
+                testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksAddressType.DOMAIN, host, 80);
+            }
         }
     }
 }

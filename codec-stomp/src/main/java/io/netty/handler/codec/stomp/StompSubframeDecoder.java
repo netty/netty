@@ -189,16 +189,25 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     resetDecoder();
             }
         } catch (Exception e) {
-            if (lastContent != null) {
-                lastContent.release();
-                lastContent = null;
-            }
+            releaseLastContentIfNeeded();
 
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
             checkpoint(State.BAD_FRAME);
         }
+    }
+
+    private void releaseLastContentIfNeeded() {
+        if (lastContent != null) {
+            lastContent.release();
+            lastContent = null;
+        }
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        releaseLastContentIfNeeded();
     }
 
     private StompCommand readCommand(ByteBuf in) {
@@ -216,6 +225,9 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private State readHeaders(ByteBuf buffer, StompHeadersSubframe headersSubframe) {
         StompHeaders headers = headersSubframe.headers();
+        // If the headers were not complete before, ReplayingDecoder parses all of them again,
+        // so count them from zero.
+        headerParser.resetNumHeaders();
         for (;;) {
             boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
             if (!headerRead) {
@@ -234,6 +246,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         long contentLength = headers.getLong(StompHeaders.CONTENT_LENGTH, 0L);
         if (contentLength < 0) {
             throw new DecoderException(StompHeaders.CONTENT_LENGTH + " must be non-negative");
+        }
+        if (contentLength > Integer.MAX_VALUE) {
+            throw new TooLongFrameException(StompHeaders.CONTENT_LENGTH + " exceeds the maximum allowed value: "
+                    + contentLength);
         }
         return contentLength;
     }
@@ -364,6 +380,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             super(charSeq, maxLineLength);
             this.validateHeaders = validateHeaders;
             this.maxNumHeaders = maxNumHeaders;
+        }
+
+        void resetNumHeaders() {
+            numHeaders = 0;
         }
 
         boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {

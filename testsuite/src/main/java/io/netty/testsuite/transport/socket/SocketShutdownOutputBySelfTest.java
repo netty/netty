@@ -45,8 +45,8 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
@@ -127,18 +127,10 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             s = ss.accept();
 
             ch.close().syncUninterruptibly();
-            try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
-            try {
-                ch.shutdownOutput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(Throwable.class, () -> ch.shutdownInput().syncUninterruptibly());
+            checkThrowable(cause);
+            cause = assertThrows(Throwable.class, () -> ch.shutdownOutput().syncUninterruptibly());
+            checkThrowable(cause);
         } finally {
             if (s != null) {
                 s.close();
@@ -198,13 +190,11 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isInputShutdown());
             assertTrue(h.ch.isOutputShutdown());
 
-            try {
-                // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[]{ 2 }, 0 , 2)).sync();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            // If half-closed, the local endpoint shouldn't be able to write
+            SocketChannel finalCh = ch;
+            Throwable cause = assertThrows(Throwable.class,
+                    () -> finalCh.writeAndFlush(randomBufferType(finalCh.alloc(), new byte[]{ 2 }, 0 , 2)).sync());
+            checkThrowable(cause);
             assertNull(h.writabilityQueue.poll());
         } finally {
             if (s != null) {

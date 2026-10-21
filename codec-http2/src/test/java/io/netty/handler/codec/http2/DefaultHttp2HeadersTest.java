@@ -25,7 +25,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
@@ -56,6 +58,17 @@ public class DefaultHttp2HeadersTest {
             @Override
             public void execute() throws Throwable {
                 new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {'\0', '\n', '\r'})
+    public void headerValueValidationIsEnabledByDefault(char illegalChar) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add("headername", "fo" + illegalChar + "o");
             }
         });
     }
@@ -95,6 +108,28 @@ public class DefaultHttp2HeadersTest {
             verifyPseudoHeadersFirst(headers);
             verifyAllPseudoHeadersPresent(headers);
         }
+    }
+
+    @Test
+    public void overwritingPseudoHeaderWithInvalidValueNotAllowed() {
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.authority("netty.io");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.authority("");
+            }
+        });
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                Iterator<Entry<CharSequence, CharSequence>> itr = headers.iterator();
+                assertTrue(itr.hasNext());
+                Entry<CharSequence, CharSequence> entry = itr.next();
+                assertEquals(":authority", entry.getKey().toString());
+                entry.setValue(""); // This must throw
+            }
+        });
     }
 
     @Test

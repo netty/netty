@@ -80,7 +80,7 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
 
         final List<Socks5AuthMethod> authMethods = msg.authMethods();
         final int numAuthMethods = authMethods.size();
-        out.writeByte(numAuthMethods);
+        writeFieldLength(out, numAuthMethods);
 
         if (authMethods instanceof RandomAccess) {
             for (int i = 0; i < numAuthMethods; i ++) {
@@ -97,18 +97,18 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
         out.writeByte(0x01);
 
         final String username = msg.username();
-        out.writeByte(username.length());
+        writeFieldLength(out, username.length());
         ByteBufUtil.writeAscii(out, username);
 
         final String password = msg.password();
-        out.writeByte(password.length());
+        writeFieldLength(out, password.length());
         ByteBufUtil.writeAscii(out, password);
     }
 
     private static void encodePrivateAuthRequest(Socks5PrivateAuthRequest msg, ByteBuf out) {
         byte[] bytes = msg.privateToken();
         out.writeByte(0x01);
-        out.writeByte(bytes.length);
+        writeFieldLength(out, bytes.length);
         out.writeBytes(bytes);
     }
 
@@ -119,7 +119,22 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
 
         final Socks5AddressType dstAddrType = msg.dstAddrType();
         out.writeByte(dstAddrType.byteValue());
-        addressEncoder.encodeAddress(dstAddrType, msg.dstAddr(), out);
+        String addrValue = msg.dstAddr();
+        if (addrValue != null && dstAddrType == Socks5AddressType.DOMAIN) {
+            checkFieldLength(addrValue.length());
+        }
+        addressEncoder.encodeAddress(dstAddrType, addrValue, out);
         ByteBufUtil.writeShortBE(out, msg.dstPort());
+    }
+
+    private static void writeFieldLength(ByteBuf out, int length) {
+        checkFieldLength(length);
+        out.writeByte(length);
+    }
+
+    private static void checkFieldLength(int length) {
+        if (length > 255 || length < 0) {
+            throw new EncoderException("Invalid field length value: " + length);
+        }
     }
 }

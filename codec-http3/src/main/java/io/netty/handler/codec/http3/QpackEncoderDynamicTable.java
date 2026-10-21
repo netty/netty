@@ -349,6 +349,18 @@ final class QpackEncoderDynamicTable {
         throw new IllegalArgumentException("Index " + idx + " not found");
     }
 
+    /**
+     * Returns {@code true} if the decoder acknowledged the entry at the passed {@code idx}, which means it can be
+     * referenced in a field section without blocking the stream.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count">known received count</a>.
+     *
+     * @param idx of the entry.
+     * @return {@code true} if the entry was acknowledged by the decoder.
+     */
+    boolean isKnownReceived(int idx) {
+        return idx <= knownReceived.index;
+    }
+
     boolean requiresDuplication(int idx, long size) {
         assert head != tail;
 

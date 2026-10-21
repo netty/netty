@@ -34,6 +34,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import static io.netty.channel.kqueue.BsdSocket.BSD_SND_LOW_AT_MAX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -102,22 +104,14 @@ public class KQueueSocketChannelConfigTest {
     @Test
     public void testSetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-            ch.config().setSoLinger(0);
-            fail();
-        } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
-        }
+        ChannelException e = assertThrows(ChannelException.class, () -> ch.config().setSoLinger(0));
+        assertInstanceOf(ClosedChannelException.class, e.getCause());
     }
 
     @Test
     public void testGetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
-        try {
-        ch.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            assertTrue(e.getCause() instanceof ClosedChannelException);
-        }
+        ChannelException e = assertThrows(ChannelException.class, () -> ch.config().getSoLinger());
+        assertInstanceOf(ClosedChannelException.class, e.getCause());
     }
 }

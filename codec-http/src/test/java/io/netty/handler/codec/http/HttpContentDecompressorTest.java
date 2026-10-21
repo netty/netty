@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpContentDecompressorTest {
@@ -77,7 +78,7 @@ public class HttpContentDecompressorTest {
         // we triggered read explicitly
         assertEquals(1, readCalled.get());
 
-        assertTrue(channel.readInbound() instanceof HttpResponse);
+        assertInstanceOf(HttpResponse.class, channel.readInbound());
 
         assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
 

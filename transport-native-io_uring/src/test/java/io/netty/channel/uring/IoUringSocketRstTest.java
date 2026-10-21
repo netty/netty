@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringSocketRstTest extends SocketRstTest {
@@ -49,7 +49,7 @@ public class IoUringSocketRstTest extends SocketRstTest {
             return;
         }
 
-        assertTrue(cause instanceof Errors.NativeIoException,
+        assertInstanceOf(Errors.NativeIoException.class, cause,
                 "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + ']');
         assertEquals(Errors.ERRNO_ECONNRESET_NEGATIVE, ((Errors.NativeIoException) cause).expectedErr());
     }

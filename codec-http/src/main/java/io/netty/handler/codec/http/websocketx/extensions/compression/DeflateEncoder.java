@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -108,8 +109,16 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             // Set empty DEFLATE block manually for unknown buffer size
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
             compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
+            if (noContext) {
+                // The message ends here, so the next one must start with an empty sliding window,
+                // as when the final fragment has content (see compressContent(...)).
+                cleanup();
+            }
         } else {
-            throw new CodecException("cannot compress content buffer");
+            // Empty non-final fragment: there is nothing to compress and no tail to remove, so the payload stays
+            // empty. The frame is still rebuilt below so RSV1 is set on a first fragment.
+            // https://tools.ietf.org/html/rfc7692#section-6 and https://tools.ietf.org/html/rfc7692#section-7.2.1
+            compressedContent = Unpooled.EMPTY_BUFFER;
         }
 
         final WebSocketFrame outMsg;

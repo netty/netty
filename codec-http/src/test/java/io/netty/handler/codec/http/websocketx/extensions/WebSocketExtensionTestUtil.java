@@ -38,7 +38,11 @@ public final class WebSocketExtensionTestUtil {
     public static HttpRequest newUpgradeRequest(String ext) {
         HttpRequest req = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat");
+        addUpgradeHeaders(req, ext);
+        return req;
+    }
 
+    static void addUpgradeHeaders(HttpRequest req, String ext) {
         req.headers().set(HttpHeaderNames.HOST, "server.example.com");
         req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString().toLowerCase());
         req.headers().set(HttpHeaderNames.CONNECTION, "Upgrade");
@@ -46,8 +50,6 @@ public final class WebSocketExtensionTestUtil {
         if (ext != null) {
             req.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, ext);
         }
-
-        return req;
     }
 
     public static HttpResponse newUpgradeResponse(String ext) {

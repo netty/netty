@@ -7,6 +7,10 @@ services:
     build:
       context: ../
       dockerfile: docker/Dockerfile.cross_compile_riscv64
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross-riscv64
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross-riscv64,mode=max,ignore-error=true
 
   cross-compile-riscv64-common: &cross-compile-riscv64-common
     depends_on: [ cross-compile-riscv64-runtime-setup ]

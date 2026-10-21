@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -282,7 +283,7 @@ public class NonStickyEventExecutorGroupTest {
 
     private static void execute(EventExecutorGroup group, CountDownLatch startLatch) throws Throwable {
         final EventExecutor executor = group.next();
-        assertTrue(executor instanceof OrderedEventExecutor);
+        assertInstanceOf(OrderedEventExecutor.class, executor);
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicInteger last = new AtomicInteger();
         int tasks = 10000;

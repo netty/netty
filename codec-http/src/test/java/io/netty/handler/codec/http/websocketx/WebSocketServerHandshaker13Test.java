@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTest {
 
@@ -99,12 +99,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
 
         ch.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(new byte[8])));
         ByteBuf buffer = ch.readOutbound();
-        try {
-            ch.writeInbound(buffer);
-            fail();
-        } catch (CorruptedWebSocketFrameException expected) {
-            // expected
-        }
+        assertThrows(CorruptedWebSocketFrameException.class, () -> ch.writeInbound(buffer));
         ReferenceCounted closeMessage = ch.readOutbound();
         assertInstanceOf(ByteBuf.class, closeMessage);
         closeMessage.release();

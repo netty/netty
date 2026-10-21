@@ -33,6 +33,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
+
+    @Test
+    public void testVarHandleQueuesWhenUnsafeIsUnavailable() {
+        assumeTrue(!PlatformDependent.hasUnsafe() && PlatformDependent.hasJctoolsVarHandle());
+
+        assertEquals("org.jctools.queues.varhandle.MpscUnboundedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscChunkedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.SpscLinkedVarHandleQueue",
+                PlatformDependent.newSpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscVarHandleArrayQueue",
+                PlatformDependent.newFixedMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.unpadded.MpscVarHandleUnpaddedArrayQueue",
+                PlatformDependent.newFixedMpscUnpaddedQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpmcVarHandleArrayQueue",
+                PlatformDependent.newFixedMpmcQueue(16).getClass().getName());
+    }
+
     @Test
     public void testEqualsConsistentTime() {
         testEquals(new EqualityChecker() {

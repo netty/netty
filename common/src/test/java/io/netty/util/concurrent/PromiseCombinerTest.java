@@ -24,7 +24,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -64,12 +63,7 @@ public class PromiseCombinerTest {
 
     @Test
     public void testNullArgument() {
-        try {
-            combiner.finish(null);
-            fail();
-        } catch (NullPointerException expected) {
-            // expected
-        }
+        assertThrows(NullPointerException.class, () -> combiner.finish(null));
         combiner.finish(p1);
         verify(p1).trySuccess(null);
     }
@@ -197,28 +191,13 @@ public class PromiseCombinerTest {
 
         Future<?> future = mock(Future.class);
 
-        try {
-            combiner.add(future);
-            fail();
-        } catch (IllegalStateException expected) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, () -> combiner.add(future));
 
-        try {
-            combiner.addAll(future);
-            fail();
-        } catch (IllegalStateException expected) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, () -> combiner.addAll(future));
 
         @SuppressWarnings("unchecked")
         Promise<Void> promise = (Promise<Void>) mock(Promise.class);
-        try {
-            combiner.finish(promise);
-            fail();
-        } catch (IllegalStateException expected) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, () -> combiner.finish(promise));
     }
 
     private static void verifyFail(Promise<Void> p, Throwable cause) {

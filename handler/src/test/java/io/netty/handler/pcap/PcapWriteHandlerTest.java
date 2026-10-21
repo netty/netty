@@ -66,8 +66,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class PcapWriteHandlerTest {
 
@@ -444,12 +444,8 @@ public class PcapWriteHandlerTest {
             assertEquals(24, pcapBuffer.readableBytes());
 
             // Verify thrown exception
-            try {
-                embeddedChannel.checkException();
-                fail();
-            } catch (Throwable t) {
-                assertSame(exception, t);
-            }
+            Throwable t = assertThrows(Throwable.class, () -> embeddedChannel.checkException());
+            assertSame(exception, t);
 
             assertFalse(embeddedChannel.finishAndReleaseAll());
         } finally {
@@ -868,9 +864,7 @@ public class PcapWriteHandlerTest {
 
         // Verify thrown exception
         try {
-            embeddedChannel.checkException();
-            fail();
-        } catch (Throwable t) {
+            Throwable t = assertThrows(Throwable.class, () -> embeddedChannel.checkException());
             assertSame(exception, t);
         } finally {
             pcapBuffer.release();

@@ -26,6 +26,7 @@ import java.util.List;
 
 public class JZlibDecoder extends ZlibDecoder {
 
+    private static final int MIN_OUTPUT_BUFFER_SIZE = 512;
     private final Inflater z = new Inflater();
     private byte[] dictionary;
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
@@ -167,7 +168,8 @@ public class JZlibDecoder extends ZlibDecoder {
 
             try {
                 loop: for (;;) {
-                    decompressed = prepareDecompressBuffer(ctx, decompressed, z.avail_in << 1);
+                    decompressed = prepareDecompressBuffer(
+                            ctx, decompressed, Math.max(z.avail_in << 1, MIN_OUTPUT_BUFFER_SIZE));
                     z.avail_out = decompressed.writableBytes();
                     z.next_out = decompressed.array();
                     z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();

@@ -47,11 +47,13 @@ jobs:
       contents: read  # for actions/checkout to fetch code
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository

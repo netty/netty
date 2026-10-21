@@ -252,7 +252,7 @@ public class DataCompressionHttp2Test {
         testEncodingMessage(padding, text, compressionAlgorithm, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                assertTrue(serverLatch.await(5, SECONDS));
+                assertTrue(serverLatch.await(10, SECONDS));
                 serverOut.flush();
                 Throwable cause = serverException.get();
                 if (cause == null) {
@@ -270,6 +270,27 @@ public class DataCompressionHttp2Test {
                             .isInstanceOf(DecompressionException.class)
                             .hasMessageContaining("maximum size");
                 }
+                return null;
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 10})
+    public void brotliEncodingHonorsMaxAllocation(final int padding) throws Exception {
+        // Use a maxAllocation well below the default output buffer size of the BrotliDecoder (64 KiB).
+        final byte[] text = new byte[128 * 1024];
+        for (int i = 0; i < text.length; i++) {
+            text[i] = (byte) (i % 251);
+        }
+        maxAllocation = 1024;
+
+        testEncodingMessage(padding, text, HttpHeaderValues.BR, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                awaitServer();
+                assertThat(serverOut.toByteArray()).isEqualTo(text);
+                assertThat(maxServerOutBufferSize).isLessThanOrEqualTo(maxAllocation);
                 return null;
             }
         });

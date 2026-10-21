@@ -33,7 +33,10 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Queue;
+import java.util.Set;
 import javax.net.ssl.SSLException;
 
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
@@ -108,6 +111,12 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     // Choose 100 which is what is used most of the times as default.
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
+    // Outbound child channels opened via Http2StreamChannelBootstrap that were not closed yet. Until their first
+    // HEADERS frame is written their stream is unknown to the connection, so closing the connection doesn't close them.
+    private final Set<AbstractHttp2StreamChannel> outboundStreamChannels = new HashSet<AbstractHttp2StreamChannel>();
+    // Shared by all outbound child channels: removes a child channel from outboundStreamChannels once it is closed.
+    private final ChannelFutureListener outboundStreamChannelCloseListener =
+            future -> outboundStreamChannels.remove(future.channel());
     private boolean parentReadInProgress;
     private int idCount;
 
@@ -165,6 +174,23 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (!outboundStreamChannels.isEmpty()) {
+            // The streams known to the connection were closed already. Close the outbound child channels whose
+            // stream was never created as well, so they see channelInactive() and their closeFuture() completes.
+            // Iterate over a copy, as closing a child channel removes it from outboundStreamChannels (see
+            // outboundStreamChannelCloseListener).
+            for (AbstractHttp2StreamChannel childChannel :
+                    new ArrayList<AbstractHttp2StreamChannel>(outboundStreamChannels)) {
+                if (childChannel.stream().state() == Http2Stream.State.IDLE) {
+                    childChannel.unsafe().closeForcibly();
+                }
+            }
+        }
+        ctx.fireChannelInactive();
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         parentReadInProgress = true;
         if (msg instanceof Http2StreamFrame) {
@@ -180,7 +206,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
-                channel.pipeline().fireUserEventTriggered(msg);
+                channel.fireChildUserEventTriggered(msg);
 
                 // RST frames will also trigger closing of the streams which then will call
                 // AbstractHttp2StreamChannel.streamClosed()
@@ -276,7 +302,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.
     Http2StreamChannel newOutboundStream() {
-        return new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
+        final Http2MultiplexHandlerStreamChannel childChannel =
+                new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
+        outboundStreamChannels.add(childChannel);
+        childChannel.closeFuture().addListener(outboundStreamChannelCloseListener);
+        return childChannel;
     }
 
     @Override
@@ -287,7 +317,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
             try {
-                childChannel.pipeline().fireExceptionCaught(cause.getCause());
+                childChannel.fireChildExceptionCaught(cause.getCause());
             } finally {
                 // Close with the correct error that causes this stream exception.
                 // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
@@ -313,7 +343,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             public boolean visit(Http2FrameStream stream) {
                 AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                         ((DefaultHttp2FrameStream) stream).attachment;
-                childChannel.pipeline().fireExceptionCaught(cause);
+                childChannel.fireChildExceptionCaught(cause);
                 return true;
             }
         });
@@ -338,7 +368,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                         final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                                 ((DefaultHttp2FrameStream) stream).attachment;
-                        childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+                        childChannel.fireChildUserEventTriggered(goAwayFrame.retainedDuplicate());
                     }
                     return true;
                 }

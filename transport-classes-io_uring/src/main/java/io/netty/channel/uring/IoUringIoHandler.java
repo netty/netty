@@ -71,7 +71,8 @@ public final class IoUringIoHandler implements IoHandler {
     private final CleanableDirectBuffer timeoutMemoryCleanable;
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
-    private final IovArray iovArray;
+    private final IoUringSharedIovArray iovArray;
+    private final IovArrayReferenceCollector iovArrayReferenceCollector;
     private final MsgHdrMemoryArray msgHdrMemoryArray;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
@@ -89,6 +90,9 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
     private final ThreadAwareExecutor executor;
+
+    // Caching completion callback to avoid creating a new instance for each poll.
+    private final CompletionCallback completionCallback = this::handle;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -144,7 +148,8 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(KERNEL_TIMESPEC_SIZE);
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
-        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
+        iovArrayReferenceCollector = new IovArrayReferenceCollector();
+        iovArray = new IoUringSharedIovArray(IoUring.NUM_ELEMENTS_IOVEC);
         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
     }
 
@@ -181,13 +186,25 @@ public final class IoUringIoHandler implements IoHandler {
         int ioCompletions;
         if (context.shouldReportActiveIoTime()) {
             long activeIoStartTimeNanos = System.nanoTime();
-            ioCompletions = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
             long activeIoEndTimeNanos = System.nanoTime();
             context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } else {
-            ioCompletions = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
         }
         return ioCompletions;
+    }
+
+    int submitIfFullAndGetRemaining() {
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        if (submissionQueue.remaining() == 0) {
+            if (submitAndClearNow(submissionQueue) == 0) {
+                throw new IllegalStateException("Submission queue is full and no submissions were accepted");
+            }
+        }
+        return submissionQueue.remaining();
     }
 
     private boolean needSubmit(int sqFlags) {
@@ -427,7 +444,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.submitAndGet();
 
         while (completionQueue.hasCompletions()) {
-            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, completionCallback);
             if (submissionQueue.count() > 0) {
                 submissionQueue.submitAndGetNow();
             }
@@ -453,7 +470,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), RINGFD_TOKEN);
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
-        completionQueue.process(this::handle);
+        completionQueue.process(completionCallback);
         for (IoUringBufferRing ioUringBufferRing : registeredIoUringBufferRing.values()) {
             ioUringBufferRing.close();
         }
@@ -755,9 +772,20 @@ public final class IoUringIoHandler implements IoHandler {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
-            assert iovArray.count() == 0;
+            // Without anything to submit all the entries were submitted already, so they can be reused too.
+            iovArray.clear();
         }
-        return iovArray;
+        IovArray next = iovArray.next();
+        iovArrayReferenceCollector.setIovArray(next);
+        return next;
+    }
+
+    /**
+     * Returns the {@link IovArrayReferenceCollector} paired with {@link #iovArray()}. A plain getter: callers are
+     * expected to have already called {@link #iovArray()} to make room, so this must not itself submit-and-clear.
+     */
+    IovArrayReferenceCollector iovArrayReferenceCollector() {
+        return iovArrayReferenceCollector;
     }
 
     MsgHdrMemoryArray msgHdrMemoryArray() {

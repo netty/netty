@@ -25,9 +25,11 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SystemPropertyUtil;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.RevokedStatus;
@@ -38,6 +40,7 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -53,12 +56,30 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
     public static final AttributeKey<Boolean> OCSP_PIPELINE_ATTRIBUTE =
             AttributeKey.newInstance("io.netty.handler.ssl.ocsp.pipeline");
 
+    /**
+     * Tolerate some clock skew in the OCSP validity time. Default to 15 minutes, which is the same as the JDK.
+     */
+    private static final long CLOCK_SKEW_TOLERANCE_MILLIS = getClockSkewTolerance();
+
+    private static long getClockSkewTolerance() {
+        long defaultToleranceSeconds = TimeUnit.MINUTES.toSeconds(15);
+        long maxToleranceSeconds = TimeUnit.DAYS.toSeconds(2);
+        long configuredToleranceSeconds = SystemPropertyUtil.getLong("io.netty.handler.ssl.ocsp.clockSkew",
+            SystemPropertyUtil.getLong("com.sun.security.ocsp.clockSkew", defaultToleranceSeconds));
+        if (configuredToleranceSeconds < 0 || configuredToleranceSeconds > maxToleranceSeconds) {
+            // Ignore negative and extremely large values.
+            configuredToleranceSeconds = defaultToleranceSeconds;
+        }
+        return TimeUnit.SECONDS.toMillis(configuredToleranceSeconds);
+    }
+
     private final boolean closeAndThrowIfNotValid;
     private final boolean validateNonce;
     private final IoTransport ioTransport;
     private final DnsNameResolver dnsNameResolver;
     private boolean ocspQueryInProgress;
     private boolean readPending;
+    private boolean discardInbound;
 
     /**
      * Create a new {@link OcspServerCertificateValidator} instance without nonce validation
@@ -140,6 +161,15 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
     }
 
     @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (discardInbound) {
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+        super.channelRead(ctx, msg);
+    }
+
+    @Override
     public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent sslHandshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
@@ -160,22 +190,28 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                 ocspQueryInProgress = true;
                 ocspRespPromise.addListener((GenericFutureListener<Future<BasicOCSPResp>>) future -> {
                     ocspQueryInProgress = false;
+                    // Assume revoked as default.
+                    OcspResponse.Status status = OcspResponse.Status.REVOKED;
                     try {
                         // If Future is success then we have successfully received OCSP response
                         // from OCSP responder. We will validate it now and process.
                         if (future.isSuccess()) {
                             SingleResp response = future.getNow().getResponses()[0];
 
-                            Date current = new Date();
                             Date thisUpdate = response.getThisUpdate();
-                        Date nextUpdate = response.getNextUpdate();
-                        if (thisUpdate == null || !current.after(thisUpdate) ||
-                                    (nextUpdate != null && !current.before(nextUpdate))) {
+                            Date nextUpdate = response.getNextUpdate();
+                            long now = System.currentTimeMillis();
+                            Date nowLower = new Date(now - CLOCK_SKEW_TOLERANCE_MILLIS);
+                            Date nowUpper = new Date(now + CLOCK_SKEW_TOLERANCE_MILLIS);
+                            if (thisUpdate == null || nowUpper.before(thisUpdate) ||
+                                nowLower.after(nextUpdate == null ? thisUpdate : nextUpdate)) {
                                 ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
+                                if (closeAndThrowIfNotValid) {
+                                    ctx.close();
+                                }
                                 return;
                             }
 
-                            OcspResponse.Status status;
                             if (response.getCertStatus() == null) {
                                 // 'null' means certificate is valid
                                 status = OcspResponse.Status.VALID;
@@ -186,14 +222,14 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             }
 
                             ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                    new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
+                                new OcspResponse(status, thisUpdate, nextUpdate)));
 
                             // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
                             // to 'true' then close the channel and throw an exception.
                             if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
                                 // Certificate is not valid. Throw
                                 ctx.fireExceptionCaught(new OCSPException(
-                                        "Certificate not valid. Status: " + status));
+                                    "Certificate not valid. Status: " + status));
                                 ctx.close();
                             }
                         } else {
@@ -202,10 +238,26 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                                 ctx.close();
                             }
                         }
+                    } catch (Throwable th) {
+                        ctx.fireExceptionCaught(th);
+                        if (closeAndThrowIfNotValid) {
+                            ctx.close();
+                        }
                     } finally {
-                        ctx.fireUserEventTriggered(evt);
-                        // Lets remove ourselves from the pipeline because we are done processing validation.
-                        ctx.pipeline().remove(this);
+                        if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
+                            // The peer can't be trusted, so drop all bytes on the floor and stay in the pipeline
+                            // until the channel is closed. This way neither the bytes we buffered nor anything that
+                            // arrives later (for example data still buffered in the SslHandler) is handed to the
+                            // following handlers.
+                            discardInbound = true;
+                            internalBuffer().clear();
+                            ctx.fireUserEventTriggered(evt);
+                        } else {
+                            ctx.fireUserEventTriggered(evt);
+                            // Lets remove ourselves from the pipeline because we are done processing validation.
+                            // This will also forward all the buffered bytes to the next handler.
+                            ctx.pipeline().remove(this);
+                        }
                         if (readPending) {
                             readPending = false;
                             ctx.read();

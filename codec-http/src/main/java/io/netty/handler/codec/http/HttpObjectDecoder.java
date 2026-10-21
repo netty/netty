@@ -29,7 +29,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -840,33 +839,34 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         }
-        if (message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING) &&
+        boolean hasTransferEncoding = message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING);
+        if (hasTransferEncoding &&
                 message.protocolVersion() != HttpVersion.HTTP_1_1 &&
                 useRfc9112TransferEncoding) {
             // The Transfer-Encoding header is not permitted at all with HTTP protocols older than 1.1,
             // and such requests must be rejected.
             throw TRANSFER_ENCODING_NOT_ALLOWED;
         }
-        if (HttpUtil.isTransferEncodingChunked(message)) {
+        boolean isTransferEncodingChunked = HttpUtil.isTransferEncodingChunked(message);
+        // Unlike responses, requests without a final chunked coding cannot use connection close for framing.
+        // See https://datatracker.ietf.org/doc/html/rfc9112#section-6.3-4
+        if (hasTransferEncoding && !isTransferEncodingChunked && isDecodingRequest()) {
+            throw new IllegalArgumentException("The final transfer coding must be chunked for HTTP requests");
+        }
+        if (isTransferEncodingChunked) {
             this.chunked = true;
+            // The "chunked must be the last encoding" rule (RFC 9112 6.1) is not specific to
+            // HTTP/1.1 -- it applies to any message that carries a Transfer-Encoding header at
+            // all. This validation must not be gated on protocolVersion(), since a decoder
+            // configured with useRfc9112TransferEncoding(false) (see HttpDecoderConfig) can
+            // still reach this point for HTTP/1.0 and other non-1.1 messages, and the ordering
+            // requirement applies to those just as much as it does to HTTP/1.1.
+            // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
+            if (!isLastTransferEncodingChunked(headers.getAll(HttpHeaderNames.TRANSFER_ENCODING))) {
+                throw new IllegalArgumentException(
+                        "chunked must be the last encoding present in the Transfer-Encoding header");
+            }
             if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                Iterator<? extends CharSequence> encodingIt =
-                        message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
-                // Validate that chunked is the last encoding.
-                // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
-                CharSequence v = null;
-                while (encodingIt.hasNext()) {
-                    v = encodingIt.next();
-                }
-                final int vLen = v.length();
-                final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
-                // We only need to validate if we have more then the chunked value length contained as otherwise
-                // we know it is only chunked.
-                if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
-                        HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
-                        throw new IllegalArgumentException(
-                                "chunked must be the last encoding present in the Transfer-Encoding header");
-                }
                 if (!contentLengthFields.isEmpty()) {
                     handleTransferEncodingChunkedWithContentLength(message);
                 }
@@ -877,6 +877,42 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return State.READ_FIXED_LENGTH_CONTENT;
         }
         return State.READ_VARIABLE_LENGTH_CONTENT;
+    }
+
+    private static boolean isLastTransferEncodingChunked(List<String> transferEncodingFields) {
+        boolean chunkedSeen = false;
+        boolean lastChunked = false;
+        int chunkedLength = HttpHeaderValues.CHUNKED.length();
+        for (int i = 0; i < transferEncodingFields.size(); ++i) {
+            String value = transferEncodingFields.get(i);
+            int start = 0;
+            while (start <= value.length()) {
+                int comma = value.indexOf(',', start);
+                int end = comma == -1 ? value.length() : comma;
+                while (start < end && (value.charAt(start) == ' ' || value.charAt(start) == '\t')) {
+                    ++start;
+                }
+                while (end > start && (value.charAt(end - 1) == ' ' || value.charAt(end - 1) == '\t')) {
+                    --end;
+                }
+                if (start < end) {
+                    lastChunked = end - start == chunkedLength &&
+                            HttpHeaderValues.CHUNKED.regionMatches(true, 0, value, start, chunkedLength);
+                    if (lastChunked) {
+                        if (chunkedSeen) {
+                            throw new IllegalArgumentException(
+                                    "chunked transfer coding must not be applied more than once");
+                        }
+                        chunkedSeen = true;
+                    }
+                }
+                if (comma == -1) {
+                    break;
+                }
+                start = comma + 1;
+            }
+        }
+        return lastChunked;
     }
 
     private static boolean isLengthEqual(String lengthValue, long contentLength) {
@@ -926,8 +962,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      *     </li>
      * </ul>
      * <p>
-     * <strong>Note:</strong> This method is only called for {@code HTTP/1.1} requests. Earlier HTTP protocol versions
-     * do not support the {@code Transfer-Encoding} header, and will reject requests that include it.
+     * <strong>Note:</strong> This method is only called for {@code HTTP/1.1} requests. Under the
+     * default configuration, earlier HTTP protocol versions carrying a {@code Transfer-Encoding}
+     * header are rejected before reaching this point. However, if
+     * {@link HttpDecoderConfig#setUseRfc9112TransferEncoding(boolean)} is set to {@code false}
+     * (see above), that rejection does not happen — a non-{@code HTTP/1.1} message can then
+     * legitimately carry {@code Transfer-Encoding} without being rejected for it, though this
+     * method specifically remains {@code HTTP/1.1}-only and is not invoked for such messages.
      */
     @SuppressWarnings("unused")
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
@@ -1014,36 +1055,28 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
-    /**
-     * It skips any whitespace char and return the number of skipped bytes.
-     */
-    private static int skipWhiteSpaces(byte[] hex, int start, int length) {
-        for (int i = 0; i < length; i++) {
-            if (!isWhitespace(hex[start + i])) {
-                return i;
-            }
-        }
-        return length;
-    }
-
     private static int getChunkSize(byte[] hex, int start, int length) {
-        // trim the leading bytes of white spaces, if any
-        final int skipped = skipWhiteSpaces(hex, start, length);
-        if (skipped == length) {
-            // empty case
-            throw new NumberFormatException();
+        if (length == 0) { // Empty case - not allowed
+            throw new NumberFormatException("Empty chunk size");
         }
-        start += skipped;
-        length -= skipped;
         long result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
             if (digit == -1) {
-                // uncommon path
-                final byte b = hex[start + i];
-                if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
-                    if (i == 0) {
-                        // empty case
+                // Uncommon path:
+                // We must either hit the chunk header line (implicit CRLF from the header line parser),
+                // or a ';' character for chunk-extensions, or the "bad whitespace" allowed to precede ';'.
+                byte b = hex[start + i];
+                int j = 0;
+                while (b == HttpConstants.SP || b == HttpConstants.HT) { // Skip BWS
+                    int index = i + (++j);
+                    if (index >= length) {
+                        throw new NumberFormatException("Invalid chunk size; expected extensions");
+                    }
+                    b = hex[start + index];
+                }
+                if (b == ';') {
+                    if (i == 0) { // Empty case - not allowed
                         throw new NumberFormatException("Empty chunk size");
                     }
                     return (int) result;
