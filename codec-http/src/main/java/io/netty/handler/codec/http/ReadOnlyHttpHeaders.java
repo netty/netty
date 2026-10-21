@@ -383,7 +383,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         ReadOnlyStringValueIterator(CharSequence name) {
             this.name = name;
             nameHash = AsciiString.hashCode(name);
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(0);
         }
 
         @Override
@@ -397,7 +397,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
                 throw new NoSuchElementException();
             }
             String value = nameValuePairs[nextNameIndex + 1].toString();
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(nextNameIndex + 2);
             return value;
         }
 
@@ -406,8 +406,8 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             throw new UnsupportedOperationException("read only");
         }
 
-        private int findNextValue() {
-            for (int i = nextNameIndex; i < nameValuePairs.length; i += 2) {
+        private int findNextValue(int fromIndex) {
+            for (int i = fromIndex; i < nameValuePairs.length; i += 2) {
                 final CharSequence roName = nameValuePairs[i];
                 if (nameHash == AsciiString.hashCode(roName) && contentEqualsIgnoreCase(name, roName)) {
                     return i;
@@ -425,7 +425,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         ReadOnlyValueIterator(CharSequence name) {
             this.name = name;
             nameHash = AsciiString.hashCode(name);
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(0);
         }
 
         @Override
@@ -439,7 +439,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
                 throw new NoSuchElementException();
             }
             CharSequence value = nameValuePairs[nextNameIndex + 1];
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(nextNameIndex + 2);
             return value;
         }
 
@@ -448,8 +448,8 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             throw new UnsupportedOperationException("read only");
         }
 
-        private int findNextValue() {
-            for (int i = nextNameIndex; i < nameValuePairs.length; i += 2) {
+        private int findNextValue(int fromIndex) {
+            for (int i = fromIndex; i < nameValuePairs.length; i += 2) {
                 final CharSequence roName = nameValuePairs[i];
                 if (nameHash == AsciiString.hashCode(roName) && contentEqualsIgnoreCase(name, roName)) {
                     return i;
