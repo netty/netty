@@ -1,7 +1,10 @@
 FROM --platform=linux/amd64 centos:7.6.1810
 
 ARG gcc_version=10.3-2021.07
+# Arm only publishes an MD5 for this release, so this SHA-256 was computed from the download (MD5 cross-checked).
+ARG gcc_sha256=1e33d53dea59c8de823bbdfe0798280bdcd138636c7060da9d77a97ded095a84
 ENV GCC_VERSION $gcc_version
+ENV GCC_SHA256 $gcc_sha256
 ENV SOURCE_DIR /root/source
 
 # Update to use the vault
@@ -18,6 +21,7 @@ WORKDIR $SOURCE_DIR
 
 # Install aarch64 gcc 10.2 toolchain
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/binrel/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && \
+   echo "$GCC_SHA256  gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz" | sha256sum -c - && \
    tar xf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
 ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 
