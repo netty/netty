@@ -308,6 +308,18 @@ public class AsciiStringCharacterTest {
     }
 
     @Test
+    public void testStaticTrimCharSequence() {
+        // Neither String nor AsciiString, so the generic code path is used.
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc  ")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc  ")).toString());
+        assertEquals("a", AsciiString.trim(new StringBuilder(" a ")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("   ")).toString());
+    }
+
+    @Test
     public void testIndexOfChar() {
         assertEquals(-1, AsciiString.indexOf(null, 'a', 0));
         assertEquals(-1, AsciiString.of("").indexOf('a', 0));
