@@ -29,6 +29,7 @@ import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1073,6 +1074,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             closed = true;
             if (handler == null) {
                 ctx.close(CompletionHandler.ignore());
+            } else if (handler instanceof Promise) {
+                // The original promise may be completed while we waited for the active streams, so don't pass it to
+                // close(...). Notify it without failing if it's already done; a cancellation still prevents the close.
+                ctx.close(PromiseNotifier.cascade(false, ctx.<Void>newPromise(), (Promise<Void>) handler));
             } else {
                 ctx.close(handler);
             }
