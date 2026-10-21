@@ -158,6 +158,10 @@ public class AsciiStringCharacterTest {
         assertContains(a, b, false, false);
         a += "0";
         assertContains(a, b, false, true);
+
+        assertContains("aab", "ab", true, true);
+        assertContains("ababc", "abc", true, true);
+        assertContains("xxYz", "xyz", false, true);
     }
 
     private static void assertContains(String a, String b, boolean caseSensitiveEquals, boolean caseInsenstaiveEquals) {
