@@ -135,6 +135,22 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
+    public void testDecodeCodeWithNonDigit() {
+        // Each of these used to be decoded as a valid code (490, 190 and 391).
+        for (final String line : new String[] { "5x0 denied\r\n", "2:0 hm\r\n", "4?1 later\r\n" }) {
+            final EmbeddedChannel channel = newChannel();
+            DecoderException exception = assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    channel.writeInbound(newBuffer(line));
+                }
+            });
+            assertNull(exception.getCause());
+            assertFalse(channel.finishAndReleaseAll());
+        }
+    }
+
+    @Test
     public void testDecodeLineWithOnlyCodeAndNoSeparator() {
         final EmbeddedChannel channel = newChannel();
         // A line consisting of just the 3-digit code (no separator, no detail) must be rejected as an invalid
