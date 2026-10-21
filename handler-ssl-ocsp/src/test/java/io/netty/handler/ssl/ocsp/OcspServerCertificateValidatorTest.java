@@ -51,6 +51,7 @@ import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.GeneralName;
@@ -110,60 +111,23 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
     private static final long NEXT_UPDATE_AHEAD_MILLIS = TimeUnit.HOURS.toMillis(1);
 
+    /**
+     * Full round trip over plain HTTP against a local OCSP responder: a good, fresh response with a
+     * {@code nextUpdate} must result in a {@link OcspResponse.Status#VALID} verdict and an open channel.
+     */
     @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
-        final AtomicBoolean ocspStatus = new AtomicBoolean();
-        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
-        final SslContext sslContext = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-
-        try {
-            final CountDownLatch latch = new CountDownLatch(1);
-
-            Bootstrap bootstrap = new Bootstrap()
-                    .group(eventLoopGroup)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.TCP_NODELAY, true)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) {
-                            ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(sslContext.newHandler(ch.alloc(), "apple.com", 443));
-                            pipeline.addLast(new OcspServerCertificateValidator(false, createDefaultTransport()));
-                            pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
-                                    // NOOP
-                                }
-
-                                @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                                    if (evt instanceof OcspValidationEvent) {
-                                        OcspValidationEvent event = (OcspValidationEvent) evt;
-
-                                        ocspStatus.set(event.response().status() == OcspResponse.Status.VALID);
-                                        ctx.channel().close();
-                                        latch.countDown();
-                                    }
-                                }
-                            });
-                        }
-                    });
-
-            ChannelFuture channelFuture = bootstrap.connect("apple.com", 443);
-            channelFuture.sync();
-
-            // Wait for maximum of 1 minute for Ocsp validation to happen
-            latch.await(1, TimeUnit.MINUTES);
-            assertTrue(ocspStatus.get());
-
-            // Wait for Channel to be closed
-            channelFuture.channel().closeFuture().sync();
-        } finally {
-            eventLoopGroup.shutdownGracefully();
-            ReferenceCountUtil.release(sslContext);
-        }
+        ResponseSpec responseSpec = new ResponseSpec(
+            false /*revoked*/, FRESH_THIS_UPDATE_AGE_MILLIS, NEXT_UPDATE_AHEAD_MILLIS);
+        validateCertificate(responseSpec, outcome -> {
+            assertEquals(1, outcome.ocspRequests, "OCSP responder must be queried");
+            assertTrue(outcome.verdictReceived, "Must deliver verdict to the application");
+            assertEquals(OcspResponse.Status.VALID, outcome.status);
+            assertNull(outcome.failure);
+            assertFalse(outcome.channelClosedFuture.isDone(), "Channel must not be closed");
+            assertEquals(SERVER_PAYLOAD_LENGTH, outcome.bytesReceived);
+        });
     }
 
     /**

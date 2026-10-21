@@ -39,7 +39,13 @@ RUN dnf install -yq \
  zip
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://beta.sdkman.io?ci=true" | bash
+ARG sdkman_install_sha256=76129982e764737a5dcbab50efcf854c9688b42e7e50a8a6c7e3fa6d52782aa5
+ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
+# The installer script is not versioned by SDKMAN!, so the pinned SHA-256 needs to be updated when it changes.
+RUN curl -fsSL -o /tmp/sdkman-install.sh "https://beta.sdkman.io?ci=true" && \
+    echo "$SDKMAN_INSTALL_SHA256  /tmp/sdkman-install.sh" | sha256sum -c - && \
+    bash /tmp/sdkman-install.sh && \
+    rm -f /tmp/sdkman-install.sh
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
@@ -54,8 +60,17 @@ RUN echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 ENV PATH /root/.sdkman/candidates/java/current/bin:/root/.sdkman/candidates/maven/current/bin:$PATH
 ENV JAVA_HOME=/root/.sdkman/candidates/java/current
 
+ARG rustup_version=1.29.1
+ARG rustup_sha256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+ENV RUSTUP_VERSION=$rustup_version
+ENV RUSTUP_SHA256=$rustup_sha256
+
 # install rust and setup PATH
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl -fsSL -o /tmp/rustup-init https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/x86_64-unknown-linux-gnu/rustup-init && \
+    echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - && \
+    chmod +x /tmp/rustup-init && \
+    /tmp/rustup-init -y && \
+    rm -f /tmp/rustup-init
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 RUN mkdir "$HOME/sources" && \

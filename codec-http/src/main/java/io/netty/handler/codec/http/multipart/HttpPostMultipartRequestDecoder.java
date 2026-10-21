@@ -755,7 +755,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         Attribute attribute;
                         try {
                             attribute = getContentDispositionAttribute(values);
-                        } catch (NullPointerException | IllegalArgumentException e) {
+                        } catch (NullPointerException | IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
                             throw new ErrorDataDecoderException(e);
                         }
                         currentFieldAttributes.put(attribute.getName(), attribute);

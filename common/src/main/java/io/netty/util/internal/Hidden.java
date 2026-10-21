@@ -105,6 +105,11 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.buffer.AdaptivePoolingAllocator$Magazine",
+                    "free"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.SslHandler",
                     "handshake"
             );

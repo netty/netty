@@ -153,6 +153,17 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- The ProcessHandle compile-time stub lives in java.lang and must
+               not be visible to Surefire's forked JVM on Java 8. -->
+          <classpathDependencyExcludes>
+            <classpathDependencyExclude>io.netty:netty-varhandle-stub</classpathDependencyExclude>
+          </classpathDependencyExcludes>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
           <execution>

@@ -47,12 +47,12 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
                 checkpoint(State.READ_USERNAME);
             }
             case READ_USERNAME: {
-                int fieldLength = byteBuf.readByte();
+                int fieldLength = byteBuf.readUnsignedByte();
                 username = byteBuf.readString(fieldLength, CharsetUtil.US_ASCII);
                 checkpoint(State.READ_PASSWORD);
             }
             case READ_PASSWORD: {
-                int fieldLength = byteBuf.readByte();
+                int fieldLength = byteBuf.readUnsignedByte();
                 String password = byteBuf.readString(fieldLength, CharsetUtil.US_ASCII);
                 out.add(new SocksAuthRequest(username, password));
                 break;
