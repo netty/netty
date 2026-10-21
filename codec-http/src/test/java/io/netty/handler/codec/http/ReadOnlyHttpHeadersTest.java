@@ -116,6 +116,30 @@ public class ReadOnlyHttpHeadersTest {
     }
 
     @Test
+    public void valueStringIterator() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false,
+                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, ACCEPT, APPLICATION_OCTET_STREAM);
+        Iterator<String> itr = headers.valueStringIterator(ACCEPT);
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_JSON.contentEqualsIgnoreCase(itr.next()));
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_OCTET_STREAM.contentEqualsIgnoreCase(itr.next()));
+        assertFalse(itr.hasNext());
+    }
+
+    @Test
+    public void valueCharSequenceIterator() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false,
+                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, ACCEPT, APPLICATION_OCTET_STREAM);
+        Iterator<CharSequence> itr = headers.valueCharSequenceIterator(ACCEPT);
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_JSON.contentEqualsIgnoreCase(itr.next()));
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_OCTET_STREAM.contentEqualsIgnoreCase(itr.next()));
+        assertFalse(itr.hasNext());
+    }
+
+    @Test
     public void validateNamesFail() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
