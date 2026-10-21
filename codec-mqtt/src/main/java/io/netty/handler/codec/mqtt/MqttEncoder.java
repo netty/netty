@@ -73,6 +73,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
+    // Strings and binary data are prefixed with a two byte length.
+    private static final int MAX_FIELD_LENGTH = 65535;
+
     private MqttEncoder() {
         super(MqttMessage.class);
     }
@@ -160,7 +163,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         if (!isValidClientId(mqttVersion, DEFAULT_MAX_CLIENT_ID_LENGTH, clientIdentifier, false)) {
             throw new MqttIdentifierRejectedException("invalid clientIdentifier");
         }
-        int clientIdentifierBytes = utf8Bytes(clientIdentifier);
+        int clientIdentifierBytes = checkFieldLength(utf8Bytes(clientIdentifier), "clientIdentifier");
         payloadBufferSize += 2 + clientIdentifierBytes;
 
         // Will topic and message
@@ -172,6 +175,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             if (!isValidPublishTopicName(willTopic)) {
                 throw new MqttIdentifierRejectedException("invalid willTopic");
             }
+            checkFieldLength(willTopicBytes, "willTopic");
+            checkFieldLength(willMessageBytes.length, "willMessage");
             payloadBufferSize += 2 + willTopicBytes;
             payloadBufferSize += 2 + willMessageBytes.length;
         }
@@ -182,12 +187,14 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             if (!isValidUserName(userName)) {
                 throw new MqttIdentifierRejectedException("invalid userName");
             }
+            checkFieldLength(userNameBytes, "userName");
             payloadBufferSize += 2 + userNameBytes;
         }
 
         byte[] password = payload.passwordInBytes();
         byte[] passwordBytes = password != null ? password : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.hasPassword()) {
+            checkFieldLength(passwordBytes.length, "password");
             payloadBufferSize += 2 + passwordBytes.length;
         }
 
@@ -306,7 +313,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
             for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
                 String topicName = topic.topicName();
-                int topicNameBytes = utf8Bytes(topicName);
+                int topicNameBytes = checkFieldLength(utf8Bytes(topicName), "topicName");
                 payloadBufferSize += 2 + topicNameBytes;
                 payloadBufferSize += 1;
             }
@@ -367,7 +374,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             MqttUnsubscribePayload payload = message.payload();
 
             for (String topicName : payload.topics()) {
-                int topicNameBytes = utf8Bytes(topicName);
+                int topicNameBytes = checkFieldLength(utf8Bytes(topicName), "topicName");
                 payloadBufferSize += 2 + topicNameBytes;
             }
 
@@ -473,7 +480,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         if (!isValidPublishTopicName(topicName)) {
             throw new MqttIdentifierRejectedException("invalid topicName");
         }
-        int topicNameBytes = utf8Bytes(topicName);
+        int topicNameBytes = checkFieldLength(utf8Bytes(topicName), "topicName");
 
         ByteBuf propertiesBuf = encodePropertiesIfNeeded(mqttVersion,
                 ctx.alloc(),
@@ -694,6 +701,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         case AUTHENTICATION_DATA:
                             writeVariableLengthInt(propertiesBuf, propertyId);
                             final byte[] binaryPropValue = ((MqttProperties.BinaryProperty) property).value;
+                            checkFieldLength(binaryPropValue.length, "property");
                             propertiesBuf.writeShort(binaryPropValue.length);
                             propertiesBuf.writeBytes(binaryPropValue, 0, binaryPropValue.length);
                             break;
@@ -763,7 +771,14 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         final int startUtf8String = writerIndex + 2;
         buf.writerIndex(startUtf8String);
         final int utf8Length = s != null? reserveAndWriteUtf8(buf, s, maxUtf8Length) : 0;
-        buf.setShort(writerIndex, utf8Length);
+        buf.setShort(writerIndex, checkFieldLength(utf8Length, "string"));
+    }
+
+    private static int checkFieldLength(int length, String name) {
+        if (length > MAX_FIELD_LENGTH) {
+            throw new EncoderException(name + " too long: " + length + " bytes (max: " + MAX_FIELD_LENGTH + ')');
+        }
+        return length;
     }
 
     private static int getVariableLengthInt(int num) {

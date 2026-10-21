@@ -315,6 +315,85 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testConnectMessageFieldTooLong() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(
+                MqttVersion.MQTT_3_1_1,
+                USER_NAME,
+                longString(65536),
+                MqttProperties.NO_PROPERTIES,
+                MqttProperties.NO_PROPERTIES);
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testPublishMessageTopicNameTooLong() throws Exception {
+        final MqttPublishMessage message = MqttMessageBuilders.publish()
+                .topicName(longString(65536))
+                .qos(MqttQoS.AT_MOST_ONCE)
+                .payload(Unpooled.EMPTY_BUFFER)
+                .build();
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testSubscribeMessageTopicFilterTooLong() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
+        // Without a length check the prefix length wraps to 4 and the trailing bytes
+        // are decoded as an extra "#" subscription.
+        final String topicFilter = "/abc" + "\u0000\u0000\u0001#" + longString(65536 - 4);
+        final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
+                .messageId(1)
+                .addSubscription(MqttQoS.AT_LEAST_ONCE, topicFilter)
+                .build();
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testSubscribeMessageMaxTopicFilterLength() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
+        final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
+                .messageId(1)
+                .addSubscription(MqttQoS.AT_LEAST_ONCE, longString(65535))
+                .build();
+
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        try {
+            // fixed header (1 + 3 bytes remaining length) and message id
+            assertEquals(65535, byteBuf.getUnsignedShort(6));
+        } finally {
+            byteBuf.release();
+        }
+    }
+
+    @Test
+    public void testUnsubscribeMessageTopicFilterTooLong() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
+        final MqttUnsubscribeMessage message = MqttMessageBuilders.unsubscribe()
+                .messageId(1)
+                .addTopicFilter(longString(65536))
+                .build();
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testUserPropertyTooLong() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+        final MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.UserProperty("key", longString(65536)));
+        final MqttMessage message = MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode((byte) 0x80)
+                .properties(props)
+                .build();
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
     public void testConnAckMessage() throws Exception {
         final MqttConnAckMessage message = createConnAckMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
@@ -1399,6 +1478,12 @@ public class MqttCodecTest {
                         0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
         return new MqttMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
+    }
+
+    private static String longString(int length) {
+        char[] chars = new char[length];
+        Arrays.fill(chars, 'a');
+        return new String(chars);
     }
 
     private static MqttConnectMessage createConnectMessage(MqttVersion mqttVersion) {
