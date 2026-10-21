@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
@@ -403,8 +404,17 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void dataReadForReservedStreamShouldThrowConnectionError() throws Exception {
-        when(stream.state()).thenReturn(RESERVED_REMOTE);
+    public void dataReadForReservedRemoteStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_REMOTE);
+    }
+
+    @Test
+    public void dataReadForReservedLocalStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_LOCAL);
+    }
+
+    private void dataReadForReservedStreamShouldThrowConnectionError(Http2Stream.State state) throws Exception {
+        when(stream.state()).thenReturn(state);
         final ByteBuf data = dummyData();
         try {
             Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
