@@ -44,7 +44,13 @@ RUN set -x && \
 
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://beta.sdkman.io?ci=true" | bash
+ARG sdkman_install_sha256=76129982e764737a5dcbab50efcf854c9688b42e7e50a8a6c7e3fa6d52782aa5
+ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
+# The installer script is not versioned by SDKMAN!, so the pinned SHA-256 needs to be updated when it changes.
+RUN curl -fsSL -o /tmp/sdkman-install.sh "https://beta.sdkman.io?ci=true" && \
+    echo "$SDKMAN_INSTALL_SHA256  /tmp/sdkman-install.sh" | sha256sum -c - && \
+    bash /tmp/sdkman-install.sh && \
+    rm -f /tmp/sdkman-install.sh
 
 ARG java_version="8.0.302-zulu"
 ENV JAVA_VERSION=$java_version
