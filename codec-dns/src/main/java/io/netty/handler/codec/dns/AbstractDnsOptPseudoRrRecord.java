@@ -26,7 +26,23 @@ import io.netty.util.internal.StringUtil;
 public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord implements DnsOptPseudoRecord {
 
     protected AbstractDnsOptPseudoRrRecord(int maxPayloadSize, int extendedRcode, int version) {
-        super(StringUtil.EMPTY_STRING, DnsRecordType.OPT, maxPayloadSize, packIntoLong(extendedRcode, version));
+        this(maxPayloadSize, extendedRcode, version, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param maxPayloadSize    the maximum UDP payload size that can be reassembled and delivered by this
+     *                          endpoint's network stack, encoded into the {@code CLASS} field
+     * @param extendedRcode     the upper 8 bits of the extended 12-bit RCODE; the lower 4 bits are carried
+     *                          by the DNS message header
+     * @param version           the EDNS version
+     * @param flags             the 16-bit flags field, which holds {@code DO} and {@code Z}; only its
+     *                          low 16 bits are used
+     */
+    protected AbstractDnsOptPseudoRrRecord(int maxPayloadSize, int extendedRcode, int version, int flags) {
+        super(StringUtil.EMPTY_STRING, DnsRecordType.OPT, maxPayloadSize,
+                packIntoLong(extendedRcode, version, flags));
     }
 
     protected AbstractDnsOptPseudoRrRecord(int maxPayloadSize) {
@@ -34,9 +50,8 @@ public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord imp
     }
 
     // See https://tools.ietf.org/html/rfc6891#section-6.1.3
-    private static long packIntoLong(int val, int val2) {
-        // We are currently not support DO and Z fields, just use 0.
-        return ((val & 0xffL) << 24 | (val2 & 0xff) << 16) & 0xFFFFFFFFL;
+    private static long packIntoLong(int extendedRcode, int version, int flags) {
+        return ((extendedRcode & 0xffL) << 24 | (version & 0xffL) << 16 | (flags & 0xffffL)) & 0xFFFFFFFFL;
     }
 
     @Override
@@ -51,7 +66,7 @@ public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord imp
 
     @Override
     public int flags() {
-       return (short) ((short) timeToLive() & 0xff);
+        return (int) (timeToLive() & 0xffffL);
     }
 
     @Override

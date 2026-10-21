@@ -42,7 +42,7 @@ public class HAProxyIntegrationTest {
     public void testBasicCase() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<HAProxyMessage> msgHolder = new AtomicReference<HAProxyMessage>();
-        LocalAddress localAddress = new LocalAddress("HAProxyIntegrationTest");
+        LocalAddress localAddress = new LocalAddress(HAProxyIntegrationTest.class);
 
         EventLoopGroup group = new DefaultEventLoopGroup();
         ServerBootstrap sb = new ServerBootstrap();

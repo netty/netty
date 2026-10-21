@@ -22,19 +22,20 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.channels.ClosedChannelException;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReentrantChannelTest extends BaseChannelTest {
 
     @Test
     public void testWritabilityChanged() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testWritabilityChanged");
+        LocalAddress addr = new LocalAddress(ReentrantChannelTest.class);
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync().channel();
@@ -106,7 +107,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testFlushInWritabilityChanged() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
+        LocalAddress addr = new LocalAddress(ReentrantChannelTest.class);
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync().channel();
@@ -156,7 +157,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testWriteFlushPingPong() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
+        LocalAddress addr = new LocalAddress(ReentrantChannelTest.class);
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync().channel();
@@ -213,7 +214,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testCloseInFlush() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testCloseInFlush");
+        LocalAddress addr = new LocalAddress(ReentrantChannelTest.class);
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync().channel();
@@ -248,7 +249,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     @Test
     public void testFlushFailure() throws Exception {
 
-        LocalAddress addr = new LocalAddress("testFlushFailure");
+        LocalAddress addr = new LocalAddress(ReentrantChannelTest.class);
 
         ServerBootstrap sb = getLocalServerBootstrap();
         sb.bind(addr).sync().channel();
@@ -257,7 +258,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        final Channel clientChannel = cb.connect(addr).sync().channel();
 
         clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
 
@@ -272,13 +273,14 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
         });
 
-        try {
-            clientChannel.writeAndFlush(createTestBuf(2000)).sync();
-            fail();
-        } catch (Throwable cce) {
-            // FIXME:  shouldn't this contain the "intentional failure" exception?
-            assertInstanceOf(ClosedChannelException.class, cce);
-        }
+        Throwable cce = assertThrows(Throwable.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                clientChannel.writeAndFlush(createTestBuf(2000)).sync();
+            }
+        });
+        // FIXME:  shouldn't this contain the "intentional failure" exception?
+        assertInstanceOf(ClosedChannelException.class, cce);
 
         clientChannel.closeFuture().sync();
 

@@ -408,6 +408,10 @@ final class FastLz {
      */
     static int decompress(final ByteBuf input, final int inOffset, final int inLength,
                           final ByteBuf output, final int outOffset, final int outLength) {
+        if (inLength == 0) {
+            return 0;
+        }
+
         //int level = ((*(const flzuint8*)input) >> 5) + 1;
         final int level = (input.getByte(inOffset) >> 5) + 1;
         if (level != LEVEL_1 && level != LEVEL_2) {
@@ -440,19 +444,31 @@ final class FastLz {
                 int code;
                 if (len == 6) {
                     if (level == LEVEL_1) {
+                        if (ip >= inLength) {
+                            return 0;
+                        }
                         // len += *ip++;
                         len += input.getUnsignedByte(inOffset + ip++);
                     } else {
                         do {
+                            if (ip >= inLength) {
+                                return 0;
+                            }
                             code = input.getUnsignedByte(inOffset + ip++);
                             len += code;
                         } while (code == 255);
                     }
                 }
                 if (level == LEVEL_1) {
+                    if (ip >= inLength) {
+                        return 0;
+                    }
                     //  ref -= *ip++;
                     ref -= input.getUnsignedByte(inOffset + ip++);
                 } else {
+                    if (ip >= inLength) {
+                        return 0;
+                    }
                     code = input.getUnsignedByte(inOffset + ip++);
                     ref -= code;
 
@@ -460,6 +476,9 @@ final class FastLz {
                     // if(FASTLZ_UNEXPECT_CONDITIONAL(code==255))
                     // if(FASTLZ_EXPECT_CONDITIONAL(ofs==(31 << 8)))
                     if (code == 255 && ofs == 31 << 8) {
+                        if (ip + 2 > inLength) {
+                            return 0;
+                        }
                         ofs = input.getUnsignedByte(inOffset + ip++) << 8;
                         ofs += input.getUnsignedByte(inOffset + ip++);
 

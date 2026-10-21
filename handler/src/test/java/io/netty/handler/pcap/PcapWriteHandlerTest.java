@@ -46,6 +46,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,8 +66,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class PcapWriteHandlerTest {
 
@@ -432,7 +433,7 @@ public class PcapWriteHandlerTest {
 
             CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(pcapBuffer);
             // We fake a client
-            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            final EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
             embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
                     .build(outputStream));
             embeddedChannel.pipeline().fireExceptionCaught(exception);
@@ -443,12 +444,13 @@ public class PcapWriteHandlerTest {
             assertEquals(24, pcapBuffer.readableBytes());
 
             // Verify thrown exception
-            try {
-                embeddedChannel.checkException();
-                fail();
-            } catch (Throwable t) {
-                assertSame(exception, t);
-            }
+            Throwable t = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    embeddedChannel.checkException();
+                }
+            });
+            assertSame(exception, t);
 
             assertFalse(embeddedChannel.finishAndReleaseAll());
         } finally {
@@ -867,9 +869,12 @@ public class PcapWriteHandlerTest {
 
         // Verify thrown exception
         try {
-            embeddedChannel.checkException();
-            fail();
-        } catch (Throwable t) {
+            Throwable t = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    embeddedChannel.checkException();
+                }
+            });
             assertSame(exception, t);
         } finally {
             pcapBuffer.release();

@@ -86,8 +86,18 @@ public class Socks5ServerEncoder extends MessageToByteEncoder<Socks5Message> {
 
         final Socks5AddressType bndAddrType = msg.bndAddrType();
         out.writeByte(bndAddrType.byteValue());
-        addressEncoder.encodeAddress(bndAddrType, msg.bndAddr(), out);
+        String addrValue = msg.bndAddr();
+        if (addrValue != null && bndAddrType == Socks5AddressType.DOMAIN) {
+            checkFieldLength(addrValue.length());
+        }
+        addressEncoder.encodeAddress(bndAddrType, addrValue, out);
 
         ByteBufUtil.writeShortBE(out, msg.bndPort());
+    }
+
+    private static void checkFieldLength(int length) {
+        if (length > 255 || length < 0) {
+            throw new EncoderException("Invalid field length value: " + length);
+        }
     }
 }

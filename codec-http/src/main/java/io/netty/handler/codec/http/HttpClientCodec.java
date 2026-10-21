@@ -340,13 +340,6 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            // Get the method of the HTTP request that corresponds to the
-            // current response.
-            //
-            // Even if we do not use the method to compare we still need to poll it to ensure we keep
-            // request / response pairs in sync.
-            HttpMethod method = queue.poll();
-
             final HttpResponseStatus status = ((HttpResponse) msg).status();
             final HttpStatusClass statusClass = status.codeClass();
             final int statusCode = status.code();
@@ -355,6 +348,10 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                 // Just delegate to super method which has all the needed handling.
                 return super.isContentAlwaysEmpty(msg);
             }
+
+            // Get the method of the HTTP request that corresponds to the
+            // current response.
+            HttpMethod method = queue.poll();
 
             // If the remote peer did for example send multiple responses for one request (which is not allowed per
             // spec but may still be possible) method will be null so guard against it.

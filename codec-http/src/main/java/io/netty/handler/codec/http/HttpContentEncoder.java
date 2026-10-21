@@ -55,6 +55,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.*;
  * converts them into {@link ByteBuf}s.
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpRequest, HttpObject> {
+    public static final int DEFAULT_MAX_PIPELINE_DEPTH = 128;
 
     private enum State {
         PASS_THROUGH,
@@ -65,9 +66,19 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private static final CharSequence ZERO_LENGTH_HEAD = "HEAD";
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
 
+    private final int maxPipelineDepth;
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
+
+    public HttpContentEncoder() {
+        this(DEFAULT_MAX_PIPELINE_DEPTH);
+    }
+
+    public HttpContentEncoder(int maxPipelineDepth) {
+        super(HttpRequest.class, HttpObject.class);
+        this.maxPipelineDepth = ObjectUtil.checkPositive(maxPipelineDepth, "maxPipelineDepth");
+    }
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -76,6 +87,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+        if (maxPipelineDepth <= acceptEncodingQueue.size()) {
+            throw new IllegalStateException("maxPipelineDepth exceeded: " + maxPipelineDepth);
+        }
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {
@@ -174,35 +188,47 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     break;
                 }
 
-                encoder = result.contentEncoder();
+                EmbeddedChannel contentEncoder = result.contentEncoder();
+                try {
+                    // Encode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
 
-                // Encode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
+                    // Output the rewritten response.
+                    if (isFull) {
+                        // Convert full message into unfull one.
+                        HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
+                        newRes.headers().set(res.headers());
+                        out.add(newRes);
 
-                // Output the rewritten response.
-                if (isFull) {
-                    // Convert full message into unfull one.
-                    HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
-                    newRes.headers().set(res.headers());
-                    out.add(newRes);
-
-                    ensureContent(res);
-                    encodeFullResponse(newRes, (HttpContent) res, out);
-                    break;
-                } else {
-                    // Make the response chunked to simplify content transformation.
-                    res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-                    res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-
-                    out.add(ReferenceCountUtil.retain(res));
-                    state = State.AWAIT_CONTENT;
-                    if (!(msg instanceof HttpContent)) {
-                        // only break out the switch statement if we have not content to process
-                        // See https://github.com/netty/netty/issues/2006
+                        ensureContent(res);
+                        encoder = contentEncoder;
+                        encodeFullResponse(newRes, (HttpContent) res, out);
+                        contentEncoder = null;
                         break;
+                    } else {
+                        // Make the response chunked to simplify content transformation.
+                        res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+                        res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+
+                        out.add(ReferenceCountUtil.retain(res));
+                        state = State.AWAIT_CONTENT;
+                        encoder = contentEncoder;
+                        contentEncoder = null;
+                        if (!(msg instanceof HttpContent)) {
+                            // only break out the switch statement if we have not content to process
+                            // See https://github.com/netty/netty/issues/2006
+                            break;
+                        }
+                        // Fall through to encode the content
                     }
-                    // Fall through to encode the content
+                } finally {
+                    if (contentEncoder != null) {
+                        if (encoder == contentEncoder) {
+                            encoder = null;
+                        }
+                        contentEncoder.finishAndReleaseAll();
+                    }
                 }
             }
             case AWAIT_CONTENT: {

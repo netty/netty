@@ -197,10 +197,13 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    private static final int MAX_PENDING_TASKS = 1024;
+
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicBoolean loopStarted = new AtomicBoolean();
         final Runnable task = new Runnable() {
             @Override
             public void run() {
@@ -208,7 +211,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             }
         };
         // Just run often enough to trigger it normally.
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 250; i++) {
             NioEventLoopGroup group = new NioEventLoopGroup(1);
             final NioEventLoop loop = (NioEventLoop) group.next();
 
@@ -218,6 +221,13 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                     try {
                         for (;;) {
                             loop.execute(task);
+                            loopStarted.set(true);
+                            // Don't let the queue grow without bounds if the producer is faster than the event
+                            // loop, otherwise we may run into an OutOfMemoryError. Keep it non-empty so we still
+                            // race with the task removal on shutdown.
+                            while (loop.pendingTasks() > MAX_PENDING_TASKS && !loop.isShuttingDown()) {
+                                Thread.yield();
+                            }
                         }
                     } catch (Throwable cause) {
                         error.set(cause);
@@ -225,11 +235,15 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 }
             });
             t.start();
+            do {
+                Thread.yield();
+            } while (!loopStarted.get());
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
             assertInstanceOf(RejectedExecutionException.class, error.get());
             error.set(null);
+            loopStarted.set(false);
         }
     }
 

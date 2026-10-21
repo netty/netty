@@ -360,7 +360,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
-        if (maxOrder > 14) {
+        if (maxOrder < 0 || maxOrder > 14) {
             throw new IllegalArgumentException("maxOrder: " + maxOrder + " (expected: 0-14)");
         }
 

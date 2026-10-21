@@ -45,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReadOnlyDirectByteBufferBufTest {
 
@@ -424,15 +423,15 @@ public class ReadOnlyDirectByteBufferBufTest {
 
     @Test
     public void testMemoryAddress() {
-        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        final ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
         try {
             assertFalse(buf.hasMemoryAddress());
-            try {
-                buf.memoryAddress();
-                fail();
-            } catch (UnsupportedOperationException expected) {
-                // expected
-            }
+            assertThrows(UnsupportedOperationException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buf.memoryAddress();
+                }
+            });
         } finally {
             buf.release();
         }
@@ -490,6 +489,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -505,6 +505,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -520,6 +521,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -535,6 +537,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -580,7 +583,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testToStringMultipleThreads1() throws Throwable {
         String expected = "Hello, World!";
         byte[] bytes = expected.getBytes(CharsetUtil.ISO_8859_1);

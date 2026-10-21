@@ -25,6 +25,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.Java8SslTestUtils.loadCertCollection;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,7 +100,7 @@ public class FingerprintTrustManagerFactoryTest {
         FingerprintTrustManagerFactory factory = new FingerprintTrustManagerFactory(FIRST_CERT_SHA1_FINGERPRINT);
 
         assertTrue(factory.engineGetTrustManagers().length > 0);
-        assertTrue(factory.engineGetTrustManagers()[0] instanceof X509TrustManager);
+        assertInstanceOf(X509TrustManager.class, factory.engineGetTrustManagers()[0]);
         X509TrustManager tm = (X509TrustManager) factory.engineGetTrustManagers()[0];
         tm.checkClientTrusted(FIRST_CHAIN, "test");
     }
@@ -114,7 +115,7 @@ public class FingerprintTrustManagerFactoryTest {
         X509Certificate[] keyCertChain = loadCertCollection("test.crt");
         assertNotNull(keyCertChain);
         assertTrue(factory.engineGetTrustManagers().length > 0);
-        assertTrue(factory.engineGetTrustManagers()[0] instanceof X509TrustManager);
+        assertInstanceOf(X509TrustManager.class, factory.engineGetTrustManagers()[0]);
         X509TrustManager tm = (X509TrustManager) factory.engineGetTrustManagers()[0];
         tm.checkClientTrusted(keyCertChain, "test");
     }
@@ -127,7 +128,7 @@ public class FingerprintTrustManagerFactoryTest {
                 .build();
 
         assertTrue(factory.engineGetTrustManagers().length > 0);
-        assertTrue(factory.engineGetTrustManagers()[0] instanceof X509TrustManager);
+        assertInstanceOf(X509TrustManager.class, factory.engineGetTrustManagers()[0]);
         final X509TrustManager tm = (X509TrustManager) factory.engineGetTrustManagers()[0];
 
         assertThrows(CertificateException.class, new Executable() {

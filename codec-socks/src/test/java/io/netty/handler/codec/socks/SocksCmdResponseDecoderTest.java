@@ -22,9 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
@@ -37,7 +38,7 @@ public class SocksCmdResponseDecoderTest {
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         if (addressType == SocksAddressType.UNKNOWN) {
-            assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
+            assertInstanceOf(UnknownSocksResponse.class, embedder.readInbound());
         } else {
             msg = embedder.readInbound();
             assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
@@ -47,6 +48,7 @@ public class SocksCmdResponseDecoderTest {
             assertEquals(((SocksCmdResponse) msg).port(), port);
         }
         assertNull(embedder.readInbound());
+        assertFalse(embedder.finish());
     }
 
     /**
@@ -90,5 +92,16 @@ public class SocksCmdResponseDecoderTest {
             testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv6,
                     "1111:111:11:1:0:0:0:1", 80);
         }
+    }
+
+    /**
+     * The bound domain length octet is unsigned; a bound domain of 128 to 255 characters must decode.
+     */
+    @Test
+    public void testSocksCmdResponseDecoderLongDomain() {
+        testSocksCmdResponseDecoderWithDifferentParams(
+                SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN, SocksCommonTestUtils.domainOfLength(128), 80);
+        testSocksCmdResponseDecoderWithDifferentParams(
+                SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN, SocksCommonTestUtils.domainOfLength(255), 80);
     }
 }

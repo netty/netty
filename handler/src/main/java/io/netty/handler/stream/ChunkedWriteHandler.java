@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -74,6 +75,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     private Queue<PendingWrite> queue;
     private volatile ChannelHandlerContext ctx;
+    private boolean inFlush;
+    private boolean flushPending;
 
     public ChunkedWriteHandler() {
     }
@@ -99,6 +102,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // Nothing will write the queued messages once this handler was removed, not even channelInactive(),
+        // so fail them now and close / release what they hold.
+        if (!queueIsEmpty()) {
+            // Only create the exception if there is something to fail, as creating it is expensive.
+            discard(new ChannelException("Pending write on removal of ChunkedWriteHandler"));
+        }
     }
 
     /**
@@ -205,6 +218,31 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     private void doFlush(final ChannelHandlerContext ctx) {
+        if (inFlush) {
+            // doFlush() must not re-enter itself: ChunkedInput.readChunk(...) and isEndOfInput() run
+            // between queue.peek() and queue.remove(), and user code executed there may
+            // synchronously trigger flush(), resumeTransfer(), channelInactive(...) or
+            // channelWritabilityChanged(...) on this very handler. A nested doFlush() would peek
+            // and consume the same queue entry again, which made the outer invocation fail with
+            // NoSuchElementException and let both invocations read from the same (already closed)
+            // input. Remember the nested call instead: the outer invocation re-runs the drain
+            // loop before returning, so a resumeTransfer(...) that arrives while it is about to
+            // suspend is not lost (see the old lock-based guard and its flushRequired follow-up).
+            flushPending = true;
+            return;
+        }
+        inFlush = true;
+        try {
+            do {
+                flushPending = false;
+                doFlush0(ctx);
+            } while (flushPending);
+        } finally {
+            inFlush = false;
+        }
+    }
+
+    private void doFlush0(final ChannelHandlerContext ctx) {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             // Even after discarding all previous queued objects we should propagate the flush through
@@ -239,7 +277,15 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // as this had to be done already by someone who resolved the
                 // promise (using ChunkedInput.close method).
                 // See https://github.com/netty/netty/issues/8700.
+                // A promise that was cancelled by the user is different: nobody closed or released the message.
                 queue.remove();
+                if (currentWrite.promise.isCancelled()) {
+                    if (currentWrite.msg instanceof ChunkedInput) {
+                        closeInput((ChunkedInput<?>) currentWrite.msg);
+                    } else {
+                        ReferenceCountUtil.release(currentWrite.msg);
+                    }
+                }
                 continue;
             }
 

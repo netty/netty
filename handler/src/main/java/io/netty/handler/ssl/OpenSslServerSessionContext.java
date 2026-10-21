@@ -26,7 +26,7 @@ import java.util.concurrent.locks.Lock;
  */
 public final class OpenSslServerSessionContext extends OpenSslSessionContext {
     OpenSslServerSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider) {
-        super(context, provider, SSL.SSL_SESS_CACHE_SERVER, new OpenSslSessionCache(context.engineMap));
+        super(context, provider, SSL.SSL_SESS_CACHE_SERVER, new OpenSslSessionCache(context.engines));
     }
 
     /**

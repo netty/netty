@@ -22,19 +22,22 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class PendingWriteQueueTest {
 
@@ -187,16 +190,17 @@ public class PendingWriteQueueTest {
     private static void assertWriteFails(ChannelHandler handler, int count) {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
-        ByteBuf[] buffers = new ByteBuf[count];
+        final ByteBuf[] buffers = new ByteBuf[count];
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = buffer.retainedDuplicate();
         }
-        try {
-            assertFalse(channel.writeOutbound(buffers));
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof TestException);
-        }
+        Exception e = assertThrows(Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                assertFalse(channel.writeOutbound(buffers));
+            }
+        });
+        assertInstanceOf(TestException.class, e);
         assertFalse(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
@@ -230,6 +234,48 @@ public class PendingWriteQueueTest {
         assertFalse(promise.isSuccess());
         assertTrue(promise2.isDone());
         assertFalse(promise2.isSuccess());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRemoveAndFailReentrantRemoveAndFail() {
+        EmbeddedChannel channel = newChannel();
+        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+        ByteBuf buf1 = Unpooled.buffer().writeZero(8);
+        ByteBuf buf2 = Unpooled.buffer().writeZero(8);
+        ByteBuf buf3 = Unpooled.buffer().writeZero(8);
+
+        ChannelPromise promise1 = channel.newPromise();
+        promise1.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                queue.removeAndFail(new IllegalStateException());
+            }
+        });
+        ChannelPromise promise2 = channel.newPromise();
+        ChannelPromise promise3 = channel.newPromise();
+        queue.add(buf1, promise1);
+        queue.add(buf2, promise2);
+        queue.add(buf3, promise3);
+        long bytesPerWrite = queue.bytes() / 3;
+
+        queue.removeAndFail(new Exception());
+
+        // The listener of promise1 removed and failed the second write.
+        assertThat(promise1.isDone()).isTrue();
+        assertThat(promise2.isDone()).isTrue();
+        assertThat(promise2.isSuccess()).isFalse();
+        assertThat(buf1.refCnt()).isZero();
+        assertThat(buf2.refCnt()).isZero();
+        assertThat(promise3.isDone()).isFalse();
+        assertThat(buf3.refCnt()).isOne();
+        assertThat(queue.size()).isOne();
+        assertThat(queue.bytes()).isEqualTo(bytesPerWrite);
+
+        queue.removeAndFailAll(new Exception());
+        assertThat(promise3.isDone()).isTrue();
+        assertThat(buf3.refCnt()).isZero();
+        assertThat(channel.unsafe().outboundBuffer().totalPendingWriteBytes()).isZero();
         assertFalse(channel.finish());
     }
 

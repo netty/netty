@@ -40,11 +40,6 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
                 factory.getKeyManagers()), password, Integer.MAX_VALUE);
     }
 
-    @Override
-    protected void assertRelease(OpenSslKeyMaterial material) {
-        assertFalse(material.release());
-    }
-
     @Test
     public void testMaterialCached() throws Exception {
         OpenSslKeyMaterialProvider provider = newMaterialProvider(newKeyManagerFactory(), PASSWORD);
@@ -53,14 +48,14 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
         assertNotNull(material);
         assertNotEquals(0, material.certificateChainAddress());
         assertNotEquals(0, material.privateKeyAddress());
-        assertEquals(2, material.refCnt());
+        assertEquals(3, material.refCnt());
 
         OpenSslKeyMaterial material2 = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, EXISTING_ALIAS);
         assertNotNull(material2);
         assertEquals(material.certificateChainAddress(), material2.certificateChainAddress());
         assertEquals(material.privateKeyAddress(), material2.privateKeyAddress());
-        assertEquals(3, material.refCnt());
-        assertEquals(3, material2.refCnt());
+        assertEquals(4, material.refCnt());
+        assertEquals(4, material2.refCnt());
 
         assertFalse(material.release());
         assertFalse(material2.release());

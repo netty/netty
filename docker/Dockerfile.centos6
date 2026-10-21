@@ -1,7 +1,12 @@
 FROM --platform=linux/amd64 centos:6.10
 
+ARG openssl_version=3.6.1
+ARG openssl_sha256=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e
+ENV OPENSSL_VERSION $openssl_version
+ENV OPENSSL_SHA256 $openssl_sha256
+
 # Update as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
@@ -18,8 +23,37 @@ RUN yum install -y \
  tar \
  unzip \
  wget \
- zip
+ zip \
+ zlib-devel \
+ perl \
+ perl-IPC-Cmd \
+ perl-Time-Piece \
+ perl-parent \
+ perl-devel \
+ centos-release-SCL
 
+# Update the SCL repo as well.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' \
+           -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/6\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/6.10\//g' \
+           /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+
+RUN yum -y install devtoolset-9-gcc devtoolset-9-gcc-c++
+RUN echo 'source /opt/rh/devtoolset-9/enable' >> ~/.bashrc
+
+# Build OpenSSL 3.x from source using devtoolset-9
+RUN set -x && \
+  source /opt/rh/devtoolset-9/enable && \
+  # --no-check-certificate: CentOS 6 ships with outdated CA bundles that can't verify modern GitHub TLS certs
+  wget --no-check-certificate https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz && \
+  echo "$OPENSSL_SHA256  openssl-$OPENSSL_VERSION.tar.gz" | sha256sum -c - && \
+  tar xvf openssl-$OPENSSL_VERSION.tar.gz && \
+  (cd openssl-$OPENSSL_VERSION && \
+  # no-asm: devtoolset-9 on CentOS 6 cannot reliably compile OpenSSL's hand-tuned x86_64 assembly
+  ./Configure linux-x86_64 --prefix=/opt/openssl-$OPENSSL_VERSION --libdir=lib shared no-asm no-apps && \
+  make -j1 install_sw) && \
+  rm -rf openssl-$OPENSSL_VERSION openssl-$OPENSSL_VERSION.tar.gz
+
+RUN echo 'export LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib' >> ~/.bashrc
 
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io?ci=true" | bash
@@ -35,6 +69,11 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 
 RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# Prepare our own build
+ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
+ENV JAVA_HOME=/root/.sdkman/candidates/java/current
+ENV LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib
 
 # Cleanup
 RUN yum clean all && \

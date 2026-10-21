@@ -132,6 +132,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -677,7 +678,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(serverException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, serverException);
     }
 
     @MethodSource("newTestParams")
@@ -693,7 +694,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(clientException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, clientException);
     }
 
     @MethodSource("newTestParams")
@@ -1321,20 +1322,35 @@ public abstract class SSLEngineTest {
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
                                                MessageReceiver receiver) throws Exception {
-        List<ByteBuf> dataCapture = null;
+        ByteBuf buf = null;
         try {
-            assertTrue(sendChannel.writeAndFlush(message).await(10, TimeUnit.SECONDS));
-            receiverLatch.await(5, TimeUnit.SECONDS);
-            message.resetReaderIndex();
+            assertTrue(sendChannel.writeAndFlush(message.duplicate())
+                    .await(10, TimeUnit.SECONDS));
+            receiverLatch.await(10, TimeUnit.SECONDS);
             assertFalse(receiver.messages.isEmpty());
-            dataCapture = new ArrayList<ByteBuf>();
-            receiver.messages.drainTo(dataCapture);
-            assertEquals(message, dataCapture.get(0));
+
+            buf = Unpooled.buffer();
+            ByteBuf buffer = receiver.messages.take();
+            for (;;) {
+                buf.writeBytes(buffer);
+                buffer.release();
+                if (buf.readableBytes() < message.readableBytes()) {
+                    buffer = receiver.messages.poll(1, TimeUnit.SECONDS);
+                    if (buffer == null) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            assertEquals(message, buf);
         } finally {
-            if (dataCapture != null) {
-                for (ByteBuf data : dataCapture) {
+            if (buf != null) {
+                buf.release();
+                for (ByteBuf data : receiver.messages) {
                     data.release();
                 }
+                receiver.messages.clear();
             }
         }
     }
@@ -1376,6 +1392,7 @@ public abstract class SSLEngineTest {
             clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+            pingPongPacketsUntilSessionAllocation(param, clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
             assertTrue(session.isValid(), "session should be valid: " + session);
@@ -1417,43 +1434,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             if (param.protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
-                // Allocate something which is big enough for sure
-                ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
-                ByteBuffer appBuffer = allocateBuffer(param.type(), 32 * 1024);
-
-                appBuffer.clear().position(4).flip();
-                packetBuffer.clear();
-
-                do {
-                    SSLEngineResult result;
-
-                    do {
-                        result = serverEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-                    do {
-                        result = clientEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-
-                    do {
-                        result = clientEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-
-                    do {
-                        result = serverEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-                } while (clientEngine.getSession().getId().length == 0);
+                pingPongPacketsUntilSessionAllocation(param, clientEngine, serverEngine);
 
                 // With TLS1.3 we should see pseudo IDs and so these should never match.
                 assertFalse(Arrays.equals(clientEngine.getSession().getId(), serverEngine.getSession().getId()));
@@ -1470,6 +1451,47 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
         }
+    }
+
+    private void pingPongPacketsUntilSessionAllocation(
+            SSLEngineTestParam param, SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
+        // Allocate something which is big enough for sure
+        ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
+        ByteBuffer appBuffer = allocateBuffer(param.type(), 32 * 1024);
+
+        appBuffer.clear().position(4).flip();
+        packetBuffer.clear();
+
+        do {
+            SSLEngineResult result;
+
+            do {
+                result = serverEngine.wrap(appBuffer, packetBuffer);
+            } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            appBuffer.clear();
+            packetBuffer.flip();
+            do {
+                result = clientEngine.unwrap(packetBuffer, appBuffer);
+            } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            packetBuffer.clear();
+            appBuffer.clear().position(4).flip();
+
+            do {
+                result = clientEngine.wrap(appBuffer, packetBuffer);
+            } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            appBuffer.clear();
+            packetBuffer.flip();
+
+            do {
+                result = serverEngine.unwrap(packetBuffer, appBuffer);
+            } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            packetBuffer.clear();
+            appBuffer.clear().position(4).flip();
+        } while (clientEngine.getSession().getId().length == 0);
     }
 
     @MethodSource("newTestParams")
@@ -3676,7 +3698,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession clientSession = clientEngine.getSession();
-            SSLSession serverSession = serverEngine.getSession();
+            final SSLSession serverSession = serverEngine.getSession();
 
             // The values should not have been carried over.
             // This is broken in conscrypt.
@@ -3797,12 +3819,12 @@ public abstract class SSLEngineTest {
                 assertNull(clientSession.getLocalCertificates());
                 assertNull(clientSession.getLocalPrincipal());
 
-                try {
-                    serverSession.getPeerCertificates();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        serverSession.getPeerCertificates();
+                    }
+                });
 
                 additionalPeerAssertions(serverSession, mutualAuth);
 
@@ -3816,12 +3838,12 @@ public abstract class SSLEngineTest {
                     assertTrue(PlatformDependent.javaVersion() >= 15);
                 }
 
-                try {
-                    serverSession.getPeerPrincipal();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        serverSession.getPeerPrincipal();
+                    }
+                });
             }
 
             Certificate[] clientPeerCertificates = clientSession.getPeerCertificates();
@@ -4769,7 +4791,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             fail();
         } catch (SSLException expected) {
-            // Expected
+            // expected
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);

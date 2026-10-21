@@ -16,12 +16,13 @@
 package io.netty.channel;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ChannelOptionTest {
 
@@ -47,17 +48,17 @@ public class ChannelOptionTest {
 
     @Test
     public void testCreateOrFail() {
-        String name = "test2";
+        final String name = "test2";
         assertFalse(ChannelOption.exists(name));
         ChannelOption<String> option = ChannelOption.newInstance(name);
         assertTrue(ChannelOption.exists(name));
         assertNotNull(option);
 
-        try {
-            ChannelOption.<String>newInstance(name);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ChannelOption.<String>newInstance(name);
+            }
+        });
     }
 }

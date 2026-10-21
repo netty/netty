@@ -74,6 +74,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -397,14 +398,14 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void getByteArrayBoundaryCheck3() {
-        byte[] dst = new byte[4];
+        final byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
-        try {
-            buffer.getBytes(0, dst, -1, 4);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Success
-        }
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.getBytes(0, dst, -1, 4);
+            }
+        });
 
         // No partial copy is expected.
         assertEquals(0, dst[0]);
@@ -415,14 +416,14 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void getByteArrayBoundaryCheck4() {
-        byte[] dst = new byte[4];
+        final byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
-        try {
-            buffer.getBytes(0, dst, 1, 4);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Success
-        }
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.getBytes(0, dst, 1, 4);
+            }
+        });
 
         // No partial copy is expected.
         assertEquals(0, dst[0]);
@@ -1896,12 +1897,12 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testWriteZero() {
-        try {
-            buffer.writeZero(-1);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // Expected
-        }
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.writeZero(-1);
+            }
+        });
 
         buffer.clear();
         while (buffer.isWritable()) {
@@ -2168,6 +2169,53 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testRetainedSliceOfNonRetainedDerivedBufferCoversTheReadableBytes() {
+        for (int i = 0; i < buffer.capacity(); i++) {
+            buffer.setByte(i, i);
+        }
+        // a writer index below the capacity, and a reader index at zero or above
+        for (int readerIndex = 0; readerIndex <= 1; readerIndex++) {
+            buffer.setIndex(readerIndex, buffer.capacity() - 2);
+            ByteBuf retainedDuplicate = null;
+            ByteBuf retainedSlice = null;
+            try {
+                retainedDuplicate = buffer.retainedDuplicate();
+                retainedSlice = buffer.retainedSlice();
+                for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice());
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate().duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice().slice());
+                }
+            } finally {
+                if (retainedDuplicate != null) {
+                    retainedDuplicate.release();
+                }
+                if (retainedSlice != null) {
+                    retainedSlice.release();
+                }
+            }
+            assertEquals(1, buffer.refCnt());
+        }
+    }
+
+    private static void assertRetainedSliceBeforeAndAfterRead(ByteBuf buf) {
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+        buf.readByte();
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+    }
+
+    private static void assertRetainedSliceMatchesTheReadableBytes(ByteBuf buf) {
+        ByteBuf retainedSlice = buf.retainedSlice();
+        try {
+            assertEquals(buf.readableBytes(), retainedSlice.readableBytes());
+            assertEquals(buf.slice(), retainedSlice);
+        } finally {
+            retainedSlice.release();
+        }
+    }
+
+    @Test
     public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
         ByteBuf slice = buffer.retainedSlice();
         ByteBuf duplicate = slice.duplicate();
@@ -2213,12 +2261,12 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testCompareTo() {
-        try {
-            buffer.compareTo(null);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.compareTo(null);
+            }
+        });
 
         // Fill the random stuff
         byte[] value = new byte[32];
@@ -2485,19 +2533,19 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
         assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
 
-        try {
-            buffer.indexOf(0, buffer.capacity() + 1, (byte) 0);
-            fail();
-        } catch (IndexOutOfBoundsException expected) {
-            // expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.indexOf(0, buffer.capacity() + 1, (byte) 0);
+            }
+        });
 
-        try {
-            buffer.indexOf(buffer.capacity(), -1, (byte) 0);
-            fail();
-        } catch (IndexOutOfBoundsException expected) {
-            // expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.indexOf(buffer.capacity(), -1, (byte) 0);
+            }
+        });
 
         assertEquals(4, buffer.indexOf(buffer.capacity() + 1, 0, (byte) 1));
         assertEquals(0, buffer.indexOf(-1, buffer.capacity(), (byte) 1));
@@ -2505,14 +2553,14 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testIndexOfReleaseBuffer() {
-        ByteBuf buffer = releasedBuffer();
+        final ByteBuf buffer = releasedBuffer();
         if (buffer.capacity() != 0) {
-            try {
-                buffer.indexOf(0, 1, (byte) 1);
-                fail();
-            } catch (IllegalReferenceCountException expected) {
-                // expected
-            }
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buffer.indexOf(0, 1, (byte) 1);
+                }
+            });
         } else {
             assertEquals(-1, buffer.indexOf(0, 1, (byte) 1));
         }
@@ -2570,12 +2618,12 @@ public abstract class AbstractByteBufTest {
         buffer.skipBytes(CAPACITY / 4);
         assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
 
-        try {
-            buffer.skipBytes(CAPACITY / 4 + 1);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.skipBytes(CAPACITY / 4 + 1);
+            }
+        });
 
         // Should remain unchanged.
         assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
@@ -2726,6 +2774,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2740,6 +2789,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2757,44 +2807,68 @@ public abstract class AbstractByteBufTest {
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         assertEquals(buffer.readableBytes(), expectedBytes.length);
         final CountDownLatch latch = new CountDownLatch(60000);
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                           buf = buffer.slice();
-                        } else {
-                           buf = buffer.duplicate();
-                        }
-                        TestGatheringByteChannel channel = new TestGatheringByteChannel();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(channel, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, channel.writtenBytes());
-                        latch.countDown();
-                    }
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                                buf = buffer.slice();
+                            } else {
+                                buf = buffer.duplicate();
+                            }
+                            TestGatheringByteChannel channel = new TestGatheringByteChannel();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(channel, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, channel.writtenBytes());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                        // Short-circuit: wake up the main thread immediately
+                        while (latch.getCount() > 0) {
+                            latch.countDown();
+                        }
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
         }
-        latch.await(10, TimeUnit.SECONDS);
-        barrier.await(5, TimeUnit.SECONDS);
+        try {
+            latch.await();
+            barrier.await(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                e.addSuppressed(inner);
+            }
+            throw e;
+        }
+        // Ensure failures in worker threads are propagated to the test thread.
+        Throwable failedThreadException = innerThrowable.get();
+        if (failedThreadException != null) {
+            throw new AssertionError("Worker thread failed", failedThreadException);
+        }
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2809,6 +2883,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2825,41 +2900,64 @@ public abstract class AbstractByteBufTest {
     static void testReadOutputStreamMultipleThreads(
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final CountDownLatch latch = new CountDownLatch(60000);
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                            buf = buffer.slice();
-                        } else {
-                            buf = buffer.duplicate();
-                        }
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(out, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, out.toByteArray());
-                        latch.countDown();
-                    }
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                                buf = buffer.slice();
+                            } else {
+                                buf = buffer.duplicate();
+                            }
+                            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(out, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, out.toByteArray());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                        // Short-circuit: wake up the main thread immediately
+                        while (latch.getCount() > 0) {
+                            latch.countDown();
+                        }
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
         }
-        latch.await(10, TimeUnit.SECONDS);
-        barrier.await(5, TimeUnit.SECONDS);
+        try {
+            latch.await();
+            barrier.await(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                e.addSuppressed(inner);
+            }
+            throw e;
+        }
+        // Ensure failures in worker threads are propagated to the test thread.
+        Throwable failedThreadException = innerThrowable.get();
+        if (failedThreadException != null) {
+            throw new AssertionError("Worker thread failed", failedThreadException);
+        }
     }
 
     @Test
@@ -2898,24 +2996,27 @@ public abstract class AbstractByteBufTest {
             @Override
             public Void call() throws Exception {
                 startBarrier.await();
-                for (int i = 0; i < 6000; i++) {
-                    ByteBuf buf;
-                    if (slice) {
-                        buf = buffer.slice();
-                    } else {
-                        buf = buffer.duplicate();
+                try {
+                    for (int i = 0; i < 6000; i++) {
+                        ByteBuf buf;
+                        if (slice) {
+                            buf = buffer.slice();
+                        } else {
+                            buf = buffer.duplicate();
+                        }
+
+                        byte[] array = new byte[8];
+                        buf.readBytes(array);
+
+                        assertArrayEquals(expectedBytes, array);
+
+                        Arrays.fill(array, (byte) 0);
+                        buf.getBytes(0, array);
+                        assertArrayEquals(expectedBytes, array);
                     }
-
-                    byte[] array = new byte[8];
-                    buf.readBytes(array);
-
-                    assertArrayEquals(expectedBytes, array);
-
-                    Arrays.fill(array, (byte) 0);
-                    buf.getBytes(0, array);
-                    assertArrayEquals(expectedBytes, array);
+                } finally {
+                    endBarrier.await();
                 }
-                endBarrier.await();
                 return null;
             }
         };
@@ -4494,27 +4595,47 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testArrayAfterRelease() {
-        ByteBuf buf = releasedBuffer();
+        final ByteBuf buf = releasedBuffer();
         if (buf.hasArray()) {
-            try {
-                buf.array();
-                fail();
-            } catch (IllegalReferenceCountException e) {
-                // expected
-            }
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buf.array();
+                }
+            });
         }
     }
 
     @Test
     public void testMemoryAddressAfterRelease() {
-        ByteBuf buf = releasedBuffer();
+        final ByteBuf buf = releasedBuffer();
         if (buf.hasMemoryAddress()) {
-            try {
-                buf.memoryAddress();
-                fail();
-            } catch (IllegalReferenceCountException e) {
-                // expected
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buf.memoryAddress();
+                }
+            });
+        }
+    }
+
+    @Test
+    public void testMemoryAddressUnsupportedWhenNoMemoryAddress() {
+        final ByteBuf buf = newBuffer(16);
+        try {
+            if (buf.hasMemoryAddress()) {
+                // Must not throw, and must not be the "no address" marker.
+                assertNotEquals(0L, buf.memoryAddress());
+            } else {
+                assertThrows(UnsupportedOperationException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        buf.memoryAddress();
+                    }
+                });
             }
+        } finally {
+            buf.release();
         }
     }
 
@@ -4544,14 +4665,14 @@ public abstract class AbstractByteBufTest {
                 buf.release();
             }
         }
-        for (ByteBuf buf : bufs) {
-            try {
-                assertEquals(0, buf.refCnt());
-                buf.slice();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+        for (final ByteBuf buf : bufs) {
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    assertEquals(0, buf.refCnt());
+                    buf.slice();
+                }
+            });
         }
     }
 
@@ -4619,14 +4740,14 @@ public abstract class AbstractByteBufTest {
                 buf.release();
             }
         }
-        for (ByteBuf buf : bufs) {
-            try {
-                assertEquals(0, buf.refCnt());
-                buf.retainedSlice();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+        for (final ByteBuf buf : bufs) {
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    assertEquals(0, buf.refCnt());
+                    buf.retainedSlice();
+                }
+            });
         }
     }
 
@@ -4694,14 +4815,14 @@ public abstract class AbstractByteBufTest {
                 buf.release();
             }
         }
-        for (ByteBuf buf : bufs) {
-            try {
-                assertEquals(0, buf.refCnt());
-                buf.duplicate();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+        for (final ByteBuf buf : bufs) {
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    assertEquals(0, buf.refCnt());
+                    buf.duplicate();
+                }
+            });
         }
     }
 
@@ -4734,14 +4855,14 @@ public abstract class AbstractByteBufTest {
                 buf.release();
             }
         }
-        for (ByteBuf buf : bufs) {
-            try {
-                assertEquals(0, buf.refCnt());
-                buf.retainedDuplicate();
-                fail();
-            } catch (IllegalReferenceCountException ignored) {
-                // as expected
-            }
+        for (final ByteBuf buf : bufs) {
+            assertThrows(IllegalReferenceCountException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    assertEquals(0, buf.refCnt());
+                    buf.retainedDuplicate();
+                }
+            });
         }
     }
 
@@ -5788,17 +5909,17 @@ public abstract class AbstractByteBufTest {
     private void testGetReadOnlyDst(boolean direct) {
         byte[] bytes = { 'a', 'b', 'c', 'd' };
 
-        ByteBuf buffer = newBuffer(bytes.length);
+        final ByteBuf buffer = newBuffer(bytes.length);
         buffer.writeBytes(bytes);
 
         ByteBuffer dst = direct ? ByteBuffer.allocateDirect(bytes.length) : ByteBuffer.allocate(bytes.length);
-        ByteBuffer readOnlyDst = dst.asReadOnlyBuffer();
-        try {
-            buffer.getBytes(0, readOnlyDst);
-            fail();
-        } catch (ReadOnlyBufferException e) {
-            // expected
-        }
+        final ByteBuffer readOnlyDst = dst.asReadOnlyBuffer();
+        assertThrows(ReadOnlyBufferException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.getBytes(0, readOnlyDst);
+            }
+        });
         assertEquals(0, readOnlyDst.position());
         buffer.release();
     }
@@ -5978,6 +6099,7 @@ public abstract class AbstractByteBufTest {
 
             final ByteBuf buffer = newBuffer(4);
             assertEquals(1, buffer.refCnt());
+            final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
             final AtomicInteger cnt = new AtomicInteger(Integer.MAX_VALUE);
             Thread t1 = new Thread(new Runnable() {
                 @Override
@@ -5988,7 +6110,11 @@ public abstract class AbstractByteBufTest {
                     } else {
                         released = buffer.release();
                     }
-                    assertTrue(released);
+                    if (!released) {
+                        innerThrowable.set(new AssertionError("buffer was not released: " + buffer));
+                        latch.countDown();
+                        return;
+                    }
                     Thread t2 = new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -6008,6 +6134,10 @@ public abstract class AbstractByteBufTest {
             t1.start();
 
             latch.await();
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                fail(inner);
+            }
             assertEquals(0, cnt.get());
             innerLatch.countDown();
         }
@@ -6231,14 +6361,16 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testEnsureWritableIntegerOverflow() {
-        ByteBuf buffer = newBuffer(CAPACITY);
+        final ByteBuf buffer = newBuffer(CAPACITY);
         buffer.writerIndex(buffer.readerIndex());
         buffer.writeByte(1);
         try {
-            buffer.ensureWritable(Integer.MAX_VALUE);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // expected
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buffer.ensureWritable(Integer.MAX_VALUE);
+                }
+            });
         } finally {
             buffer.release();
         }

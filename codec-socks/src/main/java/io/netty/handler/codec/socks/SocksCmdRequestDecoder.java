@@ -63,7 +63,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<State> {
                         break;
                     }
                     case DOMAIN: {
-                        int fieldLength = byteBuf.readByte();
+                        int fieldLength = byteBuf.readUnsignedByte();
                         String host = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
                         int port = ByteBufUtil.readUnsignedShortBE(byteBuf);
                         out.add(new SocksCmdRequest(cmdType, addressType, host, port));

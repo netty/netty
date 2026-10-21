@@ -369,7 +369,7 @@ public class OcspTest {
             try {
                 EventLoopGroup group = new DefaultEventLoopGroup();
                 try {
-                    LocalAddress address = new LocalAddress("handshake-" + Math.random());
+                    LocalAddress address = new LocalAddress(OcspTest.class);
                     Channel server = newServer(group, address, serverSslContext, response, serverHandler);
                     Channel client = newClient(group, address, clientSslContext, callback, clientHandler);
                     try {

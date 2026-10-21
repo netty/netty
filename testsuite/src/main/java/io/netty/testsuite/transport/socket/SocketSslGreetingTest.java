@@ -38,6 +38,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -58,6 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -242,13 +244,13 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
-                    SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
-                    try {
-                        session.getPeerCertificates();
-                        fail();
-                    } catch (SSLPeerUnverifiedException e) {
-                        // expected
-                    }
+                    final SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
+                    assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            session.getPeerCertificates();
+                        }
+                    });
                     try {
                         session.getPeerCertificateChain();
                         fail();
@@ -261,12 +263,12 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                             throw e;
                         }
                     }
-                    try {
-                        session.getPeerPrincipal();
-                        fail();
-                    } catch (SSLPeerUnverifiedException e) {
-                        // expected
-                    }
+                    assertThrows(SSLPeerUnverifiedException.class, new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            session.getPeerPrincipal();
+                        }
+                    });
                 }
             }
             ctx.fireUserEventTriggered(evt);

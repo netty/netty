@@ -562,7 +562,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
-                if (close) {
+                if (close || allocHandle.isReadEOF()) {
                     shutdownInput(false);
                 }
             } catch (Throwable t) {

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,6 +23,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -276,13 +276,13 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                         queuesSize.addAndGet(-size);
                         ctx.write(toSend.toSend, toSend.promise);
                     }
-                } else {
+                } else if (!perChannel.messagesQueue.isEmpty()) {
                     queuesSize.addAndGet(-perChannel.queueSize);
+                    ClosedChannelException cause = new ClosedChannelException();
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        if (toSend.toSend instanceof ByteBuf) {
-                            ((ByteBuf) toSend.toSend).release();
-                        }
+                        releaseAndFailQueuedWrite(toSend.toSend, toSend.promise, cause);
                     }
+                    perChannel.queueSize = 0;
                 }
                 perChannel.messagesQueue.clear();
             }

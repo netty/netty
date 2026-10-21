@@ -21,8 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 
 import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
@@ -42,12 +45,37 @@ import java.util.List;
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 
-    // TODO maxFrameLength + safe skip + fail-fast option
-    //      (just like LengthFieldBasedFrameDecoder)
+    private final int maxFrameLength;
+    private long bytesToDiscard;
+
+    /**
+     * Creates a new instance with no frame length limit.
+     */
+    public ProtobufVarint32FrameDecoder() {
+        this(Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new instance with the specified maximum frame length.
+     *
+     * @param maxFrameLength the maximum length of the frame.
+     *                       If the length exceeds this value,
+     *                       {@link TooLongFrameException} will be thrown.
+     */
+    public ProtobufVarint32FrameDecoder(int maxFrameLength) {
+        this.maxFrameLength = checkPositive(maxFrameLength, "maxFrameLength");
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
+        if (bytesToDiscard > 0) {
+            int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());
+            in.skipBytes(localBytesToDiscard);
+            bytesToDiscard -= localBytesToDiscard;
+            return;
+        }
+
         in.markReaderIndex();
         int preIndex = in.readerIndex();
         int length = readRawVarint32(in);
@@ -56,6 +84,19 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         }
         if (length < 0) {
             throw new CorruptedFrameException("negative length: " + length);
+        }
+
+        if (length > maxFrameLength) {
+            long discard = length - in.readableBytes();
+            if (discard <= 0) {
+                in.skipBytes(length);
+            } else {
+                bytesToDiscard = discard;
+                in.skipBytes(in.readableBytes());
+            }
+            throw new TooLongFrameException(
+                    "Frame length exceeds " + maxFrameLength
+                    + ": " + length);
         }
 
         if (in.readableBytes() < length) {
@@ -98,8 +139,13 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     }
 
     private static int readRawVarint40(ByteBuf buffer, int wholeOrMore) {
-        byte lastByte;
-        if (buffer.readableBytes() == 4 || (lastByte = buffer.getByte(buffer.readerIndex() + 4)) < 0) {
+        if (buffer.readableBytes() == 4) {
+            // The first 4 bytes all have the continuation bit set, but the 5th byte did not arrive yet.
+            // Leave the readerIndex untouched so the caller waits for more data.
+            return 0;
+        }
+        byte lastByte = buffer.getByte(buffer.readerIndex() + 4);
+        if (lastByte < 0) {
             throw new CorruptedFrameException("malformed varint.");
         }
         buffer.skipBytes(5);
@@ -137,6 +183,9 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         if ((tmp = buffer.readByte()) >= 0) {
             return result | tmp << 14;
         }
-        return result | (tmp & 127) << 14;
+        // All 3 readable bytes have the continuation bit set, which means at least one more byte is needed to
+        // complete the varint. We only end up here if less than 4 bytes were readable, so wait for more data.
+        buffer.resetReaderIndex();
+        return 0;
     }
 }

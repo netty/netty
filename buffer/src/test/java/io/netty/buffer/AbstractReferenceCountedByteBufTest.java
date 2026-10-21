@@ -31,7 +31,6 @@ import java.nio.channels.ScatteringByteChannel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class AbstractReferenceCountedByteBufTest {
 
@@ -75,14 +74,15 @@ public class AbstractReferenceCountedByteBufTest {
 
     @Test
     public void testReleaseErrorMessage() {
-        AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
+        final AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
-        try {
-            referenceCounted.release(1);
-            fail("IllegalReferenceCountException didn't occur");
-        } catch (IllegalReferenceCountException e) {
-            assertEquals("refCnt: 0, decrement: 1", e.getMessage());
-        }
+        IllegalReferenceCountException e = assertThrows(IllegalReferenceCountException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                referenceCounted.release(1);
+            }
+        });
+        assertEquals("refCnt: 0, decrement: 1", e.getMessage());
     }
 
     @Test

@@ -150,8 +150,7 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
         initState(STREAM_C, 3, true);
         initState(STREAM_D, 4, true);
 
-        Exception fakeException = new RuntimeException("Fake exception");
-        doThrow(fakeException).when(writer).write(same(stream(STREAM_C)), eq(3));
+        doThrow(Http2TestUtil.FAKE_EXCEPTION).when(writer).write(same(stream(STREAM_C)), eq(3));
 
         Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
             @Override
@@ -161,7 +160,7 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
         });
         assertFalse(Http2Exception.isStreamError(e));
         assertEquals(Http2Error.INTERNAL_ERROR, e.error());
-        assertSame(fakeException, e.getCause());
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, e.getCause());
 
         verifyWrite(atMost(1), STREAM_A, 1);
         verifyWrite(atMost(1), STREAM_B, 2);

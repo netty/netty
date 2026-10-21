@@ -849,7 +849,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     break;
                 }
 
-                SSLEngineResult result;
+                SSLEngineResult result = null;
 
                 try {
                     if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
@@ -874,16 +874,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                         result = wrap(alloc, engine, buf, out);
                     }
-                } catch (SSLException e) {
-                    // Either wrapMultiple(...) or wrap(...) did throw. In this case we need to release the buffer
-                    // that we removed from pendingUnencryptedWrites before failing the promise and rethrowing it.
-                    // Failing to do so would result in a buffer leak.
+                } catch (Throwable e) {
+                    // Either wrapMultiple(...), wrap(...) or allocateOutNetBuf(...) did throw.
+                    // In this case we need to release the buffer that we removed from pendingUnencryptedWrites
+                    // before failing the promise and rethrowing it. Failing to do so would result in a buffer leak.
                     // See https://github.com/netty/netty/issues/14644
                     //
                     // We don't need to release out here as this is done in a finally block already.
                     buf.release();
                     promise.setFailure(e);
-                    throw e;
+                    PlatformDependent.throwException(e);
                 }
 
                 if (buf.isReadable()) {
@@ -1103,6 +1103,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // reader index so its included again in the next slice.
                 in.readerIndex(in.readerIndex() - wrapBuf.readableBytes());
             }
+
+            if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
+                // The engine did neither consume nor produce anything, for example because the handshake is not done
+                // yet. Break out so the caller handles the handshake status, as otherwise we would loop forever.
+                break;
+            }
         } while (in.readableBytes() > 0);
 
         return result;
@@ -1172,7 +1178,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Channel closed, we will generate 'ClosedChannelException' now.
         ClosedChannelException exception = new ClosedChannelException();
 
-        // Add a supressed exception if the handshake was not completed yet.
+        // Add a suppressed exception if the handshake was not completed yet.
         if (isStateSet(STATE_HANDSHAKE_STARTED) && !handshakePromise.isDone()) {
             ThrowableUtil.addSuppressed(exception, StacklessSSLHandshakeException.newInstance(
                     "Connection closed while SSL/TLS handshake was in progress",

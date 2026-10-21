@@ -22,6 +22,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteOrder;
@@ -30,8 +31,8 @@ import java.security.cert.X509Certificate;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class Base64Test {
 
@@ -177,12 +178,14 @@ public class Base64Test {
     public void decodingFailsOnInvalidInputByte() {
         char[] invalidChars = {'\u007F', '\u0080', '\u00BD', '\u00FF'};
         for (char invalidChar : invalidChars) {
-            ByteBuf buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1);
+            final ByteBuf buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1);
             try {
-                Base64.decode(buf);
-                fail("Invalid character in not detected: " + invalidChar);
-            } catch (IllegalArgumentException ignored) {
-                // as expected
+                assertThrows(IllegalArgumentException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        Base64.decode(buf);
+                    }
+                });
             } finally {
                 assertTrue(buf.release());
             }

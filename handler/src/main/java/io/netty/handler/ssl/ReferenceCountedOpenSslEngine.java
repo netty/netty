@@ -127,6 +127,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static final SSLEngineResult NEED_WRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_WRAP, 0, 0);
     private static final SSLEngineResult CLOSED_NOT_HANDSHAKING = new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
 
+    // See https://www.rfc-editor.org/rfc/rfc8446#section-4.2.1
+    private static final int TLS1_3_VERSION = 0x0304;
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -201,7 +204,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     final boolean jdkCompatibilityMode;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
-    private final OpenSslEngineMap engineMap;
+    private final OpenSslEngineMap engines;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
     private final OpenSslInternalSession session;
@@ -229,7 +232,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   String endpointIdentificationAlgorithm) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        engineMap = context.engineMap;
+        engines = context.engines;
         enableOcsp = context.enableOcsp;
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         this.alloc = checkNotNull(alloc, "alloc");
@@ -415,6 +418,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         parentContext = context;
 
+        // Register for the SSL* -> engine reverse lookup used by native callbacks; held weakly (see OpenSslEngineMap).
+        engines.add(ssl, this);
+
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
@@ -425,6 +431,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
+    }
+
+    final synchronized boolean isTLSv13() {
+        return !destroyed && SSL.getVersionInt(ssl) == TLS1_3_VERSION;
     }
 
     final boolean setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
@@ -574,11 +584,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized void shutdown() {
         if (!destroyed) {
             destroyed = true;
-            // Let's check if engineMap is null as it could be in theory if we throw an OOME during the construction of
+            // Let's check if engines is null as it could be in theory if we throw an OOME during the construction of
             // ReferenceCountedOpenSslEngine (before we assign the field). This is needed as shutdown() is called from
             // the finalizer as well.
-            if (engineMap != null) {
-                engineMap.remove(ssl);
+            if (engines != null) {
+                engines.remove(ssl);
             }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
@@ -1973,9 +1983,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
             return handshakeException();
         }
-
-        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engineMap.add(this);
 
         if (!sessionSet) {
             if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {

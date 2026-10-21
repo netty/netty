@@ -61,7 +61,8 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
+        // Must be consistent with equals; super.hashCode() is Object's identity hash.
+        int hash = (int) (content ^ content >>> 32);
         hash = hash * 31 + (ack ? 1 : 0);
         return hash;
     }

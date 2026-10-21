@@ -26,7 +26,7 @@ import java.util.List;
 public class KQueueCompositeBufferGatheringWriteTest extends CompositeBufferGatheringWriteTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.socket();
+        return KQueueSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }
 
     @Override

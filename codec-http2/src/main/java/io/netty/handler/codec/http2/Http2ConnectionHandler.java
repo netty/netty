@@ -32,7 +32,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
@@ -79,6 +81,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
+    private boolean inFlush;
+    private boolean flushAgain;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -189,14 +193,45 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void flush(ChannelHandlerContext ctx) {
+        if (inFlush) {
+            // Reentrant flush (e.g. from a synchronous writability change) must not recurse — that livelocks
+            // (#17256); the in-progress flush loop picks it up.
+            flushAgain = true;
+            return;
+        }
+        inFlush = true;
         try {
-            // Trigger pending writes in the remote flow controller.
-            encoder.flowController().writePendingBytes();
-            ctx.flush();
+            do {
+                flushAgain = false;
+                // Trigger pending writes in the remote flow controller.
+                encoder.flowController().writePendingBytes();
+                ctx.flush();
+                // Honor any flush re-requested while we were flushing (a resumed write, or a direct flush from
+                // elsewhere in the pipeline) regardless of writability — flushing already-written data doesn't
+                // need a writable channel.
+            } while (flushAgain);
         } catch (Http2Exception e) {
             onError(ctx, true, e);
         } catch (Throwable cause) {
             onError(ctx, true, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
+        } finally {
+            inFlush = false;
+        }
+    }
+
+    private boolean hasPendingData() {
+        final Http2RemoteFlowController flowController = encoder.flowController();
+        try {
+            // Stop at the first stream that still has a flow-controlled frame queued. Frame-based, so it counts
+            // zero-length frames (e.g. trailing headers) that carry no flow-control bytes.
+            return connection().forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) {
+                    return !flowController.hasFlowControlled(stream);
+                }
+            }) != null;
+        } catch (Http2Exception e) {
+            return false;
         }
     }
 
@@ -221,6 +256,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public boolean prefaceSent() {
             return true;
         }
+
+        /**
+         * Send the preface if needed.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} to use.
+         * @throws Exception    thrown on error.
+         */
+        public void sendPrefaceIfNeeded(ChannelHandlerContext ctx) throws Exception {
+            // Noop by default.
+        }
     }
 
     private final class PrefaceDecoder extends BaseDecoder {
@@ -231,7 +276,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.
-            sendPreface(ctx);
+            sendPrefaceIfNeeded(ctx);
         }
 
         @Override
@@ -259,7 +304,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // The channel just became active - send the connection preface to the remote endpoint.
-            sendPreface(ctx);
+            sendPrefaceIfNeeded(ctx);
         }
 
         @Override
@@ -360,7 +405,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         /**
          * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
          */
-        private void sendPreface(ChannelHandlerContext ctx) throws Exception {
+        @Override
+        public void sendPrefaceIfNeeded(ChannelHandlerContext ctx) throws Exception {
             if (prefaceSent || !ctx.channel().isActive()) {
                 return;
             }
@@ -407,13 +453,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         // Initialize the encoder, decoder, flow controllers, and internal state.
         encoder.lifecycleManager(this);
         decoder.lifecycleManager(this);
         encoder.flowController().channelHandlerContext(ctx);
         decoder.flowController().channelHandlerContext(ctx);
         byteDecoder = new PrefaceDecoder(ctx);
+        // Streams are not only closed via closeStream(...): the connection also closes them itself, for example
+        // when a GOAWAY is received or the channel becomes inactive. Check if a pending graceful shutdown can
+        // complete whenever a stream is closed, whatever the reason.
+        connection().addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamClosed(Http2Stream stream) {
+                checkCloseConnection(ctx.newSucceededFuture());
+            }
+        });
     }
 
     @Override
@@ -445,10 +500,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        // Writability is expected to change while we are writing. We cannot allow this event to trigger reentering
-        // the allocation and write loop. Reentering the event loop will lead to over or illegal allocation.
         try {
-            if (ctx.channel().isWritable()) {
+            // Only flush on a writability change if the flow controller has frames queued. A toggle with
+            // nothing to write (e.g. SslHandler during setup) must not flush, or the flush -> writability ->
+            // flush cycle livelocks (#17256).
+            if (ctx.channel().isWritable() && hasPendingData()) {
                 flush(ctx);
             }
             encoder.flowController().channelWritabilityChanged();
@@ -464,13 +520,19 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        ctx.bind(localAddress, promise);
+        // Ensure we send the preface before we notify the bind promise as the user might try to write
+        // directly in the listener attached to the promise and we need to ensure the preface is always the first
+        // thing that is written.
+        ctx.bind(localAddress, ctx.newPromise()).addListener(new PrefaceSendListener(ctx, promise));
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
                         ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
+        // Ensure we send the preface before we notify the connect promise as the user might try to write
+        // directly in the listener attached to the promise and we need to ensure the preface is always the first
+        // thing that is written.
+        ctx.connect(remoteAddress, localAddress, ctx.newPromise()).addListener(new PrefaceSendListener(ctx, promise));
     }
 
     @Override
@@ -656,8 +718,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             onStreamError(ctx, outbound, cause, (StreamException) embedded);
         } else if (embedded instanceof CompositeStreamException) {
             CompositeStreamException compositException = (CompositeStreamException) embedded;
+            // Each contained StreamException is generally an independent error for a distinct stream (e.g.
+            // one per active stream that overflowed its flow-control window when SETTINGS_INITIAL_WINDOW_SIZE
+            // changed), so every affected stream must still be reset individually; otherwise it would be left
+            // open with a corrupted flow-control window. Should the composite ever contain more than one
+            // exception for the same stream id, only report the first one, per RFC 9113, Section 5.4's
+            // guidance to report at most one stream error per stream.
+            Set<Integer> handledStreamIds = new HashSet<Integer>();
             for (StreamException streamException : compositException) {
-                onStreamError(ctx, outbound, cause, streamException);
+                if (handledStreamIds.add(streamException.streamId())) {
+                    onStreamError(ctx, outbound, cause, streamException);
+                }
             }
         } else {
             onConnectionError(ctx, outbound, cause, embedded);
@@ -946,7 +1017,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Sent GOAWAY: lastStreamId '{}', errorCode '{}', " +
                                      "debugData '{}'. Forcing shutdown of the connection.",
-                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
+                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8));
                     }
                     ctx.close();
                 }
@@ -1012,6 +1083,33 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 ctx.close();
             } else {
                 ctx.close(promise);
+            }
+        }
+    }
+
+    private final class PrefaceSendListener implements ChannelFutureListener {
+        private final ChannelHandlerContext ctx;
+        private final ChannelPromise promise;
+
+        PrefaceSendListener(ChannelHandlerContext ctx, ChannelPromise promise) {
+            this.ctx = ctx;
+            this.promise = promise;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture f) {
+            if (f.isSuccess()) {
+                try {
+                    if (byteDecoder != null) {
+                        byteDecoder.sendPrefaceIfNeeded(ctx);
+                    }
+                } catch (Throwable e) {
+                    promise.setFailure(e);
+                    return;
+                }
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
             }
         }
     }

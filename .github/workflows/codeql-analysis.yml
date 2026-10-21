@@ -53,8 +53,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # Pinned to v6.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository

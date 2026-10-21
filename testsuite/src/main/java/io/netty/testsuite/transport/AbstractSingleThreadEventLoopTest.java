@@ -51,7 +51,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class AbstractSingleThreadEventLoopTest {
@@ -131,7 +130,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         ChannelFuture cf = serverChannelClass() == LocalServerChannel.class
-                ? b.bind(new LocalAddress("local")) : b.bind(0);
+                ? b.bind(new LocalAddress(AbstractSingleThreadEventLoopTest.class)) : b.bind(0);
         cf.sync().channel();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
@@ -336,13 +335,13 @@ public abstract class AbstractSingleThreadEventLoopTest {
         public void run() { }
     };
 
-    private static void assertRejection(EventExecutor loop) {
-        try {
-            loop.execute(NOOP);
-            fail("A task must be rejected after shutdown() is called.");
-        } catch (RejectedExecutionException e) {
-            // Expected
-        }
+    private static void assertRejection(final EventExecutor loop) {
+        assertThrows(RejectedExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                loop.execute(NOOP);
+            }
+        });
     }
 
     protected boolean supportsChannelIteration() {

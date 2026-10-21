@@ -35,6 +35,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -53,14 +55,11 @@ import java.nio.channels.NetworkChannel;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChannel> {
 
@@ -165,13 +164,13 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
     // Test for https://github.com/netty/netty/issues/4805
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
         testChannelReRegisterRead(true);
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testChannelReRegisterReadDifferentEventLoop() throws Exception {
         testChannelReRegisterRead(false);
     }
@@ -179,6 +178,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     private static void testChannelReRegisterRead(final boolean sameEventLoop) throws Exception {
         final EventLoopGroup group = new NioEventLoopGroup(2);
         final CountDownLatch latch = new CountDownLatch(1);
+        final Promise<Void> eventLoopCheck = group.next().newPromise();
 
         // Just some random bytes
         byte[] bytes = new byte[1024];
@@ -225,8 +225,17 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                  @Override
                                  public void operationComplete(ChannelFuture cf) {
                                      Channel channel = cf.channel();
-                                     assertNotSame(loop, channel.eventLoop());
-                                     group.next().register(channel);
+                                     Throwable cause = cf.cause();
+                                     if (loop == channel.eventLoop()) {
+                                         AssertionError err = new AssertionError("Got same event loop: " + loop);
+                                         ThrowableUtil.addSuppressed(err, cause);
+                                         eventLoopCheck.tryFailure(err);
+                                     } else if (cause != null) {
+                                         eventLoopCheck.tryFailure(new AssertionError(cause));
+                                     } else {
+                                         eventLoopCheck.trySuccess(null);
+                                         group.next().register(channel);
+                                     }
                                  }
                              });
                          }
@@ -242,6 +251,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             cc = bootstrap.connect(sc.localAddress()).syncUninterruptibly().channel();
             cc.writeAndFlush(Unpooled.wrappedBuffer(bytes)).syncUninterruptibly();
             latch.await();
+            eventLoopCheck.sync();
         } finally {
             if (cc != null) {
                 cc.close();
@@ -249,13 +259,13 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             if (sc != null) {
                 sc.close();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownOutputAndClose() throws IOException {
+    @Timeout(30)
+    public void testShutdownOutputAndClose() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         ServerSocket socket = new ServerSocket();
         socket.bind(new InetSocketAddress(0));
@@ -285,7 +295,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             } catch (IOException ignore) {
                 // ignore
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

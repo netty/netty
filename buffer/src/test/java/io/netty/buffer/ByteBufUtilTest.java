@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -40,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
@@ -150,6 +150,58 @@ public class ByteBufUtilTest {
         assertEquals(3, ByteBufUtil.indexOf(Unpooled.copiedBuffer("aab", CharsetUtil.UTF_8), haystack));
         haystack.release();
         needle.release();
+    }
+
+    @Test
+    public void testIndexOfNeedleWithReaderIndex() {
+        ByteBuf needle = Unpooled.copiedBuffer("abc123", CharsetUtil.US_ASCII);
+        needle.readerIndex(3);
+        ByteBuf haystack = Unpooled.copiedBuffer("ab1123", CharsetUtil.US_ASCII);
+        assertEquals(3, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+
+        needle = Unpooled.copiedBuffer("xab", CharsetUtil.US_ASCII);
+        needle.readerIndex(1);
+        haystack = Unpooled.copiedBuffer("aab", CharsetUtil.US_ASCII);
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    public void testIndexOfMatchesNaiveSearch(int needleReaderIndex) {
+        Random random = new Random(needleReaderIndex);
+        for (int i = 0; i < 10000; i++) {
+            byte[] needleBytes = new byte[2 + random.nextInt(5)];
+            byte[] haystackBytes = new byte[random.nextInt(16)];
+            byte[] prefix = new byte[needleReaderIndex];
+            for (byte[] bytes : Arrays.asList(needleBytes, haystackBytes, prefix)) {
+                for (int j = 0; j < bytes.length; j++) {
+                    bytes[j] = (byte) random.nextInt(3);
+                }
+            }
+            ByteBuf needle = Unpooled.buffer().writeBytes(prefix).writeBytes(needleBytes);
+            needle.readerIndex(prefix.length);
+            ByteBuf haystack = Unpooled.wrappedBuffer(haystackBytes);
+            assertEquals(naiveIndexOf(needleBytes, haystackBytes), ByteBufUtil.indexOf(needle, haystack));
+            needle.release();
+            haystack.release();
+        }
+    }
+
+    private static int naiveIndexOf(byte[] needle, byte[] haystack) {
+        for (int i = 0; i <= haystack.length - needle.length; i++) {
+            int j = 0;
+            while (j < needle.length && haystack[i + j] == needle[j]) {
+                j++;
+            }
+            if (j == needle.length) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Test
@@ -746,14 +798,16 @@ public class ByteBufUtilTest {
         int invoke(Object... args);
     }
 
-    private void testInvalidSubsequences(BufferType bufferType, TestMethod method) {
-        for (int [] range : INVALID_RANGES) {
-            ByteBuf buf = buffer(bufferType, 16);
+    private void testInvalidSubsequences(BufferType bufferType, final TestMethod method) {
+        for (final int [] range : INVALID_RANGES) {
+            final ByteBuf buf = buffer(bufferType, 16);
             try {
-                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
-                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
-            } catch (IndexOutOfBoundsException iiobe) {
-                // expected
+                assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
+                    }
+                });
             } finally {
                 assertFalse(buf.isReadable());
                 buf.release();
@@ -885,7 +939,7 @@ public class ByteBufUtilTest {
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
     public void testIsTextWithInvalidIndexAndLength(BufferType bufferType) {
-        ByteBuf buffer = buffer(bufferType, 4);
+        final ByteBuf buffer = buffer(bufferType, 4);
         try {
             buffer.writeBytes(new byte[4]);
             int[][] validIndexLengthPairs = {
@@ -904,13 +958,13 @@ public class ByteBufUtilTest {
                     {5, 0},
                     {1, 5},
             };
-            for (int[] pair : invalidIndexLengthPairs) {
-                try {
-                    ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
-                    fail("Expected IndexOutOfBoundsException");
-                } catch (IndexOutOfBoundsException e) {
-                    // expected
-                }
+            for (final int[] pair : invalidIndexLengthPairs) {
+                assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
+                    }
+                });
             }
         } finally {
             buffer.release();

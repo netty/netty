@@ -24,16 +24,17 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.TestAbortedException;
 
@@ -43,16 +44,24 @@ import java.security.AlgorithmConstraints;
 import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -60,6 +69,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.StandardConstants;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
@@ -1125,6 +1135,92 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
+    public void testSNIMatchersWithInvalidRequestedSNIName(SSLEngineTestParam param) throws Exception {
+        byte[] name = "example.com".getBytes(CharsetUtil.UTF_8);
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                        .sslProvider(sslServerProvider())
+                                        .protocols(param.protocols())
+                                        .ciphers(param.ciphers())
+                                        .build());
+
+        SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            SSLParameters parameters = new SSLParameters();
+            Java8SslTestUtils.setSNIMatcher(parameters, name);
+            engine.setSSLParameters(parameters);
+            // SNIHostName rejects names with a trailing dot or an empty label, this must not throw.
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("example.com.".getBytes(CharsetUtil.UTF_8)));
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("example..com".getBytes(CharsetUtil.UTF_8)));
+            assertTrue(unwrapEngine(engine).checkSniHostnameMatch("example.com".getBytes(CharsetUtil.UTF_8)));
+        } finally {
+            cleanupServerSslEngine(engine);
+        }
+    }
+
+    @CsvSource({
+            "TLSv1.2, host_name.example.com, false",
+            "TLSv1.3, host_name.example.com, false",
+            "TLSv1.2, HostName.Example.COM, true",
+            "TLSv1.3, HostName.Example.COM, true",
+            // always rejected by the SNIHostName byte constructor (empty label)
+            "TLSv1.2, example..com, false",
+            "TLSv1.3, example..com, false",
+            "TLSv1.2, , false",
+            "TLSv1.3, , false"
+    })
+    @ParameterizedTest
+    public void testRequestedServerNames(String protocol, String hostname, boolean validHostname) throws Exception {
+        checkShouldUseKeyManagerFactory();
+        assumeTrue(OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol));
+        SelfSignedCertificate certificate = CachedSelfSignedCertificate.getCachedCertificate();
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(null, null);
+        keyStore.setKeyEntry("identity", certificate.key(), "password".toCharArray(),
+                new Certificate[] { certificate.cert() });
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
+        keyManagerFactory.init(keyStore, "password".toCharArray());
+        this.serverSslCtx = SslContextBuilder.forServer(keyManagerFactory)
+                .sslProvider(this.sslServerProvider())
+                .protocols(protocol)
+                .build();
+        this.clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(certificate.cert())
+                .sslProvider(this.sslClientProvider())
+                .endpointIdentificationAlgorithm(null)
+                .protocols(protocol)
+                .build();
+
+        SSLEngine client = this.wrapEngine(this.clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine server = this.wrapEngine(this.serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            if (hostname != null) {
+                // reproduce the wire name without client-side SNIHostName validation
+                SSL.setTlsExtHostName(this.unwrapEngine(client).sslPointer(), hostname);
+            }
+
+            this.handshake(BufferType.Direct, false, client, server);
+            List<SNIServerName> names = ((ExtendedSSLSession) server.getSession()).getRequestedServerNames();
+            if (hostname == null) {
+                assertTrue(names.isEmpty());
+            } else {
+                assertEquals(1, names.size());
+                assertEquals(StandardConstants.SNI_HOST_NAME, names.get(0).getType());
+                assertArrayEquals(hostname.getBytes(CharsetUtil.UTF_8), names.get(0).getEncoded());
+
+                if (validHostname) {
+                    assertEquals(new SNIHostName(hostname.toLowerCase(Locale.ROOT)), names.get(0));
+                    assertEquals(hostname, ((SNIHostName) names.get(0)).getAsciiName());
+                }
+            }
+        } finally {
+            this.cleanupClientSslEngine(client);
+            this.cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     public void testAlgorithmConstraintsThrows(SSLEngineTestParam param) throws Exception {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -1481,6 +1577,39 @@ public class OpenSslEngineTest extends SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+        }
+    }
+
+    // Pins OPENSSL (not sslClientProvider()) because only the OPENSSL engine has a finalizer to drive the reclaim
+    // asserted here; the OPENSSL_REFCNT subclass overrides this to a no-op (it has no finalizer). Verifies that a
+    // leaked engine is collected and releases its parent context while the context is still alive -- only possible
+    // because OpenSslEngineMap holds engines weakly rather than pinning them for the context's lifetime.
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void leakedEngineIsReclaimedWhileContextAlive() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+
+        SslContext ctx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(OPENSSL)
+                .build();
+        try {
+            // newEngine retains the context, so its refCnt goes from 1 to 2.
+            SSLEngine engine = ctx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            assertEquals(2, ReferenceCountUtil.refCnt(ctx));
+
+            // Drop the engine without releasing it, simulating a leak (e.g. handlerRemoved0 never firing).
+            engine = null;
+
+            // Collection triggers OpenSslEngine.finalize(), which releases the context (2 -> 1).
+            while (ReferenceCountUtil.refCnt(ctx) != 1) {
+                System.gc();
+                System.runFinalization();
+                Thread.sleep(50);
+            }
+            assertEquals(1, ReferenceCountUtil.refCnt(ctx));
+        } finally {
+            ReferenceCountUtil.release(ctx);
         }
     }
 

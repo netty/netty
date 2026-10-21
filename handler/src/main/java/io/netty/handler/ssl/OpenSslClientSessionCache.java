@@ -31,8 +31,8 @@ import java.util.Set;
 final class OpenSslClientSessionCache extends OpenSslSessionCache {
     private final Map<HostPort, Set<NativeSslSession>> sessions = new HashMap<HostPort, Set<NativeSslSession>>();
 
-    OpenSslClientSessionCache(OpenSslEngineMap engineMap) {
-        super(engineMap);
+    OpenSslClientSessionCache(OpenSslEngineMap engines) {
+        super(engines);
     }
 
     @Override

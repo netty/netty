@@ -35,12 +35,14 @@ jobs:
   prepare-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
 
+      # Pinned to v6.0.1
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: 'zulu'
           java-version: '11'
@@ -50,15 +52,17 @@ jobs:
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
 
+      # Pinned to v2.8.1
       - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       # Cache .m2/repository
+      # Pinned to v6.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -75,8 +79,9 @@ jobs:
       - name: Checkout tag
         run: ./.github/scripts/release_checkout_tag.sh release.properties
 
+      # Pinned to v7.0.1
       - name: Upload workspace
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: prepare-release-workspace
           path: |
@@ -103,8 +108,9 @@ jobs:
     name: stage-release-${{ matrix.setup }}
 
     steps:
+      # Pinned to v8.0.1
       - name: Download release-workspace
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
@@ -112,8 +118,9 @@ jobs:
       - name: Adjust mvnw permissions
         run: chmod 755 ./prepare-release-workspace/mvnw
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
+      # Pinned to v8.0.1
+      - name: Download release-workspace
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           distribution: 'zulu'
           java-version: '11'
@@ -123,13 +130,15 @@ jobs:
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
 
+      # Pinned to v2.8.1
       - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
-      - uses: s4u/maven-settings-action@v3.0.0
+      # Pinned to v4.0.0
+      - uses: s4u/maven-settings-action@894661b3ddae382f1ae8edbeab60987e08cf0788
         with:
           servers: |
             [{
@@ -139,8 +148,9 @@ jobs:
             }]
 
       # Cache .m2/repository
+      # Pinned to v6.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -164,8 +174,9 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: docker compose ${{ matrix.docker-compose-run }}
 
-      - name: Upload local staging directory
-        uses: actions/upload-artifact@v4
+      # Pinned to v7.0.1
+      - name: Upload workspace
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
@@ -183,8 +194,9 @@ jobs:
     # Wait until we have staged everything
     needs: stage-release-linux
     steps:
+      # Pinned to v8.0.1
       - name: Download release-workspace
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
@@ -192,8 +204,9 @@ jobs:
       - name: Adjust mvnw permissions
         run: chmod 755 ./prepare-release-workspace/mvnw
 
+      # Pinned to v6.0.1
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: 'zulu'
           java-version: '11'
@@ -203,28 +216,32 @@ jobs:
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
 
+      # Pinned to v2.8.1
       - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
+      # Pinned to v8.0.1
       - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
+      # Pinned to v8.0.1
       - name: Download linux-riscv64 staging directory
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: linux-riscv64-local-staging
           path: ~/linux-riscv64-local-staging
 
+      # Pinned to v8.0.1
       - name: Download linux-x86_64-java11 staging directory
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: linux-x86_64-java11-local-staging
           path: ~/linux-x86_64-java11-local-staging
@@ -235,7 +252,8 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging
 
-      - uses: s4u/maven-settings-action@v3.0.0
+      # Pinned to v4.0.0
+      - uses: s4u/maven-settings-action@894661b3ddae382f1ae8edbeab60987e08cf0788
         with:
           servers: |
             [{
@@ -245,8 +263,9 @@ jobs:
             }]
 
       # Cache .m2/repository
+      # Pinned to v6.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository

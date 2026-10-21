@@ -53,6 +53,16 @@ public class SignatureAlgorithmConverterTest {
     }
 
     @Test
+    public void testEd25519() {
+        assertEquals("Ed25519", SignatureAlgorithmConverter.toJavaName("ed25519"));
+    }
+
+    @Test
+    public void testEd448() {
+        assertEquals("Ed448", SignatureAlgorithmConverter.toJavaName("ed448"));
+    }
+
+    @Test
     public void testInvalid() {
         assertNull(SignatureAlgorithmConverter.toJavaName("ThisIsSomethingInvalid"));
     }

@@ -19,10 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,13 +36,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DiskFileUploadTest {
     @Test
@@ -263,7 +269,7 @@ public class DiskFileUploadTest {
     @Test
     public void setSetContentFromFileExceptionally() throws Exception {
         final long maxSize = 4;
-        DiskFileUpload f1 = new DiskFileUpload("file5", "file5", "application/json", null, null, 0);
+        final DiskFileUpload f1 = new DiskFileUpload("file5", "file5", "application/json", null, null, 0);
         f1.setMaxSize(maxSize);
         try {
             f1.setContent(Unpooled.wrappedBuffer(new byte[(int) maxSize]));
@@ -273,7 +279,7 @@ public class DiskFileUploadTest {
             assertEquals(maxSize, f1.length());
             byte[] bytes = new byte[8];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
-            File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
+            final File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
             tmpFile.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tmpFile);
             try {
@@ -282,16 +288,113 @@ public class DiskFileUploadTest {
             } finally {
                 fos.close();
             }
-            try {
-                f1.setContent(tmpFile);
-                fail("should not reach here!");
-            } catch (IOException e) {
-                assertNotNull(f1.getFile());
-                assertEquals(originalFile, f1.getFile());
-                assertEquals(maxSize, f1.length());
-            }
+            IOException e = assertThrows(IOException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    f1.setContent(tmpFile);
+                }
+            });
+            assertNotNull(f1.getFile());
+            assertEquals(originalFile, f1.getFile());
+            assertEquals(maxSize, f1.length());
         } finally {
             f1.delete();
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {
+            0x00,
+            HttpConstants.CR,
+            HttpConstants.LF,
+            0x19,
+            HttpConstants.DEL,
+            HttpConstants.DOUBLE_QUOTE,
+            HttpConstants.BACKSLASH})
+    void filenameCannotContainIllegalCharacters(byte illegal) {
+        assertIllegalFilename(((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal));
+    }
+
+    private static void assertIllegalFilename(final String filename) {
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                new DiskFileUpload("f", filename, "plain/text", null, null, 0);
+            }
+        })
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Illegal filename character");
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {
+        0x00,
+        HttpConstants.CR,
+        HttpConstants.LF,
+        0x19,
+        HttpConstants.DEL})
+    void contentTypeCannotContainIllegalCharacters(byte illegal) {
+        assertIllegalContentType(((char) illegal) + "text/plain");
+        assertIllegalContentType("text/plain" + ((char) illegal) + " charset=\"us-ascii\"");
+        assertIllegalContentType("text/plain" + ((char) illegal));
+    }
+
+    @Test
+    void contentTypeCannotStartWithSpaceOrTabCharacter() {
+        assertIllegalContentType(" text/plain");
+        assertIllegalContentType("\ttext/plain");
+    }
+
+    private static void assertIllegalContentType(final String contentType) {
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                new DiskFileUpload("f", "f.txt", contentType, null, null, 0);
+            }
+        })
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Illegal Content-Type character");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "",
+        "text",
+        "text;plain",
+        "text;plain/octet-stream",
+        "text; charset=\"utf/8\"; charset=us-ascii",
+        "text/",
+        "text/;",
+        "/plain",
+    })
+    void contentTypeCannotHaveMalformedGrammar(String contentType) {
+        assertMalformedContentType(contentType);
+    }
+
+    private static void assertMalformedContentType(final String contentType) {
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                new DiskFileUpload("f", "f.txt", contentType, null, null, 0);
+            }
+        })
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Malformed content type value");
+    }
+
+    @Test
+    void contentTypeAllowsWhitespaceQuotesAndObsText() {
+        assertValidContentType("text/plain; charset=\"us-ascii\"");
+        assertValidContentType("text/plain;\tcharset=us-ascii");
+        assertValidContentType("text/plain; name=\"\u00e9\"");
+        assertValidContentType("t/p;");
+        assertValidContentType("t/p; ");
+        assertValidContentType("t/p");
+    }
+
+    private static void assertValidContentType(String contentType) {
+        assertEquals(contentType, new DiskFileUpload("f", "f.txt", contentType, null, null, 0).getContentType());
     }
 }

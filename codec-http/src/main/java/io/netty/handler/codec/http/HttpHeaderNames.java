@@ -50,6 +50,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ACCEPT_PATCH = AsciiString.cached("accept-patch");
     /**
+     * {@code "accept-query"}
+     */
+    public static final AsciiString ACCEPT_QUERY = AsciiString.cached("accept-query");
+    /**
      * {@code "access-control-allow-credentials"}
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =

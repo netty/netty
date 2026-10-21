@@ -19,7 +19,9 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class Http2DefaultFramesTest {
 
@@ -39,6 +41,50 @@ public class Http2DefaultFramesTest {
             goAwayFrame.release();
             unknownFrame.release();
             dflt.release();
+        }
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/13659
+    // AbstractHttp2StreamFrame.equals() treats two frames with a null stream as equal, but
+    // AbstractHttp2StreamFrame.hashCode() previously returned super.hashCode() (identity hash)
+    // in that case, producing different hashes for equal instances and violating the
+    // Object.hashCode contract.
+    @Test
+    public void testAbstractHttp2StreamFrameEqualInstancesHaveEqualHashCodes() {
+        AbstractHttp2StreamFrame a = new TestStreamFrame();
+        AbstractHttp2StreamFrame b = new TestStreamFrame();
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/13659 for DefaultHttp2PingFrame.
+    // equals() compares ack and content; before the fix hashCode() folded in the identity
+    // hash of Object, so two equal pings had different hash codes.
+    @Test
+    public void testDefaultHttp2PingFrameEqualInstancesHaveEqualHashCodes() {
+        DefaultHttp2PingFrame a = new DefaultHttp2PingFrame(42L, true);
+        DefaultHttp2PingFrame b = new DefaultHttp2PingFrame(42L, true);
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+    }
+
+    // Smoke test that the hash actually folds in content and ack. This is a regression guard
+    // against the pre-fix implementation, which seeded the hash with Object identity and never
+    // folded content into the result at all. Specific hashCode values are an implementation
+    // detail; we only assert that the chosen widely-spread inputs do not collide.
+    @Test
+    public void testDefaultHttp2PingFrameHashCodeDistinguishesDifferentValues() {
+        DefaultHttp2PingFrame a = new DefaultHttp2PingFrame(0L, false);
+        DefaultHttp2PingFrame differentContent = new DefaultHttp2PingFrame(Long.MAX_VALUE, false);
+        DefaultHttp2PingFrame differentAck = new DefaultHttp2PingFrame(0L, true);
+        assertNotEquals(a.hashCode(), differentContent.hashCode());
+        assertNotEquals(a.hashCode(), differentAck.hashCode());
+    }
+
+    private static final class TestStreamFrame extends AbstractHttp2StreamFrame {
+        @Override
+        public String name() {
+            return "TEST";
         }
     }
 }

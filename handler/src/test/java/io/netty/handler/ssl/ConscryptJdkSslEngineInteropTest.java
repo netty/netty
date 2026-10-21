@@ -68,8 +68,6 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
             throws Exception {
     }
 
-    @MethodSource("newTestParams")
-    @ParameterizedTest
     @Override
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.

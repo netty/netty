@@ -31,7 +31,10 @@ public interface FileUpload extends HttpData {
     String getFilename();
 
     /**
-     * Set the original filename
+     * Set the original filename.
+     * <p>
+     * <strong>Note:</strong> This method validates that the filename is safe for including in an HTTP request,
+     * and will throw an exception if that's not the case.
      */
     void setFilename(String filename);
 

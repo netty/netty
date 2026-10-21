@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 
 /**
@@ -97,9 +96,17 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
         if (type == DnsRecordType.CNAME || type == DnsRecordType.NS) {
-            return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive,
-                                           DnsCodecUtil.decompressDomainName(
-                                                   in.duplicate().setIndex(offset, offset + length)));
+            ByteBuf decompressed = DnsCodecUtil.decompressDomainName(
+                    in.duplicate().setIndex(offset, offset + length));
+            try {
+                DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, decompressed);
+                decompressed = null;
+                return record;
+            } finally {
+                if (decompressed != null) {
+                    decompressed.release();
+                }
+            }
         }
         if (type ==  DnsRecordType.MX) {
             // MX RDATA: 16-bit preference + exchange (domain name, possibly compressed)
@@ -108,25 +115,40 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
             final int pref = in.getUnsignedShort(offset);
             ByteBuf exchange = null;
+            ByteBuf out = null;
             try {
                 exchange = DnsCodecUtil.decompressDomainName(
                         in.duplicate().setIndex(offset + 2, offset + length));
 
                 // Build decompressed RDATA = [preference][expanded exchange name]
-                final ByteBuf out = in.alloc().buffer(2 + exchange.readableBytes());
+                out = in.alloc().buffer(2 + exchange.readableBytes());
                 out.writeShort(pref);
                 out.writeBytes(exchange);
 
-                return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+                DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+                out = null;
+                return record;
             } finally {
                 if (exchange != null) {
                     exchange.release();
                 }
+                if (out != null) {
+                    out.release();
+                }
             }
         }
 
-        return new DefaultDnsRawRecord(
-                name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
+        ByteBuf content = in.retainedDuplicate();
+        try {
+            content.setIndex(offset, offset + length);
+            DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, content);
+            content = null;
+            return record;
+        } finally {
+            if (content != null) {
+                content.release();
+            }
+        }
     }
 
     /**

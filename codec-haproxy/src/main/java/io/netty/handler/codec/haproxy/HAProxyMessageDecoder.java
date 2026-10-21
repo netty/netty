@@ -173,7 +173,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         }
 
         int idx = buffer.readerIndex();
-        return match(BINARY_PREFIX, buffer, idx) ? buffer.getByte(idx + BINARY_PREFIX_LENGTH) : 1;
+        return match(BINARY_PREFIX, buffer, idx) ? buffer.getUnsignedByte(idx + BINARY_PREFIX_LENGTH) : 1;
     }
 
     /**
@@ -195,7 +195,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
 
         // ensure we actually have the full header available
         if (n >= totalHeaderBytes) {
-            return totalHeaderBytes;
+            return buffer.readerIndex() + totalHeaderBytes;
         } else {
             return -1;
         }
@@ -233,6 +233,12 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        if (finished) {
+            // The header was already decoded, or decoding failed and the channel is closed. Do not decode the
+            // remaining bytes as another header.
+            return;
+        }
+
         // determine the specification version
         if (version == -1) {
             if ((version = findVersion(in)) == -1) {

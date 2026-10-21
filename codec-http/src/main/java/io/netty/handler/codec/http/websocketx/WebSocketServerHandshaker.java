@@ -166,6 +166,9 @@ public abstract class WebSocketServerHandshaker {
      * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
      * {@link FullHttpRequest} which is passed in.
      *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #handshake(ChannelHandlerContext, FullHttpRequest)}.
+     *
      * @param channel
      *              Channel
      * @param req
@@ -182,6 +185,9 @@ public abstract class WebSocketServerHandshaker {
      *
      * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
      *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #handshake(ChannelHandlerContext, FullHttpRequest, HttpHeaders, ChannelPromise)}.
+     *
      * @param channel
      *            Channel
      * @param req
@@ -195,6 +201,57 @@ public abstract class WebSocketServerHandshaker {
      */
     public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
+        return handshake0(channel, channel, req, responseHeaders, promise);
+    }
+
+    /**
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
+     *
+     * The handshake response is written to the given {@link ChannelHandlerContext}, so handlers placed
+     * after the {@link ChannelHandler} the context belongs to will not see the response. The handler the
+     * context belongs to must be placed after the HTTP encoder as the response still needs to be encoded.
+     *
+     * @param ctx
+     *              the {@link ChannelHandlerContext} to use.
+     * @param req
+     *              HTTP Request
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     */
+    public ChannelFuture handshake(ChannelHandlerContext ctx, FullHttpRequest req) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return handshake(ctx, req, null, ctx.newPromise());
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
+     *
+     * The handshake response is written to the given {@link ChannelHandlerContext}, so handlers placed
+     * after the {@link ChannelHandler} the context belongs to will not see the response. The handler the
+     * context belongs to must be placed after the HTTP encoder as the response still needs to be encoded.
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param req
+     *            HTTP Request
+     * @param responseHeaders
+     *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     */
+    public ChannelFuture handshake(ChannelHandlerContext ctx, FullHttpRequest req,
+                                            HttpHeaders responseHeaders, final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return handshake0(ctx, ctx.channel(), req, responseHeaders, promise);
+    }
+
+    private ChannelFuture handshake0(final ChannelOutboundInvoker invoker, final Channel channel, FullHttpRequest req,
+                                     HttpHeaders responseHeaders, final ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
@@ -227,7 +284,7 @@ public abstract class WebSocketServerHandshaker {
             encoderName = p.context(HttpResponseEncoder.class).name();
             p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
-        channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
+        invoker.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
@@ -246,6 +303,9 @@ public abstract class WebSocketServerHandshaker {
      * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
      * {@link FullHttpRequest} which is passed in.
      *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #handshake(ChannelHandlerContext, HttpRequest)}.
+     *
      * @param channel
      *              Channel
      * @param req
@@ -262,6 +322,9 @@ public abstract class WebSocketServerHandshaker {
      *
      * When call this method you <strong>MUST NOT</strong> retain the {@link HttpRequest} which is passed in.
      *
+     * When called from within a {@link ChannelHandler} you most likely want to use
+     * {@link #handshake(ChannelHandlerContext, HttpRequest, HttpHeaders, ChannelPromise)}.
+     *
      * @param channel
      *            Channel
      * @param req
@@ -275,8 +338,59 @@ public abstract class WebSocketServerHandshaker {
      */
     public final ChannelFuture handshake(final Channel channel, HttpRequest req,
                                          final HttpHeaders responseHeaders, final ChannelPromise promise) {
+        return handshake0(channel, channel, req, responseHeaders, promise);
+    }
+
+    /**
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link HttpRequest} which is passed in.
+     *
+     * The handshake response is written to the given {@link ChannelHandlerContext}, so handlers placed
+     * after the {@link ChannelHandler} the context belongs to will not see the response. The handler the
+     * context belongs to must be placed after the HTTP encoder as the response still needs to be encoded.
+     *
+     * @param ctx
+     *              the {@link ChannelHandlerContext} to use.
+     * @param req
+     *              HTTP Request
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     */
+    public ChannelFuture handshake(ChannelHandlerContext ctx, HttpRequest req) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return handshake(ctx, req, null, ctx.newPromise());
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link HttpRequest} which is passed in.
+     *
+     * The handshake response is written to the given {@link ChannelHandlerContext}, so handlers placed
+     * after the {@link ChannelHandler} the context belongs to will not see the response. The handler the
+     * context belongs to must be placed after the HTTP encoder as the response still needs to be encoded.
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} to use.
+     * @param req
+     *            HTTP Request
+     * @param responseHeaders
+     *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     */
+    public ChannelFuture handshake(ChannelHandlerContext ctx, HttpRequest req,
+                                         final HttpHeaders responseHeaders, final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(ctx, "ctx");
+        return handshake0(ctx, ctx.channel(), req, responseHeaders, promise);
+    }
+
+    private ChannelFuture handshake0(final ChannelOutboundInvoker invoker, final Channel channel, HttpRequest req,
+                                     final HttpHeaders responseHeaders, final ChannelPromise promise) {
         if (req instanceof FullHttpRequest) {
-            return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
+            return handshake0(invoker, channel, (FullHttpRequest) req, responseHeaders, promise);
         }
 
         if (logger.isDebugEnabled()) {
@@ -350,7 +464,7 @@ public abstract class WebSocketServerHandshaker {
             private void handleHandshakeRequest(ChannelHandlerContext ctx, HttpObject httpObject) {
                 if (httpObject instanceof FullHttpRequest) {
                     ctx.pipeline().remove(this);
-                    handshake(channel, (FullHttpRequest) httpObject, responseHeaders, promise);
+                    handshake0(invoker, channel, (FullHttpRequest) httpObject, responseHeaders, promise);
                     return;
                 }
 
@@ -360,7 +474,7 @@ public abstract class WebSocketServerHandshaker {
                     fullHttpRequest = null;
                     try {
                         ctx.pipeline().remove(this);
-                        handshake(channel, handshakeRequest, responseHeaders, promise);
+                        handshake0(invoker, channel, handshakeRequest, responseHeaders, promise);
                     } finally {
                         handshakeRequest.release();
                     }

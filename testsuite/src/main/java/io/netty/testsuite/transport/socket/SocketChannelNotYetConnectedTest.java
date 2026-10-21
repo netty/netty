@@ -29,6 +29,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
@@ -37,7 +38,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     @Test
@@ -52,22 +53,24 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
-        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
+        final SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
-            try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.shutdownInput().syncUninterruptibly();
+                }
+            });
+            checkThrowable(cause);
 
-            try {
-                ch.shutdownOutput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            cause = assertThrows(Throwable.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.shutdownOutput().syncUninterruptibly();
+                }
+            });
+            checkThrowable(cause);
         } finally {
             ch.close().syncUninterruptibly();
         }

@@ -15,22 +15,59 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
+
+    static List<DnsOpCode> opCodes() {
+        return Arrays.asList(
+                DnsOpCode.QUERY,
+                DnsOpCode.IQUERY,
+                DnsOpCode.STATUS,
+                DnsOpCode.NOTIFY,
+                DnsOpCode.UPDATE);
+    }
+
+    static List<Object[]> opCodesAndExpectedFlags() {
+        // RFC 1035 section 4.1.1: QR(1) OPCODE(4) AA TC RD RA Z(3) RCODE(4), so the OPCODE
+        // occupies bits 14-11 and RD is bit 8.
+        List<Object[]> arguments = new ArrayList<Object[]>();
+        arguments.add(new Object[] { DnsOpCode.QUERY, false, 0x0000 });
+        arguments.add(new Object[] { DnsOpCode.QUERY, true, 0x0100 });
+        arguments.add(new Object[] { DnsOpCode.IQUERY, false, 0x0800 });
+        arguments.add(new Object[] { DnsOpCode.IQUERY, true, 0x0900 });
+        arguments.add(new Object[] { DnsOpCode.STATUS, false, 0x1000 });
+        arguments.add(new Object[] { DnsOpCode.STATUS, true, 0x1100 });
+        arguments.add(new Object[] { DnsOpCode.NOTIFY, false, 0x2000 });
+        arguments.add(new Object[] { DnsOpCode.NOTIFY, true, 0x2100 });
+        arguments.add(new Object[] { DnsOpCode.UPDATE, false, 0x2800 });
+        arguments.add(new Object[] { DnsOpCode.UPDATE, true, 0x2900 });
+
+        // DnsOpCode does not range check, and an OPCODE that does not fit the four bits
+        // reserved for it must not reach the neighbouring QR bit.
+        arguments.add(new Object[] { DnsOpCode.valueOf(16), false, 0x0000 });
+        return arguments;
+    }
 
     @Test
     public void testEncodeAndDecodeQuery() {
@@ -77,5 +114,70 @@ public class DnsQueryTest {
 
         assertFalse(writeChannel.finish());
         assertFalse(readChannel.finish());
+    }
+
+    @ParameterizedTest
+    @MethodSource("opCodes")
+    public void testOpCodeSurvivesEncodeAndDecode(DnsOpCode opCode) {
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+        EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
+
+        DnsQuery query = new DatagramDnsQuery(null, addr, 1, opCode).setRecord(
+                DnsSection.QUESTION,
+                new DefaultDnsQuestion("example.com", DnsRecordType.A));
+
+        assertTrue(writeChannel.writeOutbound(query));
+        DatagramPacket packet = writeChannel.readOutbound();
+        assertTrue(readChannel.writeInbound(packet));
+
+        DnsQuery decodedDnsQuery = readChannel.readInbound();
+        assertEquals(opCode, decodedDnsQuery.opCode());
+        assertTrue(decodedDnsQuery.release());
+
+        assertFalse(writeChannel.finish());
+        assertFalse(readChannel.finish());
+    }
+
+    @ParameterizedTest
+    @MethodSource("opCodesAndExpectedFlags")
+    public void testOpCodeIsEncodedIntoBits14To11(DnsOpCode opCode, boolean recursionDesired, int expectedFlags) {
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+
+        DnsQuery query = new DatagramDnsQuery(null, addr, 1, opCode)
+                .setRecursionDesired(recursionDesired);
+        query.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion("example.com", DnsRecordType.A));
+
+        assertTrue(writeChannel.writeOutbound(query));
+        DatagramPacket packet = writeChannel.readOutbound();
+        assertEquals(expectedFlags, packet.content().getUnsignedShort(2));
+
+        assertTrue(packet.release());
+        assertFalse(writeChannel.finish());
+    }
+
+    @Test
+    public void rejectTooManyRecordsInQuery() {
+        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        for (int section = 0; section < 4; section++) {
+            final EmbeddedChannel channel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
+            final ByteBuf buf = channel.alloc().buffer(12);
+            buf.writeShort(1).writeShort(0);
+            for (int i = 0; i < 4; i++) {
+                buf.writeShort(i == section ? DnsCodecUtil.MAX_RECORDS_PER_SECTION + 1 : 0);
+            }
+            final DatagramPacket packet = new DatagramPacket(buf, null, new InetSocketAddress(0));
+            try {
+                assertThrows(TooLongFrameException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        channel.writeInbound(packet);
+                    }
+                });
+            } finally {
+                assertFalse(channel.finish());
+            }
+        }
     }
 }

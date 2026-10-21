@@ -15,10 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -210,6 +213,37 @@ public class HttpServerKeepAliveHandlerTest {
         }
         ReferenceCountUtil.release(response);
         assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testConnectionClosedWhenBothTransferEncodingAndContentLengthRfc7230() {
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new HttpRequestDecoder(new HttpDecoderConfig().setUseRfc9112TransferEncoding(false)),
+                new HttpServerKeepAliveHandler());
+
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        HttpRequest request = ch.readInbound();
+        assertFalse(HttpUtil.isKeepAlive(request));
+        LastHttpContent content = ch.readInbound();
+        ReferenceCountUtil.release(content);
+
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        setContentLength(response, 0);
+
+        ch.writeAndFlush(response);
+        HttpResponse writtenResponse = ch.readOutbound();
+
+        assertFalse(isKeepAlive(writtenResponse));
+        assertFalse(ch.isOpen());
+        ReferenceCountUtil.release(writtenResponse);
+        assertFalse(ch.finishAndReleaseAll());
     }
 
     private static void setupMessageLength(HttpResponse response, int setSelfDefinedMessageLength) {

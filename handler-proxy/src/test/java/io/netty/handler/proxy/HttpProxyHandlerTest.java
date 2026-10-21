@@ -17,6 +17,8 @@ package io.netty.handler.proxy;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,18 +41,24 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
+import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
 public class HttpProxyHandlerTest {
@@ -175,6 +183,29 @@ public class HttpProxyHandlerTest {
                 true);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans =  { true, false })
+    public void testInvalidHeaders(boolean validation) throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
+        try {
+            testInitialMessage(
+                    socketAddress,
+                    "10.0.0.1:8080",
+                    "10.0.0.1:8080",
+                    new DefaultHttpHeaders(false)
+                            .add("CUSTOM_HEADER", "CUSTOM_VALUE1\r\nInvalid: true")
+                            .add("CUSTOM_HEADER", "CUSTOM_VALUE2"),
+                    true, validation);
+            if (validation) {
+                fail("Validation should have failed for the provided headers");
+            }
+        } catch (IllegalArgumentException e) {
+            if (!validation) {
+                throw e;
+            }
+        }
+    }
+
     @Test
     public void testExceptionDuringConnect() throws Exception {
         EventLoopGroup group = null;
@@ -182,7 +213,7 @@ public class HttpProxyHandlerTest {
         Channel clientChannel = null;
         try {
             group = new DefaultEventLoopGroup(1);
-            final LocalAddress addr = new LocalAddress("a");
+            final LocalAddress addr = new LocalAddress(HttpProxyHandlerTest.class);
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
             ChannelFuture sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
@@ -217,7 +248,7 @@ public class HttpProxyHandlerTest {
             clientChannel = cf.sync().channel();
             clientChannel.close().sync();
 
-            assertTrue(exception.get() instanceof HttpProxyConnectException);
+            assertInstanceOf(HttpProxyConnectException.class, exception.get());
             HttpProxyConnectException actual = (HttpProxyConnectException) exception.get();
             assertNotNull(actual.headers());
             assertEquals("value", actual.headers().get("name"));
@@ -239,6 +270,16 @@ public class HttpProxyHandlerTest {
                                            String expectedHostHeader,
                                            HttpHeaders headers,
                                            boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
+        testInitialMessage(socketAddress, expectedUrl, expectedHostHeader, headers,
+                ignoreDefaultPortsInConnectHostHeader, true);
+    }
+
+    private static void testInitialMessage(InetSocketAddress socketAddress,
+                                           String expectedUrl,
+                                           String expectedHostHeader,
+                                           HttpHeaders headers,
+                                           boolean ignoreDefaultPortsInConnectHostHeader,
+                                           boolean validateInitialHeaders) throws Exception {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
         ChannelPromise promise = mock(ChannelPromise.class);
@@ -250,7 +291,7 @@ public class HttpProxyHandlerTest {
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),
                 headers,
-                ignoreDefaultPortsInConnectHostHeader);
+                ignoreDefaultPortsInConnectHostHeader, validateInitialHeaders);
         handler.connect(ctx, socketAddress, null, promise);
 
         FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx);
@@ -284,5 +325,44 @@ public class HttpProxyHandlerTest {
         };
         assertNotNull(channel.pipeline().get(HttpProxyHandler.class));
         assertNull(channel.pipeline().get(HttpClientCodec.class));
+    }
+
+    @Test
+    public void testRemoveOnProxyConnectionEventWritesPendingWrites() {
+        HttpProxyHandler handler = new HttpProxyHandler(new InetSocketAddress(NetUtil.LOCALHOST, 8080));
+        final AtomicBoolean active = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof ProxyConnectionEvent) {
+                    // The handshake is done, so the proxy handler is not needed anymore.
+                    ctx.pipeline().remove(HttpProxyHandler.class);
+                }
+                ctx.fireUserEventTriggered(evt);
+            }
+        }) {
+            @Override
+            public boolean isActive() {
+                return active.get();
+            }
+        };
+        channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 443));
+        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
+        ChannelFuture writeFuture = channel.writeAndFlush(msg);
+        assertThat(writeFuture.isDone()).isFalse();
+
+        active.set(true);
+        channel.pipeline().fireChannelActive();
+        ByteBuf connectRequest = channel.readOutbound();
+        assertThat(connectRequest.toString(CharsetUtil.US_ASCII)).startsWith("CONNECT ");
+        connectRequest.release();
+        channel.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+
+        assertThat(handler.connectFuture().isSuccess()).isTrue();
+        assertThat(writeFuture.isSuccess()).isTrue();
+        assertThat(channel.pipeline().get(HttpProxyHandler.class)).isNull();
+        assertThat((Object) channel.readOutbound()).isSameAs(msg);
+        msg.release();
+        assertThat(channel.finishAndReleaseAll()).isFalse();
     }
 }

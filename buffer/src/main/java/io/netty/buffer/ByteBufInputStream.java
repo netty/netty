@@ -192,6 +192,9 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public long skip(long n) throws IOException {
+        if (n <= 0) {
+            return 0;
+        }
         if (n > Integer.MAX_VALUE) {
             return skipBytes(Integer.MAX_VALUE);
         } else {
@@ -310,6 +313,9 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public int skipBytes(int n) throws IOException {
+        if (n <= 0) {
+            return 0;
+        }
         int nBytes = Math.min(available(), n);
         buffer.skipBytes(nBytes);
         return nBytes;

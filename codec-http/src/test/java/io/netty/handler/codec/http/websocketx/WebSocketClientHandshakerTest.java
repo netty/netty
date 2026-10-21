@@ -43,6 +43,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -55,8 +56,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -458,14 +459,19 @@ public abstract class WebSocketClientHandshakerTest {
     @Test
     public void testWebSocketClientHandshakeException() {
         URI uri = URI.create("ws://localhost:9999/exception");
-        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
+        final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
+        final FullHttpResponse response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
         response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "realm = access token required");
 
         try {
-            handshaker.finishHandshake(null, response);
-            fail("Expected WebSocketClientHandshakeException");
-        } catch (WebSocketClientHandshakeException exception) {
+            WebSocketClientHandshakeException exception = assertThrows(
+                    WebSocketClientHandshakeException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handshaker.finishHandshake(null, response);
+                }
+            });
             assertEquals("Invalid handshake response getStatus: 401 Unauthorized", exception.getMessage());
             assertEquals(HttpResponseStatus.UNAUTHORIZED, exception.response().status());
             assertTrue(exception.response().headers().contains(HttpHeaderNames.WWW_AUTHENTICATE,

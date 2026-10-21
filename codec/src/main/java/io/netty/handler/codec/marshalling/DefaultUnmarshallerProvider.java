@@ -25,6 +25,10 @@ import org.jboss.marshalling.Unmarshaller;
  * Default implementation of {@link UnmarshallerProvider} which will just create a new {@link Unmarshaller}
  * on every call to {@link #getUnmarshaller(ChannelHandlerContext)}
  *
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be deserialized. This explicitly needs to be done via {@link MarshallingConfiguration},
+ * missing to do so is a security risk.
  */
 public class DefaultUnmarshallerProvider implements UnmarshallerProvider {
 

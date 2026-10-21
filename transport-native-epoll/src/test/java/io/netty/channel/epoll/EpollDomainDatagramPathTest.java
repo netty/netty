@@ -25,12 +25,13 @@ import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.FileNotFoundException;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
 
@@ -38,14 +39,15 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
     void testConnectPathDoesNotExist(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
-            public void run(Bootstrap bootstrap) {
-                try {
-                    bootstrap.handler(new ChannelInboundHandlerAdapter())
-                             .connect(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
-                    fail("Expected FileNotFoundException");
-                } catch (Exception e) {
-                    assertTrue(e instanceof FileNotFoundException);
-                }
+            public void run(final Bootstrap bootstrap) {
+                Exception e = assertThrows(Exception.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        bootstrap.handler(new ChannelInboundHandlerAdapter())
+                                .connect(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
+                    }
+                });
+                assertInstanceOf(FileNotFoundException.class, e);
             }
         });
     }
@@ -54,17 +56,18 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
     void testWriteReceiverPathDoesNotExist(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
-            public void run(Bootstrap bootstrap) {
-                try {
-                    Channel ch = bootstrap.handler(new ChannelInboundHandlerAdapter())
-                                          .bind(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
-                    ch.writeAndFlush(new DomainDatagramPacket(
-                            Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
-                            EpollSocketTestPermutation.newDomainSocketAddress())).sync();
-                    fail("Expected FileNotFoundException");
-                } catch (Exception e) {
-                    assertTrue(e instanceof FileNotFoundException);
-                }
+            public void run(final Bootstrap bootstrap) {
+                Exception e = assertThrows(Exception.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        Channel ch = bootstrap.handler(new ChannelInboundHandlerAdapter())
+                                .bind(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
+                        ch.writeAndFlush(new DomainDatagramPacket(
+                                Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
+                                EpollSocketTestPermutation.newDomainSocketAddress())).sync();
+                    }
+                });
+                assertInstanceOf(FileNotFoundException.class, e);
             }
         });
     }
