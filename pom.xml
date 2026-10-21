@@ -422,11 +422,11 @@
   </profiles>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.release />
-    <javadoc.release>9</javadoc.release>
-    <javadoc.source>9</javadoc.source>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.release>25</maven.compiler.release>
+    <javadoc.release>25</javadoc.release>
+    <javadoc.source>25</javadoc.source>
     <netty.dev.tools.directory>${project.basedir}/../dev-tools/src/main/resources/</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
