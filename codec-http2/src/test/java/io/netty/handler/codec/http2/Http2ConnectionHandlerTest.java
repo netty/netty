@@ -65,6 +65,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -987,6 +988,73 @@ public class Http2ConnectionHandlerTest {
         } finally {
             client.finishAndReleaseAll();
             server.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownClosesChannelWhenSubclassCloseThrows(long gracefulShutdownTimeoutMillis)
+            throws Exception {
+        Http2ConnectionHandler serverHandler = new Http2ConnectionHandlerBuilder()
+                .server(true).frameListener(new Http2FrameAdapter()).build();
+        EmbeddedChannel server = new EmbeddedChannel(serverHandler);
+        CloseFailingHandler clientHandler = new CloseFailingHandlerBuilder()
+                .server(false).frameListener(new Http2FrameAdapter())
+                .gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis).build();
+        EmbeddedChannel client = new EmbeddedChannel(clientHandler);
+        // The graceful shutdown timeout must not elapse during the test.
+        client.freezeTime();
+        try {
+            exchangeFrames(client, server);
+            writeHeadersOnStream3(clientHandler, client);
+
+            // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
+            // The subclass throws after the graceful shutdown started, so the pipeline fails the close() promise
+            // while the graceful shutdown still waits for stream 3.
+            Promise<Void> closePromise = client.newPromise();
+            client.pipeline().close(closePromise);
+            assertFalse(closePromise.isSuccess());
+            assertSame(clientHandler.closeFailure, closePromise.cause());
+            assertTrue(client.isOpen());
+
+            ChannelHandlerContext ctx = client.pipeline().context(clientHandler);
+            clientHandler.resetStream(ctx, 3, CANCEL.code(), ctx.newPromise());
+            client.flush();
+            client.runPendingTasks();
+
+            assertEquals(0, clientHandler.connection().numActiveStreams());
+            assertFalse(client.isOpen(), "the channel must be closed once the last stream is closed");
+            assertSame(clientHandler.closeFailure, closePromise.cause());
+        } finally {
+            client.finishAndReleaseAll();
+            server.finishAndReleaseAll();
+        }
+    }
+
+    /**
+     * Throws from {@link #close(ChannelHandlerContext, CompletionHandler)} after the graceful shutdown started.
+     */
+    private static final class CloseFailingHandler extends Http2ConnectionHandler {
+        final IllegalStateException closeFailure = new IllegalStateException("close failed after super.close()");
+
+        CloseFailingHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                            Http2Settings initialSettings) {
+            super(decoder, encoder, initialSettings);
+        }
+
+        @Override
+        public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            super.close(ctx, handler);
+            throw closeFailure;
+        }
+    }
+
+    private static final class CloseFailingHandlerBuilder
+            extends AbstractHttp2ConnectionHandlerBuilder<CloseFailingHandler, CloseFailingHandlerBuilder> {
+        @Override
+        protected CloseFailingHandler build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                            Http2Settings initialSettings) {
+            return new CloseFailingHandler(decoder, encoder, initialSettings);
         }
     }
 
