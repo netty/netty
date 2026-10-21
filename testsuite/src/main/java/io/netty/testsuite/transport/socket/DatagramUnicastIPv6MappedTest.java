@@ -21,7 +21,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -72,27 +71,43 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
             int port;
             // The IPv4 stack selects a port that is unused by IPv4 sockets and by IPv6 sockets that accept IPv4
             // datagrams.
-            try (java.nio.channels.DatagramChannel ipv4 =
-                         java.nio.channels.DatagramChannel.open(StandardProtocolFamily.INET)) {
+            java.nio.channels.DatagramChannel ipv4 = null;
+            try {
+                ipv4 = java.nio.channels.DatagramChannel.open(StandardProtocolFamily.INET);
                 ipv4.bind(new InetSocketAddress(IPV4_ANY, 0));
                 port = ((InetSocketAddress) ipv4.getLocalAddress()).getPort();
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                throw new IllegalStateException(e);
+            } finally {
+                closeQuietly(ipv4);
             }
             // Bind to the port like the channel will do, which fails if an IPv6 socket that only accepts IPv6
             // datagrams uses it. The IPv4 channel must be closed by now, as this binds to the IPv4 wildcard address
             // as well on some platforms (like Linux).
-            try (java.nio.channels.DatagramChannel ipv6 =
-                         java.nio.channels.DatagramChannel.open(StandardProtocolFamily.INET6)) {
+            java.nio.channels.DatagramChannel ipv6 = null;
+            try {
+                ipv6 = java.nio.channels.DatagramChannel.open(StandardProtocolFamily.INET6);
                 ipv6.bind(new InetSocketAddress(IPV4_ANY, port));
                 return port;
             } catch (BindException e) {
                 cause = e;
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                throw new IllegalStateException(e);
+            } finally {
+                closeQuietly(ipv6);
             }
         }
-        throw new UncheckedIOException("Failed to find a port that is unused by IPv4 and IPv6 sockets", cause);
+        throw new IllegalStateException("Failed to find a port that is unused by IPv4 and IPv6 sockets", cause);
+    }
+
+    private static void closeQuietly(java.nio.channels.DatagramChannel channel) {
+        if (channel != null) {
+            try {
+                channel.close();
+            } catch (IOException ignore) {
+                // ignore
+            }
+        }
     }
 
     @Override
