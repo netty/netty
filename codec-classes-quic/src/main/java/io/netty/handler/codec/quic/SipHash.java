@@ -75,7 +75,7 @@ final class SipHash {
         int position = input.position();
         int len = remaining - (remaining % Long.BYTES);
         boolean needsReverse = input.order() == ByteOrder.BIG_ENDIAN;
-        for (int offset = position; offset < len; offset +=  Long.BYTES) {
+        for (int offset = position; offset < position + len; offset +=  Long.BYTES) {
             long m = input.getLong(offset);
             if (needsReverse) {
                 // We use little-endian as in the paper.
