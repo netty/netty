@@ -33,6 +33,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -201,6 +202,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    private static final int MAX_PENDING_TASKS = 1024;
+
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
@@ -213,12 +216,19 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         for (int i = 0; i < 250; i++) {
             EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
             final EventLoop loop = group.next();
+            final SingleThreadEventExecutor executor = (SingleThreadEventExecutor) loop;
 
             Thread t = new Thread(() -> {
                 try {
                     for (;;) {
                         loop.execute(task);
                         loopStarted.set(true);
+                        // Don't let the queue grow without bounds if the producer is faster than the event loop,
+                        // otherwise we may run into an OutOfMemoryError. Keep it non-empty so we still race with
+                        // the task removal on shutdown.
+                        while (executor.pendingTasks() > MAX_PENDING_TASKS && !executor.isShuttingDown()) {
+                            Thread.yield();
+                        }
                     }
                 } catch (Throwable cause) {
                     error.set(cause);

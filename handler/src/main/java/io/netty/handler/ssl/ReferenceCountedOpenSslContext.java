@@ -89,6 +89,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
+
+    private static final OpenSslCertificateCompressionConfig DEFAULT_CERTIFICATE_COMPRESSION_CONFIG =
+            OpenSslCertificateCompressionConfig.newBuilder()
+                    .addAlgorithm(ZlibCertificateCompressionAlgorithm.INSTANCE,
+                            OpenSslCertificateCompressionConfig.AlgorithmMode.Both)
+                    .build();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
@@ -97,6 +103,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
+    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -287,6 +294,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
         }
+        if (certCompressionConfig == null && isCertificateCompressionDisabled(mode)) {
+            certCompressionConfig = null;
+        } else if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+            certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
+        }
 
         this.tlsFalseStart = tlsFalseStart;
 
@@ -465,7 +477,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateListBytes(maxCertificateList));
             }
 
             // Set the curves / groups if anything is configured.
@@ -495,6 +507,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    private static boolean isCertificateCompressionDisabled(int mode) {
+        String property = mode == SSL.SSL_MODE_CLIENT ?
+                "jdk.tls.client.disableExtensions" : "jdk.tls.server.disableExtensions";
+        String disabledExtensions = SystemPropertyUtil.get(property);
+        if (disabledExtensions != null) {
+            for (String extension : disabledExtensions.split(",")) {
+                if ("compress_certificate".equals(extension.trim())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {
         switch (behavior) {
             case NO_ADVERTISE:
@@ -504,6 +530,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             default:
                 throw new Error("Unexpected behavior: " + behavior);
         }
+    }
+
+    static int maxCertificateListBytes(int maxCertificateListBytes) {
+        return maxCertificateListBytes > 0 ?
+                Math.max(maxCertificateListBytes, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateListBytes;
     }
 
     private void addCredential(OpenSslCredential credential) throws SSLException {
