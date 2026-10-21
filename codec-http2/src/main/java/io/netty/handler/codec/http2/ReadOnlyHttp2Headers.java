@@ -374,7 +374,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Long getTimeMillis(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToTimeMillis(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToTimeMillis(value);
+            } catch (RuntimeException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
