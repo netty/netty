@@ -439,9 +439,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (debugData.readableBytes() > maxDebugDataLength) {
                 logger.warn("GOAWAY debug data of {} bytes exceeds the maximum of {} bytes allowed by " +
                         "SETTINGS_MAX_FRAME_SIZE, truncating it.", debugData.readableBytes(), maxDebugDataLength);
-                ByteBuf truncated = debugData.retainedSlice(debugData.readerIndex(), maxDebugDataLength);
-                debugData.release();
-                debugData = truncated;
+                debugData = debugData.readSlice(maxDebugDataLength);
             }
 
             int payloadLength = 8 + debugData.readableBytes();
