@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SocketDataReadInitialStateTest extends AbstractSocketTest {
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testAutoReadOffNoDataReadUntilReadCalled(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override

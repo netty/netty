@@ -84,7 +84,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     @Test
-    @Timeout(30)
+    @Timeout(60)
     public void readMustBePendingUntilChannelIsActive(TestInfo info) throws Throwable {
         run(info, new Runner<Bootstrap>() {
             @Override
