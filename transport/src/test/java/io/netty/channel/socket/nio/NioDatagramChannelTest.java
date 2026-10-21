@@ -27,6 +27,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
@@ -35,6 +36,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramChannel> {
 
@@ -67,6 +70,29 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
                 channel.close().sync();
             }
             group.shutdownGracefully().sync();
+        }
+    }
+
+    @Test
+    public void testLoopbackModeDisabled() throws IOException {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        NioDatagramChannel channel = newNioChannel(group);
+        try {
+            NetworkChannel jdkChannel = jdkChannel(channel);
+            // Loopback is enabled by default.
+            assertTrue(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertFalse(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+
+            assertTrue(channel.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true));
+            assertFalse(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertTrue(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+
+            assertTrue(channel.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false));
+            assertTrue(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertFalse(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        } finally {
+            channel.close();
+            group.shutdownGracefully();
         }
     }
 
