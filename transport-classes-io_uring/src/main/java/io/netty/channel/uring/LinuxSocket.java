@@ -312,11 +312,6 @@ final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketStream0(ipv6, false));
     }
 
-    public static LinuxSocket newSocketStream(SocketProtocolFamily family, boolean mptcp) {
-        int fd = newSocketStream0(family, mptcp);
-        return new LinuxSocket(fd);
-    }
-
     public static LinuxSocket newSocketStream() {
         return newSocketStream(isIPv6Preferred());
     }
