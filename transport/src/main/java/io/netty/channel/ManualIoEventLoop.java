@@ -560,16 +560,30 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
         }
         // The task queue does not support remove(...), so we need to make sure we only add the task if the event loop
         // is guaranteed to still run it. See closeExternalSubmitters().
-        if (externalSubmitters.incrementAndGet() < 0 || isShutdown()) {
-            externalSubmitters.decrementAndGet();
+        if (isShutdown() || !tryEnterExternalSubmit()) {
             throw new RejectedExecutionException("event executor terminated");
         }
         try {
             taskQueue.add(command);
+            // Wake up while we are still counted, so the event loop can not destroy the handler in the meantime.
+            handler.wakeup();
         } finally {
             externalSubmitters.decrementAndGet();
         }
-        handler.wakeup();
+    }
+
+    private boolean tryEnterExternalSubmit() {
+        // Only count if the gate is still open, so rejected callers can not keep the event loop spinning in
+        // closeExternalSubmitters().
+        for (;;) {
+            int submitters = externalSubmitters.get();
+            if ((submitters & SUBMITTERS_CLOSED) != 0) {
+                return false;
+            }
+            if (externalSubmitters.compareAndSet(submitters, submitters + 1)) {
+                return true;
+            }
+        }
     }
 
     private boolean hasTasks() {
