@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
@@ -99,6 +100,82 @@ public class IoUringFileRegionTest {
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testSendFileRegionBeyond2GiB() throws Exception {
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        File inFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+        inFile.deleteOnExit();
+        String wrong = "wrong file offset";
+        String beyond2GiB = "beyond 2 GiB !!!!";
+        String beyond4GiB = "beyond 4 GiB !!!!";
+        long position2GiB = (1L << 31) + 100;
+        long position4GiB = (1L << 32) + 100;
+        // Use a sparse file so we don't need to write 4 GiB to the disk.
+        try (RandomAccessFile raf = new RandomAccessFile(inFile, "rw")) {
+            raf.setLength(position4GiB + 4096);
+            raf.seek(100);
+            raf.write(wrong.getBytes(StandardCharsets.US_ASCII));
+            raf.seek(position2GiB);
+            raf.write(beyond2GiB.getBytes(StandardCharsets.US_ASCII));
+            raf.seek(position4GiB);
+            raf.write(beyond4GiB.getBytes(StandardCharsets.US_ASCII));
+        }
+        int length = wrong.length();
+        BlockingQueue<ByteBuf> sendFileResult = new LinkedBlockingQueue<>();
+
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
+        serverBootstrap.channel(IoUringServerSocketChannel.class);
+        Channel serverChannel = serverBootstrap.group(group)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    private CompositeByteBuf compositeByteBuf;
+
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        compositeByteBuf = ctx.alloc().compositeBuffer();
+                    }
+
+                    @Override
+                    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                        compositeByteBuf.release();
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        compositeByteBuf.addComponent(true, (ByteBuf) msg);
+                        while (compositeByteBuf.readableBytes() >= length) {
+                            sendFileResult.put(compositeByteBuf.readRetainedSlice(length));
+                        }
+                    }
+                })
+                .bind(NetUtil.LOCALHOST, 0)
+                .syncUninterruptibly().channel();
+
+        Bootstrap clientBoostrap = new Bootstrap();
+        clientBoostrap.group(group)
+                .channel(IoUringSocketChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+        Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+        try {
+            clientChannel.writeAndFlush(new DefaultFileRegion(inFile, position4GiB, length)).sync();
+            assertReceived(beyond4GiB, sendFileResult.take());
+            clientChannel.writeAndFlush(new DefaultFileRegion(inFile, position2GiB, length)).sync();
+            assertReceived(beyond2GiB, sendFileResult.take());
+        } finally {
+            serverChannel.close().syncUninterruptibly();
+            clientChannel.close().syncUninterruptibly();
+            group.shutdownGracefully();
+            inFile.delete();
+        }
+    }
+
+    private static void assertReceived(String expected, ByteBuf received) {
+        try {
+            assertEquals(expected, received.toString(StandardCharsets.US_ASCII));
+        } finally {
+            received.release();
+        }
     }
 }
 
