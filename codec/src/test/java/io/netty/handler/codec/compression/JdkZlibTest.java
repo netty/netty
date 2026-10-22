@@ -439,6 +439,34 @@ public class JdkZlibTest extends ZlibTest {
         });
     }
 
+    @Test
+    public void testGzipInvalidSecondMagicByteThrows() throws Exception {
+        byte[] data = "hello gzip".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        final byte[] compressed = baos.toByteArray();
+        // Replace ID2 (0x8b) of the header.
+        compressed[1] = 0;
+
+        final EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.wrappedBuffer(compressed));
+            }
+        });
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.finishAndReleaseAll();
+            }
+        });
+    }
+
     /**
      * Allocator that will limit buffer capacity to 1M.
      */
