@@ -245,8 +245,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (event.type() == Http2FrameStreamEvent.Type.State) {
                 switch (stream.state()) {
                     case HALF_CLOSED_LOCAL:
-                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-                            // Ignore everything which was not caused by an upgrade
+                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isPushedStream(ctx, stream)) {
+                            // Ignore everything which was not caused by an upgrade or a server push
                             break;
                         }
                         // fall-through
@@ -269,6 +269,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                             ch.closeOutbound();
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+                            if (stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL) {
+                                // A pushed stream is half-closed (local) from the start, so we can't write to it.
+                                ch.closeOutbound();
+                            }
                         }
                         ChannelFuture future = ctx.channel().eventLoop().register(ch);
                         if (future.isDone()) {
@@ -351,6 +355,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     private static boolean isServer(ChannelHandlerContext ctx) {
         return ctx.channel().parent() instanceof ServerChannel;
+    }
+
+    private static boolean isPushedStream(ChannelHandlerContext ctx, Http2FrameStream stream) {
+        // On the client side only pushed streams are initiated by the server (even stream ids).
+        return !isServer(ctx) && Http2CodecUtil.isStreamIdValid(stream.id(), true);
     }
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
