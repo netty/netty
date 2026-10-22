@@ -40,7 +40,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -138,6 +141,17 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testFileRegionBeyond2GiB(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testFileRegionBeyond2GiB(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, false, true, true);
     }
@@ -156,6 +170,66 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     public void testFileRegionVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, true, false, true);
+    }
+
+    /**
+     * Sends {@link DefaultFileRegion}s which start beyond 2 GiB and beyond 4 GiB of a file, so that a transport
+     * which truncates the file offset to an {@code int} either fails or sends the bytes from the wrong offset.
+     */
+    public void testFileRegionBeyond2GiB(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final String wrong = "wrong file offset";
+        final String beyond2GiB = "beyond 2 GiB !!!!";
+        final String beyond4GiB = "beyond 4 GiB !!!!";
+        final int length = wrong.length();
+        final long position2GiB = (1L << 31) + 100;
+        final long position4GiB = (1L << 32) + 100;
+
+        File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
+        file.deleteOnExit();
+        // Use a sparse file (when the file system supports it) so we don't need to write 4 GiB to the disk.
+        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+            raf.setLength(position4GiB + 4096);
+            // Where the offset ends up if it is truncated to an int.
+            raf.seek(position4GiB & 0xFFFFFFFFL);
+            raf.write(wrong.getBytes(StandardCharsets.US_ASCII));
+            raf.seek(position2GiB);
+            raf.write(beyond2GiB.getBytes(StandardCharsets.US_ASCII));
+            raf.seek(position4GiB);
+            raf.write(beyond4GiB.getBytes(StandardCharsets.US_ASCII));
+        }
+
+        final BlockingQueue<String> received = new LinkedBlockingQueue<String>();
+        sb.childHandler(new ChannelInboundHandlerAdapter() {
+            private final StringBuilder builder = new StringBuilder();
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ByteBuf buf = (ByteBuf) msg;
+                try {
+                    builder.append(buf.toString(StandardCharsets.US_ASCII));
+                } finally {
+                    buf.release();
+                }
+                while (builder.length() >= length) {
+                    received.add(builder.substring(0, length));
+                    builder.delete(0, length);
+                }
+            }
+        });
+        cb.handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        try {
+            cc.writeAndFlush(new DefaultFileRegion(file, position4GiB, length)).sync();
+            assertEquals(beyond4GiB, received.poll(10, TimeUnit.SECONDS));
+            cc.writeAndFlush(new DefaultFileRegion(file, position2GiB, length)).sync();
+            assertEquals(beyond2GiB, received.poll(10, TimeUnit.SECONDS));
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+            file.delete();
+        }
     }
 
     public void testFileRegionCountLargerThenFile(ServerBootstrap sb, Bootstrap cb) throws Throwable {
