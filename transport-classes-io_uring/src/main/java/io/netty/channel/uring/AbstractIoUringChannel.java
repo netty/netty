@@ -132,6 +132,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private ByteBuffer remoteAddressMemory;
     private MsgHdrMemoryArray msgHdrMemoryArray;
 
+    // The initial data of a TCP_FASTOPEN_CONNECT and the number of its bytes that were sent. These bytes are only
+    // removed from the ChannelOutboundBuffer once the connect is complete, so listeners of the initial write see an
+    // active channel.
+    private ChannelOutboundBuffer fastOpenOutboundBuffer;
+    private Object fastOpenData;
+    private long fastOpenBytes;
+
     private IoRegistration registration;
 
     private volatile SocketAddress local;
@@ -324,8 +331,30 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      */
     @Override
     protected final void doShutdownOutput() throws Exception {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
+        removeFastOpenData();
         writeTracker.retainAll();
         doShutdownOutput0();
+    }
+
+    /**
+     * Removes the bytes that were sent by a TCP_FASTOPEN_CONNECT from the {@link ChannelOutboundBuffer} if the
+     * channel was connected, and forgets about them otherwise. Must be called before the
+     * {@link ChannelOutboundBuffer} is written or its messages are failed.
+     */
+    private void removeFastOpenData() {
+        ChannelOutboundBuffer in = fastOpenOutboundBuffer;
+        if (in == null) {
+            return;
+        }
+        Object data = fastOpenData;
+        long bytes = fastOpenBytes;
+        fastOpenOutboundBuffer = null;
+        fastOpenData = null;
+        fastOpenBytes = 0;
+        if (bytes > 0 && isActive() && in.current() == data) {
+            in.removeBytes(bytes);
+        }
     }
 
     /**
@@ -1019,19 +1048,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     // Complete the connect before removing the written bytes, so listeners of the initial write
                     // see an active channel and are able to write and close it like on any other connected
                     // channel. Mark the write as scheduled until the bytes were removed, as otherwise a flush that
-                    // is triggered by channelActive() would send the initial data a second time.
+                    // is triggered by channelActive() would send the initial data a second time. If the output is
+                    // shutdown in the meantime, the bytes are removed by doShutdownOutput().
+                    fastOpenBytes = res;
                     assert (ioState & WRITE_SCHEDULED) == 0;
                     ioState |= WRITE_SCHEDULED;
                     try {
                         // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
                         connectComplete(op, 0, flags, data);
-
-                        // The completion may arrive after close() or shutdownOutput() already dropped the
-                        // outbound buffer, in which case there is nothing left to remove.
-                        ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
-                        if (channelOutboundBuffer != null) {
-                            channelOutboundBuffer.removeBytes(res);
-                        }
+                        removeFastOpenData();
                     } finally {
                         ioState &= ~WRITE_SCHEDULED;
                     }
@@ -1045,9 +1070,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     // In this case, our TCP connection will be established normally, but no data was transmitted at
                     // this time. We'll just transmit the data with normal writes later.
                     // Let's submit a normal connect.
+                    removeFastOpenData();
                     submitConnect((InetSocketAddress) requestedRemoteAddress);
                 } else {
                     // There was an error, handle it as a normal connect error.
+                    removeFastOpenData();
                     connectComplete(op, res, flags, data);
                 }
                 return;
@@ -1205,6 +1232,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                                 writeTracker.abandon(opsId, ops.opcode());
                                 // Directly release the memory if submitting failed.
                                 freeMsgHdrArray();
+                            } else {
+                                fastOpenOutboundBuffer = unsafe().outboundBuffer();
+                                fastOpenData = initialData;
                             }
                         }
                     } else {

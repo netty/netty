@@ -26,6 +26,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -317,6 +319,68 @@ public class SocketConnectTest extends AbstractSocketTest {
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
         cc.close().sync();
         assertEquals(expectedString, result);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputFromFastOpenConnectListener(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testShutdownOutputFromFastOpenConnectListener);
+    }
+
+    public void testShutdownOutputFromFastOpenConnectListener(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        BlockingQueue<String> received = new LinkedBlockingQueue<>();
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) {
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    private final StringBuilder data = new StringBuilder();
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        data.append(buf.toString(US_ASCII));
+                        buf.release();
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                        received.add(data.toString());
+                    }
+                });
+            }
+        });
+        cb.handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = sb.bind().sync().channel();
+        // The first connection obtains the fast open cookie, the second one sends its initial data as part of the
+        // connect.
+        shutdownOutputFromConnectListener(cb, sc, received);
+        shutdownOutputFromConnectListener(cb, sc, received);
+    }
+
+    private static void shutdownOutputFromConnectListener(Bootstrap cb, Channel sc, BlockingQueue<String> received)
+            throws Exception {
+        Channel channel = cb.register().sync().channel();
+        ChannelFuture initialFuture = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        // Add the listener before connecting, so it is notified as part of the connect completion.
+        ChannelPromise connectPromise = channel.newPromise();
+        connectPromise.addListener(f -> ((DuplexChannel) channel).shutdownOutput());
+        try {
+            channel.connect(sc.localAddress(), connectPromise).sync();
+            String data = received.poll(2, TimeUnit.SECONDS);
+            assertNotNull(data, "connection was not closed by the server");
+            initialFuture.await();
+            // The initial write must only succeed if the initial data was sent.
+            if (initialFuture.isSuccess()) {
+                assertEquals("[fastopen]", data);
+            } else {
+                assertEquals("", data, "initial data was sent but the write failed");
+            }
+        } finally {
+            channel.close().sync();
+        }
     }
 
     private static ByteBuf directBufferWithReaderIndex(Channel channel, String prefix, String data) {
