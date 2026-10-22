@@ -25,6 +25,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,6 +83,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     private final IoHandler ioHandler;
 
     private final AtomicInteger numRegistrations = new AtomicInteger();
+
+    // Only accessed from the event loop thread.
+
+    private boolean ioLoopExited;
 
     /**
      *  Creates a new instance
@@ -229,6 +234,15 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
+
+        if (isShuttingDown()) {
+            // confirmShutdown() can return true without prepareToDestroy() having seen every registration, for
+            // example when shutdownGracefully(0, ...) is called while tasks are running or a registration task runs
+            // as part of confirmShutdown() itself. Close everything that is still registered now. The resulting close
+            // callbacks are run by the remaining confirmShutdown() calls of SingleThreadEventExecutor.
+            ioLoopExited = true;
+            ioHandler.prepareToDestroy();
+        }
     }
 
     protected final IoHandler ioHandler() {
@@ -298,6 +312,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
+        if (ioLoopExited) {
+            // The IO loop is gone, so nothing would ever close this registration again.
+            promise.setFailure(new RejectedExecutionException("IoEventLoop is shutting down"));
+            return;
+        }
         final IoRegistration registration;
         try {
             registration = ioHandler.register(handle);
