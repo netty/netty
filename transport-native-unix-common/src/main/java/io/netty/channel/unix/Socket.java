@@ -620,6 +620,10 @@ public class Socket extends FileDescriptor {
         return newSocketStream0(shouldUseIpv6(family), false);
     }
 
+    protected static int newSocketStream0(boolean ipv6) {
+        return newSocketStream0(ipv6, false);
+    }
+
     protected static int newSocketStream0(SocketProtocolFamily family, boolean mptcp) {
         return newSocketStream0(shouldUseIpv6(family), mptcp);
     }
