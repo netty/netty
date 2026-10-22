@@ -357,16 +357,16 @@ public class DefaultHttp2FrameWriterTest {
         frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
         ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND + 1);
 
-        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payload, promise);
 
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
-        assertInstanceOf(IllegalArgumentException.class, future.cause());
-        assertTrue(future.cause().getMessage().contains("0xf"));
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertTrue(promise.cause().getMessage().contains("0xf"));
         // Nothing must have been written and the payload must have been released
         assertEquals(0, outbound.readableBytes());
         assertEquals(0, payload.refCnt());
-        verify(ctx, never()).write(any(), any(ChannelPromise.class));
+        verify(ctx, never()).write(any(), any(CompletionHandler.class));
     }
 
     @Test
@@ -374,10 +374,10 @@ public class DefaultHttp2FrameWriterTest {
         frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
         ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
 
-        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payload, promise);
 
         // The mocked context never completes the writes, so only verify that the write was not rejected
-        assertFalse(future.isDone() && !future.isSuccess());
+        assertFalse(promise.isDone() && !promise.isSuccess());
         assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
                 outbound.readableBytes());
         // 24 bit payload length field must hold exactly the payload size
@@ -394,12 +394,12 @@ public class DefaultHttp2FrameWriterTest {
             settings.put((char) (0x100 + i), Long.valueOf(0));
         }
 
-        ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
+        frameWriter.writeSettings(ctx, settings, promise);
 
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
-        assertInstanceOf(IllegalArgumentException.class, future.cause());
-        assertTrue(future.cause().getMessage().contains("0x4"));
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertTrue(promise.cause().getMessage().contains("0x4"));
         assertEquals(0, outbound.readableBytes());
     }
 

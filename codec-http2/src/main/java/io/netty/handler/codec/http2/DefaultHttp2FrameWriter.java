@@ -681,10 +681,10 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         }
     }
 
-    private void verifyPayloadLength(byte frameType, int payloadLength) {
+    private void verifyPayloadLength(short frameType, int payloadLength) {
         if (payloadLength > maxFrameSize) {
             throw new IllegalArgumentException("Payload length " + payloadLength + " of frame type 0x" +
-                    Integer.toHexString(frameType & 0xFF) + " exceeds the maximum frame size " + maxFrameSize +
+                    Integer.toHexString(frameType & 0xFFFF) + " exceeds the maximum frame size " + maxFrameSize +
                     " advertised by the remote peer.");
         }
     }
