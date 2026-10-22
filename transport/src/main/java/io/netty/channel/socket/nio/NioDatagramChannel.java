@@ -718,7 +718,7 @@ public final class NioDatagramChannel
 
         boolean isLoopbackModeDisabled() {
             try {
-                return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+                return !jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
@@ -726,7 +726,7 @@ public final class NioDatagramChannel
 
         private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
             try {
-                jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
+                jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, !loopbackModeDisabled);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
