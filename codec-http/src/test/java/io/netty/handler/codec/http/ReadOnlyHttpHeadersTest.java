@@ -51,6 +51,15 @@ public class ReadOnlyHttpHeadersTest {
     }
 
     @Test
+    public void getNotConvertible() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false, CONTENT_LENGTH, "not a number");
+        assertNull(headers.getInt(CONTENT_LENGTH));
+        assertEquals(-1, headers.getInt(CONTENT_LENGTH, -1));
+        assertNull(headers.getShort(CONTENT_LENGTH));
+        assertEquals((short) -1, headers.getShort(CONTENT_LENGTH, (short) -1));
+    }
+
+    @Test
     public void charSequenceIterator() {
         ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(true,
                 ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, CONNECTION, CLOSE);
