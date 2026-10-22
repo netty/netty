@@ -995,7 +995,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (start == 0 && end == last) {
             return c;
         }
-        return c.subSequence(start, end);
+        return c.subSequence(start, end + 1);
     }
 
     /**
