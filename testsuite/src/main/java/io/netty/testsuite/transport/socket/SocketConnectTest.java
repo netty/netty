@@ -351,7 +351,6 @@ public class SocketConnectTest extends AbstractSocketTest {
                 });
             }
         });
-        cb.handler(new ChannelInboundHandlerAdapter());
 
         Channel sc = sb.bind().sync().channel();
         // The first connection obtains the fast open cookie, the second one sends its initial data as part of the
@@ -362,6 +361,7 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     private static void shutdownOutputFromConnectListener(Bootstrap cb, Channel sc, BlockingQueue<String> received)
             throws Exception {
+        cb.handler(new ChannelInboundHandlerAdapter());
         Channel channel = cb.register().sync().channel();
         ChannelFuture initialFuture = channel.write(writeAscii(DEFAULT, "[fastopen]"));
         // Add the listener before connecting, so it is notified as part of the connect completion.
