@@ -152,7 +152,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToTimeMillis(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return null;
         }
     }
@@ -165,7 +165,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToTimeMillis(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return defaultValue;
         }
     }

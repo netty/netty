@@ -377,7 +377,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToTimeMillis(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
