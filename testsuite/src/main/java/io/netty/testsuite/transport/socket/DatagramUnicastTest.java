@@ -227,23 +227,31 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             }
         }).bind(newSocketAddress()).sync().channel();
 
-        SocketAddress address = server.localAddress();
-        DatagramSocket client;
         try {
-            client = new DatagramSocket(newSocketAddress());
-        } catch (IllegalArgumentException e) {
-            assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
-            throw e;
-        }
-        SocketAddress sendAddress = address instanceof InetSocketAddress ?
-                sendToAddress((InetSocketAddress) address) : address;
-        for (int i = 0; i < 100; i++) {
+            SocketAddress address = server.localAddress();
+            DatagramSocket client;
             try {
-                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, sendAddress));
-            } catch (BindException e) {
-                throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
+                client = new DatagramSocket(newSocketAddress());
+            } catch (IllegalArgumentException e) {
+                assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
+                throw e;
             }
-            semaphore.acquire();
+            try {
+                SocketAddress sendAddress = address instanceof InetSocketAddress ?
+                        sendToAddress((InetSocketAddress) address) : address;
+                for (int i = 0; i < 100; i++) {
+                    try {
+                        client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, sendAddress));
+                    } catch (BindException e) {
+                        throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
+                    }
+                    semaphore.acquire();
+                }
+            } finally {
+                client.close();
+            }
+        } finally {
+            closeChannel(server);
         }
     }
 
