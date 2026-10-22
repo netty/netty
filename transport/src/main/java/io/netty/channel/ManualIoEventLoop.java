@@ -55,8 +55,14 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
     private static final int ST_TERMINATED = 3;
+    private static final int SUBMITTERS_CLOSED = Integer.MIN_VALUE;
 
     private final AtomicInteger state;
+    // Counts the threads that are currently inside execute(...) and have not yet added their task to the taskQueue.
+    // Once the event loop is about to do its final drain of the taskQueue the CLOSED bit is set so no new task can
+    // be accepted from another thread, and the final drain waits until all in-flight submitters are done. As the
+    // taskQueue does not support remove(...) this is the only way to guarantee that an accepted task is not lost.
+    private final AtomicInteger externalSubmitters = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final Queue<Runnable> taskQueue = PlatformDependent.newMpscQueue();
     private final IoHandlerContext nonBlockingContext = new IoHandlerContext() {
@@ -246,6 +252,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
         int run = runAllTasks(-1, false);
         handler.prepareToDestroy();
         if (confirmShutdown()) {
+            closeExternalSubmitters();
             // Destroy the handler now and run all remaining tasks.
             try {
                 handler.destroy();
@@ -262,6 +269,25 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
             }
         }
         return run;
+    }
+
+    /**
+     * Reject all tasks that are submitted from other threads from now on and wait until the ones that already passed
+     * the check in {@link #execute(Runnable)} have added their task to the {@code taskQueue}. After this method
+     * returned the {@code taskQueue} will only get new tasks from the event loop itself.
+     */
+    private void closeExternalSubmitters() {
+        for (;;) {
+            int submitters = externalSubmitters.get();
+            if ((submitters & SUBMITTERS_CLOSED) != 0 ||
+                    externalSubmitters.compareAndSet(submitters, submitters | SUBMITTERS_CLOSED)) {
+                break;
+            }
+        }
+        // Only a few instructions long, so just spin.
+        while (externalSubmitters.get() != SUBMITTERS_CLOSED) {
+            Thread.yield();
+        }
     }
 
     /**
@@ -525,32 +551,25 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     @Override
     public final void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
-        boolean inEventLoop = inEventLoop();
-        if (isShutdown()) {
-            // Check this before adding the task, also for other threads: the task queue does not support
-            // remove(...), so the check after add(...) can not take the task back, and a terminated event loop never
-            // runs it.
+        if (inEventLoop()) {
+            if (isShutdown()) {
+                throw new RejectedExecutionException("event executor terminated");
+            }
+            taskQueue.add(command);
+            return;
+        }
+        // The task queue does not support remove(...), so we need to make sure we only add the task if the event loop
+        // is guaranteed to still run it. See closeExternalSubmitters().
+        if (externalSubmitters.incrementAndGet() < 0 || isShutdown()) {
+            externalSubmitters.decrementAndGet();
             throw new RejectedExecutionException("event executor terminated");
         }
-        taskQueue.add(command);
-        if (!inEventLoop) {
-            if (isShutdown()) {
-                boolean reject = false;
-                try {
-                    if (taskQueue.remove(command)) {
-                        reject = true;
-                    }
-                } catch (UnsupportedOperationException e) {
-                    // The task queue does not support removal so the best thing we can do is to just move on and
-                    // hope we will be able to pick-up the task before its completely terminated.
-                    // In worst case we will log on termination.
-                }
-                if (reject) {
-                    throw new RejectedExecutionException("event executor terminated");
-                }
-            }
-            handler.wakeup();
+        try {
+            taskQueue.add(command);
+        } finally {
+            externalSubmitters.decrementAndGet();
         }
+        handler.wakeup();
     }
 
     private boolean hasTasks() {

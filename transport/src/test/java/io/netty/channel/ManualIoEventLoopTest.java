@@ -31,12 +31,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -405,6 +411,60 @@ public class ManualIoEventLoopTest {
         assertThat(registerFuture.isDone()).isTrue();
         assertThat(registerFuture.cause()).isInstanceOf(RejectedExecutionException.class);
         assertThat(registerFuture.channel().isOpen()).isFalse();
+    }
+
+    /**
+     * Every task for which {@link ManualIoEventLoop#execute(Runnable)} returned normally must be run, even when the
+     * event loop terminates while other threads are still submitting. Before the fix tasks that were added right
+     * before the event loop terminated were silently dropped.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    public void testNoAcceptedTaskIsLostWhenTerminatingConcurrently(boolean graceful) throws Exception {
+        final int submitters = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors()));
+        final ExecutorService executor = Executors.newFixedThreadPool(submitters);
+        try {
+            for (int i = 0; i < 300; i++) {
+                final ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), factory ->
+                        new TestIoHandler(new Semaphore(0)));
+                final AtomicInteger accepted = new AtomicInteger();
+                final AtomicInteger executed = new AtomicInteger();
+                final CountDownLatch start = new CountDownLatch(1);
+                final List<Future<?>> futures = new ArrayList<>();
+                for (int j = 0; j < submitters; j++) {
+                    futures.add(executor.submit(() -> {
+                        start.await();
+                        try {
+                            for (;;) {
+                                eventLoop.execute(executed::incrementAndGet);
+                                accepted.incrementAndGet();
+                            }
+                        } catch (RejectedExecutionException expected) {
+                            // The event loop was shut down.
+                        }
+                        return null;
+                    }));
+                }
+                start.countDown();
+                // Let some tasks flow before we start the shutdown.
+                eventLoop.runNow();
+                if (graceful) {
+                    eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+                } else {
+                    eventLoop.shutdown();
+                }
+                while (!eventLoop.isTerminated()) {
+                    eventLoop.runNow();
+                }
+                for (Future<?> future : futures) {
+                    future.get();
+                }
+                assertEquals(accepted.get(), executed.get(), "iteration " + i);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private static final class TestRunnable implements Runnable {
