@@ -882,14 +882,20 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     }
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
     (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
-    if (unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
+    // sun_path is not NUL terminated if the path fills it completely, so use a terminated copy for unlink.
+    char path[sizeof(addr.sun_path) + 1];
+    memcpy(path, addr.sun_path, sizeof(addr.sun_path));
+    path[sizeof(addr.sun_path)] = '\0';
+
+    if (unlink(path) == -1 && errno != ENOENT) {
         return -errno;
     }
 
@@ -914,7 +920,8 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
