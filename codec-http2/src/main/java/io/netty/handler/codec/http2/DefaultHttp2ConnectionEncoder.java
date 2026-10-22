@@ -228,7 +228,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             }
             // Check for HEAD method on local request streams (whether stream was just created or already existed)
             if (!connection.isServer() && headers.method() != null &&
-                HttpMethod.HEAD.asciiName().contentEqualsIgnoreCase(headers.method())) {
+                HttpMethod.HEAD.asciiName().contentEquals(headers.method())) {
                 stream.setProperty(HEAD_REQUEST_KEY, Boolean.TRUE);
             }
 

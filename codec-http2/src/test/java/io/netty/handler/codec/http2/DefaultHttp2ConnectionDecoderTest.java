@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,9 +39,11 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -1361,6 +1364,77 @@ public class DefaultHttp2ConnectionDecoderTest {
         } finally {
             data.release();
         }
+    }
+
+    @Test
+    public void clientPushedHeadResponseContentLengthZeroDataAllowed() throws Exception {
+        int promisedStreamId = 2;
+        Http2Stream pushStream = mock(Http2Stream.class);
+        when(connection.stream(promisedStreamId)).thenReturn(pushStream);
+        when(pushStream.id()).thenReturn(promisedStreamId);
+
+        //Receive PUSH_PROMISE with :method = HEAD
+        Http2Headers promisedHeaders = new DefaultHttp2Headers()
+                .method(HttpMethod.HEAD.asciiName())
+                .scheme("https")
+                .authority("localhost")
+                .path("/resource");
+        decode().onPushPromiseRead(ctx, STREAM_ID, promisedStreamId, promisedHeaders, 0);
+        //Verify HEAD_REQUEST_KEY property was set on promisedStream
+        verify(pushStream, times(1)).setProperty(eq(HEAD_REQUEST_KEY), eq(Boolean.TRUE));
+
+        when(pushStream.getProperty(HEAD_REQUEST_KEY)).thenReturn(Boolean.TRUE);
+        when(connection.isServer()).thenReturn(false);
+        when(pushStream.state()).thenReturn(Http2Stream.State.HALF_CLOSED_LOCAL);
+        mockFlowControl(0);
+        Http2Headers responseHeaders=new DefaultHttp2Headers()
+                .status(HttpResponseStatus.OK.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        decode().onHeadersRead(ctx, promisedStreamId, responseHeaders, 0, false);
+        decode().onDataRead(ctx, promisedStreamId, EMPTY_BUFFER, 0, true);
+
+        verify(listener, times(1)).onDataRead(eq(ctx), eq(promisedStreamId), eq(EMPTY_BUFFER), eq(0), eq(true));
+        verify(lifecycleManager, times(1)).closeStreamRemote(eq(pushStream), eq(future));
+    }
+
+    @Test
+    public void clientPushedGetResponseContentLengthZeroDataRejected() throws Exception {
+        int promisedStreamId = 2;
+        Http2Stream pushStream = mock(Http2Stream.class);
+        when(connection.stream(promisedStreamId)).thenReturn(pushStream);
+        when(pushStream.id()).thenReturn(promisedStreamId);
+
+        Map<Http2Connection.PropertyKey, Object> properties = new HashMap<>();
+
+        doAnswer(inv -> {
+            properties.put(inv.getArgument(0), inv.getArgument(1));
+            return null;
+        }).when(pushStream).setProperty(any(), any());
+
+        when(pushStream.getProperty(any())).thenAnswer(inv -> properties.get(inv.getArgument(0)));
+        when(pushStream.removeProperty(any())).thenAnswer(inv -> properties.remove(inv.getArgument(0)));
+
+        Http2Headers promiseHeaders = new DefaultHttp2Headers()
+                .method(HttpMethod.GET.asciiName())
+                .scheme("https")
+                .authority("localhost")
+                .path("/resource");
+        decode().onPushPromiseRead(ctx, STREAM_ID, promisedStreamId, promiseHeaders, 0);
+
+        verify(pushStream, never()).setProperty(eq(HEAD_REQUEST_KEY), any());
+        when(connection.isServer()).thenReturn(false);
+        when(pushStream.state()).thenReturn(Http2Stream.State.HALF_CLOSED_LOCAL);
+        mockFlowControl(0);
+
+        Http2Headers responseHeaders = new DefaultHttp2Headers()
+                .status(HttpResponseStatus.OK.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        decode().onHeadersRead(ctx, promisedStreamId, responseHeaders, 0, false);
+
+        assertThrows(Http2Exception.StreamException.class, () -> {
+            decode().onDataRead(ctx, promisedStreamId, EMPTY_BUFFER, 0, true);
+        });
+        verify(lifecycleManager, never()).closeStreamRemote(eq(pushStream), any(ChannelFuture.class));
     }
 
     private static ByteBuf dummyData() {

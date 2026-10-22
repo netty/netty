@@ -482,10 +482,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
                 }
-                CharSequence statusHeader = headers.status();
-                if (statusHeader != null) {
-                    HttpResponseStatus status = HttpConversionUtil.parseStatus(statusHeader);
-                    stream.setProperty(statusCodeKey, status);
+                if (!connection.isServer() && headers.status() != null) {
+                    try {
+                        HttpResponseStatus status = HttpConversionUtil.parseStatus(headers.status());
+                        stream.setProperty(statusCodeKey, status);
+                    } catch (Http2Exception e) {
+                        throw streamError(stream.id(), PROTOCOL_ERROR, e,
+                                          "Invalid status header value received");
+                    }
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
@@ -705,6 +709,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d is not known to be safe",
                         streamId, promisedStreamId);
+            }
+            // Check for HEAD method on push promised request stream
+            Http2Stream promisedStream = connection.stream(promisedStreamId);
+            if (promisedStream != null && HttpMethod.HEAD.asciiName().contentEquals(headers.method())) {
+                promisedStream.setProperty(HEAD_REQUEST_KEY, Boolean.TRUE);
             }
 
             listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
