@@ -35,8 +35,8 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + msg.extrasLength()
-            + msg.keyLength());
+        ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + (msg.extrasLength() & 0xFF)
+            + (msg.keyLength() & 0xFFFF));
 
         encodeHeader(buf, msg);
         encodeExtras(buf, msg.extras());

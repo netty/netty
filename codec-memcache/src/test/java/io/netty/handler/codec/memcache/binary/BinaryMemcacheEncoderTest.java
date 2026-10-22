@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -161,5 +163,85 @@ public class BinaryMemcacheEncoderTest {
                 channel.writeOutbound(new DefaultBinaryMemcacheRequest());
             }
         });
+    }
+
+    @Test
+    public void shouldEncodeExtrasLongerThan127Bytes() {
+        ByteBuf key = Unpooled.copiedBuffer("netty", CharsetUtil.UTF_8);
+        ByteBuf extras = Unpooled.buffer().writeZero(200);
+        ByteBuf content = Unpooled.copiedBuffer("memcache", CharsetUtil.UTF_8);
+        FullBinaryMemcacheRequest request = new DefaultFullBinaryMemcacheRequest(key, extras, content);
+        assertEquals(200 + 5 + 8, request.totalBodyLength());
+
+        assertTrue(channel.writeOutbound(request));
+        ByteBuf written = Unpooled.buffer();
+        for (;;) {
+            ByteBuf buf = channel.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            written.writeBytes(buf);
+            buf.release();
+        }
+        assertEquals(DEFAULT_HEADER_SIZE + 200 + 5 + 8, written.readableBytes());
+
+        EmbeddedChannel decoder = new EmbeddedChannel(
+                new BinaryMemcacheRequestDecoder(), new BinaryMemcacheObjectAggregator(Integer.MAX_VALUE));
+        assertTrue(decoder.writeInbound(written));
+        FullBinaryMemcacheRequest decoded = decoder.readInbound();
+        assertEquals(200, decoded.extras().readableBytes());
+        assertEquals("netty", decoded.key().toString(CharsetUtil.UTF_8));
+        assertEquals("memcache", decoded.content().toString(CharsetUtil.UTF_8));
+        decoded.release();
+        assertNull(decoder.readInbound());
+        assertFalse(decoder.finish());
+    }
+
+    @Test
+    public void shouldRejectKeyLongerThan65535Bytes() {
+        final ByteBuf key = Unpooled.buffer().writeZero(65536);
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    new DefaultBinaryMemcacheRequest(key);
+                }
+            });
+            final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.setKey(key);
+                }
+            });
+            assertEquals(0, request.keyLength());
+            assertEquals(0, request.totalBodyLength());
+        } finally {
+            key.release();
+        }
+    }
+
+    @Test
+    public void shouldRejectExtrasLongerThan255Bytes() {
+        final ByteBuf extras = Unpooled.buffer().writeZero(256);
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras);
+                }
+            });
+            final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.setExtras(extras);
+                }
+            });
+            assertEquals(0, request.extrasLength());
+            assertEquals(0, request.totalBodyLength());
+        } finally {
+            extras.release();
+        }
     }
 }
