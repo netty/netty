@@ -256,8 +256,8 @@ public class Socket extends FileDescriptor {
      * @param controlLength     the length of the control messages or {@code 0} if there are none.
      * @return                  the number of bytes written.
      */
-    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port,
-                                     long controlAddress, int controlLength) throws IOException {
+    public int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port,
+                               long controlAddress, int controlLength) throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
         byte[] address;
@@ -312,8 +312,8 @@ public class Socket extends FileDescriptor {
      *                          bytes of control messages that were received can be retrieved via
      *                          {@link DatagramSocketAddress#controlLength()}.
      */
-    public final DatagramSocketAddress recvFromAddress(long memoryAddress, int pos, int limit,
-                                                       long controlAddress, int controlLength) throws IOException {
+    public DatagramSocketAddress recvFromAddress(long memoryAddress, int pos, int limit,
+                                                 long controlAddress, int controlLength) throws IOException {
         return recvFromAddressControl(fd, memoryAddress, pos, limit, controlAddress, controlLength);
     }
 
@@ -331,8 +331,8 @@ public class Socket extends FileDescriptor {
      *                          in the upper 32 bits and the number of bytes of control messages that were received
      *                          in the lower 32 bits.
      */
-    public final long recvAddressControl(long memoryAddress, int pos, int limit,
-                                         long controlAddress, int controlLength) throws IOException {
+    public long recvAddressControl(long memoryAddress, int pos, int limit,
+                                   long controlAddress, int controlLength) throws IOException {
         long res = recvAddressControl(fd, memoryAddress, pos, limit, controlAddress, controlLength);
         int bytes = (int) (res >> 32);
         if (bytes >= 0) {
