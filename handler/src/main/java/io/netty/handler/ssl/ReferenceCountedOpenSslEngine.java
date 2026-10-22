@@ -1258,10 +1258,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // [1] https://tools.ietf.org/html/rfc5246#section-6.2.1
                         throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
                                                 session.getApplicationBufferSize());
-                    } else {
-                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                     }
-                    return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    // The plaintext of a record is never longer than MAX_PLAINTEXT_LENGTH, as (Boring)SSL rejects
+                    // records that would decrypt to more. A destination that holds that much is big enough, even
+                    // if the record is longer because of the cipher overhead.
+                    if (min(packetLengthDataOnly, MAX_PLAINTEXT_LENGTH) > capacity) {
+                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
+                        return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    }
                 }
 
                 if (len < packetLength) {

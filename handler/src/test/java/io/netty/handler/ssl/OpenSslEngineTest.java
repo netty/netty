@@ -81,6 +81,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
+import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_RECORD_SIZE;
 import static io.netty.handler.ssl.SslProvider.OPENSSL;
 import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
@@ -898,6 +899,142 @@ public class OpenSslEngineTest extends SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapFullRecordIntoBufferSizedForThePlaintext(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newJdkCompatibilityModeEngines(param);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[MAX_PLAINTEXT_LENGTH];
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapFullRecord(param, client, data);
+            int recordLength = enc.remaining();
+
+            // The record is longer than its plaintext because of the cipher overhead, but the plaintext is all the
+            // destination needs space for.
+            ByteBuffer plain = allocateBuffer(param.type(), MAX_PLAINTEXT_LENGTH);
+            SSLEngineResult result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(recordLength, result.bytesConsumed());
+            assertEquals(MAX_PLAINTEXT_LENGTH, result.bytesProduced());
+            assertEquals(0, enc.remaining());
+            assertEquals(MAX_PLAINTEXT_LENGTH, server.getSession().getApplicationBufferSize());
+            plain.flip();
+            assertEquals(ByteBuffer.wrap(data), plain);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapFullRecordIntoTooSmallBufferReportsOverflow(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newJdkCompatibilityModeEngines(param);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[MAX_PLAINTEXT_LENGTH];
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapFullRecord(param, client, data);
+            int recordLength = enc.remaining();
+
+            ByteBuffer tooSmall = allocateBuffer(param.type(), MAX_PLAINTEXT_LENGTH - 1);
+            SSLEngineResult result = server.unwrap(enc, tooSmall);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
+            assertEquals(recordLength, enc.remaining());
+            // The caller is told how much space the record may need.
+            assertEquals(MAX_RECORD_SIZE, server.getSession().getApplicationBufferSize());
+
+            ByteBuffer plain = allocateBuffer(param.type(), server.getSession().getApplicationBufferSize());
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(recordLength, result.bytesConsumed());
+            assertEquals(MAX_PLAINTEXT_LENGTH, result.bytesProduced());
+            plain.flip();
+            assertEquals(ByteBuffer.wrap(data), plain);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapRecordLongerThanMaxRecordSizeFails(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newJdkCompatibilityModeEngines(param);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            // Only the header of an application data record that is longer than any valid record.
+            int length = MAX_RECORD_SIZE + 1;
+            ByteBuffer header = allocateBuffer(param.type(), SslUtils.SSL_RECORD_HEADER_LENGTH);
+            header.put((byte) SslUtils.SSL_CONTENT_TYPE_APPLICATION_DATA).put((byte) 3).put((byte) 3)
+                    .put((byte) (length >> 8)).put((byte) length).flip();
+            final ByteBuffer src = header;
+            final ByteBuffer dst = allocateBuffer(param.type(), MAX_PLAINTEXT_LENGTH);
+            final SSLEngine serverEngine = server;
+            SSLException exception = assertThrows(SSLException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    serverEngine.unwrap(src, dst);
+                }
+            });
+            assertTrue(exception.getMessage().contains("Illegal packet length"), exception.getMessage());
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private SSLEngine[] newJdkCompatibilityModeEngines(SSLEngineTestParam param) throws Exception {
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+        return new SSLEngine[] {
+                wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT)),
+                wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT))
+        };
+    }
+
+    /**
+     * Wraps {@code data}, which must be {@code MAX_PLAINTEXT_LENGTH} bytes, into a single TLS record and returns it
+     * ready to be read.
+     */
+    private ByteBuffer wrapFullRecord(SSLEngineTestParam param, SSLEngine client, byte[] data)
+            throws SSLException {
+        ByteBuffer plain = allocateBuffer(param.type(), data.length);
+        plain.put(data).flip();
+        ByteBuffer enc = allocateBuffer(param.type(), client.getSession().getPacketBufferSize());
+        SSLEngineResult result = client.wrap(plain, enc);
+        assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+        assertEquals(data.length, result.bytesConsumed());
+        enc.flip();
+        assertTrue(enc.remaining() - SslUtils.SSL_RECORD_HEADER_LENGTH > MAX_PLAINTEXT_LENGTH);
+        return enc;
     }
 
     @MethodSource("newTestParams")
