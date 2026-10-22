@@ -441,7 +441,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (headerFinalized) {
             throw new ErrorDataEncoderException("Cannot add value once finalized");
         }
-        bodyListDatas.add(checkNotNull(data, "data"));
+        checkNotNull(data, "data");
+        if (isMultipart) {
+            checkMultipartName(data.getName());
+        }
+        bodyListDatas.add(data);
         if (!isMultipart) {
             if (data instanceof Attribute) {
                 Attribute attribute = (Attribute) data;
@@ -822,6 +826,24 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     public boolean isChunked() {
         return isChunked;
+    }
+
+    /**
+     * The name is written as a quoted-string in the part's Content-Disposition header, so control characters,
+     * DEL, double-quote and backslash would let it break out of the {@code name} parameter.
+     *
+     * @throws ErrorDataEncoderException
+     *             if the name contains one of these characters
+     */
+    private static void checkMultipartName(String name) throws ErrorDataEncoderException {
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (c < HttpConstants.SP || c == HttpConstants.DEL ||
+                c == HttpConstants.DOUBLE_QUOTE || c == HttpConstants.BACKSLASH) {
+                throw new ErrorDataEncoderException(
+                    String.format("Illegal name character 0x%02x at index %d", (int) c, i));
+            }
+        }
     }
 
     /**
