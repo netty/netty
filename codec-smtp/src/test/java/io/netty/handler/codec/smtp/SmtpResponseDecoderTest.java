@@ -22,6 +22,8 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -121,6 +123,17 @@ public class SmtpResponseDecoderTest {
     public void testDecodeInvalidCode() {
         final EmbeddedChannel channel = newChannel();
         assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("xyz Ok\r\n")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "5x0 denied\r\n", "2:0 hm\r\n", "4?1 later\r\n" })
+    public void testDecodeCodeWithNonDigit(final String line) throws Exception {
+        // Each of these used to be decoded as a valid code (490, 190 and 391).
+        final EmbeddedChannel channel = newChannel();
+        DecoderException exception = assertThrows(DecoderException.class,
+                () -> channel.writeInbound(newBuffer(line)));
+        assertNull(exception.getCause());
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
