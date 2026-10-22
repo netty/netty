@@ -401,7 +401,8 @@ static jint _sendToDomainSocket(JNIEnv* env, jint fd, void* buffer, jint pos, ji
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 
@@ -827,7 +828,8 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 

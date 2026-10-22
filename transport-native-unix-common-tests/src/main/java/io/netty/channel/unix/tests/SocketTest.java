@@ -25,10 +25,12 @@ import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class SocketTest<T extends Socket> {
@@ -127,6 +129,26 @@ public abstract class SocketTest<T extends Socket> {
         out.flip();
         assertNotEquals(ByteBuffer.allocate(0), out);
         cleanableDirectBuffer.clean();
+    }
+
+    @Test
+    public void testSendToDomainSocketWithTooLongPath() throws IOException {
+        byte[] path = new byte[4096];
+        Arrays.fill(path, (byte) 'a');
+        path[0] = '/';
+
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(1);
+        Socket domainSocket = Socket.newSocketDomainDgram();
+        try {
+            ByteBuffer buffer = cleanableDirectBuffer.buffer();
+            // The path must be rejected instead of silently being truncated and sent to a different address.
+            IOException e = assertThrows(IOException.class,
+                    () -> domainSocket.sendToDomainSocket(buffer, 0, 1, path));
+            assertTrue(e.getMessage().contains("too long"), e.getMessage());
+        } finally {
+            domainSocket.close();
+            cleanableDirectBuffer.clean();
+        }
     }
 
     protected int level() {
