@@ -248,6 +248,35 @@ public class SnappyTest {
     }
 
     @Test
+    public void encodeWithNonZeroReaderIndex() throws Exception {
+        String srcStr = "Netty has been designed carefully with the experiences " +
+                   "earned from the implementation of a lot of protocols " +
+                   "such as FTP, SMTP, HTTP, and various binary and " +
+                   "text-based legacy protocols";
+        byte[] src = srcStr.getBytes(StandardCharsets.US_ASCII);
+        ByteBuf expectedIn = Unpooled.wrappedBuffer(src);
+        ByteBuf expected = Unpooled.buffer();
+        snappy.encode(expectedIn, expected, src.length);
+
+        ByteBuf in = Unpooled.buffer().writeZero(16).writeBytes(src);
+        in.skipBytes(16);
+        ByteBuf out = Unpooled.buffer();
+        snappy.encode(in, out, in.readableBytes());
+        assertEquals(expected, out, "Encoded result must not depend on the reader index");
+
+        ByteBuf outDecoded = Unpooled.buffer();
+        snappy.decode(out, outDecoded);
+        assertEquals(CharBuffer.wrap(srcStr),
+            CharBuffer.wrap(outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII)));
+
+        expectedIn.release();
+        expected.release();
+        in.release();
+        out.release();
+        outDecoded.release();
+    }
+
+    @Test
     public void testCalculateChecksum() {
         ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
                 'n', 'e', 't', 't', 'y'
