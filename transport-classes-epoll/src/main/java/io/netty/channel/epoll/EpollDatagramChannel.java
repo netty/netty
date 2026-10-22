@@ -30,8 +30,15 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.ControlMessageBuffer;
+import io.netty.channel.unix.ControlMessageDatagramPacket;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.ControlMessageEncoder;
+import io.netty.channel.unix.ControlMessages;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
@@ -459,6 +466,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
+        if (msg instanceof ControlMessageDatagramPacket) {
+            ControlMessages controlMessages = ((ControlMessageDatagramPacket) msg).controlMessages();
+            if (!controlMessages.isEmpty()) {
+                return doWriteMessageWithControlMessages(data, remoteAddress, controlMessages);
+            }
+        }
+
         try {
             return doWriteOrSendBytes(data, remoteAddress, false) > 0;
         } catch (NativeIoException e) {
@@ -467,6 +481,30 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             }
             throw e;
         }
+    }
+
+    private boolean doWriteMessageWithControlMessages(ByteBuf data, InetSocketAddress remoteAddress,
+                                                      ControlMessages controlMessages) throws IOException {
+        NativeArrays nativeArrays = (NativeArrays) registration().attachment();
+        IovArray array = nativeArrays.cleanIovArray();
+        array.add(data, data.readerIndex(), data.readableBytes());
+        int cnt = array.count();
+        assert cnt != 0;
+
+        ControlMessageBuffer controlMessageBuffer = nativeArrays.cleanControlMessageBuffer();
+        int controlLength = ControlMessageEncoder.encodedLength(controlMessages);
+        int controlOffset = controlMessageBuffer.reserve(controlLength);
+        ControlMessageEncoder.encode(controlMessages, controlMessageBuffer.buffer(), controlOffset);
+        final int writtenBytes;
+        if (remoteAddress == null) {
+            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt, null, 0,
+                    controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+        } else {
+            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                    remoteAddress.getAddress(), remoteAddress.getPort(),
+                    controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+        }
+        return writtenBytes > 0;
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
@@ -478,6 +516,17 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof ControlMessageDatagramPacket) {
+            ControlMessageDatagramPacket packet = (ControlMessageDatagramPacket) msg;
+            checkUnresolved(packet);
+            ControlMessages controlMessages = packet.controlMessages();
+            // Fail fast if the control messages can't be sent.
+            ControlMessageEncoder.encodedLength(controlMessages);
+            ByteBuf content = packet.content();
+            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                    new ControlMessageDatagramPacket(newDirectBuffer(packet, content), packet.recipient(),
+                            controlMessages) : msg;
+        }
         if (msg instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
             if (!Native.IS_SUPPORTING_UDP_SEGMENT) {
                 throw new UnsupportedOperationException(
@@ -572,6 +621,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     do {
                         final boolean read;
                         int datagramSize = config().getMaxDatagramPayloadSize();
+                        // Fetch it for each read as it might be changed by the user while we are reading.
+                        ControlMessageDecoder decoder = config.controlMessageDecoder();
 
                         ByteBuf byteBuf = allocHandle.allocate(allocator);
                         // Only try to use recvmmsg if its really supported by the running system.
@@ -580,15 +631,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                                 0;
                         try {
                             if (numDatagram <= 1) {
-                                if (!connected || config.isUdpGro()) {
-                                    read = recvmsg(allocHandle, cleanDatagramPacketArray(), byteBuf);
+                                if (!connected || config.isUdpGro() || decoder != null) {
+                                    read = recvmsg(allocHandle, cleanDatagramPacketArray(), byteBuf, decoder);
                                 } else {
                                     read = connectedRead(allocHandle, byteBuf, datagramSize);
                                 }
                             } else {
                                 // Try to use scattering reads via recvmmsg(...) syscall.
                                 read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
-                                        byteBuf, datagramSize, numDatagram);
+                                        byteBuf, datagramSize, numDatagram, decoder);
                             }
                         } catch (NativeIoException e) {
                             if (connected) {
@@ -673,7 +724,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         return e;
     }
 
-    private static void addDatagramPacketToOut(DatagramPacket packet,
+    private static void addDatagramPacketToOut(DatagramPacket packet, ControlMessages controlMessages,
                                               RecyclableArrayList out) {
         if (packet instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
             io.netty.channel.unix.SegmentedDatagramPacket segmentedDatagramPacket =
@@ -683,8 +734,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             InetSocketAddress sender = segmentedDatagramPacket.sender();
             int segmentSize = segmentedDatagramPacket.segmentSize();
             do {
-                out.add(new DatagramPacket(content.readRetainedSlice(Math.min(content.readableBytes(),
-                        segmentSize)), recipient, sender));
+                ByteBuf segment = content.readRetainedSlice(Math.min(content.readableBytes(), segmentSize));
+                // All the segments share the same control messages as these were coalesced by the kernel.
+                out.add(controlMessages == null ? new DatagramPacket(segment, recipient, sender) :
+                        new ControlMessageDatagramPacket(segment, recipient, sender, controlMessages));
             } while (content.isReadable());
 
             segmentedDatagramPacket.release();
@@ -722,13 +775,26 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-    private boolean recvmsg(EpollRecvByteAllocatorHandle allocHandle,
-                            NativeDatagramPacketArray array, ByteBuf byteBuf) throws IOException {
+    /**
+     * Returns the number of bytes that should be reserved to receive the control messages of a single datagram or
+     * {@code 0} if no control messages should be received.
+     */
+    private static int controlLength(ControlMessageDecoder decoder) {
+        if (decoder == null) {
+            return 0;
+        }
+        // Also reserve space for the control messages that are handled by the native code itself, which are
+        // UDP_GRO (int) and IP_RECVORIGDSTADDR (struct sockaddr_in).
+        return decoder.controlLength() + ControlMessageEncoder.space(4) + ControlMessageEncoder.space(16);
+    }
+
+    private boolean recvmsg(EpollRecvByteAllocatorHandle allocHandle, NativeDatagramPacketArray array,
+                            ByteBuf byteBuf, ControlMessageDecoder decoder) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
             int writable = byteBuf.writableBytes();
 
-            boolean added = array.addWritable(byteBuf, byteBuf.writerIndex(), writable);
+            boolean added = array.addWritable(byteBuf, byteBuf.writerIndex(), writable, controlLength(decoder));
             assert added;
 
             allocHandle.attemptedBytesRead(writable);
@@ -742,7 +808,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             }
             byteBuf.writerIndex(bytesReceived);
             InetSocketAddress local = localAddress();
-            DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
+            ControlMessages controlMessages = decoder == null ? null : msg.decodeControlMessages(decoder);
+            DatagramPacket packet = msg.newDatagramPacket(byteBuf, local, controlMessages);
             if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
             } else {
@@ -750,7 +817,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // before we call fireChannelRead(...). This is because the user may call flush()
                 // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
                 datagramPackets = RecyclableArrayList.newInstance();
-                addDatagramPacketToOut(packet, datagramPackets);
+                addDatagramPacketToOut(packet, controlMessages, datagramPackets);
 
                 processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
@@ -764,12 +831,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private boolean scatteringRead(EpollRecvByteAllocatorHandle allocHandle, NativeDatagramPacketArray array,
-            ByteBuf byteBuf, int datagramSize, int numDatagram) throws IOException {
+            ByteBuf byteBuf, int datagramSize, int numDatagram, ControlMessageDecoder decoder) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
+            int controlLength = controlLength(decoder);
+            if (controlLength > 0) {
+                array.ensureControlCapacity(controlLength * Math.min(numDatagram, Limits.UIO_MAX_IOV));
+            }
             int offset = byteBuf.writerIndex();
             for (int i = 0; i < numDatagram;  i++, offset += datagramSize) {
-                if (!array.addWritable(byteBuf, offset, datagramSize)) {
+                if (!array.addWritable(byteBuf, offset, datagramSize, controlLength)) {
                     break;
                 }
             }
@@ -792,7 +863,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             if (received == 1) {
                 // Single packet fast-path
-                DatagramPacket packet = packets[0].newDatagramPacket(byteBuf, local);
+                DatagramPacket packet = packets[0].newDatagramPacket(byteBuf, local,
+                        decoder == null ? null : packets[0].decodeControlMessages(decoder));
                 if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                     processPacket(pipeline(), allocHandle, datagramSize, packet);
                     return true;
@@ -805,12 +877,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
             datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
-                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf, local);
+                ControlMessages controlMessages = decoder == null ? null : packets[i].decodeControlMessages(decoder);
+                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf, local, controlMessages);
 
                 // We need to skip the maximum datagram size to ensure we have the readerIndex in the right position
                 // for the next one.
                 byteBuf.skipBytes(datagramSize);
-                addDatagramPacketToOut(packet, datagramPackets);
+                addDatagramPacketToOut(packet, controlMessages, datagramPackets);
             }
             // Ass we did use readRetainedSlice(...) before we should now release the byteBuf and null it out.
             byteBuf.release();

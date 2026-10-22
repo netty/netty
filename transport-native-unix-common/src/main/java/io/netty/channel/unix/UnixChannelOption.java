@@ -17,10 +17,28 @@ package io.netty.channel.unix;
 
 import io.netty.channel.ChannelOption;
 
+import java.util.Set;
+
 public class UnixChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Boolean> SO_REUSEPORT = valueOf(UnixChannelOption.class, "SO_REUSEPORT");
     public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             ChannelOption.valueOf(UnixChannelOption.class, "DOMAIN_SOCKET_READ_MODE");
+
+    /**
+     * The {@link ControlMessage}s that should be received together with each datagram. Netty takes care of enabling
+     * the reception of the {@link ControlMessage}s and delivers each received datagram as
+     * {@link ControlMessageDatagramPacket}, which contains the {@link ControlMessages} that were received. Use an
+     * empty {@link Set} to disable the reception of control messages again, which is also the default.
+     * <p>
+     * It is recommended to set this option before the channel is registered (for example via the {@code Bootstrap}).
+     * If it is changed afterwards, the change applies to all datagrams that are read after the change. Depending on
+     * the transport reads might already be in progress (for example io_uring), in which case the newly requested
+     * control messages might be missing for the datagrams that are received by these reads.
+     * <p>
+     * This is supported by the datagram channels of the native transports (epoll, io_uring and kqueue).
+     */
+    public static final ChannelOption<Set<ControlMessage<?>>> RECEIVE_CONTROL_MESSAGES =
+            ChannelOption.valueOf(UnixChannelOption.class, "RECEIVE_CONTROL_MESSAGES");
 
     @SuppressWarnings({ "unused", "deprecation" })
     protected UnixChannelOption() {

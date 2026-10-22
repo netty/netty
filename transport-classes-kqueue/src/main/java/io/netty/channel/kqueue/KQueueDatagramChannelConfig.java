@@ -23,11 +23,15 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.unix.ControlMessage;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.UnixChannelOption;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
+import java.util.Set;
 
 import static io.netty.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty.channel.ChannelOption.IP_MULTICAST_ADDR;
@@ -39,10 +43,12 @@ import static io.netty.channel.ChannelOption.SO_BROADCAST;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
+import static io.netty.channel.unix.UnixChannelOption.RECEIVE_CONTROL_MESSAGES;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
 public final class KQueueDatagramChannelConfig extends KQueueChannelConfig implements DatagramChannelConfig {
     private boolean activeOnOpen;
+    private volatile ControlMessageDecoder controlMessageDecoder;
 
     KQueueDatagramChannelConfig(KQueueDatagramChannel channel) {
         super(channel, new FixedRecvByteBufAllocator(2048));
@@ -55,7 +61,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
                 super.getOptions(),
                 SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED,
                 IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL,
-                IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_REUSEPORT);
+                IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_REUSEPORT, RECEIVE_CONTROL_MESSAGES);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -94,11 +100,14 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         if (option == SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
         }
+        if (option == RECEIVE_CONTROL_MESSAGES) {
+            return (T) getReceiveControlMessages();
+        }
         return super.getOption(option);
     }
 
     @Override
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
@@ -124,6 +133,8 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
             setActiveOnOpen((Boolean) value);
         } else if (option == SO_REUSEPORT) {
             setReusePort((Boolean) value);
+        } else if (option == RECEIVE_CONTROL_MESSAGES) {
+            setReceiveControlMessages((Set<ControlMessage<?>>) value);
         } else {
             return super.setOption(option, value);
         }
@@ -167,6 +178,33 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    /**
+     * Returns the {@link ControlMessage}s that are received together with each datagram.
+     * See {@link UnixChannelOption#RECEIVE_CONTROL_MESSAGES}.
+     */
+    public Set<ControlMessage<?>> getReceiveControlMessages() {
+        return ControlMessageDecoder.types(controlMessageDecoder);
+    }
+
+    /**
+     * Set the {@link ControlMessage}s that should be received together with each datagram.
+     * See {@link UnixChannelOption#RECEIVE_CONTROL_MESSAGES}.
+     */
+    public synchronized KQueueDatagramChannelConfig setReceiveControlMessages(
+            Set<? extends ControlMessage<?>> controlMessages) {
+        try {
+            controlMessageDecoder = ControlMessageDecoder.update(
+                    ((KQueueDatagramChannel) channel).socket, controlMessageDecoder, controlMessages);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    ControlMessageDecoder controlMessageDecoder() {
+        return controlMessageDecoder;
     }
 
     @Override

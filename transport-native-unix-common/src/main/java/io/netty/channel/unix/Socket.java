@@ -244,6 +244,46 @@ public class Socket extends FileDescriptor {
         return ioResult("sendToAddresses", res);
     }
 
+    /**
+     * Send the data described by the given {@code iovec} array together with the given control messages (ancillary
+     * data) via {@code sendmsg(...)}.
+     *
+     * @param memoryAddress     the memory address of the {@code iovec} array.
+     * @param length            the number of {@code iovec}s.
+     * @param addr              the address to send to or {@code null} if the socket is connected.
+     * @param port              the port to send to.
+     * @param controlAddress    the memory address of the control messages.
+     * @param controlLength     the length of the control messages or {@code 0} if there are none.
+     * @return                  the number of bytes written.
+     */
+    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port,
+                                     long controlAddress, int controlLength) throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
+        byte[] address;
+        int scopeId;
+        if (addr == null) {
+            address = null;
+            scopeId = 0;
+        } else if (addr instanceof Inet6Address) {
+            address = addr.getAddress();
+            scopeId = ((Inet6Address) addr).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            scopeId = 0;
+            address = ipv4MappedIpv6Address(addr.getAddress());
+        }
+        int res = sendToAddressesControl(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port,
+                controlAddress, controlLength, 0);
+        if (res >= 0) {
+            return res;
+        }
+        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendToAddresses failed");
+        }
+        return ioResult("sendToAddresses", res);
+    }
+
     public final int sendToAddressesDomainSocket(long memoryAddress, int length, byte[] path) throws IOException {
         int res = sendToAddressesDomainSocket(fd, memoryAddress, length, path);
         if (res >= 0) {
@@ -258,6 +298,49 @@ public class Socket extends FileDescriptor {
 
     public final DatagramSocketAddress recvFromAddress(long memoryAddress, int pos, int limit) throws IOException {
         return recvFromAddress(fd, memoryAddress, pos, limit);
+    }
+
+    /**
+     * Receive a datagram together with its control messages (ancillary data) via {@code recvmsg(...)}.
+     *
+     * @param memoryAddress     the memory address of the buffer to read the datagram into.
+     * @param pos               the position in the buffer.
+     * @param limit             the limit of the buffer.
+     * @param controlAddress    the memory address of the buffer to read the control messages into.
+     * @param controlLength     the length of the buffer to read the control messages into.
+     * @return                  the address of the sender or {@code null} if there was nothing to read. The number of
+     *                          bytes of control messages that were received can be retrieved via
+     *                          {@link DatagramSocketAddress#controlLength()}.
+     */
+    public final DatagramSocketAddress recvFromAddress(long memoryAddress, int pos, int limit,
+                                                       long controlAddress, int controlLength) throws IOException {
+        return recvFromAddressControl(fd, memoryAddress, pos, limit, controlAddress, controlLength);
+    }
+
+    /**
+     * Receive a datagram together with its control messages (ancillary data) via {@code recvmsg(...)}, without
+     * retrieving the address of the sender. This is useful for connected sockets, as it does not need to create any
+     * objects.
+     *
+     * @param memoryAddress     the memory address of the buffer to read the datagram into.
+     * @param pos               the position in the buffer.
+     * @param limit             the limit of the buffer.
+     * @param controlAddress    the memory address of the buffer to read the control messages into.
+     * @param controlLength     the length of the buffer to read the control messages into.
+     * @return                  the number of bytes that were received (or {@code -1} if there was nothing to read)
+     *                          in the upper 32 bits and the number of bytes of control messages that were received
+     *                          in the lower 32 bits.
+     */
+    public final long recvAddressControl(long memoryAddress, int pos, int limit,
+                                         long controlAddress, int controlLength) throws IOException {
+        long res = recvAddressControl(fd, memoryAddress, pos, limit, controlAddress, controlLength);
+        int bytes = (int) (res >> 32);
+        if (bytes >= 0) {
+            return res;
+        }
+        // This will throw if it is not EAGAIN.
+        ioResult("recvAddressControl", bytes);
+        return -1L << 32;
     }
 
     public final DomainDatagramSocketAddress recvFromDomainSocket(ByteBuffer buf, int pos, int limit)
@@ -685,6 +768,9 @@ public class Socket extends FileDescriptor {
 
     private static native int recvAddress(int fd, long address, int pos, int limit);
 
+    private static native long recvAddressControl(
+            int fd, long address, int pos, int limit, long controlAddress, int controlLength);
+
     private static native int sendTo(
             int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,
             int flags);
@@ -697,6 +783,10 @@ public class Socket extends FileDescriptor {
             int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
             int flags);
 
+    private static native int sendToAddressesControl(
+            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
+            long controlAddress, int controlLength, int flags);
+
     private static native int sendToDomainSocket(int fd, ByteBuffer buf, int pos, int limit, byte[] path);
     private static native int sendToAddressDomainSocket(int fd, long memoryAddress, int pos, int limit, byte[] path);
     private static native int sendToAddressesDomainSocket(int fd, long memoryAddress, int length, byte[] path);
@@ -705,6 +795,9 @@ public class Socket extends FileDescriptor {
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     private static native DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
+    private static native DatagramSocketAddress recvFromAddressControl(
+            int fd, long memoryAddress, int pos, int limit, long controlAddress, int controlLength)
+            throws IOException;
     private static native DomainDatagramSocketAddress recvFromDomainSocket(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     private static native DomainDatagramSocketAddress recvFromAddressDomainSocket(
