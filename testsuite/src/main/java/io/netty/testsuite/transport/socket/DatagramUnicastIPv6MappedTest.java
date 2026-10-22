@@ -19,6 +19,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -27,6 +28,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
 
@@ -65,7 +68,9 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
     /**
      * Returns a port that is neither used by an IPv4 nor by an IPv6 socket.
      */
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static int unusedPort() {
+        assumeTrue(PlatformDependent.javaVersion() >= 7);
         BindException cause = null;
         for (int i = 0; i < MAX_PORT_SELECTION_ATTEMPTS; i++) {
             int port;
