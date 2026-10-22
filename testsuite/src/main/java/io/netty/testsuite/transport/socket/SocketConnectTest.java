@@ -40,6 +40,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
@@ -264,6 +265,57 @@ public class SocketConnectTest extends AbstractSocketTest {
         String expectedString = expectedInitialData + "[normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
         cc.disconnect().sync();
+        assertEquals(expectedString, result);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteFromFastOpenInitialDataListener(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testWriteFromFastOpenInitialDataListener);
+    }
+
+    public void testWriteFromFastOpenInitialDataListener(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        cb.option(ChannelOption.AUTO_READ, true);
+
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new EchoServerHandler());
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        // The first connection obtains the fast open cookie, the second one sends its initial data as part of the
+        // connect.
+        connectAndWriteFromInitialDataListener(cb, sc);
+        connectAndWriteFromInitialDataListener(cb, sc);
+    }
+
+    private static void connectAndWriteFromInitialDataListener(Bootstrap cb, Channel sc) throws Exception {
+        BufferingClientHandler handler = new BufferingClientHandler();
+        cb.handler(handler);
+        Channel channel = cb.register().sync().channel();
+        AtomicBoolean activeInListener = new AtomicBoolean();
+        BlockingQueue<ChannelFuture> followUpFutures = new LinkedBlockingQueue<>();
+        ChannelFuture initialFuture = channel.write(writeAscii(DEFAULT, "[fastopen]")).addListener(f -> {
+            activeInListener.set(channel.isActive());
+            followUpFutures.add(channel.writeAndFlush(writeAscii(DEFAULT, "[follow-up]")));
+        });
+        Channel cc = channel.connect(sc.localAddress()).sync().channel();
+        // Without a fast open cookie the initial data is still queued and is written by this flush.
+        cc.flush();
+
+        initialFuture.sync();
+        // Waiters may be woken up before the listeners were notified, so wait for the listener itself.
+        ChannelFuture followUpFuture = followUpFutures.poll(2, TimeUnit.SECONDS);
+        assertNotNull(followUpFuture, "listener of the initial write was not notified");
+        assertTrue(activeInListener.get(), "channel was not active when the initial write was notified");
+        followUpFuture.sync();
+        String expectedString = "[fastopen][follow-up]";
+        String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
+        cc.close().sync();
         assertEquals(expectedString, result);
     }
 

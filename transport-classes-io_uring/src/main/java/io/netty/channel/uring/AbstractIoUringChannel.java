@@ -1016,15 +1016,30 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 freeMsgHdrArray();
                 if (res > 0) {
                     // Connect complete!
-                    // The completion may arrive after close() or shutdownOutput() already dropped the
-                    // outbound buffer, in which case there is nothing left to remove.
-                    ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
-                    if (channelOutboundBuffer != null) {
-                        channelOutboundBuffer.removeBytes(res);
+                    // Complete the connect before removing the written bytes, so listeners of the initial write
+                    // see an active channel and are able to write and close it like on any other connected
+                    // channel. Mark the write as scheduled until the bytes were removed, as otherwise a flush that
+                    // is triggered by channelActive() would send the initial data a second time.
+                    assert (ioState & WRITE_SCHEDULED) == 0;
+                    ioState |= WRITE_SCHEDULED;
+                    try {
+                        // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
+                        connectComplete(op, 0, flags, data);
+
+                        // The completion may arrive after close() or shutdownOutput() already dropped the
+                        // outbound buffer, in which case there is nothing left to remove.
+                        ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
+                        if (channelOutboundBuffer != null) {
+                            channelOutboundBuffer.removeBytes(res);
+                        }
+                    } finally {
+                        ioState &= ~WRITE_SCHEDULED;
                     }
 
-                    // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    connectComplete(op, 0, flags, data);
+                    // Write what is left of the initial data and everything that was flushed in the meantime.
+                    if ((ioState & POLL_OUT_SCHEDULED) == 0) {
+                        scheduleWriteIfNeeded(outboundBuffer(), false);
+                    }
                 } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
                     // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
                     // In this case, our TCP connection will be established normally, but no data was transmitted at
