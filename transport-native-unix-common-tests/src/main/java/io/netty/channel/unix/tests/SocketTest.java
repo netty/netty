@@ -214,4 +214,35 @@ public abstract class SocketTest<T extends Socket> {
             socketFile.delete();
         }
     }
+
+    @Test
+    public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
+        // Find the longest path that is not rejected as too long, which is the size of sun_path.
+        int max = 90;
+        while (max < 4096 && !isConnectPathTooLong(max + 1)) {
+            max++;
+        }
+        assertTrue(isConnectPathTooLong(max + 1));
+        assertTrue(max >= 100);
+        // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
+        for (int i = 0; i < 100; i++) {
+            assertFalse(isConnectPathTooLong(max));
+        }
+    }
+
+    private static boolean isConnectPathTooLong(int length) throws IOException {
+        StringBuilder path = new StringBuilder("/");
+        while (path.length() < length) {
+            path.append('a');
+        }
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.connect(new DomainSocketAddress(path.toString()));
+            return false;
+        } catch (IOException e) {
+            return e.getMessage() != null && e.getMessage().contains("too long");
+        } finally {
+            domainSocket.close();
+        }
+    }
 }

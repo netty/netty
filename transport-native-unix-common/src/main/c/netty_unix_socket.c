@@ -883,7 +883,8 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     }
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
@@ -892,9 +893,14 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
 
     // Only remove a stale socket left behind by a previous run. Never remove any other kind of file (regular file,
     // directory, symlink, ...); if something else exists at the path bind(...) will fail with EADDRINUSE.
+    // sun_path is not NUL terminated if the path fills it completely, so use a terminated copy for lstat/unlink.
+    char path[sizeof(addr.sun_path) + 1];
+    memcpy(path, addr.sun_path, sizeof(addr.sun_path));
+    path[sizeof(addr.sun_path)] = '\0';
+
     struct stat st;
-    if (lstat((const char*) addr.sun_path, &st) == 0) {
-        if (S_ISSOCK(st.st_mode) && unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
+    if (lstat(path, &st) == 0) {
+        if (S_ISSOCK(st.st_mode) && unlink(path) == -1 && errno != ENOENT) {
             return -errno;
         }
     } else if (errno != ENOENT && errno != ENOTDIR) {
@@ -922,7 +928,8 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
