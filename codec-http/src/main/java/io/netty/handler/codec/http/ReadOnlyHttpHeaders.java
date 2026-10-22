@@ -100,7 +100,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToInt(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return null;
         }
     }
@@ -113,7 +113,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToInt(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return defaultValue;
         }
     }
@@ -126,7 +126,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToShort(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return null;
         }
     }
@@ -139,7 +139,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         }
         try {
             return INSTANCE.convertToShort(value);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException ignore) {
             return defaultValue;
         }
     }

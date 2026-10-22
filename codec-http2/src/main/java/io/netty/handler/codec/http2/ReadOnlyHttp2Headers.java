@@ -244,7 +244,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToByte(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -263,7 +263,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToChar(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -282,7 +282,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToShort(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -301,7 +301,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToInt(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -320,7 +320,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToLong(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -339,7 +339,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToFloat(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
@@ -358,7 +358,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (value != null) {
             try {
                 return INSTANCE.convertToDouble(value);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignore) {
                 return null;
             }
         }
