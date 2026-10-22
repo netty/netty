@@ -23,6 +23,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -459,7 +460,11 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             ByteBuffer byteBuffer = ByteBuffer.wrap(array);
             int read = 0;
             while (read < srcsize) {
-                read += fileChannel.read(byteBuffer);
+                int readnow = fileChannel.read(byteBuffer);
+                if (readnow == -1) {
+                    throw new EOFException("Unexpected end of file after " + read + " of " + srcsize + " bytes");
+                }
+                read += readnow;
             }
         } finally {
             accessFile.close();
