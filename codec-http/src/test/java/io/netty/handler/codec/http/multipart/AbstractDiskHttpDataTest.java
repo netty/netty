@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.EOFException;
 import java.io.File;
@@ -89,9 +90,25 @@ public class AbstractDiskHttpDataTest {
                 }
             };
             test.setContent(shortFile);
-            assertThrows(EOFException.class, test::get);
-            assertThrows(EOFException.class, test::getByteBuf);
-            assertThrows(EOFException.class, test::getString);
+            final TestHttpData data = test;
+            assertThrows(EOFException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    data.get();
+                }
+            });
+            assertThrows(EOFException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    data.getByteBuf();
+                }
+            });
+            assertThrows(EOFException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    data.getString();
+                }
+            });
         } finally {
             test.delete();
             assertTrue(tmpFile.delete());
