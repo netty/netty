@@ -2323,6 +2323,32 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testReadUsAsciiCharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testReadUtf8CharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.UTF_8);
+    }
+
+    private void testReadCharSequenceOutOfBounds(final Charset charset) {
+        final ByteBuf buf = newBuffer(16);
+        try {
+            buf.clear().writeBytes(new byte[] { 'a', 'b' });
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readCharSequence(3, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readString(3, charset));
+            assertEquals(0, buf.readerIndex());
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(0, buf.capacity() + 1, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(-1, 1, charset));
+            assertThrows(IndexOutOfBoundsException.class,
+                    () -> buf.getCharSequence(0, buf.capacity() + 1, charset));
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
     @Timeout(30)
     public void testToStringMultipleThreads() throws Throwable {
         buffer.clear();
