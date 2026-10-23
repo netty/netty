@@ -415,4 +415,105 @@ public class JsonObjectDecoderTest {
 
         assertFalse(ch.finish());
     }
+
+    @Test
+    public void testSmallObjectsInOneReadLongerThanMaxObjectLength() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(16));
+        // Each object is 7 bytes, the buffer is 21 bytes.
+        ch.writeInbound(Unpooled.copiedBuffer("{\"a\":1}{\"b\":2}{\"c\":3}", CharsetUtil.UTF_8));
+        assertNextObject(ch, "{\"a\":1}");
+        assertNextObject(ch, "{\"b\":2}");
+        assertNextObject(ch, "{\"c\":3}");
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSmallObjectsInOneReadLoopLongerThanMaxObjectLength() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(16));
+        // Several reads before channelReadComplete(), with objects that span the reads, so the bytes pile up in
+        // the cumulation.
+        ch.writeInbound(Unpooled.copiedBuffer("{\"a\":1}{\"b\"", CharsetUtil.UTF_8),
+                Unpooled.copiedBuffer(":2}{\"c\":3}{", CharsetUtil.UTF_8),
+                Unpooled.copiedBuffer("\"d\":4}", CharsetUtil.UTF_8));
+        assertNextObject(ch, "{\"a\":1}");
+        assertNextObject(ch, "{\"b\":2}");
+        assertNextObject(ch, "{\"c\":3}");
+        assertNextObject(ch, "{\"d\":4}");
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testStreamArrayElementsLongerThanMaxObjectLength() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(8, true));
+        ch.writeInbound(Unpooled.copiedBuffer("[{\"a\":1},{\"b\":2},{\"c\":3}]", CharsetUtil.UTF_8));
+        assertNextObject(ch, "{\"a\":1}");
+        assertNextObject(ch, "{\"b\":2}");
+        assertNextObject(ch, "{\"c\":3}");
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testMaxObjectLengthIsExact() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(7));
+        ch.writeInbound(Unpooled.copiedBuffer("{\"a\":1}", CharsetUtil.UTF_8));
+        assertNextObject(ch, "{\"a\":1}");
+        assertFalse(ch.finish());
+
+        final EmbeddedChannel ch2 = new EmbeddedChannel(new JsonObjectDecoder(6));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch2.writeInbound(Unpooled.copiedBuffer("{\"a\":1}", CharsetUtil.UTF_8));
+            }
+        });
+        assertFalse(ch2.finish());
+    }
+
+    @Test
+    public void testIncompleteObjectLongerThanMaxObjectLength() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(8));
+        ch.writeInbound(Unpooled.copiedBuffer("{\"a\":", CharsetUtil.UTF_8));
+        // The object is not complete yet but already longer than maxObjectLength.
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("\"012", CharsetUtil.UTF_8));
+            }
+        });
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDecodesObjectsAfterTooLongObject() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(16));
+        ch.writeInbound(Unpooled.copiedBuffer("{\"a\":\"0123456", CharsetUtil.UTF_8));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("789abcdef\"}", CharsetUtil.UTF_8));
+            }
+        });
+        ch.writeInbound(Unpooled.copiedBuffer("{\"b\":2}", CharsetUtil.UTF_8));
+        ch.writeInbound(Unpooled.copiedBuffer("{\"c\":3}", CharsetUtil.UTF_8));
+        assertNextObject(ch, "{\"b\":2}");
+        assertNextObject(ch, "{\"c\":3}");
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testBufferWithNonZeroReaderIndex() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
+        ByteBuf buf = Unpooled.copiedBuffer("HDR: {\"a\":1}", CharsetUtil.UTF_8);
+        // For example, a handler in front of the decoder consumed a prefix and passed the buffer on.
+        buf.skipBytes(5);
+        ch.writeInbound(buf);
+        assertNextObject(ch, "{\"a\":1}");
+        assertFalse(ch.finish());
+    }
+
+    private static void assertNextObject(EmbeddedChannel ch, String expected) {
+        ByteBuf res = ch.readInbound();
+        assertEquals(expected, res.toString(CharsetUtil.UTF_8));
+        res.release();
+    }
 }
