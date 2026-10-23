@@ -57,8 +57,8 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
     void remoteSettings(Http2Settings settings) throws Http2Exception;
 
     /**
-     * Writes the given data to the internal {@link Http2FrameWriter} without performing any
-     * state checks on the connection/stream.
+     * Writes the given data to the internal {@link Http2FrameWriter}. The encoder validates frame types sent on
+     * reserved streams, but does not perform other connection or stream state checks.
      */
     @Override
     ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
