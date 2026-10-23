@@ -156,6 +156,11 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public Http2FrameCodecBuilder headersEncoder(Http2HeadersEncoder headersEncoder) {
+        return super.headersEncoder(headersEncoder);
+    }
+
+    @Override
     public Http2FrameCodecBuilder encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
         return super.encoderIgnoreMaxHeaderListSize(ignoreMaxHeaderListSize);
     }
