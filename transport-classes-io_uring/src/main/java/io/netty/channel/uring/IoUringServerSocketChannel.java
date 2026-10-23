@@ -29,12 +29,12 @@ import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -371,9 +371,8 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
             DomainSocketAddress local = (DomainSocketAddress) localAddress();
             super.doClose(promise.addListener(f -> {
                 if (local != null) {
-                    // Delete the socket file if possible.
-                    File socketFile = new File(local.path());
-                    boolean success = socketFile.delete();
+                    // Delete the socket file if possible (only if it is not a regular file, directory or symlink).
+                    boolean success = UnixChannelUtil.deleteDomainSocketFile(local.path());
                     if (!success && logger.isDebugEnabled()) {
                         logger.debug("Failed to delete a domain socket file: {}", local.path());
                     }
