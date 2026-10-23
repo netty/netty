@@ -68,6 +68,24 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
+      # The default "docker" buildx driver can't export cache to a registry; switch to the
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
+      # Pinned to v4.4.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+      # This workflow's token only has read-all permissions, so the cache push will fail;
+      # ignore-error=true on cache_to in the compose files absorbs that. Cache reads still work
+      # since read-all grants packages: read.
+      # Pinned to v4.6.0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 

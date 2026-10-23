@@ -27,7 +27,7 @@ RUN microdnf install -y \
 # what makes them loadable under musl; see codec-native-quic/pom.xml. It is only available from
 # EPEL. The version call fails the image build if EPEL ever stops resolving, instead of leaving
 # that to be discovered halfway through a maven run.
-RUN microdnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+RUN rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
     microdnf install -y patchelf && \
     patchelf --version
 
