@@ -6,6 +6,8 @@ argument-hint: "[PR number | branch]"
 
 Review the current changes for bugs, security, and thread-safety issues.
 
+This skill is read-only, and that rule supersedes everything else in it, including every checklist and sub-agent briefing. Do not edit files, run builds or tests, or apply fixes. Deciding what to do with the report is up to the user.
+
 ## Scope
 
 Determine what to review based on context:
@@ -30,6 +32,7 @@ Read the checklist files that apply to the diff, from the `references/` director
 | `security-tls.md` | touches TLS, trust or key managers, certificates, SSL contexts, or OpenSSL/BoringSSL code |
 | `concurrency.md` | touches shared mutable state, locks, channel handlers, event loops, executors or futures |
 | `native-jni.md` | touches C or header files, or Java `native` declarations |
+| `variant-analysis.md` | fixes a security vulnerability: the commit or PR text mentions a CVE, GHSA, vulnerability or security issue, or the diff adds validation, a limit or a rejection for attacker-controlled input. If in doubt whether the change is a security fix, apply it |
 
 ### Splitting the review across sub-agents
 
@@ -42,7 +45,7 @@ If your runner supports sub-agents, and the diff is large or spans several areas
    - `security-tls.md`
    - `concurrency.md`
    - `native-jni.md`
-
+   - `variant-analysis.md`, when the change fixes a security vulnerability. This reviewer runs regardless of the size thresholds above, and should use a high-capability model (for example Claude Opus 5.5 or GPT-6-Sol, or an equivalent or better model); if the runner can't select a model, run it anyway. In addition to the items below, its briefing must include the fix's commit or PR description and any linked issue or advisory, and the instruction to include a failing test case with each finding. Without sub-agents, do this analysis yourself after the other checklists.
    Sub-agents start with no context, so each briefing must be self-contained:
    - the base branch and the exact `git diff` command to obtain the changes
    - the files in scope
@@ -51,7 +54,7 @@ If your runner supports sub-agents, and the diff is large or spans several areas
    - the Verification rules below, and the Output Format
    - that it is read-only: no edits, no builds, no tests
    - that it should stay within its checklist, but may report an obvious defect it comes across
-3. **Verify independently:** for every CRITICAL and HIGH finding, start a separate verifier sub-agent. Give it only the finding and its location, and ask it to try to refute it against the actual code. Drop findings that are refuted. Try to refute MEDIUM and LOW findings yourself in the same way; the point is to attempt refutation, not to confirm.
+3. **Verify independently:** for every CRITICAL and HIGH finding, start a separate verifier sub-agent. Give it only the finding and its location, and ask it to try to refute it against the actual code. Drop findings that are refuted. For variant-analysis findings, the verifier must also check that any proposed test compiles against the existing API and would actually fail on the current code. Try to refute MEDIUM and LOW findings yourself in the same way; the point is to attempt refutation, not to confirm.
 4. **Consolidate (you):** merge duplicates raised by more than one reviewer, order by severity, and produce the final Summary and Findings in the Output Format. Sub-agents report to you, not to the user.
 
 ### Verification
@@ -80,6 +83,7 @@ For each issue found, report:
 - **Problem:** What the bug is and how it can manifest (e.g. for concurrency issues, a specific interleaving or timing)
 - **Suggestion:** Concrete fix (code sketch if helpful)
 
+Variant-analysis findings additionally include the fields described in `variant-analysis.md` (root cause link, specification reference, and a failing test case).
 Severity levels:
 - **CRITICAL** — Unsafe memory access; undefined behavior; data-race or deadlock; parsing bugs on non-trusted inputs (e.g., from the network); high-severity security issue, including: request smuggling, authentication or TLS validation bypass, credential or key material exposure, deserialization RCE, decompression or XML bomb, log injection of sensitive data
 - **HIGH** — Likely to produce incorrect behavior; logic errors; parsing bugs on trusted inputs
