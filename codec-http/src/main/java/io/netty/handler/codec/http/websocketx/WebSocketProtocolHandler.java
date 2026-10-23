@@ -142,6 +142,20 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         closeSent = promise;
     }
 
+    /**
+     * If a close frame was already sent (or is still being sent), closes the channel once that write completes
+     * (or the force-close timeout fires) and returns {@code true}. Returns {@code false} otherwise.
+     */
+    boolean closeIfCloseSent(final ChannelHandlerContext ctx) throws Exception {
+        if (closeSent == null) {
+            return false;
+        }
+        // Flush through our own override so the force-close timeout is guaranteed to be armed.
+        flush(ctx);
+        closeSent.addListener(future -> ctx.close());
+        return true;
+    }
+
     void applyCloseSentTimeout(ChannelHandlerContext ctx) {
         if (forceCloseTimeoutTask != null || closeSent.isDone() || forceCloseTimeoutMillis < 0) {
             return;

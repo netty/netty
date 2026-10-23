@@ -382,7 +382,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         stream.id(), stream.state());
                     break;
                 default:
-                    error = streamError(stream.id(), PROTOCOL_ERROR,
+                    // IDLE, RESERVED_LOCAL or RESERVED_REMOTE: this must be treated as a connection error
+                    // (RFC 9113, section 5.1).
+                    error = connectionError(PROTOCOL_ERROR,
                         "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     break;
             }
@@ -687,7 +689,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // extract the content-length header
             List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
             if (contentLength != null && !contentLength.isEmpty()) {
-                long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                long cLength;
+                try {
+                    cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                } catch (IllegalArgumentException e) {
+                    throw streamError(promisedStreamId, PROTOCOL_ERROR, e,
+                        "Promised request on stream %d for promised stream %d contains invalid content-length header",
+                        streamId, promisedStreamId);
+                }
                 if (cLength != -1 && cLength != 0) {
                     throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d contains invalid content-length header",

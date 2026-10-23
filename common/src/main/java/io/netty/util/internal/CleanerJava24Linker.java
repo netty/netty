@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.util.Locale;
 
 import static java.lang.invoke.MethodType.methodType;
 
@@ -31,6 +32,8 @@ public class CleanerJava24Linker implements Cleaner {
     private static final MethodHandle INVOKE_MALLOC;
     private static final MethodHandle INVOKE_CREATE_BYTEBUFFER;
     private static final MethodHandle INVOKE_FREE;
+
+    private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
 
     static {
         boolean suitableJavaVersion;
@@ -98,11 +101,11 @@ public class CleanerJava24Linker implements Cleaner {
                 // Finally, we create three method handles, for malloc, free, and for wrapping an address in a
                 // ByteBuffer. Effectively, we need the equivalent of these three code snippets:
                 //
-                //        MemorySegment mallocPtr = Linker.nativeLinker().defaultLookup().find("malloc").get();
+                //        MemorySegment mallocPtr = dlsym(RTLD_DEFAULT, "malloc"); // see 'dlsym' below
                 //        MethodHandle malloc = Linker.nativeLinker().downcallHandle(
                 //                mallocPtr, FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
                 //
-                //        MemorySegment freePtr = Linker.nativeLinker().defaultLookup().find("free").get();
+                //        MemorySegment freePtr = dlsym(RTLD_DEFAULT, "free"); // see 'dlsym' below
                 //        MethodHandle free = Linker.nativeLinker().downcallHandle(
                 //                freePtr, FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
                 //
@@ -115,47 +118,85 @@ public class CleanerJava24Linker implements Cleaner {
                 Class<?> memSegCls = Class.forName("java.lang.foreign.MemorySegment");
                 Class<?> funcDescCls = Class.forName("java.lang.foreign.FunctionDescriptor");
 
-                MethodHandle nativeLinker = lookup.findStatic(linkerCls, "nativeLinker", methodType(linkerCls));
-                MethodHandle defaultLookupStatic = MethodHandles.foldArguments(
-                        lookup.findVirtual(linkerCls, "defaultLookup", methodType(symbolLookupCls)),
-                        nativeLinker);
-                MethodHandle downcallHandleStatic = MethodHandles.foldArguments(
-                        lookup.findVirtual(linkerCls, "downcallHandle",
-                                methodType(MethodHandle.class, memSegCls, funcDescCls, linkerOptionArrayCls)),
-                        nativeLinker);
-                MethodHandle findSymbol = MethodHandles.foldArguments(
-                        lookup.findVirtual(symbolLookupCls, "findOrThrow", methodType(memSegCls, String.class)),
-                        defaultLookupStatic);
+                Object linker = lookup.findStatic(linkerCls, "nativeLinker", methodType(linkerCls)).invoke();
+                Object defaultLookup = lookup.findVirtual(linkerCls, "defaultLookup", methodType(symbolLookupCls))
+                        .invoke(linker);
+                MethodHandle downcallHandle = lookup.findVirtual(linkerCls, "downcallHandle",
+                                methodType(MethodHandle.class, memSegCls, funcDescCls, linkerOptionArrayCls))
+                        .bindTo(linker);
+                MethodHandle findOrThrow = lookup.findVirtual(symbolLookupCls, "findOrThrow",
+                        methodType(memSegCls, String.class)).bindTo(defaultLookup);
+                MethodHandle ofAddress = lookup.findStatic(memSegCls, "ofAddress", methodType(memSegCls, long.class));
+                Object noOptions = Array.newInstance(linkerOptionCls, 0);
+
+                Object longLayout = lookup.findStaticGetter(valueLayoutCls, "JAVA_LONG", ofLongValueLayoutCls).invoke();
+                // These are varargs methods; use fixed arity so that invoke() passes our layout arrays through
+                // instead of collecting them into a new array.
+                MethodHandle funcDescOf = lookup.findStatic(funcDescCls, "of",
+                        methodType(funcDescCls, memoryLayoutCls, memoryLayoutArrayCls)).asFixedArity();
+                MethodHandle funcDescOfVoid = lookup.findStatic(funcDescCls, "ofVoid",
+                        methodType(funcDescCls, memoryLayoutArrayCls)).asFixedArity();
+
+                // The default lookup resolves symbols from the JDK's own libsyslookup and its direct dependencies,
+                // so on Linux and macOS it returns the libc implementation of malloc and free even when the
+                // process has interposed another allocator (e.g. jemalloc via LD_PRELOAD). Every other way Netty
+                // allocates native memory, Unsafe.allocateMemory included, reaches malloc through the dynamic
+                // linker and does honor the interposition. To stay consistent with them, resolve the symbols
+                // through dlsym(RTLD_DEFAULT, ...), which searches the global scope in load order, exactly like a
+                // PLT relocation would. If anything about that fails, fall back to the default lookup.
+                Object mallocPtr = null;
+                Object freePtr = null;
+                long rtldDefault = rtldDefault();
+                if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
+                    try {
+                        // MethodHandle dlsym = linker.downcallHandle(defaultLookup.findOrThrow("dlsym"),
+                        //         FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, ADDRESS));
+                        Object dlsymLayouts = Array.newInstance(memoryLayoutCls, 2);
+                        Array.set(dlsymLayouts, 0, longLayout);
+                        Array.set(dlsymLayouts, 1, addressLayoutGetter.invoke());
+                        MethodHandle dlsym = (MethodHandle) downcallHandle.invoke(
+                                findOrThrow.invoke("dlsym"), funcDescOf.invoke(longLayout, dlsymLayouts), noOptions);
+
+                        // The symbol names must be passed as C strings. An automatic arena keeps them alive for as
+                        // long as the segments are reachable, which is just the duration of the two calls.
+                        Class<?> arenaCls = Class.forName("java.lang.foreign.Arena");
+                        Object arena = lookup.findStatic(arenaCls, "ofAuto", methodType(arenaCls)).invoke();
+                        MethodHandle allocateFrom = lookup.findVirtual(arenaCls, "allocateFrom",
+                                methodType(memSegCls, String.class)).bindTo(arena);
+
+                        long mallocAddr = (long) dlsym.invoke(rtldDefault, allocateFrom.invoke("malloc"));
+                        long freeAddr = (long) dlsym.invoke(rtldDefault, allocateFrom.invoke("free"));
+                        if (mallocAddr != 0 && freeAddr != 0) {
+                            mallocPtr = ofAddress.invoke(mallocAddr);
+                            freePtr = ofAddress.invoke(freeAddr);
+                            if (logger != null) {
+                                logger.debug("malloc/free resolved via dlsym(RTLD_DEFAULT)");
+                            }
+                        } else if (logger != null) {
+                            logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup");
+                        }
+                    } catch (Throwable t) {
+                        if (logger != null) {
+                            logger.debug("Failed to resolve malloc/free via dlsym, using default lookup", t);
+                        }
+                    }
+                }
+                if (mallocPtr == null) {
+                    mallocPtr = findOrThrow.invoke("malloc");
+                    freePtr = findOrThrow.invoke("free");
+                }
 
                 // Constructing the malloc (long)long handle
-                Object longLayout = lookup.findStaticGetter(valueLayoutCls, "JAVA_LONG", ofLongValueLayoutCls).invoke();
                 Object layoutArray = Array.newInstance(memoryLayoutCls, 1);
                 Array.set(layoutArray, 0, longLayout);
-                MethodHandle mallocFuncDesc = MethodHandles.insertArguments(
-                        lookup.findStatic(funcDescCls, "of",
-                                methodType(funcDescCls, memoryLayoutCls, memoryLayoutArrayCls)),
-                        0, longLayout, layoutArray);
-                MethodHandle mallocLinker = MethodHandles.foldArguments(
-                        MethodHandles.foldArguments(downcallHandleStatic,
-                                MethodHandles.foldArguments(findSymbol,
-                                        MethodHandles.constant(String.class, "malloc"))),
-                        mallocFuncDesc);
-                mallocMethod = (MethodHandle) mallocLinker.invoke(Array.newInstance(linkerOptionCls, 0));
+                mallocMethod = (MethodHandle) downcallHandle.invoke(
+                        mallocPtr, funcDescOf.invoke(longLayout, layoutArray), noOptions);
 
                 // Constructing the free (long)void handle
-                MethodHandle freeFuncDesc = MethodHandles.insertArguments(
-                        lookup.findStatic(funcDescCls, "ofVoid",
-                                methodType(funcDescCls, memoryLayoutArrayCls)),
-                        0, layoutArray);
-                MethodHandle freeLinker = MethodHandles.foldArguments(
-                        MethodHandles.foldArguments(downcallHandleStatic,
-                                MethodHandles.foldArguments(findSymbol,
-                                        MethodHandles.constant(String.class, "free"))),
-                        freeFuncDesc);
-                freeMethod = (MethodHandle) freeLinker.invoke(Array.newInstance(linkerOptionCls, 0));
+                freeMethod = (MethodHandle) downcallHandle.invoke(
+                        freePtr, funcDescOfVoid.invoke(layoutArray), noOptions);
 
                 // Constructing the wrapper (long, long)ByteBuffer handle
-                MethodHandle ofAddress = lookup.findStatic(memSegCls, "ofAddress", methodType(memSegCls, long.class));
                 MethodHandle reinterpret = lookup.findVirtual(memSegCls, "reinterpret",
                         methodType(memSegCls, long.class));
                 MethodHandle asByteBuffer = lookup.findVirtual(memSegCls, "asByteBuffer", methodType(ByteBuffer.class));
@@ -191,6 +232,27 @@ public class CleanerJava24Linker implements Cleaner {
 
     static boolean isSupported() {
         return INVOKE_MALLOC != null;
+    }
+
+    /**
+     * The value of the {@code RTLD_DEFAULT} pseudo-handle for {@code dlsym(3)} on this platform, or
+     * {@link #RTLD_DEFAULT_UNSUPPORTED} if we do not know it. The value is not standardised: glibc and musl use
+     * {@code (void*) 0}, while macOS and the BSDs use {@code (void*) -2}. Windows has no {@code dlsym}, and a native
+     * image must keep using the default lookup because the resolved addresses would otherwise be captured in the
+     * image heap at build time.
+     */
+    private static long rtldDefault() {
+        if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
+            return RTLD_DEFAULT_UNSUPPORTED;
+        }
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        if (os.contains("linux")) {
+            return 0L;
+        }
+        if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
+            return -2L;
+        }
+        return RTLD_DEFAULT_UNSUPPORTED;
     }
 
     @Override

@@ -271,6 +271,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             try {
                 onUpgradeEvent(ctx, upgrade.retain());
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
+                if (stream == null) {
+                    // The upgrade failed (e.g. because the channel was already closed), so the stream was never
+                    // created. The failure was already propagated through the pipeline.
+                    return;
+                }
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
                     // The stream was already made active, but ctx may have been null so it wasn't initialized.

@@ -36,11 +36,14 @@ import java.util.Arrays;
  * write's buffers reachable for as long as this event loop went without servicing another write.
  */
 final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
-    private final IovArray iovArray;
+    private IovArray iovArray;
     private ReferenceCounted[] references = new ReferenceCounted[4];
     private int count;
 
-    IovArrayReferenceCollector(IovArray iovArray) {
+    IovArrayReferenceCollector() {
+    }
+
+    void setIovArray(IovArray iovArray) {
         this.iovArray = iovArray;
     }
 

@@ -17,6 +17,7 @@ package io.netty.handler.ssl.ocsp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,12 +44,14 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.GeneralName;
@@ -79,6 +82,7 @@ import java.util.function.Consumer;
 
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -92,6 +96,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
     /**
      * Well within the 15 minutes of clock skew that the validator tolerates by default.
      */
+    private static final int SERVER_PAYLOAD_LENGTH = 8;
     private static final long FRESH_THIS_UPDATE_AGE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
     /**
@@ -106,60 +111,23 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
     private static final long NEXT_UPDATE_AHEAD_MILLIS = TimeUnit.HOURS.toMillis(1);
 
+    /**
+     * Full round trip over plain HTTP against a local OCSP responder: a good, fresh response with a
+     * {@code nextUpdate} must result in a {@link OcspResponse.Status#VALID} verdict and an open channel.
+     */
     @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
-        final AtomicBoolean ocspStatus = new AtomicBoolean();
-        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
-        final SslContext sslContext = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-
-        try {
-            final CountDownLatch latch = new CountDownLatch(1);
-
-            Bootstrap bootstrap = new Bootstrap()
-                    .group(eventLoopGroup)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.TCP_NODELAY, true)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) {
-                            ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(sslContext.newHandler(ch.alloc(), "apple.com", 443));
-                            pipeline.addLast(new OcspServerCertificateValidator(false, createDefaultTransport()));
-                            pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
-                                    // NOOP
-                                }
-
-                                @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                                    if (evt instanceof OcspValidationEvent) {
-                                        OcspValidationEvent event = (OcspValidationEvent) evt;
-
-                                        ocspStatus.set(event.response().status() == OcspResponse.Status.VALID);
-                                        ctx.channel().close();
-                                        latch.countDown();
-                                    }
-                                }
-                            });
-                        }
-                    });
-
-            ChannelFuture channelFuture = bootstrap.connect("apple.com", 443);
-            channelFuture.sync();
-
-            // Wait for maximum of 1 minute for Ocsp validation to happen
-            latch.await(1, TimeUnit.MINUTES);
-            assertTrue(ocspStatus.get());
-
-            // Wait for Channel to be closed
-            channelFuture.channel().closeFuture().sync();
-        } finally {
-            eventLoopGroup.shutdownGracefully();
-            ReferenceCountUtil.release(sslContext);
-        }
+        ResponseSpec responseSpec = new ResponseSpec(
+            false /*revoked*/, FRESH_THIS_UPDATE_AGE_MILLIS, NEXT_UPDATE_AHEAD_MILLIS);
+        validateCertificate(responseSpec, outcome -> {
+            assertEquals(1, outcome.ocspRequests, "OCSP responder must be queried");
+            assertTrue(outcome.verdictReceived, "Must deliver verdict to the application");
+            assertEquals(OcspResponse.Status.VALID, outcome.status);
+            assertNull(outcome.failure);
+            assertFalse(outcome.channelClosedFuture.isDone(), "Channel must not be closed");
+            assertEquals(SERVER_PAYLOAD_LENGTH, outcome.bytesReceived);
+        });
     }
 
     /**
@@ -177,6 +145,26 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             assertTrue(outcome.channelClosedFuture.awaitUninterruptibly(10, TimeUnit.SECONDS),
                 "Channel must be closed for a REVOKED certificate");
             assertInstanceOf(OCSPException.class, outcome.failure);
+            assertEquals(0, outcome.bytesReceived);
+        });
+    }
+
+    /**
+     * With {@code closeAndThrowIfNotValid} disabled the application decides what to do with a revoked certificate,
+     * so it must receive the verdict and all the bytes the peer sent, unmodified.
+     */
+    @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    void revokedCertificateDeliversAllBytesWhenNotClosing() throws Exception {
+        ResponseSpec responseSpec = new ResponseSpec(
+            true /*revoked*/, FRESH_THIS_UPDATE_AGE_MILLIS, NEXT_UPDATE_AHEAD_MILLIS);
+        validateCertificate(responseSpec, false, outcome -> {
+            assertEquals(1, outcome.ocspRequests, "OCSP responder must be queried");
+            assertTrue(outcome.verdictReceived, "Must deliver verdict to the application");
+            assertEquals(OcspResponse.Status.REVOKED, outcome.status);
+            assertNull(outcome.failure);
+            assertFalse(outcome.channelClosedFuture.isDone(), "Channel must not be closed");
+            assertEquals(SERVER_PAYLOAD_LENGTH, outcome.bytesReceived);
         });
     }
 
@@ -195,6 +183,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                     "was delivered for an OCSP response without 'nextUpdate'");
             // Whatever the verdict is, the revoked certificate must never be reported as valid.
             assertNotEquals(OcspResponse.Status.VALID, outcome.status);
+            assertEquals(0, outcome.bytesReceived);
         });
     }
 
@@ -210,6 +199,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             assertTrue(outcome.verdictReceived, "Must deliver verdict to the application");
             assertEquals(OcspResponse.Status.VALID, outcome.status);
             assertNull(outcome.failure);
+            assertEquals(SERVER_PAYLOAD_LENGTH, outcome.bytesReceived);
         });
     }
 
@@ -228,6 +218,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             assertNotNull(outcome.failure, "No exception was delivered for an out-of-date OCSP response");
             assertTrue(outcome.channelClosedFuture.awaitUninterruptibly(10, TimeUnit.SECONDS),
                 "Channel was not closed for an out-of-date OCSP response");
+            assertEquals(0, outcome.bytesReceived);
         });
     }
 
@@ -246,6 +237,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             assertEquals(OcspResponse.Status.VALID, outcome.status,
                 "A response that is still within its nextUpdate window was not accepted");
             assertNull(outcome.failure);
+            assertEquals(SERVER_PAYLOAD_LENGTH, outcome.bytesReceived);
         });
     }
 
@@ -258,6 +250,11 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
      * @param assertions the assertions to verify on the {@link ValidationOutcome}
      */
     private void validateCertificate(ResponseSpec spec, Consumer<ValidationOutcome> assertions) throws Exception {
+        validateCertificate(spec, true, assertions);
+    }
+
+    private void validateCertificate(ResponseSpec spec, boolean closeAndThrowIfNotValid,
+                                     Consumer<ValidationOutcome> assertions) throws Exception {
         final X509Bundle issuer = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.ecp256)
                 .subject("CN=OcspIssuerCA")
@@ -334,6 +331,8 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                         protected void initChannel(SocketChannel ch) {
                             acceptedServerChannel.set(ch);
                             ch.pipeline().addLast(serverSslCtx.newHandler(ch.alloc()));
+                            // Write back some bytes so we can validate if these are discarded or not.
+                            ch.writeAndFlush(ch.alloc().buffer(SERVER_PAYLOAD_LENGTH).writeZero(SERVER_PAYLOAD_LENGTH));
                         }
                     })
                     .bind(NetUtil.LOCALHOST4, 0)
@@ -348,6 +347,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
             final ValidationOutcome outcome = new ValidationOutcome();
             final CountDownLatch verdictLatch = new CountDownLatch(1);
+            final CountDownLatch sslEventLatch = new CountDownLatch(1);
             client = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
@@ -358,13 +358,16 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(clientSslCtx.newHandler(ch.alloc(), "localhost", tlsPort));
                             pipeline.addLast(new OcspServerCertificateValidator(
-                                    true, false, ioTransport, dnsNameResolver));
+                                    closeAndThrowIfNotValid, false, ioTransport, dnsNameResolver));
                             pipeline.addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof OcspValidationEvent) {
                                         outcome.status = ((OcspValidationEvent) evt).response().status();
                                         verdictLatch.countDown();
+                                    }
+                                    if (evt instanceof SslHandshakeCompletionEvent) {
+                                        sslEventLatch.countDown();
                                     }
                                     ctx.fireUserEventTriggered(evt);
                                 }
@@ -379,7 +382,9 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                    // Ensure forwarded bytes are released
+                                    if (msg instanceof ByteBuf) {
+                                        outcome.bytesReceived += ((ByteBuf) msg).readableBytes();
+                                    }
                                     ReferenceCountUtil.release(msg);
                                 }
                             });
@@ -388,10 +393,17 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                     .connect(NetUtil.LOCALHOST4, tlsPort)
                     .sync()
                     .channel();
-
             outcome.verdictReceived = verdictLatch.await(20, TimeUnit.SECONDS);
             outcome.channelClosedFuture = client.closeFuture();
+            // Wait until the channel was closed or the payload of the server was delivered, so assertions on the
+            // received bytes are not racy.
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (!outcome.channelClosedFuture.isDone() && outcome.bytesReceived < SERVER_PAYLOAD_LENGTH &&
+                    System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
             outcome.ocspRequests = ocspRequests.get();
+            assertTrue(sslEventLatch.await(10, TimeUnit.SECONDS));
             assertions.accept(outcome);
         } finally {
             if (client != null) {
@@ -472,5 +484,6 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
         volatile boolean verdictReceived;
         volatile ChannelFuture channelClosedFuture;
         volatile int ocspRequests;
+        volatile int bytesReceived;
     }
 }

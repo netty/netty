@@ -296,7 +296,12 @@ public class JdkZlibDecoder extends ZlibDecoder {
                         throw new DecompressionException(
                                 "decompression failure, unable to set dictionary as non was specified");
                     }
-                    inflater.setDictionary(dictionary);
+                    try {
+                        inflater.setDictionary(dictionary);
+                    } catch (IllegalArgumentException e) {
+                        // The dictionary ID in the stream header does not match the configured dictionary.
+                        throw new DecompressionException("decompression failure, dictionary mismatch", e);
+                    }
                 }
 
                 if (inflater.finished()) {
@@ -376,10 +381,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     return false;
                 }
                 // read magic numbers
-                int magic0 = in.readByte();
-                int magic1 = in.readByte();
+                int magic0 = in.readUnsignedByte();
+                int magic1 = in.readUnsignedByte();
 
-                if (magic0 != 31) {
+                if (magic0 != 31 || magic1 != 139) {
                     throw new DecompressionException("Input is not in the GZIP format");
                 }
                 crc.update(magic0);

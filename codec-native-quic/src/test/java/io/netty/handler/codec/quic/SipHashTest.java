@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,6 +135,25 @@ public class SipHashTest {
         SipHash hash = new SipHash(2, 4, REFERENCE_SEED);
         long h = hash.macHash(ByteBuffer.wrap(param.input));
         assertEquals(param.expectedOutput, h);
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    void testReferenceCasesWithPosition(ReferenceTestParam param) {
+        SipHash hash = new SipHash(2, 4, REFERENCE_SEED);
+        // Put the input at a non-zero position of a larger buffer.
+        int position = 13;
+        byte[] bytes = new byte[position + param.input.length + 7];
+        Arrays.fill(bytes, (byte) 0x55);
+        System.arraycopy(param.input, 0, bytes, position, param.input.length);
+
+        ByteBuffer heap = ByteBuffer.wrap(bytes, position, param.input.length);
+        assertEquals(param.expectedOutput, hash.macHash(heap));
+
+        ByteBuffer direct = ByteBuffer.allocateDirect(bytes.length);
+        direct.put(bytes).position(position).limit(position + param.input.length);
+        assertEquals(param.expectedOutput, hash.macHash(direct));
+        assertEquals(position, direct.position());
     }
 
     @Test

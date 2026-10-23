@@ -33,6 +33,8 @@ concurrency:
 
 jobs:
   tests:
+    # Nothing to report if the run was cancelled, for example by cancel-on-merge.yml once the PR was merged.
+    if: github.event.workflow_run.conclusion != 'cancelled'
     permissions:
       actions: read  # for dawidd6/action-download-artifact to query and download artifacts
       checks: write  # for scacap/action-surefire-report to publish result as PR check

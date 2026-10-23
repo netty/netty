@@ -29,6 +29,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -40,10 +42,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -145,6 +150,20 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, MAX_PADDING + 1})
+    public void writeHeadersRejectsInvalidPadding(int padding) {
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> frameWriter.writeHeaders(ctx, streamId, headers, padding, true, promise));
+
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertFalse(outbound.isReadable());
     }
 
     @Test
@@ -331,6 +350,72 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameHeaderBytes, payload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writeFrameExceedingMaxFrameSizeFailsPromiseAndReleasesPayload() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND + 1);
+
+        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, future.cause());
+        assertTrue(future.cause().getMessage().contains("0xf"));
+        // Nothing must have been written and the payload must have been released
+        assertEquals(0, outbound.readableBytes());
+        assertEquals(0, payload.refCnt());
+        verify(ctx, never()).write(any(), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeFrameAtMaxFrameSizeSucceeds() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+
+        // The mocked context never completes the writes, so only verify that the write was not rejected
+        assertFalse(future.isDone() && !future.isSuccess());
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // 24 bit payload length field must hold exactly the payload size
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+    }
+
+    @Test
+    public void writeSettingsExceedingMaxFrameSizeFailsPromise() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        Http2Settings settings = new Http2Settings();
+        // Each setting takes 6 bytes, so this is one entry more than fits into a single frame
+        int entries = Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND / Http2CodecUtil.SETTING_ENTRY_LENGTH + 1;
+        for (int i = 0; i < entries; i++) {
+            settings.put((char) (0x100 + i), Long.valueOf(0));
+        }
+
+        ChannelFuture future = frameWriter.writeSettings(ctx, settings, promise);
+
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, future.cause());
+        assertTrue(future.cause().getMessage().contains("0x4"));
+        assertEquals(0, outbound.readableBytes());
+    }
+
+    @Test
+    public void writeGoAwayTruncatesDebugDataExceedingMaxFrameSize() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf debugData = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        frameWriter.writeGoAway(ctx, 0, Http2Error.NO_ERROR.code(), debugData, promise);
+
+        // 8 bytes of last stream id and error code plus the truncated debug data fill exactly one frame
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // The original debug data buffer must have been released
+        assertEquals(0, debugData.refCnt());
     }
 
     @Test

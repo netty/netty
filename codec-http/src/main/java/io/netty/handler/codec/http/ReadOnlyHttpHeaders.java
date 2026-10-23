@@ -47,7 +47,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
 
     /**
      * Create a new instance.
-     * @param validateHeaders {@code true} to validate the contents of each header name.
+     * @param validateHeaders {@code true} to validate the contents of each header name and value.
      * @param nameValuePairs An array of the structure {@code [<name,value>,<name,value>,...]}.
      *                      A copy will <strong>NOT</strong> be made of this array. If the contents of this array
      *                      may be modified externally you are responsible for passing in a copy.
@@ -67,8 +67,10 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
     }
 
     private static void validateHeaders(CharSequence... keyValuePairs) {
+        DefaultHttpHeadersFactory factory = DefaultHttpHeadersFactory.headersFactory();
         for (int i = 0; i < keyValuePairs.length; i += 2) {
-            DefaultHttpHeadersFactory.headersFactory().getNameValidator().validateName(keyValuePairs[i]);
+            factory.getNameValidator().validateName(keyValuePairs[i]);
+            factory.getValueValidator().validate(keyValuePairs[i + 1]);
         }
     }
 
@@ -93,25 +95,53 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
     @Override
     public Integer getInt(CharSequence name) {
         CharSequence value = get0(name);
-        return value == null ? null : INSTANCE.convertToInt(value);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return INSTANCE.convertToInt(value);
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
     public int getInt(CharSequence name, int defaultValue) {
         CharSequence value = get0(name);
-        return value == null ? defaultValue : INSTANCE.convertToInt(value);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return INSTANCE.convertToInt(value);
+        } catch (RuntimeException ignore) {
+            return defaultValue;
+        }
     }
 
     @Override
     public Short getShort(CharSequence name) {
         CharSequence value = get0(name);
-        return value == null ? null : INSTANCE.convertToShort(value);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return INSTANCE.convertToShort(value);
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
     public short getShort(CharSequence name, short defaultValue) {
         CharSequence value = get0(name);
-        return value == null ? defaultValue : INSTANCE.convertToShort(value);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return INSTANCE.convertToShort(value);
+        } catch (RuntimeException ignore) {
+            return defaultValue;
+        }
     }
 
     @Override
@@ -381,7 +411,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         ReadOnlyStringValueIterator(CharSequence name) {
             this.name = name;
             nameHash = AsciiString.hashCode(name);
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(0);
         }
 
         @Override
@@ -395,7 +425,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
                 throw new NoSuchElementException();
             }
             String value = nameValuePairs[nextNameIndex + 1].toString();
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(nextNameIndex + 2);
             return value;
         }
 
@@ -404,8 +434,8 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             throw new UnsupportedOperationException("read only");
         }
 
-        private int findNextValue() {
-            for (int i = nextNameIndex; i < nameValuePairs.length; i += 2) {
+        private int findNextValue(int fromIndex) {
+            for (int i = fromIndex; i < nameValuePairs.length; i += 2) {
                 final CharSequence roName = nameValuePairs[i];
                 if (nameHash == AsciiString.hashCode(roName) && contentEqualsIgnoreCase(name, roName)) {
                     return i;
@@ -423,7 +453,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         ReadOnlyValueIterator(CharSequence name) {
             this.name = name;
             nameHash = AsciiString.hashCode(name);
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(0);
         }
 
         @Override
@@ -437,7 +467,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
                 throw new NoSuchElementException();
             }
             CharSequence value = nameValuePairs[nextNameIndex + 1];
-            nextNameIndex = findNextValue();
+            nextNameIndex = findNextValue(nextNameIndex + 2);
             return value;
         }
 
@@ -446,8 +476,8 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             throw new UnsupportedOperationException("read only");
         }
 
-        private int findNextValue() {
-            for (int i = nextNameIndex; i < nameValuePairs.length; i += 2) {
+        private int findNextValue(int fromIndex) {
+            for (int i = fromIndex; i < nameValuePairs.length; i += 2) {
                 final CharSequence roName = nameValuePairs[i];
                 if (nameHash == AsciiString.hashCode(roName) && contentEqualsIgnoreCase(name, roName)) {
                     return i;
