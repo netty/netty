@@ -102,6 +102,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
+    /**
+     * Flag to notify event loop thread to continue running when going from state
+     * ST_SUSPENDING back to ST_STARTED. This happens when attempting to un-suspend
+     * a thread that is not fully suspended.
+     */
+    private volatile boolean attemptRestart;
+
     // A running total of nanoseconds this executor has spent in an "active" state.
     private volatile long accumulatedActiveTimeNanos;
     // Timestamp of the last recorded activity (tasks + I/O).
@@ -1174,6 +1181,24 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // changed the state in between, so this can't spin.
             currentState = state;
         }
+        if (currentState == ST_SUSPENDING) {
+            boolean success = false;
+            while (state == ST_SUSPENDING) {
+                // Set attemptRestart before changing state since event loop thread may run and
+                // suspend thread as soon as it sees ST_STARTED
+                attemptRestart = true;
+                if (STATE_UPDATER.compareAndSet(this, ST_SUSPENDING, ST_STARTED)) {
+                    success = true;
+                    break;
+                }
+                // CAS did not work, try again if the state is still in suspending
+                attemptRestart = false;
+            }
+            if (!success) {
+                // Re-do start thread again because state may have changed while attempting to start
+                startThread();
+            }
+        }
     }
 
     private boolean ensureThreadStarted(int oldState) {
@@ -1233,12 +1258,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
+                        } else if (attemptRestart && currentState == ST_STARTED) {
+                            attemptRestart = false;
+                            continue;
                         } else if (currentState == ST_SUSPENDING || currentState == ST_SUSPENDED) {
                             // We were trying to suspend (or just did) but something raced in - e.g. a scheduled
                             // task being cancelled and re-submitted itself for removal via scheduleRemoveScheduled()
                             // - so we can no longer suspend right now. No shutdown was requested, so this must not
                             // be treated as if run() returned without confirming shutdown; just go around the loop
                             // again so run() can pick up whatever raced in.
+                            continue;
+                        } else if (attemptRestart && currentState == ST_STARTED) {
+                            attemptRestart = false;
                             continue;
                         }
                         break;
@@ -1247,6 +1278,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     unexpectedException = t;
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
+                    attemptRestart = false;
                     boolean shutdown = !suspend;
                     if (shutdown) {
                         for (;;) {
