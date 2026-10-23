@@ -2395,7 +2395,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract boolean hasMemoryAddress();
 
     /**
-     * Returns the low-level memory address that point to the first byte of ths backing data.
+     * Returns the low-level memory address that point to the first byte of this backing data.
      *
      * @throws UnsupportedOperationException
      *         if this buffer does not support accessing the low-level memory address
