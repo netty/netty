@@ -226,11 +226,20 @@ public class QueryStringDecoder {
     }
 
     /**
-     * Returns raw query string of the URI.
+     * Returns raw query string of the URI, without the leading {@code '?'} and without a fragment.
      */
     public String rawQuery() {
-        int start = pathEndIdx() + 1;
-        return start < uri.length() ? uri.substring(start) : EMPTY_STRING;
+        int start = pathEndIdx();
+        int len = uri.length();
+        if (start < len && uri.charAt(start) == '?') {
+            start++;
+        }
+        // Like parameters(), the query ends at the fragment (see RFC 3986, Section 3.4).
+        int end = uri.indexOf('#', start);
+        if (end == -1) {
+            end = len;
+        }
+        return start < end ? uri.substring(start, end) : EMPTY_STRING;
     }
 
     private int pathEndIdx() {
