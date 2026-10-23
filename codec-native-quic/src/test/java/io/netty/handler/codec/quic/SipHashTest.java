@@ -176,25 +176,41 @@ public class SipHashTest {
 
         assertNotEquals(bufferHash, emptyBufferHash);
     }
+    // Generated with the C reference implementation of SipHash by Aumasson and Bernstein using REFERENCE_SEED as key
+    // and the input { 0xFF, 0xFE, 0xFD, ... } of the given length, so all bytes have the high bit set.
+    private static final long[] HIGH_BIT_SIPHASH_2_4 = {
+            0x726fdb47dd0e0e31L, 0xcad12f7b27ddb802L, 0xee020a2ca42633c2L, 0xd28e1408552167dcL,
+            0x3067dad1a19df0c8L, 0x88afd40be2916184L, 0xe23b20781abfdf34L, 0x8d2b24fa51917090L,
+            0x9d25fe4a6e4d49b7L, 0x9cfba5fed13d3760L, 0x151f179e6b380f42L, 0xf214c1e17c4bd36cL,
+            0xb326506e3d991f3fL, 0xf43383957f8830cbL, 0xa5e5d48d71586bacL, 0x3709d8375309fb8cL,
+            0x6064c6487802dfedL, 0x1a2382bb5c87bc46L, 0x44dfb6cbcb898803L, 0x74b485dc5e9eda19L,
+            0x3bf470ff2cc6ea8bL, 0x3146e0166bd50515L, 0xb1b32251cb011b47L, 0x39012c98e0691184L,
+            0x1f69be2606641c2eL, 0x1d19b9456544450dL, 0x638603a02f385403L, 0x05ccdf4c359f0ea3L,
+            0xc009246f6f6fcdedL, 0x6a5c20afd4fa2477L, 0x7898b29524be27f2L, 0xb462bba59f460fc7L,
+    };
+
+    private static final long[] HIGH_BIT_SIPHASH_1_3 = {
+            0xabac0158050fc4dcL, 0x336d38979e4a286bL, 0x8825dabba9d6513dL, 0xd317429738140ab5L,
+            0x3315291981541962L, 0x55abc8d58c8454b6L, 0x4bfd1a086cea05d8L, 0x24a42183d28800edL,
+            0x20fadea1b8200dd2L, 0x558de27058ffa0f7L, 0x34b9f61e293c6686L, 0x0c5d935eb5bb3e19L,
+            0x62e4e8c0b4947beeL, 0xd3f1a2faad7b96cbL, 0xa3413ac38f444662L, 0xf730e5d1f505db50L,
+            0x8d7b719a5626cabeL, 0x0ed2b1b1d2e016a2L, 0x1d7380831104030eL, 0x7cc48c8088ef769fL,
+            0x65cdbb6008683d42L, 0xb8c183fecbeca2f0L, 0x204b6f57c02a4b66L, 0x38f7c9c538c84cf1L,
+            0x8d01dd9d0257aab3L, 0x2883f66f248bcaa7L, 0x1a86471614107a27L, 0xd823fbf2ffdb10b4L,
+            0xe757f8fd1f0f9329L, 0x77982acee01d2cf0L, 0xcab2c286fb2e7147L, 0x0928840e7c9d4018L,
+    };
 
     @Test
     void testBytesWithHighBitSet() {
-        byte[] seed = new byte[16];
-        ThreadLocalRandom.current().nextBytes(seed);
-
-        for (int rounds = 0; rounds < 100; rounds++) {
-            for (int length = 0; length < 40; length++) {
-                byte[] input = new byte[length];
-                ThreadLocalRandom.current().nextBytes(input);
-                // Ensure we also cover inputs that only consist of bytes that are negative when read as signed.
-                if (rounds % 2 == 0) {
-                    for (int i = 0; i < input.length; i++) {
-                        input[i] |= (byte) 0x80;
-                    }
-                }
-                assertEquals(reference(1, 3, seed, input), new SipHash(1, 3, seed).macHash(ByteBuffer.wrap(input)));
-                assertEquals(reference(2, 4, seed, input), new SipHash(2, 4, seed).macHash(ByteBuffer.wrap(input)));
+        SipHash hash24 = new SipHash(2, 4, REFERENCE_SEED);
+        SipHash hash13 = new SipHash(1, 3, REFERENCE_SEED);
+        for (int length = 0; length < HIGH_BIT_SIPHASH_2_4.length; length++) {
+            byte[] input = new byte[length];
+            for (int i = 0; i < input.length; i++) {
+                input[i] = (byte) (0xFF - i);
             }
+            assertEquals(HIGH_BIT_SIPHASH_2_4[length], hash24.macHash(ByteBuffer.wrap(input)), "length " + length);
+            assertEquals(HIGH_BIT_SIPHASH_1_3[length], hash13.macHash(ByteBuffer.wrap(input)), "length " + length);
         }
     }
 
@@ -211,61 +227,5 @@ public class SipHashTest {
         assertNotEquals(h1, h2);
         assertNotEquals(h1, h3);
         assertNotEquals(h1, h4);
-    }
-
-    // Straightforward implementation of SipHash-c-d that only works on a byte[] and treats all bytes as unsigned.
-    private static long reference(int c, int d, byte[] seed, byte[] input) {
-        long k0 = littleEndianLong(seed, 0);
-        long k1 = littleEndianLong(seed, 8);
-        long[] v = { 0x736f6d6570736575L ^ k0, 0x646f72616e646f6dL ^ k1,
-                0x6c7967656e657261L ^ k0, 0x7465646279746573L ^ k1 };
-        int end = input.length - (input.length % 8);
-        for (int i = 0; i < end; i += 8) {
-            long m = littleEndianLong(input, i);
-            v[3] ^= m;
-            for (int r = 0; r < c; r++) {
-                sipRound(v);
-            }
-            v[0] ^= m;
-        }
-        long b = (long) input.length << 56;
-        for (int i = end; i < input.length; i++) {
-            b |= (input[i] & 0xFFL) << (8 * (i - end));
-        }
-        v[3] ^= b;
-        for (int r = 0; r < c; r++) {
-            sipRound(v);
-        }
-        v[0] ^= b;
-        v[2] ^= 0xFF;
-        for (int r = 0; r < d; r++) {
-            sipRound(v);
-        }
-        return v[0] ^ v[1] ^ v[2] ^ v[3];
-    }
-
-    private static long littleEndianLong(byte[] bytes, int offset) {
-        long l = 0;
-        for (int i = 7; i >= 0; i--) {
-            l = (l << 8) | (bytes[offset + i] & 0xFFL);
-        }
-        return l;
-    }
-
-    private static void sipRound(long[] v) {
-        v[0] += v[1];
-        v[2] += v[3];
-        v[1] = Long.rotateLeft(v[1], 13);
-        v[3] = Long.rotateLeft(v[3], 16);
-        v[1] ^= v[0];
-        v[3] ^= v[2];
-        v[0] = Long.rotateLeft(v[0], 32);
-        v[2] += v[1];
-        v[0] += v[3];
-        v[1] = Long.rotateLeft(v[1], 17);
-        v[3] = Long.rotateLeft(v[3], 21);
-        v[1] ^= v[2];
-        v[3] ^= v[0];
-        v[2] = Long.rotateLeft(v[2], 32);
     }
 }
