@@ -19,9 +19,9 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -145,10 +145,11 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         final long nextWakeUpIndex;
         final EventExecutor[] activeExecutors;
         final EventExecutorChooser activeExecutorsChooser;
-        Set<SingleThreadEventExecutor> pausedExecutors;
+        // Never mutated after construction, a new set is created for every state transition.
+        final Set<SingleThreadEventExecutor> pausedExecutors;
 
         AutoScalingState(int activeChildrenCount, long nextWakeUpIndex, EventExecutor[] activeExecutors) {
-            this(activeChildrenCount, nextWakeUpIndex, activeExecutors, ConcurrentHashMap.newKeySet());
+            this(activeChildrenCount, nextWakeUpIndex, activeExecutors, Collections.emptySet());
         }
 
         AutoScalingState(int activeChildrenCount, long nextWakeUpIndex, EventExecutor[] activeExecutors,
@@ -200,15 +201,18 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 // This is only reachable if minChildren is 0 and the monitor has just suspended the last active thread.
                 // To prevent an error and ensure the group can recover, we wake one up and use the
                 // chooser that contains all executors as a safe temporary choice.
-                tryScaleUpBy(1);
-                EventExecutor executor = allExecutorsChooser.next();
-                this.state.get().pausedExecutors.remove(executor);
-                if (executor instanceof SingleThreadEventExecutor) {
-                    SingleThreadEventExecutor stee = (SingleThreadEventExecutor) executor;
-                    stee.resetIdleCycles();
-                    stee.resetBusyCycles();
+                EventExecutor woken = tryScaleUpBy(1);
+                if (woken != null) {
+                    return woken;
                 }
-                return executor;
+                // Another thread may have woken an executor in the meantime, so look at the latest state.
+                currentState = this.state.get();
+                if (currentState.activeExecutors.length > 0) {
+                    return currentState.activeExecutorsChooser.next();
+                }
+                // Nothing could be woken up. Fall back to any executor without touching the state, submitting
+                // a task will resume it if it is suspended.
+                return allExecutorsChooser.next();
             }
             return currentState.activeExecutorsChooser.next();
         }
@@ -218,20 +222,24 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
          * This method is thread-safe and updates the state atomically.
          *
          * @param amount    The desired number of threads to add to the active count.
+         * @return          the first executor that was added to the active executors, or {@code null} if none was.
          */
-        private void tryScaleUpBy(int amount) {
+        private EventExecutor tryScaleUpBy(int amount) {
             if (amount <= 0) {
-                return;
+                return null;
             }
 
             for (;;) {
                 AutoScalingState oldState = state.get();
                 if (oldState.activeChildrenCount >= maxChildren) {
-                    return;
+                    return null;
                 }
 
                 int canAdd = Math.min(amount, maxChildren - oldState.activeChildrenCount);
                 List<EventExecutor> wokenUp = new ArrayList<>(canAdd);
+                // The paused set of a published state must never be modified, so work on a copy that is only
+                // published if the CAS succeeds.
+                Set<SingleThreadEventExecutor> newPaused = new HashSet<>(oldState.pausedExecutors);
                 final long startIndex = oldState.nextWakeUpIndex;
 
                 for (int i = 0; i < executors.length; i++) {
@@ -244,16 +252,17 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                         SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
                         if (stee.isSuspended()) {
                             stee.execute(NO_OOP_TASK);
+                            newPaused.remove(stee);
                             wokenUp.add(stee);
-                        } else if (oldState.pausedExecutors.remove(stee)) {
-                            // Remove from the paused list so that it can accept connections once again
+                        } else if (newPaused.remove(stee)) {
+                            // Removed from the paused set so that it can accept connections once again.
                             wokenUp.add(stee);
                         }
                     }
                 }
 
                 if (wokenUp.isEmpty()) {
-                    return;
+                    return null;
                 }
 
                 // Create the new state.
@@ -265,10 +274,16 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                         oldState.activeChildrenCount + wokenUp.size(),
                         startIndex + wokenUp.size(),
                         newActiveList.toArray(new EventExecutor[0]),
-                        oldState.pausedExecutors);
+                        newPaused);
 
                 if (state.compareAndSet(oldState, newState)) {
-                    return;
+                    for (EventExecutor executor : wokenUp) {
+                        // Give the executor a full patience period before it can be paused or suspended again.
+                        SingleThreadEventExecutor stee = (SingleThreadEventExecutor) executor;
+                        stee.resetIdleCycles();
+                        stee.resetBusyCycles();
+                    }
+                    return wokenUp.get(0);
                 }
                 // CAS failed, another thread changed the state. Loop again to retry.
             }
@@ -288,6 +303,9 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             private final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
             private final List<SingleThreadEventExecutor> consistentlyBusyChildren = new ArrayList<>(maxChildren);
             private final List<SingleThreadEventExecutor> drainingIdleChildren = new ArrayList<>(maxChildren);
+            // Changes to the paused set decided in a single run, applied to the latest state when rebuilding.
+            private final Set<SingleThreadEventExecutor> toPause = new HashSet<>();
+            private final Set<SingleThreadEventExecutor> toUnpause = new HashSet<>();
             private long lastCheckTimeNanos;
 
             @Override
@@ -321,12 +339,14 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 consistentlyIdleChildren.clear();
                 consistentlyBusyChildren.clear();
                 drainingIdleChildren.clear();
+                toPause.clear();
+                toUnpause.clear();
 
                 final AutoScalingState currentState = state.get();
                 // Attempt to suspend current paused children if possible.
                 for (SingleThreadEventExecutor pausedChild : currentState.pausedExecutors) {
                     if (pausedChild.getNumOfRegisteredChannels() <= 0 && pausedChild.trySuspend()) {
-                        currentState.pausedExecutors.remove(pausedChild);
+                        toUnpause.add(pausedChild);
                     }
                 }
 
@@ -424,7 +444,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                                 idleChild.resetIdleCycles();
                             } else {
                                 // If failed to suspend, we add it to the paused children to later be able to suspend it
-                                currentState.pausedExecutors.add(idleChild);
+                                toPause.add(idleChild);
                             }
                             changed = true;
                         }
@@ -440,7 +460,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                             int threadsPaused = 0;
                             // Iterate children to drain and add it to the list of paused children
                             while (threadsPaused < threadsToPause) {
-                                currentState.pausedExecutors.add(drainingIdleChildren.get(threadsPaused++));
+                                toPause.add(drainingIdleChildren.get(threadsPaused++));
                             }
                             changed = true;
                         }
@@ -448,20 +468,25 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 }
 
                 // If a scale-down occurred, or if the actual state differs from our view, rebuild.
-                if (changed || currentActive != currentState.activeExecutors.length) {
+                if (changed || !toUnpause.isEmpty() || currentActive != currentState.activeExecutors.length) {
                     rebuildActiveExecutors();
                 }
             }
 
             /**
              * Atomically updates the state by creating a new snapshot with the current set of active executors.
+             * The pending paused set changes are applied on top of the latest state on every attempt, so that
+             * concurrent changes done by {@link #tryScaleUpBy(int)} are not lost.
              */
             private void rebuildActiveExecutors() {
                 for (;;) {
                     AutoScalingState oldState = state.get();
+                    Set<SingleThreadEventExecutor> newPaused = new HashSet<>(oldState.pausedExecutors);
+                    newPaused.removeAll(toUnpause);
+                    newPaused.addAll(toPause);
                     List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
                     for (EventExecutor executor : executors) {
-                        if (!executor.isSuspended() && !oldState.pausedExecutors.contains(executor)) {
+                        if (!executor.isSuspended() && !newPaused.contains(executor)) {
                             active.add(executor);
                         }
                     }
@@ -471,7 +496,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     // another thread likely changed it. We use the count from our fresh scan.
                     // The nextWakeUpIndex is preserved from the old state as this rebuild is not a scale-up action.
                     AutoScalingState newState = new AutoScalingState(newActiveExecutors.length,
-                            oldState.nextWakeUpIndex, newActiveExecutors, oldState.pausedExecutors);
+                            oldState.nextWakeUpIndex, newActiveExecutors, newPaused);
 
                     if (state.compareAndSet(oldState, newState)) {
                         break;

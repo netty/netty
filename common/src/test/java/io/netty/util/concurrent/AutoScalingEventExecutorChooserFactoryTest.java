@@ -19,10 +19,17 @@ import io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory.AutoScali
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -415,6 +422,60 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             }
             assertTrue(pausedExecutor.isSuspended(), "Executor that was paused after idle cycles was not suspended.");
         } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    void testConcurrentNextWithAllExecutorsPausedKeepsStateConsistent() throws Exception {
+        final int maxThreads = 8;
+        final int threads = 16;
+        final int timeWindowMs = 1000;
+        TestEventExecutorGroup group = new TestEventExecutorGroup(0, maxThreads, timeWindowMs, TimeUnit.MILLISECONDS);
+        ExecutorService callers = Executors.newFixedThreadPool(threads);
+        try {
+            startAllExecutors(group);
+            // Registered channels prevent the idle executors from being suspended, so they end up paused instead.
+            for (EventExecutor executor : group) {
+                ((TestEventExecutor) executor).getAndIncrementRegisteredChannels();
+            }
+
+            for (int round = 0; round < 2; round++) {
+                // Wait until all executors are paused, which leaves the group without any active executor.
+                final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+                while (group.activeExecutorCount() > 0 && System.nanoTime() < deadline) {
+                    Thread.sleep(10);
+                }
+                assertEquals(0, group.activeExecutorCount(), "All executors should have been paused");
+
+                // Many threads racing to recover the group while there is no active executor.
+                final Set<EventExecutor> returned = ConcurrentHashMap.newKeySet();
+                final CyclicBarrier barrier = new CyclicBarrier(threads);
+                List<Future<?>> futures = new ArrayList<>(threads);
+                for (int i = 0; i < threads; i++) {
+                    futures.add(callers.submit(() -> {
+                        barrier.await();
+                        returned.add(group.next());
+                        return null;
+                    }));
+                }
+                for (Future<?> future : futures) {
+                    future.get(10, TimeUnit.SECONDS);
+                }
+
+                // Every executor handed out must be part of the active executors, otherwise it was woken without
+                // being tracked and will not receive any further work.
+                Set<EventExecutor> active = new HashSet<>();
+                for (int i = 0; i < 4 * maxThreads; i++) {
+                    active.add(group.next());
+                }
+                assertTrue(active.containsAll(returned),
+                        "Returned executors " + returned + " are not all active: " + active);
+                assertEquals(active.size(), group.activeExecutorCount());
+            }
+        } finally {
+            callers.shutdownNow();
             group.shutdownGracefully().syncUninterruptibly();
         }
     }
