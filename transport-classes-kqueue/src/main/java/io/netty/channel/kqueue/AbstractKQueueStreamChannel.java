@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -266,6 +267,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -378,6 +381,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
+        removeFastOpenData();
         socket.shutdown(false, true);
     }
 
@@ -502,6 +507,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     class KQueueStreamUnsafe extends AbstractKQueueUnsafe {
+        @Override
+        protected Executor prepareToClose() {
+            // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+            removeFastOpenData();
+            return super.prepareToClose();
+        }
+
         @Override
         void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
             final ChannelConfig config = config();
