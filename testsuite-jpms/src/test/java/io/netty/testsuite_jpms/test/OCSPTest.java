@@ -77,7 +77,7 @@ public class OCSPTest {
     public void testSimpleQueryTest() throws Exception {
         // Everything stays on the loopback interface so the test does not depend on external hosts.
         X509Bundle issuer = new CertificateBuilder()
-                .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                .rsa2048()
                 .subject("CN=OcspIssuerCA")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
@@ -104,7 +104,7 @@ public class OCSPTest {
                 AuthorityInformationAccess aia = new AuthorityInformationAccess(
                         new AccessDescription(AccessDescription.id_ad_ocsp, ocspName));
                 X509Bundle serverBundle = new CertificateBuilder()
-                        .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                        .rsa2048()
                         .subject("CN=localhost")
                         .addSanDnsName("localhost")
                         .addExtendedKeyUsageServerAuth()

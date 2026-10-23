@@ -122,7 +122,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
-    @Test
     private static void write(FileChannel channel, String value, long position) throws IOException {
         ByteBuffer buffer = ByteBuffer.wrap(value.getBytes(StandardCharsets.US_ASCII));
         while (buffer.hasRemaining()) {
@@ -130,6 +129,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
     }
 
+    @Test
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
