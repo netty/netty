@@ -47,6 +47,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -281,6 +282,8 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -407,6 +410,9 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
         boolean write = false;
         switch (type.direction()) {
             case Outbound:
+                // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the
+                // output.
+                removeFastOpenData();
                 write = true;
                 break;
             case Inbound:
@@ -590,6 +596,13 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     }
 
     @Override
+    protected Executor prepareToClose() {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+        removeFastOpenData();
+        return super.prepareToClose();
+    }
+
+    @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
@@ -610,7 +623,8 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
-                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The written data is removed once the connect is complete.
+                        fastOpenDataSent(outbound, initialData, Math.abs(bytesSent));
                         // The `connectx` method returns a negative number if connection is in-progress.
                         // So we should return `true` to indicate that connection was established, if it's positive.
                         return bytesSent > 0;

@@ -58,6 +58,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private Promise<Void> connectPromise;
     private SocketAddress requestedRemoteAddress;
 
+    // The initial data that was sent by a TCP_FASTOPEN_CONNECT. Its bytes are only removed from the
+    // ChannelOutboundBuffer once the connect is complete, so listeners of the initial write see an active channel.
+    private ChannelOutboundBuffer fastOpenOutboundBuffer;
+    private Object fastOpenData;
+    private long fastOpenBytes;
+
     private final KQueueIoHandle ioHandle = new KQueueIoHandleImpl();
     final BsdSocket socket;
     private IoRegistration registration;
@@ -114,6 +120,40 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     @Override
     public boolean isActive() {
         return active;
+    }
+
+    /**
+     * Remember that {@code bytes} of {@code data}, the current message of {@code in}, were sent by a
+     * TCP_FASTOPEN_CONNECT.
+     */
+    final void fastOpenDataSent(ChannelOutboundBuffer in, Object data, long bytes) {
+        fastOpenOutboundBuffer = in;
+        fastOpenData = data;
+        fastOpenBytes = bytes;
+    }
+
+    /**
+     * Removes the bytes that were sent by a TCP_FASTOPEN_CONNECT from the {@link ChannelOutboundBuffer} if the
+     * channel was connected, and forgets about them otherwise. Must be called before the
+     * {@link ChannelOutboundBuffer} is written or its messages are failed.
+     *
+     * @return {@code true} if bytes were removed.
+     */
+    final boolean removeFastOpenData() {
+        ChannelOutboundBuffer in = fastOpenOutboundBuffer;
+        if (in == null) {
+            return false;
+        }
+        Object data = fastOpenData;
+        long bytes = fastOpenBytes;
+        fastOpenOutboundBuffer = null;
+        fastOpenData = null;
+        fastOpenBytes = 0;
+        if (!isActive() || in.current() != data) {
+            return false;
+        }
+        in.removeBytes(bytes);
+        return true;
     }
 
     @Override
@@ -368,13 +408,27 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         try {
             connected = doConnect(remoteAddress, localAddress);
         } catch (Throwable cause) {
+            // The connect failed, so we don't know if the initial data that was sent by TCP_FASTOPEN_CONNECT
+            // was received.
+            removeFastOpenData();
             promise.setFailure(cause);
             return;
         }
         if (connected) {
             promise.setSuccess(null);
+            completeFastOpenConnect();
         } else {
             connectPromise = promise;
+        }
+    }
+
+    /**
+     * The connect is complete and the channel was notified, so remove the initial data that was sent by
+     * TCP_FASTOPEN_CONNECT now and write what is left of it.
+     */
+    private void completeFastOpenConnect() {
+        if (removeFastOpenData()) {
+            writeFlushed();
         }
     }
 
@@ -451,6 +505,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // successfully complete the connectPromise and update the channel state to active (which is incorrect).
             Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
             AbstractKQueueChannel.this.connectPromise = null;
+            // The connect failed, so we don't know if the initial data that was sent by TCP_FASTOPEN_CONNECT
+            // was received.
+            removeFastOpenData();
             if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
                             : new ConnectException("failed to connect").initCause(cause))) {
                 return true;
@@ -545,6 +602,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         try {
             connected = doFinishConnect();
         } catch (Throwable cause) {
+            // The connect failed, so we don't know if the initial data that was sent by TCP_FASTOPEN_CONNECT
+            // was received.
+            removeFastOpenData();
             connectPromise = null;
             promise.setFailure(cause);
             return;
@@ -553,6 +613,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             active = true;
             connectPromise = null;
             promise.setSuccess(null);
+            completeFastOpenConnect();
         }
     }
 
