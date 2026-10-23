@@ -17,6 +17,7 @@ package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -51,10 +52,15 @@ public final class UnixChannelUtil {
     /**
      * Delete the file at {@code path} but only if it is not a regular file, directory or symbolic link (i.e. it is
      * a socket inode as left behind by a bound domain socket). Symbolic links are never followed.
+     * This requires Java 7 or later, on older versions nothing is deleted.
      *
      * @return {@code true} if the file was deleted.
      */
+    @SuppressJava6Requirement(reason = "Guarded by version check")
     public static boolean deleteDomainSocketFile(String path) {
+        if (PlatformDependent.javaVersion() < 7) {
+            return false;
+        }
         try {
             Path file = Paths.get(path);
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class,

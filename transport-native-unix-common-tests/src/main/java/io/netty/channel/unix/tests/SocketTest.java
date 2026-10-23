@@ -19,17 +19,19 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.TestAbortedException;
 
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -146,8 +148,13 @@ public abstract class SocketTest<T extends Socket> {
     public void testBindDomainSocketDoesNotRemoveRegularFile() throws Exception {
         File file = PlatformDependent.createTempFile("NETTY", "UDS", null);
         try {
-            byte[] content = "do not delete".getBytes(StandardCharsets.US_ASCII);
-            Files.write(file.toPath(), content);
+            byte[] content = "do not delete".getBytes(CharsetUtil.US_ASCII);
+            FileOutputStream out = new FileOutputStream(file);
+            try {
+                out.write(content);
+            } finally {
+                out.close();
+            }
 
             Socket domainSocket = Socket.newSocketDomain();
             try {
@@ -156,7 +163,15 @@ public abstract class SocketTest<T extends Socket> {
                 domainSocket.close();
             }
             assertTrue(file.isFile());
-            assertArrayEquals(content, Files.readAllBytes(file.toPath()));
+            byte[] read = new byte[content.length];
+            DataInputStream in = new DataInputStream(new FileInputStream(file));
+            try {
+                in.readFully(read);
+                assertEquals(-1, in.read());
+            } finally {
+                in.close();
+            }
+            assertArrayEquals(content, read);
         } finally {
             file.delete();
         }
