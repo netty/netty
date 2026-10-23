@@ -137,17 +137,13 @@ public abstract class SocketTest<T extends Socket> {
 
     @Test
     public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
-        // Find the longest path that is not rejected as too long, which is the size of sun_path.
-        int max = 90;
-        while (max < 4096 && !isConnectPathTooLong(max + 1)) {
-            max++;
-        }
-        assertTrue(isConnectPathTooLong(max + 1));
+        int max = Socket.maxDomainSocketPathLength();
         assertTrue(max >= 100);
         // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
         for (int i = 0; i < 100; i++) {
             assertFalse(isConnectPathTooLong(max));
         }
+        assertTrue(isConnectPathTooLong(max + 1));
     }
 
     private static boolean isConnectPathTooLong(int length) throws IOException {

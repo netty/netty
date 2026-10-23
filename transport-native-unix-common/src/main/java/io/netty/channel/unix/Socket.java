@@ -572,6 +572,14 @@ public class Socket extends FileDescriptor {
         return new Socket(newSocketDgram0());
     }
 
+    /**
+     * Returns the size of {@code sun_path} of the native {@code sockaddr_un}, which is the maximum length in bytes
+     * of a path that can be used for a domain socket.
+     */
+    public static int maxDomainSocketPathLength() {
+        return domainSocketMaxPathLength();
+    }
+
     public static Socket newSocketDomain() {
         return new Socket(newSocketDomain0());
     }
@@ -680,6 +688,7 @@ public class Socket extends FileDescriptor {
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
     private static native int msgFastopen();
+    private static native int domainSocketMaxPathLength();
 
     private static native int newSocketStreamFd(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);

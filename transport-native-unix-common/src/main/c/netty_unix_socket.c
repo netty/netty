@@ -1270,6 +1270,10 @@ static jint netty_unix_socket_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
+static jint netty_unix_socket_domainSocketMaxPathLength(JNIEnv* env, jclass clazz) {
+    return (jint) sizeof(((struct sockaddr_un*) NULL)->sun_path);
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -1329,6 +1333,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "isIPv6Preferred0", "(Z)Z", (void *) netty_unix_socket_isIPv6Preferred0 },
   { "isIPv6", "(I)Z", (void *) netty_unix_socket_isIPv6 },
   { "msgFastopen", "()I", (void *) netty_unix_socket_msgFastopen },
+  { "domainSocketMaxPathLength", "()I", (void *) netty_unix_socket_domainSocketMaxPathLength },
   { "setIntOpt", "(IIII)V", (void *) netty_unix_socket_setIntOpt },
   { "setRawOptArray", "(III[BII)V", (void *) netty_unix_socket_setRawOptArray },
   { "setRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_setRawOptAddress },
