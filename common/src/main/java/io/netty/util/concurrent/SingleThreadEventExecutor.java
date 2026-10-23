@@ -107,7 +107,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * ST_SUSPENDING back to ST_STARTED. This happens when attempting to un-suspend
      * a thread that is not fully suspended.
      */
-    private boolean attemptRestart;
+    private volatile boolean attemptRestart;
 
     // A running total of nanoseconds this executor has spent in an "active" state.
     private volatile long accumulatedActiveTimeNanos;
@@ -1184,16 +1184,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (currentState == ST_SUSPENDING) {
             boolean success = false;
             while (state == ST_SUSPENDING) {
-                if (!STATE_UPDATER.compareAndSet(this, ST_SUSPENDING, ST_STARTED)) {
-                    continue;
-                    // CAS did not work, try again if the state is still in suspending
-                }
-                // The state changed to started but the event loop thread may have already
-                // started attempting to suspend the thread. Therefore set the flag to attempt
-                // a restart if possible
+                // Set attemptRestart before changing state since event loop thread may run and
+                // suspend thread as soon as it sees ST_STARTED
                 attemptRestart = true;
-                success = true;
-                break;
+                if (STATE_UPDATER.compareAndSet(this, ST_SUSPENDING, ST_STARTED)) {
+                    success = true;
+                    break;
+                }
+                // CAS did not work, try again if the state is still in suspending
+                attemptRestart = false;
             }
             if (!success) {
                 // Re-do start thread again because state may have changed while attempting to start
@@ -1259,6 +1258,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
+                        } else if (attemptRestart && currentState == ST_STARTED) {
+                            attemptRestart = false;
+                            continue;
                         } else if (currentState == ST_SUSPENDING || currentState == ST_SUSPENDED) {
                             // We were trying to suspend (or just did) but something raced in - e.g. a scheduled
                             // task being cancelled and re-submitted itself for removal via scheduleRemoveScheduled()
