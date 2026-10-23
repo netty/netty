@@ -15,14 +15,14 @@
  */
 package io.netty.handler.ssl.ocsp;
 
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.handler.ssl.ocsp.OcspTestUtil.CertAndKey;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.Promise;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.BasicOCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.CertificateID;
@@ -34,54 +34,48 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
-import javax.net.ssl.HttpsURLConnection;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.net.URL;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.Date;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
+import static io.netty.handler.ssl.ocsp.OcspTestUtil.buildCertificate;
+import static io.netty.handler.ssl.ocsp.OcspTestUtil.ocspUrlExtension;
+import static io.netty.handler.ssl.ocsp.OcspTestUtil.startOcspResponder;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class OcspClientTest {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
+    @Test
+    void simpleOcspQueryTest() throws Exception {
+        CertAndKey caRoot = buildCertificate("CN=TrustedRootCA", true, null);
 
-    @ParameterizedTest
-    @ValueSource(strings = {"https://apple.com"})
-    void simpleOcspQueryTest(String urlString) throws IOException, ExecutionException, InterruptedException {
-        HttpsURLConnection httpsConnection = null;
+        EventLoopGroup serverGroup = new NioEventLoopGroup(1);
         try {
-            URL url = new URL(urlString);
-            httpsConnection = (HttpsURLConnection) url.openConnection();
-            httpsConnection.connect();
+            // Start a local OCSP responder so the test never leaves the loopback interface.
+            Channel server = startOcspResponder(serverGroup, caRoot);
+            try {
+                CertAndKey serverCert = buildCertificate("CN=TargetServer", false, caRoot,
+                        ocspUrlExtension(server));
 
-            // Pull server certificates for validation
-            X509Certificate[] certs = (X509Certificate[]) httpsConnection.getServerCertificates();
-            X509Certificate serverCert = certs[0];
-            X509Certificate certIssuer = certs[1];
+                DnsNameResolver resolver = createDefaultResolver(IoTransport.DEFAULT);
+                try {
+                    Promise<BasicOCSPResp> promise = IoTransport.DEFAULT.eventLoop().newPromise();
+                    OcspClient.query(serverCert.certificate, caRoot.certificate, true,
+                            IoTransport.DEFAULT, resolver, promise);
+                    BasicOCSPResp basicOCSPResp = promise.get(10, TimeUnit.SECONDS);
 
-            Promise<BasicOCSPResp> promise = IoTransport.DEFAULT.eventLoop().newPromise();
-            OcspClient.query(serverCert, certIssuer, false,
-                    IoTransport.DEFAULT, createDefaultResolver(IoTransport.DEFAULT), promise);
-            BasicOCSPResp basicOCSPResp = promise.get();
-
-            // 'null' means certificate is valid
-            assertNull(basicOCSPResp.getResponses()[0].getCertStatus());
-        } finally {
-            if (httpsConnection != null) {
-                httpsConnection.disconnect();
+                    // 'null' means certificate is valid
+                    assertNull(basicOCSPResp.getResponses()[0].getCertStatus());
+                } finally {
+                    resolver.close();
+                }
+            } finally {
+                server.close().sync();
             }
+        } finally {
+            serverGroup.shutdownGracefully(0, 1, TimeUnit.SECONDS).syncUninterruptibly();
         }
     }
 
@@ -137,46 +131,5 @@ class OcspClientTest {
                 .build(responderBundle.keyPair.getPrivate());
 
         return respBuilder.build(signer, certChain, new Date());
-    }
-
-    /**
-     * Build an X.509 certificate with the given subject. If {@code issuer} is {@code null} the certificate is
-     * self-signed, otherwise it is issued (signed) by the given issuer. Uses RSA-2048 keys.
-     */
-    private static CertAndKey buildCertificate(String subjectDn, boolean isCertificateAuthority,
-                                               CertAndKey issuer) throws Exception {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-        keyPairGenerator.initialize(2048);
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
-        X500Name subject = new X500Name(subjectDn);
-        boolean selfSigned = issuer == null;
-        X500Name issuerName = selfSigned
-                ? subject
-                : new JcaX509CertificateHolder(issuer.certificate).getSubject();
-        PrivateKey signingKey = selfSigned ? keyPair.getPrivate() : issuer.keyPair.getPrivate();
-
-        Date notBefore = new Date(System.currentTimeMillis() - 86400000L);
-        Date notAfter = new Date(System.currentTimeMillis() + 365L * 86400000L);
-
-        JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
-                issuerName, new BigInteger(64, RANDOM), notBefore, notAfter, subject, keyPair.getPublic());
-        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(isCertificateAuthority));
-
-        ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA").build(signingKey);
-        X509CertificateHolder holder = builder.build(signer);
-        X509Certificate certificate = new JcaX509CertificateConverter().getCertificate(holder);
-
-        return new CertAndKey(certificate, keyPair);
-    }
-
-    private static final class CertAndKey {
-        final X509Certificate certificate;
-        final KeyPair keyPair;
-
-        CertAndKey(X509Certificate certificate, KeyPair keyPair) {
-            this.certificate = certificate;
-            this.keyPair = keyPair;
-        }
     }
 }
