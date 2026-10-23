@@ -37,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
@@ -158,7 +158,12 @@ public abstract class SocketTest<T extends Socket> {
 
             Socket domainSocket = Socket.newSocketDomain();
             try {
-                assertThrows(IOException.class, () -> domainSocket.bind(new DomainSocketAddress(file)));
+                try {
+                    domainSocket.bind(new DomainSocketAddress(file));
+                    fail("bind should fail as the file already exists");
+                } catch (IOException expected) {
+                    // expected
+                }
             } finally {
                 domainSocket.close();
             }
