@@ -430,6 +430,35 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
+    public void testGzipInvalidSecondMagicByteThrows() throws Exception {
+        byte[] data = "hello gzip".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        // Replace ID2 (0x8b) of the header.
+        compressed[1] = 0;
+
+        final EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        final ByteBuf input = Unpooled.wrappedBuffer(compressed);
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(input);
+            }
+        });
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.finishAndReleaseAll();
+            }
+        });
+    }
+
+    @Test
     void testAllowDefaultCompression() {
         assertDoesNotThrow(new Executable() {
             @Override

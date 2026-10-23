@@ -18,6 +18,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -330,6 +331,75 @@ public class MqttCodecTest {
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
         validateConnectPayload(message.payload(), decodedMessage.payload());
+    }
+
+    @Test
+    public void testPublishMessageRemainingLengthTooLarge() throws Exception {
+        // The remaining length is a Variable Byte Integer and so can not be larger than 268,435,455.
+        // Re-use the same slice to not allocate that much memory.
+        final ByteBuf chunk = Unpooled.buffer(1024 * 1024).writerIndex(1024 * 1024);
+        final CompositeByteBuf payload = Unpooled.compositeBuffer(300);
+        try {
+            for (int i = 0; i < 257; i++) {
+                payload.addComponent(true, chunk.retainedSlice());
+            }
+            final MqttPublishMessage message = MqttMessageBuilders.publish()
+                    .topicName("/abc")
+                    .qos(MqttQoS.AT_MOST_ONCE)
+                    .payload(payload)
+                    .build();
+
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    MqttEncoder.doEncode(ctx, message);
+                }
+            });
+        } finally {
+            payload.release();
+            chunk.release();
+        }
+    }
+
+    @Test
+    public void testSubscriptionIdentifierTooLarge() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+        final MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268435456));
+        final MqttMessage message = MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode((byte) 0x80)
+                .properties(props)
+                .build();
+
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
+    }
+
+    @Test
+    public void testSubscriptionIdentifierMaxValue() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+        final MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268435455));
+        final MqttMessage message = MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode((byte) 0x80)
+                .properties(props)
+                .build();
+
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        try {
+            // fixed header (2 bytes), packet id (2), reason code (1), properties length (1),
+            // property id (1) and the four bytes Variable Byte Integer
+            assertEquals(2 + 2 + 1 + 1 + 1 + 4, byteBuf.readableBytes());
+            assertEquals(2 + 1 + 1 + 1 + 4, byteBuf.getUnsignedByte(1));
+        } finally {
+            byteBuf.release();
+        }
     }
 
     @Test

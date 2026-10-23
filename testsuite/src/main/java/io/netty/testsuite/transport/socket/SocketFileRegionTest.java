@@ -26,9 +26,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,12 +38,16 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
@@ -111,6 +117,17 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testFileRegionBeyond2GiB(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testFileRegionBeyond2GiB(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, false, true, true);
     }
@@ -129,6 +146,74 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     public void testFileRegionVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, true, false, true);
+    }
+
+    /**
+     * Sends {@link DefaultFileRegion}s which start beyond 2 GiB and beyond 4 GiB of a file, so that a transport
+     * which truncates the file offset to an {@code int} either fails or sends the bytes from the wrong offset.
+     */
+    public void testFileRegionBeyond2GiB(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final String wrong = "wrong file offset";
+        final String beyond2GiB = "beyond 2 GiB !!!!";
+        final String beyond4GiB = "beyond 4 GiB !!!!";
+        final int length = wrong.length();
+        final long position2GiB = (1L << 31) + 100;
+        final long position4GiB = (1L << 32) + 100;
+
+        // Other file systems (for example NTFS) zero-fill the gap when writing beyond the end of the file, which
+        // would mean writing 4 GiB to the disk.
+        assumeFalse(PlatformDependent.isWindows());
+
+        File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
+        file.deleteOnExit();
+        // Writing beyond the end of the file creates a sparse file on most file systems, so only a few KiB are used.
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        try {
+            // Where the offset ends up if it is truncated to an int.
+            write(raf, wrong, position4GiB & 0xFFFFFFFFL);
+            write(raf, beyond2GiB, position2GiB);
+            write(raf, beyond4GiB, position4GiB);
+        } finally {
+            raf.close();
+        }
+
+        final BlockingQueue<String> received = new LinkedBlockingQueue<String>();
+        sb.childHandler(new ChannelInboundHandlerAdapter() {
+            private final StringBuilder builder = new StringBuilder();
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ByteBuf buf = (ByteBuf) msg;
+                try {
+                    builder.append(buf.toString(CharsetUtil.US_ASCII));
+                } finally {
+                    buf.release();
+                }
+                while (builder.length() >= length) {
+                    received.add(builder.substring(0, length));
+                    builder.delete(0, length);
+                }
+            }
+        });
+        cb.handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        try {
+            cc.writeAndFlush(new DefaultFileRegion(file, position4GiB, length)).sync();
+            assertEquals(beyond4GiB, received.poll(10, TimeUnit.SECONDS));
+            cc.writeAndFlush(new DefaultFileRegion(file, position2GiB, length)).sync();
+            assertEquals(beyond2GiB, received.poll(10, TimeUnit.SECONDS));
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+            file.delete();
+        }
+    }
+
+    private static void write(RandomAccessFile raf, String value, long position) throws IOException {
+        raf.seek(position);
+        raf.write(value.getBytes(CharsetUtil.US_ASCII));
     }
 
     public void testFileRegionCountLargerThenFile(ServerBootstrap sb, Bootstrap cb) throws Throwable {

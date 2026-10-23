@@ -95,25 +95,53 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
     @Override
     public Integer getInt(CharSequence name) {
         CharSequence value = get0(name);
-        return value == null ? null : INSTANCE.convertToInt(value);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return INSTANCE.convertToInt(value);
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
     public int getInt(CharSequence name, int defaultValue) {
         CharSequence value = get0(name);
-        return value == null ? defaultValue : INSTANCE.convertToInt(value);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return INSTANCE.convertToInt(value);
+        } catch (RuntimeException ignore) {
+            return defaultValue;
+        }
     }
 
     @Override
     public Short getShort(CharSequence name) {
         CharSequence value = get0(name);
-        return value == null ? null : INSTANCE.convertToShort(value);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return INSTANCE.convertToShort(value);
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
     public short getShort(CharSequence name, short defaultValue) {
         CharSequence value = get0(name);
-        return value == null ? defaultValue : INSTANCE.convertToShort(value);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return INSTANCE.convertToShort(value);
+        } catch (RuntimeException ignore) {
+            return defaultValue;
+        }
     }
 
     @Override
