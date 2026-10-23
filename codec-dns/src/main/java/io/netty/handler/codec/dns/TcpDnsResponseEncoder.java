@@ -47,7 +47,12 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
 
         buf.writerIndex(buf.writerIndex() + 2);
         DnsMessageUtil.encodeDnsResponse(encoder, response, buf);
-        buf.setShort(0, buf.readableBytes() - 2);
+        try {
+            DnsCodecUtil.setTcpMessageLength(buf);
+        } catch (Throwable cause) {
+            buf.release();
+            throw cause;
+        }
 
         out.add(buf);
     }
