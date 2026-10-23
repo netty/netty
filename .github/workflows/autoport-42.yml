@@ -15,7 +15,7 @@ jobs:
       group: port-42-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.2')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -34,13 +34,13 @@ jobs:
         run: |
           MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
           echo "Auto-porting commit: $MERGE_COMMIT"
-          
+
           PORT_BRANCH="auto-port-pr-${{ github.event.pull_request.number }}-to-4.2"
           if [[ $(git branch --show-current) != '4.2' ]]; then
             git fetch origin 4.2:4.2
           fi
           git checkout -b "$PORT_BRANCH" 4.2
-          
+
           if git cherry-pick -x "$MERGE_COMMIT"; then
             echo "Cherry-pick successful"
           else
@@ -58,7 +58,7 @@ jobs:
             echo "Auto-port branch push failed"
             exit 1
           fi
-          
+
       - name: Create pull request
         id: create-pr
         if: steps.cherry-pick.outcome == 'success'

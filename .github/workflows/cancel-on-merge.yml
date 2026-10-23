@@ -17,7 +17,7 @@ permissions:
 jobs:
   cancel:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Cancel running and queued workflows for this PR
         uses: actions/github-script@v8
