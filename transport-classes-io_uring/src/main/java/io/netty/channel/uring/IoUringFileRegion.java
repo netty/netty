@@ -32,7 +32,7 @@ final class IoUringFileRegion implements FileRegion {
 
     final DefaultFileRegion fileRegion;
     private FileDescriptor[] pipe;
-    private int transferred;
+    private long transferred;
     private int pipeLen = -1;
 
     IoUringFileRegion(DefaultFileRegion fileRegion) {
@@ -55,8 +55,8 @@ final class IoUringFileRegion implements FileRegion {
 
     IoUringIoOps spliceToPipe() {
         int fileRegionFd = Native.getFd(fileRegion);
-        int len = (int) (count() - transferred());
-        int offset =  (int) (position() + transferred());
+        int len = (int) Math.min(count() - transferred(), Integer.MAX_VALUE);
+        long offset = position() + transferred();
         return IoUringIoOps.newSplice(
                 fileRegionFd, offset,
                 pipe[1].intValue(), -1L,
