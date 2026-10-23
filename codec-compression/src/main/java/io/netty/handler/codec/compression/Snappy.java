@@ -93,6 +93,7 @@ public final class Snappy {
 
         int inIndex = in.readerIndex();
         final int baseIndex = inIndex;
+        final int endIndex = baseIndex + length;
 
         int hashTableSize = MathUtil.findNextPositivePowerOfTwo(length);
         hashTableSize = Math.min(hashTableSize, MAX_HT_SIZE);
@@ -101,7 +102,7 @@ public final class Snappy {
 
         int nextEmit = inIndex;
 
-        if (length - inIndex >= MIN_COMPRESSIBLE_BYTES) {
+        if (length >= MIN_COMPRESSIBLE_BYTES) {
             int nextHash = hash(in, ++inIndex, shift);
             outer: while (true) {
                 int skip = 32;
@@ -115,7 +116,7 @@ public final class Snappy {
                     nextIndex = inIndex + bytesBetweenHashLookups;
 
                     // We need at least 4 remaining bytes to read the hash
-                    if (nextIndex > length - 4) {
+                    if (nextIndex > endIndex - 4) {
                         break outer;
                     }
 
@@ -134,14 +135,14 @@ public final class Snappy {
                 int insertTail;
                 do {
                     int base = inIndex;
-                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, length);
+                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, endIndex);
                     inIndex += matched;
                     int offset = base - candidate;
                     encodeCopy(out, offset, matched);
                     in.readerIndex(in.readerIndex() + matched);
                     insertTail = inIndex - 1;
                     nextEmit = inIndex;
-                    if (inIndex >= length - 4) {
+                    if (inIndex >= endIndex - 4) {
                         break outer;
                     }
 
@@ -159,8 +160,8 @@ public final class Snappy {
         }
 
         // If there are any remaining characters, write them out as a literal
-        if (nextEmit < length) {
-            encodeLiteral(in, out, length - nextEmit);
+        if (nextEmit < endIndex) {
+            encodeLiteral(in, out, endIndex - nextEmit);
         }
     }
 
