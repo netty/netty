@@ -224,10 +224,7 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
 
 static jint netty_io_uring_duplicateFd(JNIEnv* env, jclass clazz, jint fd) {
     int duplicate = fcntl(fd, F_DUPFD_CLOEXEC, 0);
-    if (duplicate < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "fcntl(F_DUPFD_CLOEXEC) failed: ", errno);
-    }
-    return duplicate;
+    return duplicate < 0 ? -errno : duplicate;
 }
 
 static jint netty_io_uring_close(JNIEnv* env, jclass clazz, jint fd) {

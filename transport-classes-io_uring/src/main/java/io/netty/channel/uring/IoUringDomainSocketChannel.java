@@ -136,13 +136,13 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
-                try {
-                    // Keep a private fd until SENDMSG completes, even if a failed write listener closes the original.
-                    pendingSendFd = new FileDescriptor(Native.duplicateFd(((FileDescriptor) msg).intValue()));
-                } catch (Throwable cause) {
-                    handleWriteError(cause);
+                int fd = Native.duplicateFd(((FileDescriptor) msg).intValue());
+                if (fd < 0) {
+                    handleWriteError(Errors.newIOException("fcntl(F_DUPFD_CLOEXEC)", fd));
                     return 0;
                 }
+                // Keep a private fd until SENDMSG completes, even if a failed write listener closes the original.
+                pendingSendFd = new FileDescriptor(fd);
                 try {
                     IoUringIoOps ioUringIoOps = prepSendFdIoOps(pendingSendFd, writeMsgHdrMemory);
                     writeId = submitWrite(ioUringIoOps);
