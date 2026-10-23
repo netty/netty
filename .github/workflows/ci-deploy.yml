@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  stage-snapshot:
+  stage-snapshot-linux:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -48,6 +48,9 @@ jobs:
           - setup: linux-aarch64
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-snapshot"
+          - setup: linux-riscv64
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.cross.yaml run cross-compile-riscv64-stage-snapshot"
 
     name: stage-snapshot-${{ matrix.setup }}
     env:
@@ -107,14 +110,23 @@ jobs:
           include-hidden-files: true
 
 
-  deploy-staged-snapshots:
-    runs-on: ubuntu-22.04
-    # Wait until we have staged everything
-    needs: stage-snapshot
+  stage-snapshot-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: macos-x86_64-java25
+            os: macos-15-intel
+          - setup: macos-aarch64-java25
+            os: macos-15
+
+    runs-on: ${{ matrix.os }}
+    name:  ${{ matrix.setup }}  build
+
     steps:
       # Pinned to v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      
+
       # Pinned to v6.0.1
       - name: Set up JDK 25
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
@@ -134,20 +146,158 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
-      # Setup some env to re-use later.
-      - name: Prepare enviroment variables
-        run: |
-          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
+      - name: Install tools via brew
+        run: brew bundle
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
+
+      # Pinned to v7.0.1
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
+  stage-snapshot-windows-x86_64:
+    runs-on: windows-2022
+    name: stage-snapshot-windows-x86_64
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
+    steps:
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # Pinned to v6.0.1
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: 'zulu'
+          java-version: '25'
+
+      # Cache .m2/repository
+      # Pinned to v6.1.0
+      - name: Cache local Maven repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+            cache-windows-maven-
+
+      # Pinned to 1.96.1
+      - name: Install stable rust toolchain
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          targets: x86_64-pc-windows-msvc
+          toolchain: 'stable'
+
+      # Pinned to v3.0.0
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
+
+      # Pinned to v1.13.0
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          arch: x86_amd64
+
+      # Pinned to v4.1.0
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@dfdcf5bba9c0a16358a21c13a06ec5c89024b3ac
+        with:
+          args: install ninja nasm
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
+
+      # Pinned to v7.0.1
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: windows-x86_64-local-staging
+          path: /local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
+  deploy-staged-snapshots:
+    runs-on: ubuntu-22.04
+    # Wait until we have staged everything
+    needs: [ stage-snapshot-linux, stage-snapshot-windows-x86_64, stage-snapshot-macos ]
+    steps:
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # Pinned to v6.0.1
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: 'zulu'
+          java-version: '25'
+
+      # Cache .m2/repository
+      # Pinned to v6.1.0
+      - name: Cache local Maven repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
+
+      # Pinned to v4.0.0
+      - uses: s4u/maven-settings-action@894661b3ddae382f1ae8edbeab60987e08cf0788
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
+            }]
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
-
       # Pinned to v8.0.1
+      - name: Download windows_x86_64 staging directory
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: windows-x86_64-local-staging
+          path: ~/windows-x86_64-local-staging
+
+      - name: Download macos-aarch64-java25 staging directory
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: macos-aarch64-java25-local-staging
+          path: ~/macos-aarch64-java25-local-staging
+
+      - name: Download macos-x86_64-java25 staging directory
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: macos-x86_64-java25-local-staging
+          path: ~/macos-x86_64-java25-local-staging
+
       - name: Download linux-aarch64 staging directory
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
+
+      - name: Download linux-riscv64 staging directory
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: linux-riscv64-local-staging
+          path: ~/linux-riscv64-local-staging
 
       - name: Download linux-x86_64-java25 staging directory
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -155,23 +305,18 @@ jobs:
           name: linux-x86_64-java25-local-staging
           path: ~/linux-x86_64-java25-local-staging
 
-      - name: Merge staging repositories
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java25-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java25-local-staging/deferred/* ~/local-staging/deferred/
+      # The netty5-all module depends on the native jars of all platforms, so these need to be
+      # present in the local maven repository before it can be built.
+      - name: Copy previous build artifacts to local maven repository
+        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java25-local-staging ~/macos-x86_64-java25-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java25-local-staging
 
-      # Pinned to v4.0.0
-      - uses: s4u/maven-settings-action@894661b3ddae382f1ae8edbeab60987e08cf0788
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
+      - name: Generate netty5-all and deploy to local staging.
+        run: |
+          mkdir -p ~/all-local-staging
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
+
+      - name: Merge staging repositories
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java25-local-staging ~/macos-x86_64-java25-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java25-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots

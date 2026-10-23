@@ -1,5 +1,6 @@
 FROM --platform=linux/amd64 ubuntu:20.04
 
+ARG java_version=25-zulu
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install requirements
@@ -7,6 +8,7 @@ RUN apt-get update -qq \
  && apt-get install -qq -y \
         autoconf \
         automake \
+        ca-certificates \
         curl \
         gcc-riscv64-linux-gnu \
         git \
@@ -16,10 +18,26 @@ RUN apt-get update -qq \
         libssl-dev \
         libtool \
         make \
-        openjdk-11-jdk-headless \
         tar \
         unzip \
         zip \
  && rm -rf /var/lib/apt/lists/*
 
-ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+# Downloading and installing SDKMAN!
+ARG sdkman_install_sha256=76129982e764737a5dcbab50efcf854c9688b42e7e50a8a6c7e3fa6d52782aa5
+ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
+# The installer script is not versioned by SDKMAN!, so the pinned SHA-256 needs to be updated when it changes.
+RUN curl -fsSL -o /tmp/sdkman-install.sh "https://beta.sdkman.io?ci=true" && \
+    echo "$SDKMAN_INSTALL_SHA256  /tmp/sdkman-install.sh" | sha256sum -c - && \
+    bash /tmp/sdkman-install.sh && \
+    rm -f /tmp/sdkman-install.sh
+ENV JAVA_VERSION $java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+ENV JAVA_HOME="/root/.sdkman/candidates/java/current"
