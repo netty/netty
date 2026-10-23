@@ -48,6 +48,7 @@ Do not reimplement CI checks by hand. Run the right build command instead. Envir
 
 - New files must have license headers with the year the file was introduced.
 - A bug fix comes with a regression test.
+- Non-trivial performance fixes (complex code or more than 20 lines changed) must demonstrate their worth with a JMH benchmark in `microbench`.
 - Use JUnit 5 and AssertJ for writing tests.
 - Don't use mocking unless existing tests for the class already do so, or it would introduce _significant_ complexity to avoid.
 - Avoid sleeps in tests if at all possible, avoid sizing test resources off `NettyRuntime.availableProcessors()`, and avoid asserting on elapsed time.
