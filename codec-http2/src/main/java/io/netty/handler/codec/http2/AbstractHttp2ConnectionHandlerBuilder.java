@@ -80,6 +80,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private long gracefulShutdownDrainMillis;
     private boolean decoupleCloseAndGoAway;
     private boolean flushPreface = true;
 
@@ -165,6 +166,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
                                                " (expected: -1 for indefinite or >= 0)");
         }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
+        return self();
+    }
+
+    /**
+     * Returns how long (in milliseconds) the connection is kept open and reading after the graceful shutdown
+     * completed. See {@link Http2ConnectionHandler#gracefulShutdownDrainMillis(long)}.
+     */
+    protected long gracefulShutdownDrainMillis() {
+        return gracefulShutdownDrainMillis;
+    }
+
+    /**
+     * Sets how long (in milliseconds) the connection is kept open and reading after the graceful shutdown completed.
+     * See {@link Http2ConnectionHandler#gracefulShutdownDrainMillis(long)}.
+     */
+    protected B gracefulShutdownDrainMillis(long gracefulShutdownDrainMillis) {
+        this.gracefulShutdownDrainMillis = checkPositiveOrZero(gracefulShutdownDrainMillis,
+                "gracefulShutdownDrainMillis");
         return self();
     }
 
@@ -704,6 +723,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
         // Setup post build options
         handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
+        handler.gracefulShutdownDrainMillis(gracefulShutdownDrainMillis);
         if (handler.decoder().frameListener() == null) {
             handler.decoder().frameListener(frameListener);
         }
