@@ -251,6 +251,8 @@ public class DefaultHeadersTest {
         assertTrue(headers.containsTimeMillis(of("millis"), millis));
         // This test doesn't work on midnight, January 1, 1970 UTC
         assertFalse(headers.containsTimeMillis(of("millis"), 0));
+        headers.add(of("not a date"), "not a date");
+        assertNull(headers.getTimeMillis(of("not a date")));
 
         headers.addObject(of("object"), "Hello World");
         assertTrue(headers.containsObject(of("object"), "Hello World"));
