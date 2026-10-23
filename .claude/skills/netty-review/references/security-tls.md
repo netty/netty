@@ -21,3 +21,17 @@
 
 **Factory delegation:**
 - When a `TrustManagerFactory` or `KeyManagerFactory` wrapper delegates to an inner factory, ensure all `engineGetTrustManagers()` / `engineGetKeyManagers()` code paths delegate correctly; a missing branch can silently return an empty or default manager set.
+
+**Hostname verification on every engine path:**
+- Hostname verification must hold on every path that validates a certificate: the JDK `SSLEngine` path, the OpenSSL/BoringSSL callbacks, and QUIC certificate verification. Check that each path calls the engine-aware trust manager overload and that endpoint identification is configured.
+- When trust-manager wrapping is unavailable (for example on newer JDKs), verify the hostname explicitly instead of silently skipping it.
+
+**OCSP validation:**
+- The response must be tied to the certificate being checked: verify that the `CertificateID` in the response matches the request.
+- Check freshness using `thisUpdate` and `nextUpdate`. An absent `nextUpdate` must not skip validation. When a check fails, make sure the control flow actually stops: a missing `return` after flagging an out-of-date response would still report it as valid.
+- Check the responder's Extended Key Usage.
+- Don't release the handshake-complete event, or let application data flow, before the asynchronous revocation check has finished.
+
+**SNI / ClientHello parsing:**
+- A ClientHello can be split across multiple TLS records at any offset; parsing must handle every split. A parse failure must never silently fall back to the default `SslContext`.
+- Bound reassembly in both bytes and CPU, and don't preallocate based on an attacker-declared length.

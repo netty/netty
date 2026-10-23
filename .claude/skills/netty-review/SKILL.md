@@ -27,9 +27,9 @@ Read the checklist files that apply to the diff, from the `references/` director
 | ---- | --------------------- |
 | `general.md` | touches any Java code (always) |
 | `tests-and-style.md` | touches any Java code (always); also check tests against the rules in `AGENTS.md` |
-| `security-general.md` | handles network input, allocates based on input sizes, logs, builds file paths, uses serialization or XML |
+| `security-general.md` | handles network input, allocates based on input sizes, accumulates per-connection state, retains or releases buffers in codecs, logs, builds file paths, reads or creates local files, implements access-control filters, uses serialization or XML |
 | `security-protocols.md` | touches a codec or protocol implementation (HTTP/1.1, HTTP/2, HTTP/3, QUIC, DNS, MQTT, Redis, Memcache, SMTP, SOCKS, STOMP, HAProxy, XML). Read only the sections for the protocols touched |
-| `security-tls.md` | touches TLS, trust or key managers, certificates, SSL contexts, or OpenSSL/BoringSSL code |
+| `security-tls.md` | touches TLS, trust or key managers, certificates, OCSP, SNI or ClientHello parsing, SSL contexts, or OpenSSL/BoringSSL code |
 | `concurrency.md` | touches shared mutable state, locks, channel handlers (also for handler reentrancy), event loops, executors or futures |
 | `native-jni.md` | touches C or header files, or Java `native` declarations |
 | `variant-analysis.md` | fixes a security vulnerability: the commit or PR text mentions a CVE, GHSA, vulnerability or security issue, or the diff adds validation, a limit or a rejection for attacker-controlled input. If in doubt whether the change is a security fix, apply it |

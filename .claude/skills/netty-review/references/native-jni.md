@@ -110,6 +110,12 @@
 - `clock_gettime` clock IDs vary: `CLOCK_MONOTONIC_COARSE` is Linux-only. macOS may not have `clock_gettime` at all on older versions (project uses `NETTY_USE_MACH_INSTEAD_OF_CLOCK` with Mach absolute time)
 - `off_t` can be 32-bit on 32-bit systems without `_FILE_OFFSET_BITS=64`. Use explicit 64-bit types or ensure the correct define is set
 
+## File Descriptors and Socket Events
+
+- **`recvmsg` with `SCM_RIGHTS`:** Size the control buffer for what a peer can send, handle `MSG_CTRUNC`, validate `cmsg_len` and the number of descriptors, and close every received descriptor on every path, including when the message is rejected. A control buffer sized for a single `int` can still receive a message carrying several descriptors, all of which are installed and must be closed.
+- **Half-closed connections and resets:** Error and hang-up events that arrive after a half-close (for example an RST) must lead to closing the channel or removing the interest; otherwise channels go stale or the event loop busy-loops.
+- **Native SSL input:** Validate the length and structure of packets before handing them to the native `SSLEngine`; a crafted packet that reaches native code unchecked can crash the process.
+
 ## Memory Management
 - Every `malloc`/`calloc`/`realloc` must have a corresponding `free` on all code paths including the `goto error`/`goto done` cleanup path
 - Always null-check `malloc`/`calloc` return values. The project typically returns NULL or `goto`s the error label on allocation failure

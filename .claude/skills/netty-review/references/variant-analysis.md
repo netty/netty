@@ -38,6 +38,12 @@ Take the input that triggers the bug and mutate it:
 - Search the repository for the same pattern (same helper, same idiom, copy-pasted logic) in other modules and other protocols. Use `grep` for the exact construct, not only the method name.
 - Check history for earlier fixes of the same class of bug (`git log -S`, `git log --grep`). Were they applied to all siblings, or only to the one that was reported?
 - Check whether the fix is complete within its own code: all branches, all limits, all error paths. Look for the check being performed on a different value than the one later used (time-of-check vs time-of-use, check before decoding vs use after decoding).
+- Check whether the fix is applied everywhere its logic is needed:
+  - constructors but not setters or mutators
+  - the HTTP/1.1 path but not the HTTP/1.0, RTSP or WebSocket handshaker branches
+  - the decoder but not the encoder
+  - the failing branch but not its sibling limit or the nested case
+  - the server codec but not the client codec, or HTTP/2 but not HTTP/3
 
 ## 5. Related uncovered edge cases
 
