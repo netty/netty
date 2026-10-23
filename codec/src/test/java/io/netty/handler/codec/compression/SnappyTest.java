@@ -252,7 +252,7 @@ public class SnappyTest {
                    "earned from the implementation of a lot of protocols " +
                    "such as FTP, SMTP, HTTP, and various binary and " +
                    "text-based legacy protocols";
-        byte[] src = srcStr.getBytes(StandardCharsets.US_ASCII);
+        byte[] src = srcStr.getBytes(CharsetUtil.US_ASCII);
         ByteBuf expectedIn = Unpooled.wrappedBuffer(src);
         ByteBuf expected = Unpooled.buffer();
         snappy.encode(expectedIn, expected, src.length);
