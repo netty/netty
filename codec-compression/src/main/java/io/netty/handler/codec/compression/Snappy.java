@@ -32,6 +32,8 @@ public final class Snappy {
 
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
+    // The offset of a copy is encoded as an unsigned 16 bit value, so we can't reference data that is further back.
+    private static final int MAX_COPY_OFFSET = 0xFFFF;
 
     // used as a return value to indicate that we haven't yet read our full preamble
     private static final int PREAMBLE_NOT_FULL = -1;
@@ -128,7 +130,7 @@ public final class Snappy {
 
                     table[hash] = (short) (inIndex - baseIndex);
                 }
-                while (in.getInt(inIndex) != in.getInt(candidate));
+                while (!isMatch(in, inIndex, candidate));
 
                 encodeLiteral(in, out, inIndex - nextEmit);
 
@@ -152,7 +154,7 @@ public final class Snappy {
                     candidate = baseIndex + (table[currentHash] & 0xFFFF);
                     table[currentHash] = (short) (inIndex - baseIndex);
                 }
-                while (in.getInt(insertTail + 1) == in.getInt(candidate));
+                while (isMatch(in, insertTail + 1, candidate));
 
                 nextHash = hash(in, insertTail + 2, shift);
                 ++inIndex;
@@ -163,6 +165,15 @@ public final class Snappy {
         if (nextEmit < endIndex) {
             encodeLiteral(in, out, endIndex - nextEmit);
         }
+    }
+
+    /**
+     * Returns {@code true} if the 4 bytes at the candidate are the same as at the index and the candidate can be
+     * referenced with a copy.
+     */
+    private static boolean isMatch(ByteBuf in, int index, int candidate) {
+        // The hash table only stores the lower 16 bits of the position, so the candidate may be too far away.
+        return index - candidate <= MAX_COPY_OFFSET && in.getInt(index) == in.getInt(candidate);
     }
 
     /**

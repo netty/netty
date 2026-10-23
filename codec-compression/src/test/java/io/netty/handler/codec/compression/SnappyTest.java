@@ -25,9 +25,11 @@ import org.junit.jupiter.api.function.Executable;
 import static io.netty.handler.codec.compression.Snappy.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 
 public class SnappyTest {
     private final Snappy snappy = new Snappy();
@@ -321,6 +323,56 @@ public class SnappyTest {
             });
         } finally {
             input.release();
+        }
+    }
+
+    @Test
+    public void testEncodeLargeInputWithRepeatedDataFurtherAwayThanMaxCopyOffset() {
+        // Create data that repeats after more than 65535 bytes so the only matches are too far away to be referenced.
+        byte[] period = new byte[70000];
+        new Random(42).nextBytes(period);
+        byte[] data = new byte[period.length * 2];
+        System.arraycopy(period, 0, data, 0, period.length);
+        System.arraycopy(period, 0, data, period.length, period.length);
+
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        ByteBuf compressed = Unpooled.buffer();
+        ByteBuf decompressed = Unpooled.buffer();
+        try {
+            snappy.encode(in, compressed, data.length);
+            snappy.reset();
+            snappy.decode(compressed, decompressed);
+            assertEquals(Unpooled.wrappedBuffer(data), decompressed);
+        } finally {
+            in.release();
+            compressed.release();
+            decompressed.release();
+        }
+    }
+
+    @Test
+    public void testEncodeLargeInputWithMatchesWithinMaxCopyOffset() {
+        // Repeat a block that is smaller than the max offset so we still find matches in the large input.
+        byte[] period = new byte[1000];
+        new Random(42).nextBytes(period);
+        byte[] data = new byte[200000];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = period[i % period.length];
+        }
+
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        ByteBuf compressed = Unpooled.buffer();
+        ByteBuf decompressed = Unpooled.buffer();
+        try {
+            snappy.encode(in, compressed, data.length);
+            assertTrue(compressed.readableBytes() < data.length / 10);
+            snappy.reset();
+            snappy.decode(compressed, decompressed);
+            assertEquals(Unpooled.wrappedBuffer(data), decompressed);
+        } finally {
+            in.release();
+            compressed.release();
+            decompressed.release();
         }
     }
 
