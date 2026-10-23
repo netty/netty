@@ -80,6 +80,9 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean closeCompleted;
     private final PendingOpMap pendingOps;
     private int nextRegistrationId = 1;
+    // The number of registrations that were cancelled but are not removed yet because they still wait for completions
+    // of operations that were submitted before. Only accessed from the event loop.
+    private int pendingRemovals;
 
     private static final long INVALID_ID = 0;
     private static final long EVENTFD_TOKEN = PendingOpMap.token(1);
@@ -172,6 +175,8 @@ public final class IoUringIoHandler implements IoHandler {
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        // We may block here even if there are registrations waiting for completions before they can be removed
+        // (see hasPendingCancellations()), as these completions will wake us up.
         if (!completionQueue.hasCompletions() && context.canBlock()) {
             if (eventfdReadSubmitted == 0) {
                 submitEventFdRead();
@@ -529,6 +534,8 @@ public final class IoUringIoHandler implements IoHandler {
             return;
         }
         closeCompleted = true;
+        // The ring is closed, so no more completions will arrive for registrations that wait for them.
+        pendingRemovals = 0;
         ringBuffer.close();
         closeWakeupGate();
         try {
@@ -540,6 +547,14 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryCleanable.clean();
         iovArray.release();
         msgHdrMemoryArray.release();
+    }
+
+    @Override
+    public boolean hasPendingCancellations() {
+        assert executor.isExecutorThread(Thread.currentThread());
+        // Registrations that were cancelled while operations were outstanding are only removed (and so their
+        // IoUringIoHandle notified via unregistered()) once the last completion for these arrived.
+        return pendingRemovals != 0;
     }
 
     @Override
@@ -685,6 +700,7 @@ public final class IoUringIoHandler implements IoHandler {
                 // We have some completions outstanding, we will remove the id <-> registration mapping
                 // once these are done.
                 removeLater = true;
+                pendingRemovals++;
                 return;
             }
             remove();
@@ -709,13 +725,19 @@ public final class IoUringIoHandler implements IoHandler {
 
         void handle(int res, int flags, byte op, long userData, ByteBuffer extraCqeData) {
             event.update(res, flags, op, userData, extraCqeData);
-            handle.handle(this, event);
-            // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
-            // receive more completions for the intial request.
-            if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
-                // No more outstanding completions, remove the registration now.
-                removeLater = false;
-                remove();
+            try {
+                handle.handle(this, event);
+            } finally {
+                // Do this even if handle(...) threw, as otherwise the registration would never be removed and the
+                // event loop could never suspend (see hasPendingCancellations()).
+                // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we
+                // will receive more completions for the intial request.
+                if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
+                    // No more outstanding completions, remove the registration now.
+                    removeLater = false;
+                    pendingRemovals--;
+                    remove();
+                }
             }
         }
     }
