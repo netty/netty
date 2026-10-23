@@ -31,6 +31,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -227,6 +228,28 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
             assertTrue(parent.isActive());
             assertTrue(requestChannel.isActive());
             assertEquals(0, pushChannels.get());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void streamExceptionForStreamWithoutChildChannelIsPropagated() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            Http2FrameCodec.DefaultHttp2FrameStream stream = new Http2FrameCodec.DefaultHttp2FrameStream();
+            final Http2FrameStreamException exception = new Http2FrameStreamException(
+                    stream, Http2Error.PROTOCOL_ERROR, new IllegalStateException());
+            parent.pipeline().context(Http2FrameCodec.class).fireExceptionCaught(exception);
+
+            Http2FrameStreamException caught = assertThrows(Http2FrameStreamException.class, new Executable() {
+                @Override
+                public void execute() {
+                    parent.checkException();
+                }
+            });
+            assertSame(exception, caught);
         } finally {
             parent.finishAndReleaseAll();
         }
