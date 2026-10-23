@@ -104,6 +104,27 @@ public class @K@ObjectHashMapTest {
     }
 
     @Test
+    public void iteratorRemoveShouldNotReturnEntriesTwice() {
+        map = new @K@ObjectHashMap<Value>(8);
+        // 6 and 14 both hash to index 6, so 14 is stored at index 7. 15 hashes to index 7 and wraps around to index 0.
+        map.put((@O@)(@k@) 6, new Value("A"));
+        map.put((@O@)(@k@) 14, new Value("B"));
+        map.put((@O@)(@k@) 15, new Value("C"));
+        Set<@O@> keys = new HashSet<@O@>();
+        Iterator<PrimitiveEntry<Value>> itr = map.entries().iterator();
+        while (itr.hasNext()) {
+            @k@ key = itr.next().key();
+            assertTrue(keys.add(key));
+            if (key != 15) {
+                itr.remove();
+            }
+        }
+        assertEquals(3, keys.size());
+        assertEquals(1, map.size());
+        assertNotNull(map.get((@O@)(@k@) 15));
+    }
+
+    @Test
     public void putNewMappingShouldSucceed() {
         Value v = new Value("v");
         @k@ key = 1;
