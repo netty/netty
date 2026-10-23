@@ -31,6 +31,29 @@ Read the checklist files that apply to the diff, from the `references/` director
 | `concurrency.md` | touches shared mutable state, locks, channel handlers, event loops, executors or futures |
 | `native-jni.md` | touches C or header files, or Java `native` declarations |
 
+### Splitting the review across sub-agents
+
+If your runner supports sub-agents, and the diff is large or spans several areas of the table above (as a rough guide: more than ~500 changed lines, or three or more checklists apply), split the review instead of doing it in one pass. For small diffs, review in a single pass; the overhead isn't worth it.
+
+1. **Triage (you):** obtain the diff, list the changed files, and decide which checklists apply using the table above.
+2. **Review in parallel:** start one reviewer sub-agent per applicable group, all at once:
+   - `general.md` + `tests-and-style.md`
+   - `security-general.md` + the relevant sections of `security-protocols.md`
+   - `security-tls.md`
+   - `concurrency.md`
+   - `native-jni.md`
+
+   Sub-agents start with no context, so each briefing must be self-contained:
+   - the base branch and the exact `git diff` command to obtain the changes
+   - the files in scope
+   - the checklist file(s) to read, and only those
+   - that it should read full files for surrounding context
+   - the Verification rules below, and the Output Format
+   - that it is read-only: no edits, no builds, no tests
+   - that it should stay within its checklist, but may report an obvious defect it comes across
+3. **Verify independently:** for every CRITICAL and HIGH finding, start a separate verifier sub-agent. Give it only the finding and its location, and ask it to try to refute it against the actual code. Drop findings that are refuted. Try to refute MEDIUM and LOW findings yourself in the same way; the point is to attempt refutation, not to confirm.
+4. **Consolidate (you):** merge duplicates raised by more than one reviewer, order by severity, and produce the final Summary and Findings in the Output Format. Sub-agents report to you, not to the user.
+
 ### Verification
 
 Before reporting a finding, verify its veracity and avoid reporting findings that aren't actually problems:
