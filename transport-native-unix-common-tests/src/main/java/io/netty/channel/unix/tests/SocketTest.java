@@ -16,6 +16,8 @@
 package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.CleanableDirectBuffer;
 import org.junit.jupiter.api.AfterEach;
@@ -142,9 +144,9 @@ public abstract class SocketTest<T extends Socket> {
         try {
             ByteBuffer buffer = cleanableDirectBuffer.buffer();
             // The path must be rejected instead of silently being truncated and sent to a different address.
-            IOException e = assertThrows(IOException.class,
+            NativeIoException e = assertThrows(NativeIoException.class,
                     () -> domainSocket.sendToDomainSocket(buffer, 0, 1, path));
-            assertTrue(e.getMessage().contains("too long"), e.getMessage());
+            assertEquals(Errors.ERRNO_ENAMETOOLONG_NEGATIVE, e.expectedErr());
         } finally {
             domainSocket.close();
             cleanableDirectBuffer.clean();
