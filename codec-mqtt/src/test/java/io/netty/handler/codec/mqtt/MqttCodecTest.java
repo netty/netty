@@ -349,7 +349,12 @@ public class MqttCodecTest {
                     .payload(payload)
                     .build();
 
-            assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() {
+                    MqttEncoder.doEncode(ctx, message);
+                }
+            });
         } finally {
             payload.release();
             chunk.release();
@@ -360,21 +365,26 @@ public class MqttCodecTest {
     public void testSubscriptionIdentifierTooLarge() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
         final MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268_435_456));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268435456));
         final MqttMessage message = MqttMessageBuilders.pubAck()
                 .packetId((short) 1)
                 .reasonCode((byte) 0x80)
                 .properties(props)
                 .build();
 
-        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
     }
 
     @Test
     public void testSubscriptionIdentifierMaxValue() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
         final MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268_435_455));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 268435455));
         final MqttMessage message = MqttMessageBuilders.pubAck()
                 .packetId((short) 1)
                 .reasonCode((byte) 0x80)

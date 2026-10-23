@@ -47,7 +47,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
     // A Variable Byte Integer uses at most four bytes, which limits it to 268,435,455.
-    private static final int MAX_VARIABLE_LENGTH_INT = 268_435_455;
+    private static final int MAX_VARIABLE_LENGTH_INT = 268435455;
 
     private MqttEncoder() { }
 
