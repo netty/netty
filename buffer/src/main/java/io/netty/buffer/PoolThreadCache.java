@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * Acts a Thread cache for allocations. This implementation is moduled after
  * <a href="https://people.freebsd.org/~jasone/jemalloc/bsdcan2006/jemalloc.pdf">jemalloc</a> and the descripted
- * technics of
+ * techniques of
  * <a href="https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919">
  * Scalable memory allocation using jemalloc</a>.
  */
