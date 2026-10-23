@@ -15,6 +15,7 @@
  */
 package io.netty.microbench.buffer;
 
+import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -35,12 +36,19 @@ import org.openjdk.jmh.annotations.Warmup;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Unsafe or VarHandle accesses depend on the forked JVM: pass {@code -jvmArgsAppend -Dio.netty.noUnsafe=true}
+ * to measure the VarHandle path on JDKs where Unsafe is used by default. A system property set in a setup method
+ * comes too late, the benchmark class already initialized PlatformDependent.
+ */
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @Fork(2)
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
 public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
+
+    private static final int SLICE_OFFSET = 13;
 
     @Param({
             "7",
@@ -78,26 +86,34 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
     private boolean direct;
 
     @Param({
-            "true",
-            "false",
+            "unpooled",
+            "pooled",
+            "adaptive",
     })
-    private boolean noUnsafe;
+    private String allocator;
 
+    /**
+     * {@code true} searches a retained slice at a non-zero offset of the buffer, as io_uring buffer rings deliver.
+     */
     @Param({
-            "true",
             "false",
+            "true",
     })
-    private boolean pooled;
+    private boolean slice;
 
     @Setup(Level.Trial)
     public void init() {
-        System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;
         this.data = new ByteBuf[permutations];
-        final ByteBufAllocator allocator = pooled? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT;
+        final ByteBufAllocator allocator = allocator(this.allocator);
         for (int i = 0; i < permutations; ++i) {
-            data[i] = direct? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size);
+            final int capacity = slice ? size + SLICE_OFFSET : size;
+            ByteBuf buf = direct? allocator.directBuffer(capacity, capacity) : allocator.heapBuffer(capacity, capacity);
+            data[i] = slice ? buf.retainedSlice(SLICE_OFFSET, size) : buf;
+            if (slice) {
+                buf.release();
+            }
             for (int j = 0; j < size; j++) {
                 int value = random.nextInt(Byte.MIN_VALUE, Byte.MAX_VALUE + 1);
                 // turn any found value into something different
@@ -112,6 +128,19 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
             }
             final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
             data[i].setByte(foundIndex, needleByte);
+        }
+    }
+
+    static ByteBufAllocator allocator(String name) {
+        switch (name) {
+        case "unpooled":
+            return UnpooledByteBufAllocator.DEFAULT;
+        case "pooled":
+            return PooledByteBufAllocator.DEFAULT;
+        case "adaptive":
+            return AdaptiveByteBufAllocator.DEFAULT;
+        default:
+            throw new IllegalArgumentException(name);
         }
     }
 

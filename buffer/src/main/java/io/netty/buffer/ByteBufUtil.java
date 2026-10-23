@@ -576,8 +576,16 @@ public final class ByteBufUtil {
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
             return -1;
         }
+        buffer.checkIndex(fromIndex, toIndex - fromIndex);
+        return buffer._indexOf(fromIndex, toIndex, value);
+    }
+
+    /**
+     * {@link #firstIndexOf(AbstractByteBuf, int, int, byte)} without the checks: the caller made sure that
+     * {@code fromIndex < toIndex} is a valid range of an accessible buffer.
+     */
+    static int firstIndexOf0(AbstractByteBuf buffer, int fromIndex, int toIndex, byte value) {
         final int length = toIndex - fromIndex;
-        buffer.checkIndex(fromIndex, length);
         if (!SWAR_UNALIGNED) {
             return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
         }
@@ -607,6 +615,79 @@ public final class ByteBufUtil {
                 return offset + SWARUtil.getIndex(result, isNative);
             }
             offset += Long.BYTES;
+        }
+        return -1;
+    }
+
+    /**
+     * {@link #firstIndexOf(AbstractByteBuf, int, int, byte)} over native memory, without calls into a buffer.
+     * Requires {@link PlatformDependent#hasUnsafe()}. Returns the offset from {@code address}, or {@code -1}.
+     */
+    static int firstIndexOf(long address, int length, byte value) {
+        // whole words first, then the (length & 7) tail bytes
+        int offset = 0;
+        if (SWAR_UNALIGNED) {
+            final long pattern = SWARUtil.compilePattern(value);
+            for (final int words = length & ~7; offset < words; offset += Long.BYTES) {
+                final long result = SWARUtil.applyPattern(UnsafeByteBufUtil.getLongLE(address + offset), pattern);
+                if (result != 0) {
+                    return offset + SWARUtil.getIndex(result, false);
+                }
+            }
+        }
+        for (; offset < length; offset++) {
+            if (PlatformDependent.getByte(address + offset) == value) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@link #firstIndexOf(AbstractByteBuf, int, int, byte)} over a heap array, without calls into a buffer.
+     * Returns the offset from {@code index}, or {@code -1}.
+     */
+    static int firstIndexOf(byte[] array, int index, int length, byte value) {
+        // whole words first, then the (length & 7) tail bytes
+        int offset = 0;
+        if (SWAR_UNALIGNED) {
+            final long pattern = SWARUtil.compilePattern(value);
+            for (final int words = length & ~7; offset < words; offset += Long.BYTES) {
+                final long result = SWARUtil.applyPattern(UnsafeByteBufUtil.getLongLE(array, index + offset), pattern);
+                if (result != 0) {
+                    return offset + SWARUtil.getIndex(result, false);
+                }
+            }
+        }
+        for (; offset < length; offset++) {
+            if (array[index + offset] == value) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@link #firstIndexOf(AbstractByteBuf, int, int, byte)} over a direct {@link ByteBuffer} with absolute
+     * accesses, without calls into a buffer. Returns the offset from {@code index}, or {@code -1}.
+     */
+    static int firstIndexOf(ByteBuffer buffer, int index, int length, byte value) {
+        // whole words first, then the (length & 7) tail bytes
+        int offset = 0;
+        if (PlatformDependent.hasVarHandle()) {
+            final long pattern = SWARUtil.compilePattern(value);
+            for (final int words = length & ~7; offset < words; offset += Long.BYTES) {
+                final long word = VarHandleByteBufferAccess.getLongLE(buffer, index + offset);
+                final long result = SWARUtil.applyPattern(word, pattern);
+                if (result != 0) {
+                    return offset + SWARUtil.getIndex(result, false);
+                }
+            }
+        }
+        for (; offset < length; offset++) {
+            if (buffer.get(index + offset) == value) {
+                return offset;
+            }
         }
         return -1;
     }

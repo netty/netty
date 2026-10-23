@@ -1504,4 +1504,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
     ByteBuffer _internalNioBuffer() {
         return internalNioBuffer(0, capacity());
     }
+
+    /**
+     * The search of {@link #indexOf(int, int, byte)} after its checks: {@code fromIndex < toIndex} is a valid range
+     * and the buffer is accessible.
+     */
+    int _indexOf(int fromIndex, int toIndex, byte value) {
+        return ByteBufUtil.firstIndexOf0(this, fromIndex, toIndex, value);
+    }
 }

@@ -69,6 +69,21 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         return 128 * 1024; // Min chunk size
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void indexOfOnSlices(boolean direct) {
+        AdaptiveByteBufAllocator allocator = newAllocator(direct);
+        ByteBuf parent = direct ? allocator.directBuffer(160) : allocator.heapBuffer(160);
+        try {
+            // the shape io_uring buffer rings hand out: an unpooled slice of an adaptive buffer
+            AbstractByteBufTest.assertIndexOfEveryRangeAndPosition(parent.slice(13, 80));
+            AbstractByteBufTest.assertIndexOfEveryRangeAndPosition(parent.slice(0, 80));
+            AbstractByteBufTest.assertIndexOfEveryRangeAndPosition(parent);
+        } finally {
+            parent.release();
+        }
+    }
+
     @Override
     @Test
     public void testUnsafeHeapBufferAndUnsafeDirectBuffer() {

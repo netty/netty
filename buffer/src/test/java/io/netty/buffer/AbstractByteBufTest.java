@@ -2527,6 +2527,52 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testIndexOfEveryRangeAndPosition() {
+        ByteBuf buf = newBuffer(80);
+        try {
+            assertIndexOfEveryRangeAndPosition(buf);
+        } finally {
+            buf.release();
+        }
+    }
+
+    /**
+     * Checks {@link ByteBuf#indexOf(int, int, byte)} for ranges starting at 0..9 and ending anywhere up to the
+     * capacity, with the needle absent, just before the range, and at every position in it, for needles with and
+     * without the high bit set.
+     */
+    static void assertIndexOfEveryRangeAndPosition(ByteBuf buf) {
+        int capacity = buf.capacity();
+        for (byte needle : new byte[] { 0, (byte) 0x80, (byte) 0xFF, '\n' }) {
+            byte other = (byte) (needle ^ 1);
+            for (int i = 0; i < capacity; i++) {
+                buf.setByte(i, other);
+            }
+            for (int from = 0; from < Math.min(10, capacity); from++) {
+                if (from > 0) {
+                    buf.setByte(from - 1, needle);
+                }
+                for (int to = from; to <= capacity; to++) {
+                    assertEquals(-1, buf.indexOf(from, to, needle));
+                    for (int at = from; at < to; at++) {
+                        buf.setByte(at, needle);
+                        assertEquals(at, buf.indexOf(from, to, needle));
+                        if (at < to - 1) {
+                            buf.setByte(to - 1, needle);
+                            assertEquals(at, buf.indexOf(from, to, needle));
+                            buf.setByte(to - 1, other);
+                        }
+                        buf.setByte(at, other);
+                    }
+                }
+                if (from > 0) {
+                    buf.setByte(from - 1, other);
+                }
+            }
+        }
+    }
+
+    @Test
     public void testIndexOfReleaseBuffer() {
         ByteBuf buffer = releasedBuffer();
         if (buffer.capacity() != 0) {
