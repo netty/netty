@@ -23,6 +23,7 @@ import java.util.Collections;
 
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
+import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
@@ -54,6 +55,13 @@ public class StringUtilTest {
         assertEquals("0", toHexString(new byte[] { 0, 0 }));
         assertEquals("100", toHexString(new byte[] { 1, 0 }));
         assertEquals("", toHexString(EmptyArrays.EMPTY_BYTES));
+    }
+
+    @Test
+    public void testDecodeHexNibbleByte() {
+        for (int i = 0; i < 256; i++) {
+            assertEquals(decodeHexNibble((char) i), decodeHexNibble((byte) i));
+        }
     }
 
     @Test
