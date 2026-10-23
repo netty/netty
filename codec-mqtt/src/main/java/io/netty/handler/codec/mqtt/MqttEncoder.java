@@ -46,6 +46,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
+    // A Variable Byte Integer uses at most four bytes, which limits it to 268,435,455.
+    private static final int MAX_VARIABLE_LENGTH_INT = 268435455;
+
     private MqttEncoder() { }
 
     @Override
@@ -247,9 +250,11 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 message.variableHeader().properties());
 
         try {
-            ByteBuf buf = ctx.alloc().buffer(4 + propertiesBuf.readableBytes());
+            final int variablePartSize = 2 + propertiesBuf.readableBytes();
+            final int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+            ByteBuf buf = ctx.alloc().buffer(fixedHeaderBufferSize + variablePartSize);
             buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
-            writeVariableLengthInt(buf, 2 + propertiesBuf.readableBytes());
+            writeVariableLengthInt(buf, variablePartSize);
             buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
             buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
             buf.writeBytes(propertiesBuf);
@@ -700,6 +705,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static void writeVariableLengthInt(ByteBuf buf, int num) {
+        checkVariableLengthInt(num);
         do {
             int digit = num % 128;
             num /= 128;
@@ -737,7 +743,16 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         buf.setShort(writerIndex, utf8Length);
     }
 
+    private static void checkVariableLengthInt(int num) {
+        // A negative value means that the computed size overflowed.
+        if (num < 0 || num > MAX_VARIABLE_LENGTH_INT) {
+            throw new EncoderException("Variable Byte Integer out of range: " + num +
+                    " (max: " + MAX_VARIABLE_LENGTH_INT + ')');
+        }
+    }
+
     private static int getVariableLengthInt(int num) {
+        checkVariableLengthInt(num);
         int count = 0;
         do {
             num /= 128;
