@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -250,6 +251,45 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
                 }
             });
             assertSame(exception, caught);
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void dataFrameForStreamWithoutChildChannelIsReleased() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            ByteBuf content = bb("hello");
+            Http2DataFrame data = new DefaultHttp2DataFrame(content, false, 3)
+                    .stream(new Http2FrameCodec.DefaultHttp2FrameStream());
+            parent.pipeline().context(Http2FrameCodec.class).fireChannelRead(data);
+
+            parent.checkException();
+            assertEquals(0, content.refCnt());
+            assertTrue(parent.isActive());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void headersFrameForStreamWithoutChildChannelIsConnectionError() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            Http2HeadersFrame headers = new DefaultHttp2HeadersFrame(new DefaultHttp2Headers())
+                    .stream(new Http2FrameCodec.DefaultHttp2FrameStream());
+            parent.pipeline().context(Http2FrameCodec.class).fireChannelRead(headers);
+
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() {
+                    parent.checkException();
+                }
+            });
+            assertFalse(parent.isActive());
         } finally {
             parent.finishAndReleaseAll();
         }

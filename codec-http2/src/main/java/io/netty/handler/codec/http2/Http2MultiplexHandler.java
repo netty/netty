@@ -29,6 +29,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 
@@ -203,12 +204,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+            if (channel == null) {
+                onFrameForStreamWithoutChildChannel(ctx, streamFrame);
+                return;
+            }
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
-                if (channel == null) {
-                    // A promised stream has no child channel until its HEADERS are received, so it may be
-                    // reset or prioritized before one exists.
-                    return;
-                }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
                 channel.fireChildUserEventTriggered(msg);
@@ -229,6 +229,28 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
         // Send everything down the pipeline
         ctx.fireChannelRead(msg);
+    }
+
+    private static void onFrameForStreamWithoutChildChannel(ChannelHandlerContext ctx, Http2StreamFrame frame) {
+        if (frame instanceof Http2ResetFrame || frame instanceof Http2PriorityFrame) {
+            // A promised stream has no child channel until its HEADERS are received, so it may be reset or
+            // prioritized before one exists. These frames are neither flow-controlled nor reference-counted.
+            return;
+        }
+        if (frame instanceof Http2DataFrame) {
+            Http2DataFrame data = (Http2DataFrame) frame;
+            int bytes = data.initialFlowControlledBytes();
+            data.release();
+            if (bytes > 0) {
+                // No child channel will consume these bytes, so give them back to the flow controller.
+                ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(bytes).stream(frame.stream()));
+            }
+            return;
+        }
+        ReferenceCountUtil.release(frame);
+        ChannelHandlerContext codecCtx = ctx.pipeline().context(Http2FrameCodec.class);
+        ((Http2FrameCodec) codecCtx.handler()).onError(codecCtx, false, connectionError(INTERNAL_ERROR,
+                "Received %s for stream %d which has no child channel", frame.name(), frame.stream().id()));
     }
 
     @Override
