@@ -1,0 +1,200 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslContext$AbstractCertificateVerifier",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslContext$PrivateKeyMethod",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslContext$AsyncPrivateKeyMethod",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslContext$CompressionAlgorithm",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$TrustManagerVerifyCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$OpenSslClientCertificateCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$OpenSslClientSessionContext",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslServerContext$ExtendedTrustManagerVerifyCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslServerContext$TrustManagerVerifyCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslServerContext$OpenSslServerCertificateCallback",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslCertificateCompressionAlgorithm",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslSessionCache",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslClientSessionCache",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslSessionContext",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslServerSessionContext",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslKeyMaterial",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.DefaultOpenSslKeyMaterial",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslPrivateKey$OpenSslPrivateKeyMaterial",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.OpenSslSessionTicketKey",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.ReferenceCountedOpenSslServerContext$OpenSslSniHostnameMatcher",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.handler.ssl.OpenSsl"
+    },
+    "name": "io.netty.handler.ssl.JdkDelegatingPrivateKeyMethod",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  }
+]
