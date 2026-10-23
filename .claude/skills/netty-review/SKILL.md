@@ -30,7 +30,7 @@ Read the checklist files that apply to the diff, from the `references/` director
 | `security-general.md` | handles network input, allocates based on input sizes, logs, builds file paths, uses serialization or XML |
 | `security-protocols.md` | touches a codec or protocol implementation (HTTP/1.1, HTTP/2, HTTP/3, QUIC, DNS, MQTT, Redis, Memcache, SMTP, SOCKS, STOMP, HAProxy, XML). Read only the sections for the protocols touched |
 | `security-tls.md` | touches TLS, trust or key managers, certificates, SSL contexts, or OpenSSL/BoringSSL code |
-| `concurrency.md` | touches shared mutable state, locks, channel handlers, event loops, executors or futures |
+| `concurrency.md` | touches shared mutable state, locks, channel handlers (also for handler reentrancy), event loops, executors or futures |
 | `native-jni.md` | touches C or header files, or Java `native` declarations |
 | `variant-analysis.md` | fixes a security vulnerability: the commit or PR text mentions a CVE, GHSA, vulnerability or security issue, or the diff adds validation, a limit or a rejection for attacker-controlled input. If in doubt whether the change is a security fix, apply it |
 
@@ -46,6 +46,7 @@ If your runner supports sub-agents, and the diff is large or spans several areas
    - `concurrency.md`
    - `native-jni.md`
    - `variant-analysis.md`, when the change fixes a security vulnerability. This reviewer runs regardless of the size thresholds above, and should use a high-capability model (for example Claude Opus 5.5 or GPT-6-Sol, or an equivalent or better model); if the runner can't select a model, run it anyway. In addition to the items below, its briefing must include the fix's commit or PR description and any linked issue or advisory, and the instruction to include a failing test case with each finding. Without sub-agents, do this analysis yourself after the other checklists.
+
    Sub-agents start with no context, so each briefing must be self-contained:
    - the base branch and the exact `git diff` command to obtain the changes
    - the files in scope
@@ -84,6 +85,7 @@ For each issue found, report:
 - **Suggestion:** Concrete fix (code sketch if helpful)
 
 Variant-analysis findings additionally include the fields described in `variant-analysis.md` (root cause link, specification reference, and a failing test case).
+
 Severity levels:
 - **CRITICAL** — Unsafe memory access; undefined behavior; data-race or deadlock; parsing bugs on non-trusted inputs (e.g., from the network); high-severity security issue, including: request smuggling, authentication or TLS validation bypass, credential or key material exposure, deserialization RCE, decompression or XML bomb, log injection of sensitive data
 - **HIGH** — Likely to produce incorrect behavior; logic errors; parsing bugs on trusted inputs
