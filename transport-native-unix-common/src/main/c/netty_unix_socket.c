@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/un.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -889,7 +890,14 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     memcpy(addr.sun_path, socket_path, socket_path_len);
     (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
-    if (unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
+    // Only remove a stale socket left behind by a previous run. Never remove any other kind of file (regular file,
+    // directory, symlink, ...); if something else exists at the path bind(...) will fail with EADDRINUSE.
+    struct stat st;
+    if (lstat((const char*) addr.sun_path, &st) == 0) {
+        if (S_ISSOCK(st.st_mode) && unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
+            return -errno;
+        }
+    } else if (errno != ENOENT && errno != ENOTDIR) {
         return -errno;
     }
 
