@@ -116,7 +116,8 @@ public abstract class QuicCodecDispatcher implements ChannelInboundHandler {
         ByteBuf connectionId = getDestinationConnectionId(packet.content(), localConnectionIdLength);
         if (connectionId != null) {
             int idx = decodeIndex(connectionId);
-            if (contextList.size() > idx) {
+            // decodeIndex(...) returns -1 if decoding was not successful.
+            if (idx >= 0 && contextList.size() > idx) {
                 ChannelHandlerContextDispatcher selectedCtx = contextList.get(idx);
                 if (selectedCtx != null) {
                     selectedCtx.fireChannelRead(msg);
