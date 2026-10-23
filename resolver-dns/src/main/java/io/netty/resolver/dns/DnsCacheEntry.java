@@ -16,6 +16,8 @@
 package io.netty.resolver.dns;
 
 import java.net.InetAddress;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Represents the results from a previous DNS query which can be cached.
@@ -34,4 +36,20 @@ public interface DnsCacheEntry {
      * @return the rational for why the DNS query failed, or {@code null} if the query hasn't failed.
      */
     Throwable cause();
+
+    /**
+     * Get the CNAME chain that led to this address resolution.
+     * <p>
+     * This method returns the sequence of CNAME records that were followed during DNS resolution.
+     * If the address was resolved directly without following any CNAMEs, this returns an empty list.
+     * <p>
+     * The default implementation returns an empty list for backward compatibility with existing
+     * cache implementations.
+     *
+     * @return the CNAME chain, never {@code null} but may be empty
+     * @since 4.2.0
+     */
+    default List<String> cnameChain() {
+        return Collections.emptyList();
+    }
 }
