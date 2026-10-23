@@ -335,6 +335,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected final void doShutdownOutput() throws Exception {
         // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
         removeFastOpenData();
+        // AbstractUnsafe has already cleared outboundBuffer and fails flushed messages after this method returns.
+        AbstractUringUnsafe unsafe = ioUringUnsafe();
+        unsafe.prepareToDiscardOutboundMessages(unsafe.originalOutboundBuffer);
         doShutdownOutput0();
     }
 
@@ -505,6 +508,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private ChannelPromise deregisterPromise;
         // Only one primary write batch is submitted at a time. Notifications belong to older zero-copy writes.
         final WriteOpsSnapshot currentWrite = new WriteOpsSnapshot();
+        // Never null, unlike outboundBuffer(). Only used to retain in-flight writes after shutdownOutput().
+        final ChannelOutboundBuffer originalOutboundBuffer = outboundBuffer();
         // References retained before outbound messages are released. Non-null until the batch completes,
         // even when empty, so subsequent completions no longer consume the outbound queue.
         List<ReferenceCounted> retainedWriteBuffers;
@@ -517,8 +522,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             return id;
         }
 
-        @Override
-        public final void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
+        // Must be called before AbstractUnsafe fails flushed messages that in-flight writes may still use.
+        final void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
             if (retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
                 return;
             }
@@ -742,6 +747,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
             if ((ioState & POLL_OUT_SCHEDULED) == 0) {
+                ChannelOutboundBuffer in = outboundBuffer();
+                if (in != null && !in.isEmpty() && !isActive()) {
+                    // super.flush0() fails flushed messages when the channel is inactive.
+                    prepareToDiscardOutboundMessages(in);
+                }
                 super.flush0();
             }
         }
@@ -1054,8 +1064,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
             } else if (!socket.isOutputShutdown()) {
-                // Try writing again
-                super.flush0();
+                // Try writing again. POLL_OUT_SCHEDULED is clear, so flush0() retains in-flight writes if inactive.
+                flush0();
             }
         }
 
