@@ -83,7 +83,6 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
     @Setup
     public void setup() {
         buffer = bufferType.newBuffer(size);
-        // Pre-fill so readByte benchmarks have readable content
         buffer.writerIndex(buffer.capacity());
     }
 
