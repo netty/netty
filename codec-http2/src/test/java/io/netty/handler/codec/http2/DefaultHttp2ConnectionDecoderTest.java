@@ -1387,7 +1387,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(connection.isServer()).thenReturn(false);
         when(pushStream.state()).thenReturn(Http2Stream.State.HALF_CLOSED_LOCAL);
         mockFlowControl(0);
-        Http2Headers responseHeaders=new DefaultHttp2Headers()
+        Http2Headers responseHeaders = new DefaultHttp2Headers()
                 .status(HttpResponseStatus.OK.codeAsText())
                 .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
         decode().onHeadersRead(ctx, promisedStreamId, responseHeaders, 0, false);
