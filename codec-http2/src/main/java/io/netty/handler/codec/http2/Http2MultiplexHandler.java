@@ -204,6 +204,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
+                if (channel == null) {
+                    // There is no child channel for this stream, e.g. a pushed stream that was reset before
+                    // its HEADERS were received.
+                    return;
+                }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
                 channel.fireChildUserEventTriggered(msg);

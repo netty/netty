@@ -197,4 +197,38 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
             parent.finishAndReleaseAll();
         }
     }
+
+    @Test
+    public void resetOfPromisedStreamBeforeHeaders() {
+        final AtomicInteger pushChannels = new AtomicInteger();
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                    @Override
+                    protected void initChannel(Http2StreamChannel ch) {
+                        pushChannels.incrementAndGet();
+                    }
+                }));
+        try {
+            Http2FrameInboundWriter frameInboundWriter = new Http2FrameInboundWriter(parent);
+            frameInboundWriter.writeInboundSettings(new Http2Settings());
+
+            Http2StreamChannel requestChannel = new Http2StreamChannelBootstrap(parent)
+                    .handler(new ChannelInboundHandlerAdapter()).open().syncUninterruptibly().getNow();
+            Http2Headers request = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/");
+            requestChannel.writeAndFlush(new DefaultHttp2HeadersFrame(request, true)).syncUninterruptibly();
+
+            Http2Headers pushRequest = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/push");
+            frameInboundWriter.writePushPromise(requestChannel.stream().id(), 2, pushRequest, 0);
+            frameInboundWriter.writeInboundRstStream(2, Http2Error.CANCEL.code());
+
+            parent.checkException();
+            assertTrue(parent.isActive());
+            assertTrue(requestChannel.isActive());
+            assertEquals(0, pushChannels.get());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
 }
