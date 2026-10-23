@@ -1243,7 +1243,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         try {
             return valueConverter.convertTimeMillis(value);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Failed to convert millsecond value for header '" + name + '\'', e);
+            throw new IllegalArgumentException("Failed to convert millisecond value for header '" + name + '\'', e);
         }
     }
 
@@ -1316,7 +1316,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             return valueConverter.convertToTimeMillis(value);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(
-                    "Failed to convert header value to millsecond for header '" + name + '\'');
+                    "Failed to convert header value to millisecond for header '" + name + '\'');
         }
     }
 
