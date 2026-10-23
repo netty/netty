@@ -23,7 +23,7 @@ Leaked `ByteBuf`s on error paths have been a recurring source of remotely trigge
 
 - **Validate before retaining:** Don't call `retain*`, `readRetainedSlice` or `retainedDuplicate`, or allocate, until the input has been validated. A frame that is rejected after the retain leaks.
 - **Every exit path:** For each exit from `decode` / `channelRead` (normal return, early return, exception, handler removal, `channelInactive`), every buffer that was retained or stored in handler state must be released exactly once.
-- **Stateful handlers:** Handlers that hold partial aggregates or cumulation buffers need cleanup in `handlerRemoved` and `channelInactive`.
+- **Stateful handlers:** Handlers that hold partial aggregates or cumulation buffers need cleanup in `handlerRemoved`.
 - **Nested structures:** Nested TLVs, arrays and similar structures must release children at every depth, including when a nested element fails.
 - **Consistent limit handling:** When input is rejected because one limit is exceeded, reset the related aggregate state the same way every other limit-failure path does. A sibling limit that doesn't clear the state leaves retained buffers behind and corrupts the handling of later messages.
 - **Helper channels:** Work handed to a helper channel (for example a decompressor) may arrive after that channel has already been closed; make sure the buffer is still released.

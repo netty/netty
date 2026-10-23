@@ -25,11 +25,9 @@
 - Passing a thread-confined object to another thread without safe handoff
 
 ## Netty-Specific Concerns
-- Accessing a `Channel`, `ChannelHandlerContext`, or `ChannelPipeline` from outside its `EventLoop` thread without checking `inEventLoop()` / scheduling via `execute()`
-- Calling `ByteBuf` retain/release or read/write from a thread that does not own the buffer
-- Sharing a `ChannelHandler` instance across pipelines without `@Sharable`, or marking a handler `@Sharable` when it holds mutable state
-- Completing a `Promise`/`Future` from the wrong `EventLoop`, creating ordering issues
-- Modifying pipeline from a thread that isn't the channel's `EventLoop`
+- Calling `ByteBuf` read/write, or any other mutating method, from a thread that does not own the buffer (`retain` and `release` are thread-safe)
+- Sharing a `ChannelHandler` instance across pipelines without `@Sharable` (or without overriding `ChannelHandlerAdapter.isSharable`), or marking a handler `@Sharable` when it holds mutable state
+- Assuming listeners of externally supplied `Promise` or `Future` instances will run on the `EventLoop` that attached the listener, creating visibility or ordering issues
 - Using blocking calls inside an `EventLoop` thread (blocking the I/O thread)
 
 ## Handler Reentrancy
