@@ -515,6 +515,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
+        checkReadableBytes(length);
         CharSequence sequence = getCharSequence(readerIndex, length, charset);
         readerIndex += length;
         return sequence;
@@ -1243,6 +1244,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public String toString(int index, int length, Charset charset) {
+        checkIndex(index, length);
         return ByteBufUtil.decodeString(this, index, length, charset);
     }
 
