@@ -17,6 +17,7 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.Socket;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,7 +138,7 @@ public abstract class SocketTest<T extends Socket> {
 
     @Test
     public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
-        int max = Socket.maxDomainSocketPathLength();
+        int max = Limits.UDS_SUN_PATH_SIZE;
         assertTrue(max >= 100);
         // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
         for (int i = 0; i < 100; i++) {
