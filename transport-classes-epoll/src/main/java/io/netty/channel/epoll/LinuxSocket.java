@@ -15,11 +15,9 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
-import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
@@ -30,6 +28,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -326,44 +325,60 @@ public final class LinuxSocket extends Socket {
         return ioResult("sendfile", (int) res);
     }
 
+    /**
+     * @deprecated Use {@link Socket#bind(SocketAddress)}.
+     */
+    @Deprecated
     public void bindVSock(VSockAddress address) throws IOException {
-        int res = bindVSock(/*fd*/intValue(), address.getCid(), address.getPort());
-        if (res < 0) {
-            throw newIOException("bindVSock", res);
-        }
+        super.bind(address);
     }
 
+    /**
+     * @deprecated Use {@link Socket#connect(SocketAddress)}.
+     */
+    @Deprecated
     public boolean connectVSock(VSockAddress address) throws IOException {
-        int res = connectVSock(/*fd*/intValue(), address.getCid(), address.getPort());
-        if (res < 0) {
-            return Errors.handleConnectErrno("connectVSock", res);
-        }
-        return true;
+        return super.connect(address);
     }
 
+    /**
+     * Helper proxy to the new {@link Socket#remoteVSockAddress()}.
+     * Can be removed when {@link #remoteVSockAddress()} is removed.
+     */
+    io.netty.channel.unix.VSockAddress remoteVSockAddress0() {
+        return super.remoteVSockAddress();
+    }
+
+    /**
+     * @deprecated Use {@link Socket#remoteVSockAddress()}.
+     */
+    @Deprecated
     public VSockAddress remoteVSockAddress() {
-        byte[] addr = remoteVSockAddress(/*fd*/intValue());
+        final io.netty.channel.unix.VSockAddress addr = super.remoteVSockAddress();
         if (addr == null) {
             return null;
         }
-        int cid = getIntAt(addr, 0);
-        int port = getIntAt(addr, 4);
-        return new VSockAddress(cid, port);
+        return new VSockAddress(addr.getCid(), addr.getPort());
     }
 
+    /**
+     * Helper proxy to the new {@link Socket#localVSockAddress()}.
+     * Can be removed when {@link #localVSockAddress()} is removed.
+     */
+    io.netty.channel.unix.VSockAddress localVSockAddress0() {
+        return super.localVSockAddress();
+    }
+
+    /**
+     * @deprecated Use {@link Socket#localVSockAddress()}.
+     */
+    @Deprecated
     public VSockAddress localVSockAddress() {
-        byte[] addr = localVSockAddress(/*fd*/intValue());
+        final io.netty.channel.unix.VSockAddress addr = super.localVSockAddress();
         if (addr == null) {
             return null;
         }
-        int cid = getIntAt(addr, 0);
-        int port = getIntAt(addr, 4);
-        return new VSockAddress(cid, port);
-    }
-
-    private static int getIntAt(byte[] array, int startIndex) {
-        return array[startIndex] << 24 | (array[startIndex + 1] & 0xFF) << 16
-                | (array[startIndex + 2] & 0xFF) << 8 | (array[startIndex + 3] & 0xFF);
+        return new VSockAddress(addr.getCid(), addr.getPort());
     }
 
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
@@ -383,18 +398,6 @@ public final class LinuxSocket extends Socket {
 
     public static LinuxSocket newSocket(int fd) {
         return new LinuxSocket(fd);
-    }
-
-    public static LinuxSocket newVSockStream() {
-        return new LinuxSocket(newVSockStream0());
-    }
-
-    static int newVSockStream0() {
-        int res = newVSockStreamFd();
-        if (res < 0) {
-            throw new ChannelException(newIOException("newVSockStream", res));
-        }
-        return res;
     }
 
     public static LinuxSocket newSocketStream(boolean ipv6) {
@@ -437,6 +440,10 @@ public final class LinuxSocket extends Socket {
         return newSocketDgram(isIPv6Preferred());
     }
 
+    public static LinuxSocket newSocketVSock() {
+        return new LinuxSocket(newVSockStream1());
+    }
+
     public static LinuxSocket newSocketDomain() {
         return new LinuxSocket(newSocketDomain0());
     }
@@ -444,12 +451,6 @@ public final class LinuxSocket extends Socket {
     public static LinuxSocket newSocketDomainDgram() {
         return new LinuxSocket(newSocketDomainDgram0());
     }
-
-    private static native int newVSockStreamFd();
-    private static native int bindVSock(int fd, int cid, int port);
-    private static native int connectVSock(int fd, int cid, int port);
-    private static native byte[] remoteVSockAddress(int fd);
-    private static native byte[] localVSockAddress(int fd);
 
     private static native void joinGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
                                          int scopeId, int interfaceIndex) throws IOException;
