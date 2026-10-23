@@ -29,6 +29,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 
@@ -203,12 +204,13 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+            if (channel == null) {
+                // There is no child channel for this stream, e.g. a pushed stream that was reset before its
+                // HEADERS were received.
+                ReferenceCountUtil.release(msg);
+                return;
+            }
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
-                if (channel == null) {
-                    // There is no child channel for this stream, e.g. a pushed stream that was reset before
-                    // its HEADERS were received.
-                    return;
-                }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
                 channel.fireChildUserEventTriggered(msg);
