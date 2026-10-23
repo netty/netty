@@ -711,7 +711,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private MqttSubAckPayload decodeSubackPayload(
             ByteBuf buffer, int maxAllowedRemainingBytes) {
         int bytesRemainingInVariablePart = this.bytesRemainingInVariablePart;
-        final List<Integer> grantedQos = new ArrayList<Integer>(bytesRemainingInVariablePart);
+        final List<Integer> grantedQos = new ArrayList<Integer>();
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             checkMaxMessageLengthRemaining(--maxAllowedRemainingBytes);
@@ -727,7 +727,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private MqttUnsubAckPayload decodeUnsubAckPayload(
         ByteBuf buffer, int maxAllowedRemainingBytes) {
         int bytesRemainingInVariablePart = this.bytesRemainingInVariablePart;
-        final List<Short> reasonCodes = new ArrayList<Short>(bytesRemainingInVariablePart);
+        final List<Short> reasonCodes = new ArrayList<Short>();
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             checkMaxMessageLengthRemaining(--maxAllowedRemainingBytes);
