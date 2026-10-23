@@ -48,7 +48,7 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
         encoder.encode(msg, out);
 
         // Now fill in the correct length based on the amount of data that we wrote the ByteBuf.
-        out.setShort(0, out.readableBytes() - 2);
+        DnsCodecUtil.setTcpMessageLength(out);
     }
 
     @Override
