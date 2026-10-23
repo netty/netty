@@ -25,6 +25,10 @@ import java.util.List;
 
 /**
  * Configuration for TLS1.3 certificate compression extension.
+ * When no configuration is specified, zlib compression is enabled in both directions with BoringSSL and AWS-LC.
+ * Use an empty configuration to disable it. The {@code jdk.tls.client.disableExtensions} and
+ * {@code jdk.tls.server.disableExtensions} system properties can disable the default for the corresponding side,
+ * but an explicit configuration takes precedence.
  */
 public final class OpenSslCertificateCompressionConfig implements
         Iterable<OpenSslCertificateCompressionConfig.AlgorithmConfig> {

@@ -58,6 +58,12 @@ public abstract class WebSocketServerHandshaker {
 
     private final String uri;
 
+    private final boolean isSecure;
+
+    private final String host;
+
+    private final String path;
+
     private final String[] subprotocols;
 
     private final WebSocketVersion version;
@@ -109,16 +115,35 @@ public abstract class WebSocketServerHandshaker {
             WebSocketVersion version, String uri, String subprotocols, WebSocketDecoderConfig decoderConfig) {
         this.version = version;
         this.uri = uri;
+        this.isSecure = false;
+        this.host = null;
+        this.path = null;
+        this.subprotocols = parseSubprotocols(subprotocols);
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+    }
+
+    // Package-private: defers URI construction to avoid String allocation.
+    WebSocketServerHandshaker(
+            WebSocketVersion version, boolean isSecure, String host, String path,
+            String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        this.version = version;
+        this.uri = null;
+        this.isSecure = isSecure;
+        this.host = host;
+        this.path = path;
+        this.subprotocols = parseSubprotocols(subprotocols);
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+    }
+
+    private static String[] parseSubprotocols(String subprotocols) {
         if (subprotocols != null) {
             String[] subprotocolArray = subprotocols.split(",");
             for (int i = 0; i < subprotocolArray.length; i++) {
                 subprotocolArray[i] = subprotocolArray[i].trim();
             }
-            this.subprotocols = subprotocolArray;
-        } else {
-            this.subprotocols = EmptyArrays.EMPTY_STRINGS;
+            return subprotocolArray;
         }
-        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        return EmptyArrays.EMPTY_STRINGS;
     }
 
     /**
@@ -126,7 +151,10 @@ public abstract class WebSocketServerHandshaker {
      */
     @Deprecated
     public String uri() {
-        return uri;
+        if (uri != null) {
+            return uri;
+        }
+        return (isSecure ? "wss" : "ws") + "://" + host + path;
     }
 
     /**
