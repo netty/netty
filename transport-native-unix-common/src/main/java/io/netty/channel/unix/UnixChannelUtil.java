@@ -17,9 +17,16 @@ package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import static io.netty.channel.unix.Limits.IOV_MAX;
 
@@ -38,6 +45,30 @@ public final class UnixChannelUtil {
 
     static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf, int iovMax) {
         return !byteBuf.hasMemoryAddress() && (!byteBuf.isDirect() || byteBuf.nioBufferCount() > iovMax);
+    }
+
+    /**
+     * Delete the file at {@code path} but only if it is not a regular file, directory or symbolic link (i.e. it is
+     * a socket inode as left behind by a bound domain socket). Symbolic links are never followed.
+     *
+     * @return {@code true} if the file was deleted.
+     */
+    public static boolean deleteDomainSocketFile(String path) {
+        try {
+            Path file = Paths.get(path);
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class,
+                    LinkOption.NOFOLLOW_LINKS);
+            if (!attrs.isOther()) {
+                return false;
+            }
+            Files.delete(file);
+            return true;
+        } catch (IOException ignore) {
+            return false;
+        } catch (InvalidPathException ignore) {
+            // For example abstract namespace addresses, which have no file system presence.
+            return false;
+        }
     }
 
     public static InetSocketAddress computeRemoteAddr(InetSocketAddress remoteAddr, InetSocketAddress osRemoteAddr) {
