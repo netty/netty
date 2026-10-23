@@ -39,8 +39,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.StandardOpenOption;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -53,6 +55,7 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -120,6 +123,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     @Test
+    private static void write(FileChannel channel, String value, long position) throws IOException {
+        ByteBuffer buffer = ByteBuffer.wrap(value.getBytes(StandardCharsets.US_ASCII));
+        while (buffer.hasRemaining()) {
+            position += channel.write(buffer, position);
+        }
+    }
+
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -186,16 +196,16 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         File file = PlatformDependent.createTempFile("netty-", ".tmp", null);
         file.deleteOnExit();
-        // Use a sparse file (when the file system supports it) so we don't need to write 4 GiB to the disk.
-        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
-            raf.setLength(position4GiB + 4096);
+        // The file must be created with the SPARSE option, which is only honoured together with CREATE_NEW. Otherwise
+        // some file systems (for example NTFS) zero-fill the gap on each write beyond the end of the file, which means
+        // writing 4 GiB to the disk. When the file system doesn't support sparse files the option is ignored.
+        assertTrue(file.delete());
+        try (FileChannel channel = FileChannel.open(file.toPath(),
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, StandardOpenOption.SPARSE)) {
             // Where the offset ends up if it is truncated to an int.
-            raf.seek(position4GiB & 0xFFFFFFFFL);
-            raf.write(wrong.getBytes(StandardCharsets.US_ASCII));
-            raf.seek(position2GiB);
-            raf.write(beyond2GiB.getBytes(StandardCharsets.US_ASCII));
-            raf.seek(position4GiB);
-            raf.write(beyond4GiB.getBytes(StandardCharsets.US_ASCII));
+            write(channel, wrong, position4GiB & 0xFFFFFFFFL);
+            write(channel, beyond2GiB, position2GiB);
+            write(channel, beyond4GiB, position4GiB);
         }
 
         final BlockingQueue<String> received = new LinkedBlockingQueue<String>();
