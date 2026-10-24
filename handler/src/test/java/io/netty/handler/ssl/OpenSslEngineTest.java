@@ -15,6 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.AbstractByteBufAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -998,7 +1001,126 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapHeapBufferIntoSmallerBufferCopiesEachRecordOnce(SSLEngineTestParam param) throws Exception {
+        DirectBytesCountingAllocator alloc = new DirectBytesCountingAllocator();
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, alloc);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[4 * MAX_PLAINTEXT_LENGTH];
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapIntoHeapBuffer(client, data, MAX_PLAINTEXT_LENGTH);
+
+            // The engine copies a heap buffer to direct memory to decrypt it. As the destination only has room for
+            // one record, every unwrap(...) should copy at most one full record and not all the records that are left.
+            ByteBuffer plain = ByteBuffer.allocateDirect(MAX_PLAINTEXT_LENGTH);
+            ByteBuffer received = ByteBuffer.allocate(data.length);
+            alloc.directBytes = 0;
+            int calls = 0;
+            while (enc.hasRemaining()) {
+                SSLEngineResult result = server.unwrap(enc, plain);
+                assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+                assertEquals(MAX_PLAINTEXT_LENGTH, result.bytesProduced());
+                plain.flip();
+                received.put(plain);
+                plain.clear();
+                calls++;
+            }
+            received.flip();
+            assertEquals(ByteBuffer.wrap(data), received);
+            assertThat(alloc.directBytes).isLessThanOrEqualTo(
+                    (long) calls * unwrapEngine(server).maxEncryptedPacketLength());
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapHeapBuffersCopiedInPartsInOrder(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[4 * MAX_PLAINTEXT_LENGTH];
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapIntoHeapBuffer(client, data, 256);
+            int encLength = enc.remaining();
+            ByteBuffer first = enc.duplicate();
+            first.limit(encLength - 512);
+            ByteBuffer second = enc.duplicate();
+            second.position(encLength - 512);
+
+            // The engine copies at most as many bytes of the first buffer at once as full records with the plaintext
+            // that fits would take. Small records have more overhead, so it has to copy the first buffer in parts.
+            ReferenceCountedOpenSslEngine serverEngine = unwrapEngine(server);
+            assertThat(first.remaining()).isGreaterThan(
+                    data.length + data.length / MAX_PLAINTEXT_LENGTH * serverEngine.maxWrapOverhead());
+
+            // All of the first buffer must still be decrypted before the second one.
+            ByteBuffer plain = ByteBuffer.allocateDirect(data.length);
+            SSLEngineResult result = serverEngine.unwrap(
+                    new ByteBuffer[] { first, second }, new ByteBuffer[] { plain });
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(encLength, result.bytesConsumed());
+            assertEquals(data.length, result.bytesProduced());
+            plain.flip();
+            assertEquals(ByteBuffer.wrap(data), plain);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private static final class DirectBytesCountingAllocator extends AbstractByteBufAllocator {
+        long directBytes;
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return UnpooledByteBufAllocator.DEFAULT.heapBuffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            directBytes += initialCapacity;
+            return UnpooledByteBufAllocator.DEFAULT.directBuffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
+    }
+
     private SSLEngine[] newJdkCompatibilityModeEngines(SSLEngineTestParam param) throws Exception {
+        newContexts(param);
+        return new SSLEngine[] {
+                wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT)),
+                wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT))
+        };
+    }
+
+    /**
+     * Unlike the client engine, the server engine is not in jdkCompatibilityMode, so a single
+     * {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} may decrypt several records.
+     */
+    private SSLEngine[] newEnginesWithNonJdkCompatibilityModeServer(SSLEngineTestParam param,
+                                                                    ByteBufAllocator serverAlloc) throws Exception {
+        newContexts(param);
+        return new SSLEngine[] {
+                wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT)),
+                wrapEngine(serverSslCtx.newHandler(serverAlloc).engine())
+        };
+    }
+
+    private void newContexts(SSLEngineTestParam param) throws Exception {
         SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -1014,10 +1136,24 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        return new SSLEngine[] {
-                wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT)),
-                wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT))
-        };
+    }
+
+    /**
+     * Wraps {@code data} into records of {@code recordLength} bytes of plaintext each and returns them in a heap
+     * buffer ready to be read.
+     */
+    private static ByteBuffer wrapIntoHeapBuffer(SSLEngine client, byte[] data, int recordLength)
+            throws SSLException {
+        // A record is at most getPacketBufferSize() - MAX_PLAINTEXT_LENGTH bytes longer than its plaintext.
+        int maxOverhead = client.getSession().getPacketBufferSize() - MAX_PLAINTEXT_LENGTH;
+        ByteBuffer enc = ByteBuffer.allocate(data.length / recordLength * (recordLength + maxOverhead));
+        for (int offset = 0; offset < data.length; offset += recordLength) {
+            SSLEngineResult result = client.wrap(ByteBuffer.wrap(data, offset, recordLength), enc);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(recordLength, result.bytesConsumed());
+        }
+        enc.flip();
+        return enc;
     }
 
     /**

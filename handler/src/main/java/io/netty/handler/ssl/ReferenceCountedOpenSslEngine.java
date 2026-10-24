@@ -75,6 +75,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -767,6 +768,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 
+    /**
+     * It is assumed this method is called in a synchronized block!
+     * <br>
+     * Calculates how many encrypted bytes to write into the BIO at most when there is space for
+     * {@code plaintextLength} bytes of plaintext. This is at least one record of the maximum size this engine writes,
+     * longer records are written into the BIO in parts.
+     */
+    private int calculateMaxLengthForUnwrap(long plaintextLength) {
+        long records = (plaintextLength + MAX_PLAINTEXT_LENGTH - 1) / MAX_PLAINTEXT_LENGTH;
+        return (int) min(MAX_VALUE, max(maxEncryptedPacketLength0(), plaintextLength + records * maxWrapOverhead));
+    }
+
     final synchronized int sslPending() {
         return sslPending0();
     }
@@ -1313,6 +1326,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                         // stated in the SSLEngine javadocs.
                         pendingEncryptedBytes = min(packetLength, remaining);
+                        if (!src.isDirect()) {
+                            // A heap buffer is copied before it is written into the BIO. Only copy what can be
+                            // decrypted into the space left in dsts, so that the rest is not copied again by every
+                            // following call when src holds more records than dsts have room for.
+                            pendingEncryptedBytes = min(pendingEncryptedBytes,
+                                    calculateMaxLengthForUnwrap(capacity - bytesProduced));
+                        }
                         try {
                             bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
                         } catch (SSLException e) {
@@ -1389,6 +1409,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             }
                         }
 
+                        if (bioWriteCopyBuf != null && pendingEncryptedBytes == 0 && packetLength > 0 &&
+                                src.hasRemaining()) {
+                            // Only part of src was copied into the BIO and all of it was consumed, so copy the next
+                            // part of src.
+                            continue;
+                        }
                         if (++srcsOffset >= srcsEndOffset) {
                             break;
                         }

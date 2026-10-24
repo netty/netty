@@ -192,11 +192,13 @@ public class SslHandlerUnwrapBufferSizeTest {
         SslContext serverContext = newContext(receiver, true, protocol, cipher);
         SslContext clientContext = newContext(sender, false, protocol, cipher);
         AllocationRecordingAllocator recording = new AllocationRecordingAllocator();
+        // The OpenSSL engine uses its allocator to copy data from heap buffers to direct memory.
+        AllocationRecordingAllocator engineRecording = new AllocationRecordingAllocator();
         EmbeddedChannel server = new EmbeddedChannel();
         server.config().setAllocator(recording);
         server.pipeline().addLast(receiver == Engine.OPENSSL_NEW_ENGINE ?
-                new SslHandler(serverContext.newEngine(UnpooledByteBufAllocator.DEFAULT)) :
-                serverContext.newHandler(UnpooledByteBufAllocator.DEFAULT));
+                new SslHandler(serverContext.newEngine(engineRecording)) :
+                serverContext.newHandler(engineRecording));
         EmbeddedChannel client = new EmbeddedChannel(clientContext.newHandler(UnpooledByteBufAllocator.DEFAULT));
         try {
             Future<Channel> serverHandshake = server.pipeline().get(SslHandler.class).handshakeFuture();
@@ -215,6 +217,7 @@ public class SslHandlerUnwrapBufferSizeTest {
             assertTrue(serverHandshake.isSuccess(), String.valueOf(serverHandshake.cause()));
             assertTrue(clientHandshake.isSuccess(), String.valueOf(clientHandshake.cause()));
             recording.capacities.clear();
+            engineRecording.capacities.clear();
 
             byte[] data = new byte[RECORDS * MAX_PLAINTEXT_LENGTH];
             for (int i = 0; i < data.length; i++) {
@@ -244,6 +247,32 @@ public class SslHandlerUnwrapBufferSizeTest {
                 // the SSLEngine needs would show up as an additional allocation after BUFFER_OVERFLOW.
                 assertEquals(wireRecords.size(), recording.capacities.size(),
                         "unwrap allocations: " + recording.capacities);
+            }
+
+            if (receiver.isOpenSsl()) {
+                // The OpenSSL engine copies data from heap buffers to direct memory to decrypt it. It should only copy
+                // what it can decrypt into the buffer it is given, and not copy all the rest of a read again for
+                // every record in it. When a read completes a record that the engine holds the start of from an
+                // earlier read, it doesn't know how much of the record is left and may copy more of the read than it
+                // consumes: at most the read or one full record, once for the unwrap(...) that completes the record
+                // and once more for the next one if its plaintext didn't fit. Every unwrap(...) may also copy up to
+                // maxWrapOverhead bytes more than the records it consumes.
+                ReferenceCountedOpenSslEngine engine =
+                        (ReferenceCountedOpenSslEngine) server.pipeline().get(SslHandler.class).engine();
+                long wireBytes = 0;
+                for (int length : wireRecords) {
+                    wireBytes += length;
+                }
+                long copied = 0;
+                for (int capacity : engineRecording.capacities) {
+                    copied += capacity;
+                }
+                long reads = readSize == 0 ? wireRecords.size() : (wireBytes + readSize - 1) / readSize;
+                long maxExtraPerRecord = readSize == 0 ? engine.maxEncryptedPacketLength() :
+                        Math.min(readSize, engine.maxEncryptedPacketLength());
+                assertThat(copied).isLessThanOrEqualTo(wireBytes +
+                        2 * Math.min(reads, wireRecords.size()) * maxExtraPerRecord +
+                        (long) wireRecords.size() * engine.maxWrapOverhead());
             }
         } finally {
             client.finishAndReleaseAll();
