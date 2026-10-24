@@ -196,6 +196,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024;
 
+    /**
+     * The JDK {@link SSLEngine} requires at least {@code packetLength - 5 - 16} bytes of space in the destination
+     * buffer to unwrap a record, no matter which cipher suite is used: every {@code estimateFragmentSize(...)} in
+     * {@code sun.security.ssl.SSLCipher} subtracts at least the 5 byte record header and 16 bytes of tag or MAC.
+     */
+    private static final int JDK_MIN_UNWRAP_OVERHEAD = 5 + 16;
+
     private enum SslEngineType {
         TCNATIVE(true, COMPOSITE_CUMULATOR) {
             @Override
@@ -241,6 +248,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             int calculatePendingData(SslHandler handler, int guess) {
                 int sslPending = ((ReferenceCountedOpenSslEngine) handler.engine).sslPending();
                 return sslPending > 0 ? sslPending : guess;
+            }
+
+            @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // OpenSSL / BoringSSL reject records with more than MAX_PLAINTEXT_LENGTH bytes of plaintext, and
+                // ReferenceCountedOpenSslEngine.unwrap(...) does not ask for more space than that.
+                return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
             @Override
@@ -290,6 +304,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             int calculatePendingData(SslHandler handler, int guess) {
                 return guess;
+            }
+
+            @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // Conscrypt is always used in jdkCompatibilityMode, so length is one full record. Its engine does not
+                // compare the length of a record with the capacity of the destination, and decrypts at most
+                // MAX_PLAINTEXT_LENGTH bytes from it.
+                return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
             @Override
@@ -366,6 +388,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // The JDK SSLEngine is always used in jdkCompatibilityMode, so length is one full record. Space for
+                // the plaintext is enough, but the engine also wants room for everything but the header and the
+                // tag / MAC (which includes the TLSv1.3 content type byte). Use whichever is larger.
+                return length <= MAX_PLAINTEXT_LENGTH ? length : Math.max(MAX_PLAINTEXT_LENGTH,
+                        length - JDK_MIN_UNWRAP_OVERHEAD);
+            }
+
+            @Override
             boolean jdkCompatibilityMode(SSLEngine engine) {
                 return true;
             }
@@ -384,6 +415,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException;
 
         abstract int calculatePendingData(SslHandler handler, int guess);
+
+        /**
+         * Returns the capacity of the first buffer to unwrap {@code length} bytes of inbound data into. This can be
+         * smaller than {@code length} as the cipher overhead of a record does not end up in the plaintext. If the
+         * buffer is too small anyway, {@link #unwrap(ChannelHandlerContext, ByteBuf, int)} handles the resulting
+         * {@link Status#BUFFER_OVERFLOW} by allocating a larger one.
+         */
+        abstract int calculateInitialUnwrapBufSize(SslHandler handler, int length);
 
         abstract boolean jdkCompatibilityMode(SSLEngine engine);
 
@@ -1491,7 +1530,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         boolean wrapLater = false;
         boolean notifyClosure = false;
         boolean executedRead = false;
-        ByteBuf decodeOut = allocate(ctx, length);
+        ByteBuf decodeOut = allocate(ctx, engineType.calculateInitialUnwrapBufSize(this, length));
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
@@ -1582,7 +1621,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     break;
                 } else if (decodeOut == null) {
-                    decodeOut = allocate(ctx, length);
+                    decodeOut = allocate(ctx, engineType.calculateInitialUnwrapBufSize(this, length));
                 }
             } while (!ctx.isRemoved());
 
