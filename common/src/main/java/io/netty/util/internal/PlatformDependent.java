@@ -215,7 +215,7 @@ public final class PlatformDependent {
                     // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
                     // but we cannot use "shared" arenas due to JDK bugs.
                     // If the "linker" implementation is supported, then we have native access permissions
-                    // in the "io.netty.common" module, and we can link directly to malloc() and free() from libc.
+                    // in the "io.netty.common" module, and we can link directly to the process' malloc() and free().
                     LEGACY_CLEANER = new CleanerJava24Linker();
                 } else if (CleanerJava25.isSupported()) {
                     // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
@@ -265,16 +265,19 @@ public final class PlatformDependent {
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
 
-        boolean jfrAvailable;
+        // Read the property first, so that disabling JFR support keeps Netty away from jdk.jfr entirely.
+        boolean jfr = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", true);
         Throwable jfrFailure = null;
-        try {
-            //noinspection Since15
-            jfrAvailable = FlightRecorder.isAvailable();
-        } catch (Throwable t) {
-            jfrFailure = t;
-            jfrAvailable = false;
+        if (jfr) {
+            try {
+                //noinspection Since15
+                jfr = FlightRecorder.isAvailable();
+            } catch (Throwable t) {
+                jfrFailure = t;
+                jfr = false;
+            }
         }
-        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
+        JFR = jfr;
         if (logger.isTraceEnabled() && jfrFailure != null) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
         } else if (logger.isDebugEnabled()) {
@@ -1288,16 +1291,44 @@ public final class PlatformDependent {
             if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
                 return new MpscChunkedArrayQueue<T>(chunkSize, capacity);
             }
-            return hasJctoolsVarHandle() ? new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity)
-                    : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscChunkedQueue(chunkSize, capacity) :
+                    new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
             if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
                 return new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE);
             }
-            return hasJctoolsVarHandle() ? new MpscUnboundedVarHandleArrayQueue<T>(MPSC_CHUNK_SIZE)
-                    : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscUnboundedQueue(MPSC_CHUNK_SIZE) :
+                    new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+        }
+    }
+
+    private static final class VarHandleQueueHolder {
+        static <T> Queue<T> newMpscChunkedQueue(final int chunkSize, final int capacity) {
+            return new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity);
+        }
+
+        static <T> Queue<T> newMpscUnboundedQueue(final int chunkSize) {
+            return new MpscUnboundedVarHandleArrayQueue<T>(chunkSize);
+        }
+
+        static <T> Queue<T> newSpscQueue() {
+            return new SpscLinkedVarHandleQueue<T>();
+        }
+
+        static <T> Queue<T> newFixedMpscQueue(final int capacity) {
+            return new MpscVarHandleArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpscUnpaddedQueue(final int capacity) {
+            return new MpscVarHandleUnpaddedArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpmcQueue(final int capacity) {
+            return new MpmcVarHandleArrayQueue<T>(capacity);
         }
     }
 
@@ -1335,7 +1366,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new SpscLinkedQueue<T>();
         }
-        return hasJctoolsVarHandle() ? new SpscLinkedVarHandleQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newSpscQueue() :
+                new SpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -1346,7 +1379,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpscArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpscVarHandleArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscQueue(capacity) :
+                new MpscAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1358,8 +1393,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpscUnpaddedArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpscVarHandleUnpaddedArrayQueue<T>(capacity)
-                : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscUnpaddedQueue(capacity) :
+                new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**
@@ -1370,7 +1406,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpmcArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpmcVarHandleArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpmcQueue(capacity) :
+                new MpmcAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1414,22 +1452,29 @@ public final class PlatformDependent {
         if (javaVersion() >= 10) {
             PlatformDependent0.splittableRandomNextBytes(rng, data);
         } else {
-            int i = 0;
-            int len = data.length;
-            int longs = len >>> 3;
-            while (longs-- > 0) {
-                long val = rng.nextLong();
-                for (int j = 0; j < Long.BYTES; j++) {
-                    data[i++] = (byte) val;
-                    val = val >>> Byte.SIZE;
-                }
+            splittableRandomNextBytesFallback(rng, data);
+        }
+    }
+
+    /**
+     * Fills {@code data} the way {@code SplittableRandom.nextBytes(byte[])} (Java 10+) does.
+     */
+    static void splittableRandomNextBytesFallback(SplittableRandom rng, byte[] data) {
+        int i = 0;
+        int len = data.length;
+        int longs = len >>> 3;
+        while (longs-- > 0) {
+            long val = rng.nextLong();
+            for (int j = 0; j < Long.BYTES; j++) {
+                data[i++] = (byte) val;
+                val = val >>> Byte.SIZE;
             }
-            if (i < len) {
-                long val = rng.nextLong();
-                for (; i < len; i++) {
-                    data[i++] = (byte) val;
-                    val = val >>> Byte.SIZE;
-                }
+        }
+        if (i < len) {
+            long val = rng.nextLong();
+            for (; i < len; i++) {
+                data[i] = (byte) val;
+                val = val >>> Byte.SIZE;
             }
         }
     }

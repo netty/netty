@@ -399,6 +399,29 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
+    public void testDictionaryMismatchThrowsDecompressionException() {
+        Deflater deflater = new Deflater();
+        byte[] compressed = new byte[64];
+        int length;
+        try {
+            deflater.setDictionary("some dictionary".getBytes(CharsetUtil.UTF_8));
+            deflater.setInput("hello".getBytes(CharsetUtil.UTF_8));
+            deflater.finish();
+            length = deflater.deflate(compressed);
+            assertTrue(deflater.finished());
+        } finally {
+            deflater.end();
+        }
+
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new JdkZlibDecoder("another dictionary".getBytes(CharsetUtil.UTF_8), 0));
+        final ByteBuf input = Unpooled.wrappedBuffer(compressed, 0, length);
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(input));
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, channel::finishAndReleaseAll);
+    }
+
+    @Test
     void testAllowDefaultCompression() {
         assertDoesNotThrow(() -> new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION));
     }
@@ -437,6 +460,26 @@ public class JdkZlibTest extends ZlibTest {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
         ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testGzipInvalidSecondMagicByteThrows() throws Exception {
+        byte[] data = "hello gzip".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        // Replace ID2 (0x8b) of the header.
+        compressed[1] = 0;
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertThrows(DecompressionException.class, () -> {
+            ch.writeInbound(Unpooled.wrappedBuffer(compressed));
+        });
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, ch::finishAndReleaseAll);
     }
 
     @Test

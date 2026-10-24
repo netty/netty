@@ -36,6 +36,8 @@ final class GroupsConverter {
                 return "X25519";
             case "x448":
                 return "X448";
+            case "x25519mlkem768":
+            // Misspelled alias that shipped in earlier releases; keep it so existing configurations don't break.
             case "x25519mlkem786":
                 return "X25519MLKEM768";
             default:

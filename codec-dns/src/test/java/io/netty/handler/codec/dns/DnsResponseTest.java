@@ -21,6 +21,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsResponseTest {
 
@@ -125,5 +127,39 @@ public class DnsResponseTest {
         } finally {
             assertFalse(embedder.finish());
         }
+    }
+
+    @Test
+    public void rejectTooManyRecordsInResponse() {
+        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        for (int section = 0; section < 4; section++) {
+            final EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
+            final ByteBuf packet = newHeader(embedder, 0x8000, section, DnsCodecUtil.MAX_RECORDS_PER_SECTION + 1);
+            try {
+                assertThrows(TooLongFrameException.class,
+                        () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
+            } finally {
+                assertFalse(embedder.finish());
+            }
+        }
+    }
+
+    @Test
+    public void acceptMaxRecordsInResponse() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
+        // No records follow the header, so the response is considered truncated but must not be rejected.
+        ByteBuf packet = newHeader(embedder, 0x8000, 1, DnsCodecUtil.MAX_RECORDS_PER_SECTION);
+        assertTrue(embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
+        ((DatagramDnsResponse) embedder.readInbound()).release();
+        assertFalse(embedder.finish());
+    }
+
+    private static ByteBuf newHeader(EmbeddedChannel channel, int flags, int section, int count) {
+        ByteBuf buf = channel.alloc().buffer(12);
+        buf.writeShort(1).writeShort(flags);
+        for (int i = 0; i < 4; i++) {
+            buf.writeShort(i == section ? count : 0);
+        }
+        return buf;
     }
 }

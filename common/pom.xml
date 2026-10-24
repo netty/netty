@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.19.Final-SNAPSHOT</version>
+    <version>4.2.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -152,6 +152,17 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- The ProcessHandle compile-time stub lives in java.lang and must
+               not be visible to Surefire's forked JVM on Java 8. -->
+          <classpathDependencyExcludes>
+            <classpathDependencyExclude>io.netty:netty-varhandle-stub</classpathDependencyExclude>
+          </classpathDependencyExcludes>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>

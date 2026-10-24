@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.19.Final-SNAPSHOT</version>
+    <version>4.2.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport</artifactId>
@@ -33,6 +33,12 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-varhandle-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
@@ -96,6 +102,17 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- The ProcessHandle compile-time stub lives in java.lang and must
+               not be visible to Surefire's forked JVM on Java 8. -->
+          <classpathDependencyExcludes>
+            <classpathDependencyExclude>io.netty:netty-varhandle-stub</classpathDependencyExclude>
+          </classpathDependencyExcludes>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>

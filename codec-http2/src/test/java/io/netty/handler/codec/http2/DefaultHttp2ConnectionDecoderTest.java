@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
@@ -400,6 +401,36 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         });
         data.release();
+    }
+
+    @Test
+    public void dataReadForReservedRemoteStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_REMOTE);
+    }
+
+    @Test
+    public void dataReadForReservedLocalStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_LOCAL);
+    }
+
+    private void dataReadForReservedStreamShouldThrowConnectionError(Http2Stream.State state) throws Exception {
+        when(stream.state()).thenReturn(state);
+        final ByteBuf data = dummyData();
+        try {
+            Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+                }
+            });
+            assertThat(ex).isNotInstanceOf(Http2Exception.StreamException.class);
+            assertEquals(PROTOCOL_ERROR, ex.error());
+            verify(localFlow).receiveFlowControlledFrame(eq(stream), eq(data), eq(10), eq(true));
+            verify(localFlow).consumeBytes(eq(stream), eq(data.readableBytes() + 10));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
     }
 
     @Test
@@ -962,6 +993,24 @@ public class DefaultHttp2ConnectionDecoderTest {
         dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(headers), eq(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"abc", "1,2", "99999999999999999999"})
+    public void testPromiseWithInvalidContentLength(String contentLength) throws Exception {
+        final Http2FrameListener dec = decode();
+        final Http2Headers headers = new DefaultHttp2Headers(false)
+                .method("GET").scheme("https").authority("example.org").path("/")
+                .set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(ex));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
     @Test
