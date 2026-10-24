@@ -95,7 +95,8 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
-                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The written data is removed once the connect is complete.
+                        fastOpenDataSent(outbound, initialData, Math.abs(bytesSent));
                         // The `connectx` method returns a negative number if connection is in-progress.
                         // So we should return `true` to indicate that connection was established, if it's positive.
                         return bytesSent > 0;
