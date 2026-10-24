@@ -17,6 +17,8 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 RUN yum -y install epel-release
 
 # Install requirements. golang, ninja-build and perl are needed to build boringssl for codec-native-quic.
+# patchelf is what drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries,
+# which is what makes them loadable under musl; see codec-native-quic/pom.xml.
 RUN yum install -y \
  apr-devel \
  autoconf \
@@ -33,6 +35,7 @@ RUN yum install -y \
  ninja-build \
  make \
  openssl-devel \
+ patchelf \
  perl \
  tar \
  unzip \
