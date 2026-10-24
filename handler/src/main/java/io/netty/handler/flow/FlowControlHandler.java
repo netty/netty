@@ -96,6 +96,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int unsatisfiedReads;
 
     /**
+     * {@code true} if a manual {@code read()} is currently in progress.
+     * Prevents duplicate read-requests sent to upstream if auto-read is disabled.
+     */
+    private boolean manualReading;
+
+    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
@@ -172,9 +178,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
         boolean dequeued = dequeue(ctx);
 
-        if (config.isAutoRead() || (dequeued && unsatisfiedReads > 0)) {
+        if (config.isAutoRead()) {
             // Forwarding `read` event unconditionally under auto-read.
             // `setAutoRead(true)` re-arms read interest with nothing but `channel.read()`.
+            manualReading = false;
+            ctx.read();
+        } else if (dequeued && unsatisfiedReads > 0 && !manualReading) {
+            manualReading = true;
             ctx.read();
         }
     }
@@ -191,11 +201,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        manualReading = false;
         if (config.isAutoRead()) {
             // Forwarding `read-complete` event unconditionally under auto-read.
             ctx.fireChannelReadComplete();
         } else if (unsatisfiedReads > 0) {
             // Upstream completed the read cycle, initiating the next one.
+            manualReading = true;
             ctx.read();
         }
     }

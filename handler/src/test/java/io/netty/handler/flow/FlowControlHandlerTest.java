@@ -853,7 +853,7 @@ public class FlowControlHandlerTest {
         channel.read();
         channel.read();
 
-        assertEquals(add(expected, "#r", "#r", "#r"), events);
+        assertEquals(add(expected, "#r"), events);
 
         channel.writeOneInbound("1");
         assertEquals(add(expected, "1"), events);
@@ -866,7 +866,7 @@ public class FlowControlHandlerTest {
         channel.read();
 
         channel.flushInbound(); // Trigger readComplete event
-        assertEquals(add(expected, "#r", "#r", "#r", "#r"), events);
+        assertEquals(add(expected, "#r"), events);
 
         channel.writeInbound("2", "3", "4");
         assertEquals(add(expected, "2", "3", "4", "#r"), events);
@@ -956,7 +956,7 @@ public class FlowControlHandlerTest {
 
         // We got the first message with auto-read on. It immediately satisfies the first read.
         channel.writeInbound("1"); // channelReadComplete -> autoRead == true -> #r
-        assertEquals(add(expected, "#r", "#r", "#r", "1", "#rc", "#r"), events);
+        assertEquals(add(expected, "#r", "#r", "1", "#rc", "#r"), events);
 
         channel.config().setAutoRead(false);
         channel.config().setAutoRead(true);
@@ -1311,7 +1311,9 @@ public class FlowControlHandlerTest {
                         events.add((String) msg);
                     }
                     @Override
-                    public void channelReadComplete(ChannelHandlerContext ctx) { events.add("#rc"); }
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        events.add("#rc");
+                    }
                 });
 
         ch.config().setAutoRead(false);
