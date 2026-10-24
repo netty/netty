@@ -388,16 +388,31 @@ public class HttpContentCompressor extends HttpContentEncoder {
             start = comma + 1;
         }
         if (brQ > 0.0f || zstdQ > 0.0f || snappyQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {
-                return "br";
-            } else if (zstdQ != -1.0f && zstdQ >= snappyQ && this.zstdOptions != null) {
-                return "zstd";
-            } else if (snappyQ != -1.0f && snappyQ >= gzipQ && this.snappyOptions != null) {
-                return "snappy";
-            } else if (gzipQ != -1.0f && gzipQ >= deflateQ && this.gzipOptions != null) {
-                return "gzip";
-            } else if (deflateQ != -1.0f && this.deflateOptions != null) {
-                return "deflate";
+            // Use the configured encoding with the highest qvalue. A qvalue of 0 means "not acceptable"
+            // (RFC 9110 12.4.2). If the qvalues are equal, prefer br, zstd, snappy, gzip and deflate in this order.
+            String encoding = null;
+            float q = 0.0f;
+            if (brQ > q && this.brotliOptions != null) {
+                encoding = "br";
+                q = brQ;
+            }
+            if (zstdQ > q && this.zstdOptions != null) {
+                encoding = "zstd";
+                q = zstdQ;
+            }
+            if (snappyQ > q && this.snappyOptions != null) {
+                encoding = "snappy";
+                q = snappyQ;
+            }
+            if (gzipQ > q && this.gzipOptions != null) {
+                encoding = "gzip";
+                q = gzipQ;
+            }
+            if (deflateQ > q && this.deflateOptions != null) {
+                encoding = "deflate";
+            }
+            if (encoding != null) {
+                return encoding;
             }
         }
         if (starQ > 0.0f) {

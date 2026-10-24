@@ -40,6 +40,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -51,6 +52,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.charset.StandardCharsets;
 
@@ -131,6 +134,39 @@ public class HttpContentCompressorTest {
             final String targetEncoding = compressor.determineEncoding(acceptEncoding);
             assertEquals(expectedEncoding, targetEncoding);
         }
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource(delimiter = '|', value = {
+            "snappy;q=0, deflate | deflate",
+            "snappy;q=0, gzip;q=0, deflate | deflate",
+            "gzip, deflate, snappy;q=0 | gzip",
+            "snappy;q=0.1, gzip | gzip",
+            "snappy;q=0.1, deflate;q=0.5 | deflate",
+            "snappy;q=0.2, gzip;q=0.5, deflate;q=0.3 | gzip",
+            "snappy, gzip | snappy",
+            "gzip, snappy | snappy",
+            "snappy;q=0, *;q=0.5 | gzip",
+    })
+    public void testDetermineEncodingHonoursQValues(String acceptEncoding, String expectedEncoding) {
+        HttpContentCompressor compressor = new HttpContentCompressor(StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate(), StandardCompressionOptions.snappy());
+        assertEquals(expectedEncoding, compressor.determineEncoding(acceptEncoding));
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource(delimiter = '|', value = {
+            "br;q=0, gzip | gzip",
+            "gzip, br;q=0 | gzip",
+            "br;q=0.1, gzip | gzip",
+            "br;q=0, snappy;q=0, gzip;q=0, deflate | deflate",
+    })
+    @EnabledIf("isBrotliAvailable")
+    public void testDetermineEncodingHonoursQValuesBrotli(String acceptEncoding, String expectedEncoding) {
+        HttpContentCompressor compressor = new HttpContentCompressor(StandardCompressionOptions.brotli(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate(),
+                StandardCompressionOptions.snappy());
+        assertEquals(expectedEncoding, compressor.determineEncoding(acceptEncoding));
     }
 
     @Test
