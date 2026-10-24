@@ -61,6 +61,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -1130,6 +1131,205 @@ public class OpenSslEngineTest extends SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapRandomRecordsIntoRandomBuffersJDKCompatibilityModeOn(SSLEngineTestParam param)
+            throws Exception {
+        SSLEngine[] engines = newJdkCompatibilityModeEngines(param);
+        unwrapRandomRecordsIntoRandomBuffers(param, engines[0], engines[1]);
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapRandomRecordsIntoRandomBuffersJDKCompatibilityModeOff(SSLEngineTestParam param)
+            throws Exception {
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, UnpooledByteBufAllocator.DEFAULT);
+        unwrapRandomRecordsIntoRandomBuffers(param, engines[0], engines[1]);
+    }
+
+    /**
+     * Unwraps records of random length that are passed to the server engine in random parts, split over a random
+     * number of source buffers and unwrapped into a random number of destination buffers of random capacity. The
+     * plaintext must arrive intact, and every call that is passed all data and as much space as the engine asks for
+     * must make progress.
+     */
+    private void unwrapRandomRecordsIntoRandomBuffers(SSLEngineTestParam param, SSLEngine client, SSLEngine server)
+            throws Exception {
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+            ReferenceCountedOpenSslEngine serverEngine = unwrapEngine(server);
+            // Fixed seeds, so that a failure can be reproduced.
+            for (long seed = 0; seed < 10; seed++) {
+                unwrapRandomRecords(param.type(), seed, client, serverEngine);
+            }
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private static void unwrapRandomRecords(BufferType type, long seed, SSLEngine client,
+                                            ReferenceCountedOpenSslEngine server) throws SSLException {
+        Random random = new Random(seed);
+        int[] recordLengths = new int[1 + random.nextInt(16)];
+        int plaintextLength = 0;
+        for (int i = 0; i < recordLengths.length; i++) {
+            switch (random.nextInt(4)) {
+                case 0:
+                    recordLengths[i] = 1 + random.nextInt(64);
+                    break;
+                case 1:
+                    recordLengths[i] = 1 + random.nextInt(2048);
+                    break;
+                case 2:
+                    recordLengths[i] = MAX_PLAINTEXT_LENGTH;
+                    break;
+                default:
+                    recordLengths[i] = 1 + random.nextInt(MAX_PLAINTEXT_LENGTH);
+                    break;
+            }
+            plaintextLength += recordLengths[i];
+        }
+        byte[] plaintext = new byte[plaintextLength];
+        random.nextBytes(plaintext);
+        ByteBuffer enc = ByteBuffer.allocate(recordLengths.length * client.getSession().getPacketBufferSize());
+        for (int i = 0, offset = 0; i < recordLengths.length; offset += recordLengths[i++]) {
+            SSLEngineResult result = client.wrap(ByteBuffer.wrap(plaintext, offset, recordLengths[i]), enc);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(recordLengths[i], result.bytesConsumed());
+        }
+        enc.flip();
+        byte[] wire = new byte[enc.remaining()];
+        enc.get(wire);
+
+        ByteBuffer received = ByteBuffer.allocate(plaintextLength);
+        int consumed = 0;
+        boolean stalled = false;
+        for (int call = 0; consumed < wire.length || received.hasRemaining(); call++) {
+            String message = "seed " + seed + ", call " + call + ", consumed " + consumed + " of " + wire.length +
+                    ", received " + received.position() + " of " + plaintextLength;
+            assertThat(call).as(message).isLessThan(10000);
+
+            // After a call that made no progress, pass all data and as much space as the engine asks for.
+            int available = wire.length - consumed;
+            int length = stalled || random.nextBoolean() ? available : random.nextInt(available + 1);
+            int applicationBufferSize = server.getSession().getApplicationBufferSize();
+            ByteBuffer[] srcs = newRandomSrcs(type, random, wire, consumed, length);
+            ByteBuffer[] dsts = newRandomDsts(type, random, stalled ? applicationBufferSize : 0);
+            int[] srcPositions = positions(srcs);
+            int[] dstPositions = positions(dsts);
+            int capacity = 0;
+            for (ByteBuffer dst : dsts) {
+                capacity += dst.remaining();
+            }
+            boolean mustMakeProgress = length == available && capacity >= applicationBufferSize;
+
+            SSLEngineResult result = server.unwrap(srcs, dsts);
+            message += ", " + result;
+            assertThat(result.getStatus()).as(message).isIn(SSLEngineResult.Status.OK,
+                    SSLEngineResult.Status.BUFFER_OVERFLOW, SSLEngineResult.Status.BUFFER_UNDERFLOW);
+
+            int srcBytes = 0;
+            for (int i = 0; i < srcs.length; i++) {
+                srcBytes += srcs[i].position() - srcPositions[i];
+            }
+            assertEquals(result.bytesConsumed(), srcBytes, message);
+            int dstBytes = 0;
+            for (int i = 0; i < dsts.length; i++) {
+                ByteBuffer produced = dsts[i].duplicate();
+                produced.flip();
+                produced.position(dstPositions[i]);
+                dstBytes += produced.remaining();
+                assertThat(produced.remaining()).as(message).isLessThanOrEqualTo(received.remaining());
+                received.put(produced);
+            }
+            assertEquals(result.bytesProduced(), dstBytes, message);
+
+            consumed += result.bytesConsumed();
+            boolean progress = result.bytesConsumed() > 0 || result.bytesProduced() > 0;
+            assertTrue(progress || !mustMakeProgress, message);
+            stalled = !progress;
+        }
+        received.flip();
+        assertEquals(ByteBuffer.wrap(plaintext), received, "seed " + seed);
+    }
+
+    /**
+     * Returns {@code length} bytes of {@code data} from {@code offset}, split over random source buffers, some of
+     * which are empty, and which may start at a position other than {@code 0}.
+     */
+    private static ByteBuffer[] newRandomSrcs(BufferType type, Random random, byte[] data, int offset, int length) {
+        List<ByteBuffer> srcs = new ArrayList<ByteBuffer>();
+        int remaining = length;
+        do {
+            int part = remaining == 0 || random.nextInt(8) == 0 ? 0 :
+                    random.nextInt(4) == 0 ? remaining : 1 + random.nextInt(remaining);
+            ByteBuffer src = newRandomBuffer(type, random, part);
+            src.put(data, offset, part);
+            src.limit(src.position());
+            src.position(src.position() - part);
+            srcs.add(src);
+            offset += part;
+            remaining -= part;
+        } while (remaining > 0);
+        return srcs.toArray(new ByteBuffer[0]);
+    }
+
+    /**
+     * Returns random destination buffers, some of which are tiny or empty, with at least {@code minCapacity} bytes of
+     * space in total.
+     */
+    private static ByteBuffer[] newRandomDsts(BufferType type, Random random, int minCapacity) {
+        ByteBuffer[] dsts = new ByteBuffer[1 + random.nextInt(3)];
+        int capacity = 0;
+        for (int i = 0; i < dsts.length; i++) {
+            int dstCapacity;
+            switch (random.nextInt(5)) {
+                case 0:
+                    dstCapacity = random.nextInt(17);
+                    break;
+                case 1:
+                    dstCapacity = 1 + random.nextInt(2048);
+                    break;
+                case 2:
+                    dstCapacity = MAX_PLAINTEXT_LENGTH - 1 + random.nextInt(3);
+                    break;
+                case 3:
+                    dstCapacity = MAX_RECORD_SIZE;
+                    break;
+                default:
+                    dstCapacity = 1 + random.nextInt(4 * MAX_PLAINTEXT_LENGTH);
+                    break;
+            }
+            dsts[i] = newRandomBuffer(type, random, dstCapacity);
+            capacity += dstCapacity;
+        }
+        if (capacity < minCapacity) {
+            dsts[dsts.length - 1] = newRandomBuffer(type, random, minCapacity);
+        }
+        return dsts;
+    }
+
+    /**
+     * Returns a buffer with {@code length} bytes remaining, which starts at a random position.
+     */
+    private static ByteBuffer newRandomBuffer(BufferType type, Random random, int length) {
+        int position = random.nextInt(16);
+        boolean direct = type == BufferType.Direct || type == BufferType.Mixed && random.nextBoolean();
+        ByteBuffer buffer = direct ? ByteBuffer.allocateDirect(position + length) :
+                ByteBuffer.allocate(position + length);
+        buffer.position(position);
+        return buffer;
+    }
+
+    private static int[] positions(ByteBuffer[] buffers) {
+        int[] positions = new int[buffers.length];
+        for (int i = 0; i < buffers.length; i++) {
+            positions[i] = buffers[i].position();
+        }
+        return positions;
     }
 
     private static final class DirectBytesCountingAllocator extends AbstractByteBufAllocator {
