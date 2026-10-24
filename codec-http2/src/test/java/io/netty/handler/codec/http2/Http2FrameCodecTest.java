@@ -25,6 +25,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
@@ -292,6 +293,110 @@ public class Http2FrameCodecTest {
 
         verify(frameWriter, never()).writeRstStream(eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
         assertTrue(channel.isActive());
+    }
+
+    private Http2Headers newRequest(CharSequence method) {
+        return new DefaultHttp2Headers()
+                .method(method).scheme(HttpScheme.HTTPS.name())
+                .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
+    }
+
+    // See https://www.rfc-editor.org/rfc/rfc9113.html#section-8.1.1: a response to a HEAD request is defined to
+    // have no content, so a non-zero content-length is allowed even though no DATA is received.
+    @Test
+    public void headResponseAllowsContentLengthDataMismatch() throws Exception {
+        headResponseAllowsContentLengthDataMismatch(Http2FrameCodecBuilder.forClient());
+    }
+
+    // The HEAD-tracking property must still be found even when the encoder is wrapped, e.g. by
+    // StreamBufferingEncoder (enabled via encoderEnforceMaxConcurrentStreams).
+    @Test
+    public void headResponseAllowsContentLengthDataMismatchWithBufferedStreams() throws Exception {
+        headResponseAllowsContentLengthDataMismatch(
+                Http2FrameCodecBuilder.forClient().encoderEnforceMaxConcurrentStreams(true));
+    }
+
+    private void headResponseAllowsContentLengthDataMismatch(Http2FrameCodecBuilder builder) throws Exception {
+        setUp(builder, new Http2Settings(), false);
+        // A client does not receive the connection preface bytes, but still needs the server's initial SETTINGS
+        // to complete the handshake before any stream traffic can flow.
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        assertNotNull(inboundHandler.readInbound());
+
+        final Http2FrameStream stream = frameCodec.newStream();
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(newRequest(HttpMethod.HEAD.asciiName()), true)
+                .stream(stream)).syncUninterruptibly();
+
+        Http2Headers headResponse = new DefaultHttp2Headers()
+                .status(HttpResponseStatus.OK.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        frameInboundWriter.writeInboundHeaders(stream.id(), headResponse, 0, false);
+        frameInboundWriter.writeInboundData(stream.id(), Unpooled.EMPTY_BUFFER, 0, true);
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+        assertEquals(headResponse, headersFrame.headers());
+
+        Http2DataFrame dataFrame = inboundHandler.readInbound();
+        assertNotNull(dataFrame);
+        assertTrue(dataFrame.isEndStream());
+        dataFrame.release();
+        assertNull(inboundHandler.readInbound());
+
+        inboundHandler.checkException();
+        assertTrue(channel.isActive());
+    }
+
+    // A normal (non-HEAD, non-204/304) response must still be rejected as malformed if its content-length does
+    // not match the amount of DATA received, per https://www.rfc-editor.org/rfc/rfc9113.html#section-8.1.1.
+    @Test
+    public void nonHeadResponseContentLengthDataMismatchIsRejected() throws Exception {
+        setUp(Http2FrameCodecBuilder.forClient(), new Http2Settings(), false);
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+
+        final Http2FrameStream stream = frameCodec.newStream();
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(newRequest(HttpMethod.GET.asciiName()), true)
+                .stream(stream)).syncUninterruptibly();
+
+        Http2Headers headResponse = new DefaultHttp2Headers()
+                .status(HttpResponseStatus.OK.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        frameInboundWriter.writeInboundHeaders(stream.id(), headResponse, 0, false);
+        frameInboundWriter.writeInboundData(stream.id(), Unpooled.EMPTY_BUFFER, 0, true);
+
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertInstanceOf(StreamException.class, e.getCause());
+        assertEquals(Http2Error.PROTOCOL_ERROR, ((StreamException) e.getCause()).error());
+    }
+
+    // 204/304 responses are always defined as having no content, regardless of the request method.
+    @Test
+    public void noContentStatusResponseAllowsContentLengthDataMismatch() throws Exception {
+        setUp(Http2FrameCodecBuilder.forClient(), new Http2Settings(), false);
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        assertNotNull(inboundHandler.readInbound());
+
+        final Http2FrameStream stream = frameCodec.newStream();
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(newRequest(HttpMethod.GET.asciiName()), true)
+                .stream(stream)).syncUninterruptibly();
+
+        Http2Headers headResponse = new DefaultHttp2Headers()
+                .status(HttpResponseStatus.NO_CONTENT.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L);
+        frameInboundWriter.writeInboundHeaders(stream.id(), headResponse, 0, false);
+        frameInboundWriter.writeInboundData(stream.id(), Unpooled.EMPTY_BUFFER, 0, true);
+
+        assertNotNull(inboundHandler.readInbound());
+        Http2DataFrame dataFrame = inboundHandler.readInbound();
+        assertNotNull(dataFrame);
+        dataFrame.release();
+
+        inboundHandler.checkException();
     }
 
     @Test

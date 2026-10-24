@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
@@ -232,6 +233,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
                 promise = promise.unvoid();
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
+
+                if (!stream.isHeadersSent() && !stream.isTrailersSent()) {
+                    // This is the initial (request) HEADERS frame for the stream. Remember if it used the
+                    // HEAD method so the decoder can allow a content-length/DATA mismatch on the response.
+                    CharSequence method = headers.method();
+                    if (method != null && HttpMethod.HEAD.asciiName().contentEquals(method)) {
+                        stream.setProperty(Http2ConnectionPropertyKeys.METHOD_IS_HEAD_KEY, Boolean.TRUE);
+                    }
+                }
 
                 ChannelFuture future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
                         weight, exclusive, padding, endOfStream, promise);
