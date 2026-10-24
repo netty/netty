@@ -268,7 +268,7 @@ public final class StringUtil {
     public static int decodeHexNibble(final byte b) {
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        return HEX2B[b];
+        return HEX2B[b & 0xFF];
     }
 
     /**
