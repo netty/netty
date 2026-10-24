@@ -29,6 +29,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 
@@ -203,6 +204,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+            if (channel == null) {
+                onFrameForStreamWithoutChildChannel(ctx, streamFrame);
+                return;
+            }
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
@@ -226,6 +231,28 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         ctx.fireChannelRead(msg);
     }
 
+    private static void onFrameForStreamWithoutChildChannel(ChannelHandlerContext ctx, Http2StreamFrame frame) {
+        if (frame instanceof Http2ResetFrame || frame instanceof Http2PriorityFrame) {
+            // A promised stream has no child channel until its HEADERS are received, so it may be reset or
+            // prioritized before one exists. These frames are neither flow-controlled nor reference-counted.
+            return;
+        }
+        if (frame instanceof Http2DataFrame) {
+            Http2DataFrame data = (Http2DataFrame) frame;
+            int bytes = data.initialFlowControlledBytes();
+            data.release();
+            if (bytes > 0) {
+                // No child channel will consume these bytes, so give them back to the flow controller.
+                ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(bytes).stream(frame.stream()));
+            }
+            return;
+        }
+        ReferenceCountUtil.release(frame);
+        ChannelHandlerContext codecCtx = ctx.pipeline().context(Http2FrameCodec.class);
+        ((Http2FrameCodec) codecCtx.handler()).onError(codecCtx, false, connectionError(INTERNAL_ERROR,
+                "Received %s for stream %d which has no child channel", frame.name(), frame.stream().id()));
+    }
+
     @Override
     public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isWritable()) {
@@ -245,8 +272,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (event.type() == Http2FrameStreamEvent.Type.State) {
                 switch (stream.state()) {
                     case HALF_CLOSED_LOCAL:
-                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-                            // Ignore everything which was not caused by an upgrade
+                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isPushedStream(stream)) {
+                            // Ignore everything which was not caused by an upgrade or a server push
                             break;
                         }
                         // fall-through
@@ -269,6 +296,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                             ch.closeOutbound();
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+                            if (stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL) {
+                                // A pushed stream is half-closed (local) from the start, so we can't write to it.
+                                ch.closeOutbound();
+                            }
                         }
                         ChannelFuture future = ctx.channel().eventLoop().register(ch);
                         if (future.isDone()) {
@@ -316,6 +347,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             Http2FrameStream stream = exception.stream();
             AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
+            if (childChannel == null) {
+                // The stream has no child channel yet, e.g. a promised stream whose HEADERS were malformed.
+                ctx.fireExceptionCaught(cause);
+                return;
+            }
             try {
                 childChannel.fireChildExceptionCaught(cause.getCause());
             } finally {
@@ -343,7 +379,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             public boolean visit(Http2FrameStream stream) {
                 AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                         ((DefaultHttp2FrameStream) stream).attachment;
-                childChannel.fireChildExceptionCaught(cause);
+                if (childChannel != null) {
+                    childChannel.fireChildExceptionCaught(cause);
+                }
                 return true;
             }
         });
@@ -351,6 +389,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     private static boolean isServer(ChannelHandlerContext ctx) {
         return ctx.channel().parent() instanceof ServerChannel;
+    }
+
+    private boolean isPushedStream(Http2FrameStream stream) {
+        // On the client side only pushed streams are initiated by the server (even stream ids).
+        return !isServerCodec() && Http2CodecUtil.isStreamIdValid(stream.id(), true);
     }
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
@@ -368,7 +411,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                         final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                                 ((DefaultHttp2FrameStream) stream).attachment;
-                        childChannel.fireChildUserEventTriggered(goAwayFrame.retainedDuplicate());
+                        if (childChannel != null) {
+                            childChannel.fireChildUserEventTriggered(goAwayFrame.retainedDuplicate());
+                        }
                     }
                     return true;
                 }
