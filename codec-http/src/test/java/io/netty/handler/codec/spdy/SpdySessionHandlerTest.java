@@ -359,7 +359,7 @@ public class SpdySessionHandlerTest {
     }
 
     @Test
-    public void testDataFrameExceedingSessionWindowIsReleased() {
+    public void testDataFrameExceedingSessionWindowIsReleased() throws Exception {
         EmbeddedChannel sessionHandler = new EmbeddedChannel(new SpdySessionHandler(SpdyVersion.SPDY_3_1, true));
         sessionHandler.writeInbound(new DefaultSpdySynStreamFrame(1, 0, (byte) 0));
 
