@@ -326,13 +326,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     /**
-     * Validates that request-only pseudo-headers do not appear in response contexts and
-     * response only pseudo-headers (:status) do not appear in request contexts (RFC 9113 Section 8.3).
+     * Validates that pseudo-headers are defined and are used in the correct
+     * endpoint direction (RFC 9113, Sections 8.1.1 and 8.3).
      *
-     * @param isServer
-     * @param streamId
-     * @param headers
-     * @throws Http2Exception
+     * @param isServer true if processing an inbound request on the server
+     * @param streamId the target HTTP/2 stream ID
+     * @param headers  the HTTP/2 headers container
+     * @throws Http2Exception if a pseudo-header is undefined or used in the
+     *                        wrong endpoint direction
      */
     private static void validatePseudoHeadersDirection(boolean isServer, int streamId, Http2Headers headers)
             throws Http2Exception {
@@ -340,14 +341,18 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             CharSequence name = entry.getKey();
             if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                 PseudoHeaderName pseudo = PseudoHeaderName.getPseudoHeader(name);
-                if (pseudo != null) {
-                    if (isServer && pseudo == PseudoHeaderName.STATUS) {
-                        throw streamError(streamId, PROTOCOL_ERROR,
-                                          "Response-only pseudo-header '%s' received in request.", name);
-                    } else if (!isServer && pseudo.isRequestOnly()) {
-                        throw streamError(streamId, PROTOCOL_ERROR,
-                                          "Request-only pseudo-header '%s' received in response.", name);
-                    }
+                if (pseudo == null) {
+                    // Undefined pseudo header
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Undefined pseudo-header '%s' received.", name);
+                }
+                if (isServer && !pseudo.isRequestOnly()) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Response-only pseudo-header '%s' received in request.", name);
+                }
+                if (!isServer && pseudo.isRequestOnly()) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Request-only pseudo-header '%s' received in response.", name);
                 }
             } else {
                 //Pseudo-headers MUST precede regular headers, so we can stop checking
