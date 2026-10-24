@@ -217,7 +217,6 @@
         <maven.compiler.release>8</maven.compiler.release>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -237,7 +236,6 @@
         <maven.compiler.release>8</maven.compiler.release>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -257,7 +255,6 @@
         <maven.compiler.release>8</maven.compiler.release>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -278,7 +275,6 @@
         <maven.compiler.release>8</maven.compiler.release>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -294,7 +290,6 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -310,7 +305,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -327,7 +321,6 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -344,7 +337,6 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -361,7 +353,6 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -662,6 +653,7 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
         <skipHttp2Testsuite>true</skipHttp2Testsuite>
+        <skipH3Spec>true</skipH3Spec>
       </properties>
     </profile>
     <profile>
