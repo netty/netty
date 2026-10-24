@@ -50,7 +50,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
                                             ByteBuf content) {
         super(key, extras);
         this.content = ObjectUtil.checkNotNull(content, "content");
-        setTotalBodyLength(keyLength() + extrasLength() + content.readableBytes());
+        setTotalBodyLength((keyLength() & 0xFFFF) + (extrasLength() & 0xFF) + content.readableBytes());
     }
 
     @Override
