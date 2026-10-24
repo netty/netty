@@ -44,16 +44,17 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsResponse response, List<Object> out) throws Exception {
         ByteBuf buf = ctx.alloc().ioBuffer(1024);
-
-        buf.writerIndex(buf.writerIndex() + 2);
-        DnsMessageUtil.encodeDnsResponse(encoder, response, buf);
+        boolean success = false;
         try {
+            buf.writerIndex(buf.writerIndex() + 2);
+            DnsMessageUtil.encodeDnsResponse(encoder, response, buf);
             DnsCodecUtil.setTcpMessageLength(buf);
-        } catch (Throwable cause) {
-            buf.release();
-            throw cause;
+            out.add(buf);
+            success = true;
+        } finally {
+            if (!success) {
+                buf.release();
+            }
         }
-
-        out.add(buf);
     }
 }

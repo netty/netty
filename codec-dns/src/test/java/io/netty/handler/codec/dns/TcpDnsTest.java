@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
 
@@ -75,11 +76,16 @@ public class TcpDnsTest {
 
     @Test
     public void testResponseEncodeFailsIfMessageTooLarge() {
-        EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
-        DnsResponse response = new DefaultDnsResponse(1);
+        final EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
+        final DnsResponse response = new DefaultDnsResponse(1);
         addLargeRecords(response);
         try {
-            assertThrows(EncoderException.class, () -> channel.writeOutbound(response));
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    channel.writeOutbound(response);
+                }
+            });
             assertNull(channel.readOutbound());
         } finally {
             assertFalse(channel.finish());
@@ -88,11 +94,16 @@ public class TcpDnsTest {
 
     @Test
     public void testQueryEncodeFailsIfMessageTooLarge() {
-        EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsQueryEncoder());
-        DnsQuery query = new DefaultDnsQuery(1, DnsOpCode.QUERY);
+        final EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsQueryEncoder());
+        final DnsQuery query = new DefaultDnsQuery(1, DnsOpCode.QUERY);
         addLargeRecords(query);
         try {
-            assertThrows(EncoderException.class, () -> channel.writeOutbound(query));
+            assertThrows(EncoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    channel.writeOutbound(query);
+                }
+            });
             assertNull(channel.readOutbound());
         } finally {
             assertFalse(channel.finish());
