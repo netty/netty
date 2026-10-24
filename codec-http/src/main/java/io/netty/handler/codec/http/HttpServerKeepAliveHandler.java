@@ -113,7 +113,8 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
      */
     private static boolean isSelfDefinedMessageLength(HttpResponse response) {
         return isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(response) ||
-               isInformational(response) || response.status().code() == HttpResponseStatus.NO_CONTENT.code();
+               isInformational(response) || response.status().code() == HttpResponseStatus.NO_CONTENT.code() ||
+               response.status().code() == HttpResponseStatus.NOT_MODIFIED.code();
     }
 
     private static boolean isInformational(HttpResponse response) {
