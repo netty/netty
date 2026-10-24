@@ -83,6 +83,13 @@ class HttpDataTest {
         assertThat(duplicate.release()).isTrue();
     }
 
+    @ParameterizedHttpDataTest
+    void testSetContentEmptyBufferCompletes(HttpData httpData) throws IOException {
+        httpData.setContent(Unpooled.EMPTY_BUFFER);
+        assertThat(httpData.isCompleted()).isTrue();
+        httpData.delete();
+    }
+
     @Test
     void testAddContentExceedsDefinedSizeDiskFileUpload() {
         doTestAddContentExceedsSize(
