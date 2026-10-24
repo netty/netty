@@ -47,8 +47,14 @@
     "condition": {
       "typeReachable": "io.netty.channel.epoll.Native"
     },
+    "name":"io.netty.channel.unix.ControlMessageStaticallyReferencedJniMethods"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
     "name":"io.netty.channel.unix.DatagramSocketAddress",
-    "methods":[{"name":"<init>","parameterTypes":["byte[]","int","int","int","io.netty.channel.unix.DatagramSocketAddress"] }]
+    "methods":[{"name":"<init>","parameterTypes":["byte[]","int","int","int","int","io.netty.channel.unix.DatagramSocketAddress"] }]
   },
   {
     "condition": {

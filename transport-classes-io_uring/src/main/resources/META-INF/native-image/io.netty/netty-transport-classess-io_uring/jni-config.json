@@ -34,6 +34,12 @@
     "condition": {
       "typeReachable": "io.netty.channel.uring.Native"
     },
+    "name": "io.netty.channel.unix.ControlMessageStaticallyReferencedJniMethods"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
     "name": "io.netty.channel.DefaultFileRegion",
     "allDeclaredFields": true,
     "fields": [
@@ -130,6 +136,7 @@
         "name": "<init>",
         "parameterTypes": [
           "byte[]",
+          "int",
           "int",
           "int",
           "int",

@@ -15,12 +15,14 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.unix.ControlMessageBuffer;
 import io.netty.channel.unix.IovArray;
 
 final class NativeArrays {
 
     // These are initialized on first use
     private IovArray iovArray;
+    private ControlMessageBuffer controlMessageBuffer;
 
     /**
      * Return a cleared {@link IovArray} that can be used for writes.
@@ -34,11 +36,27 @@ final class NativeArrays {
         return iovArray;
     }
 
+    /**
+     * Return a cleared {@link ControlMessageBuffer} that can be used for reads and writes.
+     */
+    ControlMessageBuffer cleanControlMessageBuffer() {
+        if (controlMessageBuffer == null) {
+            controlMessageBuffer = new ControlMessageBuffer();
+        } else {
+            controlMessageBuffer.clear();
+        }
+        return controlMessageBuffer;
+    }
+
     void free() {
         // release native memory
         if (iovArray != null) {
             iovArray.release();
             iovArray = null;
+        }
+        if (controlMessageBuffer != null) {
+            controlMessageBuffer.release();
+            controlMessageBuffer = null;
         }
     }
 }

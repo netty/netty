@@ -58,9 +58,6 @@ final class MsgHdr {
 
     static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, long iovMemory, int iovLength,
                     ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
-        int memoryPosition = memory.position();
-        memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
-
         int msgControlLen = 0;
         long msgControlAddr;
         if (segmentSize > 0 && msgControl != null && cmsgHdrDataOffset >= 0) {
@@ -72,6 +69,14 @@ final class MsgHdr {
             // Set to 0 if we not explicit requested GSO.
             msgControlAddr = 0;
         }
+        set(memory, sockAddrMemory, addressSize, iovMemory, iovLength, msgControlAddr, msgControlLen);
+    }
+
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, long iovMemory, int iovLength,
+                    long msgControlAddr, int msgControlLen) {
+        int memoryPosition = memory.position();
+        memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
+
         long sockAddr = sockAddrMemory == null ? 0 : Buffer.memoryAddress(sockAddrMemory);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, (int) sockAddr);
@@ -131,6 +136,18 @@ final class MsgHdr {
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         }
+    }
+
+    /**
+     * Returns the value of {@code msg_controllen}, which is the length of the control messages that were received
+     * once {@code recvmsg} completed.
+     */
+    static int getControlLen(ByteBuffer memory) {
+        int memoryPosition = memory.position();
+        long msgControlLen = Native.SIZEOF_SIZE_T == 4
+                ? memory.getInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN) & 0xFFFFFFFFL
+                : memory.getLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN);
+        return (int) msgControlLen;
     }
 
     static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) throws IOException {
