@@ -550,6 +550,13 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             final KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.readEOF();
 
+            // kqueue reports each filter as its own event, so the EOF may be processed before the EVFILT_WRITE event
+            // that completes the connect. Finish the connect first so the data that the remote peer sent before it
+            // closed the connection is read, and not dropped by shutting down the input.
+            if (connectPromise != null) {
+                finishConnect();
+            }
+
             if (isActive()) {
                 // If it is still active, we need to call readReady as otherwise we may miss to
                 // read pending data from the underlying file descriptor.
