@@ -1307,7 +1307,9 @@ public class FlowControlHandlerTest {
                 new FlowControlHandler(),
                 new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) { events.add((String) msg); }
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        events.add((String) msg);
+                    }
                     @Override
                     public void channelReadComplete(ChannelHandlerContext ctx) { events.add("#rc"); }
                 });
