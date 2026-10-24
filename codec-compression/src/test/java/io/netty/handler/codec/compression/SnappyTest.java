@@ -105,6 +105,51 @@ public class SnappyTest {
     }
 
     @Test
+    public void testDecodeLiteralWith4ByteLength() {
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+            0x05, // preamble length
+            (byte) (63 << 2), // literal tag + 4 byte length
+            0x04, 0x00, 0x00, 0x00, // length - 1
+            0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
+        });
+        ByteBuf out = Unpooled.buffer(5);
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 0x6e, 0x65, 0x74, 0x74, 0x79 });
+        try {
+            snappy.decode(in, out);
+            assertEquals(expected, out);
+        } finally {
+            in.release();
+            out.release();
+            expected.release();
+        }
+    }
+
+    @Test
+    public void testDecodeLiteralWith4ByteLengthThatIsTooLarge() {
+        // The length - 1 is an unsigned 32-bit integer, none of these can be handled.
+        for (final int length : new int[] { 0x7FFFFFFF, 0x80000000, 0xFFFFFFFE, 0xFFFFFFFF }) {
+            final ByteBuf in = Unpooled.buffer();
+            in.writeByte(0x05); // preamble length
+            in.writeByte(63 << 2); // literal tag + 4 byte length
+            in.writeIntLE(length);
+            in.writeZero(16);
+            final ByteBuf out = Unpooled.buffer(5);
+            try {
+                assertThrows(DecompressionException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        snappy.decode(in, out);
+                    }
+                }, "length: " + length);
+            } finally {
+                in.release();
+                out.release();
+                snappy.reset();
+            }
+        }
+    }
+
+    @Test
     public void testDecodeCopyWithOffsetBeforeChunk() {
         final ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0a, // preamble length
