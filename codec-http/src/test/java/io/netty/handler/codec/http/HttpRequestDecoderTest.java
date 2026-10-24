@@ -1134,7 +1134,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    void mustRejectChunkSizeWithNonAsciiCharacters() {
+    void mustRejectChunkSizeWithNonAsciiCharacters() throws Exception {
         String requestStr = "POST /one HTTP/1.1\r\n" +
                 "Host: localhost\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
