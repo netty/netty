@@ -17,6 +17,8 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.CleanableDirectBuffer;
@@ -31,6 +33,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -135,6 +138,26 @@ public abstract class SocketTest<T extends Socket> {
         out.flip();
         assertNotEquals(ByteBuffer.allocate(0), out);
         cleanableDirectBuffer.clean();
+    }
+
+    @Test
+    public void testSendToDomainSocketWithTooLongPath() throws IOException {
+        byte[] path = new byte[4096];
+        Arrays.fill(path, (byte) 'a');
+        path[0] = '/';
+
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(1);
+        Socket domainSocket = Socket.newSocketDomainDgram();
+        try {
+            ByteBuffer buffer = cleanableDirectBuffer.buffer();
+            // The path must be rejected instead of silently being truncated and sent to a different address.
+            NativeIoException e = assertThrows(NativeIoException.class,
+                    () -> domainSocket.sendToDomainSocket(buffer, 0, 1, path));
+            assertEquals(Errors.ERRNO_ENAMETOOLONG_NEGATIVE, e.expectedErr());
+        } finally {
+            domainSocket.close();
+            cleanableDirectBuffer.clean();
+        }
     }
 
     protected int level() {

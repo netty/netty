@@ -7,6 +7,8 @@ ARG gcc_sha256=1e33d53dea59c8de823bbdfe0798280bdcd138636c7060da9d77a97ded095a84
 ENV GCC_VERSION $gcc_version
 ENV GCC_SHA256 $gcc_sha256
 ENV SOURCE_DIR /root/source
+ENV CMAKE_VERSION_BASE=3.26
+ENV CMAKE_VERSION=$CMAKE_VERSION_BASE.4
 
 
 # Update to use the vault
@@ -14,10 +16,31 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 
 RUN yum -y install epel-release
 
-# Install requirements. patchelf is what drops the DT_NEEDED on ld-linux-<arch>.so from the
-# linked native libraries, which is what makes them loadable under musl; see
-# codec-native-quic/pom.xml.
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip patchelf
+# Install requirements. golang, ninja-build and perl are needed to build boringssl for codec-native-quic.
+# patchelf is what drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries,
+# which is what makes them loadable under musl; see codec-native-quic/pom.xml.
+RUN yum install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ bzip2 \
+ git \
+ glibc-devel \
+ golang \
+ gnupg \
+ libaio-devel \
+ libtool \
+ lksctp-tools \
+ redhat-lsb-core \
+ ninja-build \
+ make \
+ openssl-devel \
+ patchelf \
+ perl \
+ tar \
+ unzip \
+ wget \
+ zip
 
 # Downloading and installing SDKMAN!
 ARG sdkman_install_sha256=76129982e764737a5dcbab50efcf854c9688b42e7e50a8a6c7e3fa6d52782aa5
@@ -39,6 +62,9 @@ RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
+
+# Refresh the CA bundle so wget can verify the TLS chain of the download hosts.
+RUN yum update -y ca-certificates
 
 # Install aarch64 gcc 10.2 toolchain
 RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/binrel/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && \
