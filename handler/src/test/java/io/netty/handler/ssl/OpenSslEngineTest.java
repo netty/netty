@@ -1079,6 +1079,59 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapHeapBufferIntoBufferThatBufferedPlaintextFillsCopiesNothing(SSLEngineTestParam param)
+            throws Exception {
+        DirectBytesCountingAllocator alloc = new DirectBytesCountingAllocator();
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, alloc);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[2 * MAX_PLAINTEXT_LENGTH];
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapIntoHeapBuffer(client, data, MAX_PLAINTEXT_LENGTH);
+            int firstRecordLength = SslUtils.getEncryptedPacketLength(new ByteBuffer[] { enc }, 0);
+            ByteBuffer received = ByteBuffer.allocate(data.length);
+
+            // Only half of the plaintext of the first record fits, the engine keeps the rest.
+            ByteBuffer plain = ByteBuffer.allocateDirect(MAX_PLAINTEXT_LENGTH / 2);
+            SSLEngineResult result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(firstRecordLength, result.bytesConsumed());
+            assertEquals(MAX_PLAINTEXT_LENGTH / 2, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+
+            // The rest fills the destination, so nothing of the second record needs to be copied.
+            plain.clear();
+            alloc.directBytes = 0;
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(MAX_PLAINTEXT_LENGTH / 2, result.bytesProduced());
+            assertEquals(0, alloc.directBytes);
+            plain.flip();
+            received.put(plain);
+
+            int secondRecordLength = enc.remaining();
+            plain = ByteBuffer.allocateDirect(MAX_PLAINTEXT_LENGTH);
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(secondRecordLength, result.bytesConsumed());
+            assertEquals(MAX_PLAINTEXT_LENGTH, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+            received.flip();
+            assertEquals(ByteBuffer.wrap(data), received);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
     private static final class DirectBytesCountingAllocator extends AbstractByteBufAllocator {
         long directBytes;
 

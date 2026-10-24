@@ -1322,6 +1322,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             bioWriteCopyBuf = null;
                             pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                         }
+                    } else if (!src.isDirect() && sslPending0() >= capacity - bytesProduced) {
+                        // The plaintext SSL has already decrypted fills the space left in dsts, so none of src can be
+                        // consumed by this call and there is no need to copy it.
+                        bioWriteCopyBuf = null;
+                        pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                     } else {
                         // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                         // stated in the SSLEngine javadocs.
