@@ -78,6 +78,7 @@ import static org.mockito.Mockito.when;
  */
 public class DefaultHttp2ConnectionEncoderTest {
     private static final int STREAM_ID = 2;
+    private static final int PUSH_PARENT_STREAM_ID = 1;
     private static final int PUSH_STREAM_ID = 4;
 
     @Mock
@@ -427,7 +428,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void headersWriteShouldOpenStreamForPush() throws Exception {
         writeAllFlowControlledFrames();
-        Http2Stream parent = createStream(STREAM_ID, false);
+        Http2Stream parent = connection.remote().createStream(PUSH_PARENT_STREAM_ID, false);
         reservePushStream(PUSH_STREAM_ID, parent);
 
         ChannelPromise promise = newPromise();
@@ -646,11 +647,11 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void pushPromiseWriteShouldReserveStream() throws Exception {
-        createStream(STREAM_ID, false);
+        connection.remote().createStream(PUSH_PARENT_STREAM_ID, false);
         ChannelPromise promise = newPromise();
-        encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, promise);
+        encoder.writePushPromise(ctx, PUSH_PARENT_STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, promise);
         assertEquals(RESERVED_LOCAL, stream(PUSH_STREAM_ID).state());
-        verify(writer).writePushPromise(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
+        verify(writer).writePushPromise(eq(ctx), eq(PUSH_PARENT_STREAM_ID), eq(PUSH_STREAM_ID),
                 eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(promise));
     }
 
@@ -873,7 +874,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void headersWriteShouldHalfClosePushStream() throws Exception {
         writeAllFlowControlledFrames();
-        Http2Stream parent = createStream(STREAM_ID, false);
+        Http2Stream parent = connection.remote().createStream(PUSH_PARENT_STREAM_ID, false);
         Http2Stream stream = reservePushStream(PUSH_STREAM_ID, parent);
         ChannelPromise promise = newPromise();
         encoder.writeHeaders(ctx, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
