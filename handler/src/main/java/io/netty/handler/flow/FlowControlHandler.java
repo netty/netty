@@ -96,16 +96,6 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int unsatisfiedReads;
 
     /**
-     * {@code true} if a {@code read()} is currently in progress.
-     */
-    private boolean reading;
-
-    /**
-     * {@code true} if auto-read is "on" and downstream is awaiting for readComplete event.
-     */
-    private boolean autoReadComplete;
-
-    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
@@ -163,11 +153,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
-        if (!isQueueEmpty()) {
-            unsatisfiedReads = queue.size();
-            dequeue(ctx);
-            ctx.fireChannelReadComplete();
-        }
+        unsatisfiedReads = isQueueEmpty() ? 0 : queue.size();
+        dequeue(ctx);
         destroy();
     }
 
@@ -181,23 +168,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     public void read(ChannelHandlerContext ctx) throws Exception {
         if (!config.isAutoRead()) {
             unsatisfiedReads++;
-            autoReadComplete = false;
         }
 
         boolean dequeued = dequeue(ctx);
-        if (dequeuing) {
-            // make sure we are invoking post-processors in the top-most read() call.
-            return;
-        }
-        if (dequeued && unsatisfiedReads == 0) {
-            if (config.isAutoRead()) {
-                autoReadComplete = true;
-            } else {
-                // We have satisfied all reads. As such, we can complete the current read cycle.
-                ctx.fireChannelReadComplete();
-            }
-        } else if (!reading) {
-            reading = true;
+
+        if (config.isAutoRead() || (dequeued && unsatisfiedReads > 0)) {
+            // Forwarding `read` event unconditionally under auto-read.
+            // `setAutoRead(true)` re-arms read interest with nothing but `channel.read()`.
             ctx.read();
         }
     }
@@ -209,30 +186,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         }
 
         queue.offer(msg);
-
-        // If we are nested in a dequeue() call, delegating post-processing to the outermost call.
-        if (dequeue(ctx) && !dequeuing && unsatisfiedReads == 0) {
-            if (config.isAutoRead()) {
-                autoReadComplete = true;
-            } else {
-                ctx.fireChannelReadComplete();
-            }
-        }
+        dequeue(ctx);
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        reading = false;
         if (config.isAutoRead()) {
-            // When auto-read is enabled, all `read-complete` events are swallowed,
-            // except for the one followed immediately after all reads are satisfied.
-            if (autoReadComplete) {
-                autoReadComplete = false;
-                ctx.fireChannelReadComplete();
-            }
+            // Forwarding `read-complete` event unconditionally under auto-read.
+            ctx.fireChannelReadComplete();
         } else if (unsatisfiedReads > 0) {
             // Upstream completed the read cycle, initiating the next one.
-            reading = true;
             ctx.read();
         }
     }
@@ -241,29 +204,44 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * Dequeues messages while auto-read is enabled or downstream reads are unsatisfied, and updates
      * {@code unsatisfiedReads} accordingly.
      *
+     * @return {@code true} if this call was a top-level invocation, {@code false} otherwise;
+     * actually dequeued messages count could be zero.
      * @see #read(ChannelHandlerContext)
      * @see #channelRead(ChannelHandlerContext, Object)
      */
     private boolean dequeue(ChannelHandlerContext ctx) {
-        boolean didSatisfyARead = false;
-
-        boolean wasDequeuing = dequeuing;
+        if (dequeuing) {
+            // If we are nested in a dequeue() call, delegating post-processing to the outermost call.
+            return false;
+        }
         dequeuing = true;
         try {
-            // fireChannelRead(...) may call ctx.read() and so this method may be re-entered. Because of that
-            // we need to check if queue was set to null in the meantime and, if so, break out of the loop.
-            while (queue != null && (config.isAutoRead() || unsatisfiedReads > 0)) {
-                Object msg = queue.poll();
-                if (msg == null) {
-                    break;
+            boolean fireReadComplete = false;
+
+            while (queue != null) {
+                if (config.isAutoRead() || unsatisfiedReads > 0) {
+                    Object msg = queue.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    if (unsatisfiedReads > 0) {
+                        unsatisfiedReads--;
+                    }
+                    fireReadComplete = true;
+                    ctx.fireChannelRead(msg);
+                    continue;
                 }
 
-                if (unsatisfiedReads > 0) {
-                    unsatisfiedReads--;
+                //assert !config.isAutoRead();
+                //assert unsatisfiedReads == 0;
+                if (fireReadComplete) {
+                    // We have satisfied all reads. As such, we can complete the current read cycle.
+                    fireReadComplete = false;
+                    ctx.fireChannelReadComplete();
+                    continue;
                 }
-                ctx.fireChannelRead(msg);
 
-                didSatisfyARead = true;
+                break;
             }
 
             if (queue != null && queue.isEmpty()) {
@@ -271,9 +249,9 @@ public class FlowControlHandler extends ChannelDuplexHandler {
                 queue = null;
             }
 
-            return didSatisfyARead;
+            return true;
         } finally {
-            dequeuing = wasDequeuing;
+            dequeuing = false;
         }
     }
 
