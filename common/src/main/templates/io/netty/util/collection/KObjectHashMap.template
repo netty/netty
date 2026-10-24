@@ -592,12 +592,30 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
      * Iterator over primitive entries. Entry key/values are overwritten by each call to {@link #next()}.
      */
     private final class PrimitiveIterator implements Iterator<PrimitiveEntry<V>>, PrimitiveEntry<V> {
+        // prevIndex and nextIndex count from start, see index(int).
+        private final int start;
         private int prevIndex = -1;
         private int nextIndex = -1;
         private int entryIndex = -1;
 
+        PrimitiveIterator() {
+            // Start right after an empty slot and wrap around at the end of the array. removeAt(...) only moves
+            // entries within the run of occupied slots after the removed entry, and that run ends before this
+            // empty slot. So it never moves an entry that was already returned to a slot that is still ahead of
+            // the iterator. There is always an empty slot, see calcMaxSize(int).
+            int i = 0;
+            while (values[i] != null) {
+                i++;
+            }
+            start = i + 1;
+        }
+
+        private int index(int i) {
+            return (start + i) & mask;
+        }
+
         private void scanNext() {
-            while (++nextIndex != values.length && values[nextIndex] == null) {
+            while (++nextIndex != values.length && values[index(nextIndex)] == null) {
             }
         }
 
@@ -619,7 +637,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             scanNext();
 
             // Always return the same Entry object, just change its index each time.
-            entryIndex = prevIndex;
+            entryIndex = index(prevIndex);
             return this;
         }
 
@@ -628,7 +646,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             if (prevIndex == -1) {
                 throw new IllegalStateException("next must be called before each remove.");
             }
-            if (removeAt(prevIndex)) {
+            if (removeAt(index(prevIndex))) {
                 // removeAt may move elements "back" in the array if they have been displaced because their spot in the
                 // array was occupied when they were inserted. If this occurs then the nextIndex is now invalid and
                 // should instead point to the prevIndex which now holds an element which was "moved back".
