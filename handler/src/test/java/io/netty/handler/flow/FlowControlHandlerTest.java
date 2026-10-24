@@ -1266,6 +1266,62 @@ public class FlowControlHandlerTest {
         msg2.release();
     }
 
+    @Test
+    public void autoReadResumeMustRearmTransport() throws Exception {
+        final List<String> events = new ArrayList<String>();
+        EmbeddedChannel ch = new EmbeddedChannel(false, false,
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void read(ChannelHandlerContext ctx) throws Exception {
+                        events.add("#r");
+                        super.read(ctx);
+                    }
+                },
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        events.add((String) msg);
+                        if ("REQ".equals(msg)) {
+                            ctx.channel().config().setAutoRead(false);   // javadoc example
+                        }
+                    }
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        events.add("#rc");
+                    }
+                });
+
+        ch.register();                       // auto-read on
+        ch.writeInbound("REQ", "LAST");      // decoder emits two, handler pauses on the first
+        assertEquals(Arrays.asList("#r", "REQ", "#rc"), events);
+
+        ch.config().setAutoRead(true);       // application resumes and leaves auto-read on
+        assertEquals(Arrays.asList("#r", "REQ", "#rc", "LAST", "#r"), events);
+    }
+
+    @Test
+    public void deliveredMessageMustBeFollowedByReadComplete() throws Exception {
+        final List<String> events = new ArrayList<>();
+        EmbeddedChannel ch = new EmbeddedChannel(false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) { events.add((String) msg); }
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) { events.add("#rc"); }
+                });
+
+        ch.config().setAutoRead(false);
+        ch.register();
+        ch.read();
+        ch.read();                          // two explicit reads while auto-read is off
+        ch.config().setAutoRead(true);      // then auto-read is enabled
+        ch.writeInbound("1");               // one message arrives and IS delivered
+
+        assertEquals(Arrays.asList("1", "#rc"), events);
+    }
+
     @SafeVarargs
     private static <T> List<T> add(List<T> list, T... elements) {
         Collections.addAll(list, elements);
