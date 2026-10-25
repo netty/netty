@@ -19,6 +19,7 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.CleanableDirectBuffer;
@@ -235,6 +236,33 @@ public abstract class SocketTest<T extends Socket> {
         } finally {
             regular.delete();
             socketFile.delete();
+        }
+    }
+
+    @Test
+    public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
+        int max = Limits.UDS_SUN_PATH_SIZE;
+        assertTrue(max >= 100);
+        // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
+        for (int i = 0; i < 100; i++) {
+            assertFalse(isConnectPathTooLong(max));
+        }
+        assertTrue(isConnectPathTooLong(max + 1));
+    }
+
+    private static boolean isConnectPathTooLong(int length) throws IOException {
+        StringBuilder path = new StringBuilder("/");
+        while (path.length() < length) {
+            path.append('a');
+        }
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.connect(new DomainSocketAddress(path.toString()));
+            return false;
+        } catch (IOException e) {
+            return e.getMessage() != null && e.getMessage().contains("too long");
+        } finally {
+            domainSocket.close();
         }
     }
 }
