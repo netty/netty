@@ -17,19 +17,23 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledDirectByteBuf;
+import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.unix.Buffer;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.SplittableRandom;
@@ -40,8 +44,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,6 +88,14 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         if (cause != null) {
             throw new AssertionError(cause.getMessage(), cause);
         }
+    }
+
+    /**
+     * The address of the slot behind {@code buffer}: a leak-tracked hand-out is a new wrapper every time, so the
+     * identity of what {@link IoUringRecyclingBufferRingAllocator#allocate()} returns says nothing.
+     */
+    private static long slot(ByteBuf buffer) {
+        return IoUring.memoryAddress(buffer);
     }
 
     private static IoUringRecyclingBufferRingAllocator newAllocator(int bufferRingSize) {
@@ -137,12 +151,13 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             buffer.release();
             assertEquals(0, buffer.refCnt());
 
-            assertSame(buffer, allocator.allocate());
-            assertEquals(1, buffer.refCnt());
-            assertEquals(0, buffer.readerIndex());
-            assertEquals(0, buffer.writerIndex());
-            assertEquals(BUFFER_SIZE, buffer.writableBytes());
-            buffer.release();
+            ByteBuf again = allocator.allocate();
+            assertEquals(slot(buffer), slot(again));
+            assertEquals(1, again.refCnt());
+            assertEquals(0, again.readerIndex());
+            assertEquals(0, again.writerIndex());
+            assertEquals(BUFFER_SIZE, again.writableBytes());
+            again.release();
             assertEquals(0, allocator.fallbackAllocations());
         });
     }
@@ -157,14 +172,15 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             buffer.markReaderIndex();
             buffer.release();
 
-            assertSame(buffer, allocator.allocate());
-            buffer.writeLong(2).writeLong(3);
+            ByteBuf again = allocator.allocate();
+            assertEquals(slot(buffer), slot(again));
+            again.writeLong(2).writeLong(3);
             // Like a new buffer: without marking first, a reset goes back to 0.
-            buffer.resetReaderIndex();
-            assertEquals(0, buffer.readerIndex());
-            buffer.resetWriterIndex();
-            assertEquals(0, buffer.writerIndex());
-            buffer.release();
+            again.resetReaderIndex();
+            assertEquals(0, again.readerIndex());
+            again.resetWriterIndex();
+            assertEquals(0, again.writerIndex());
+            again.release();
         });
     }
 
@@ -183,13 +199,14 @@ public class IoUringRecyclingBufferRingAllocatorTest {
 
             first.release();
             ByteBuf other = allocator.allocate();
-            assertNotSame(buffer, other);
+            assertNotEquals(slot(buffer), slot(other));
             other.release();
 
             second.release();
             assertEquals(0, buffer.refCnt());
-            assertSame(buffer, allocator.allocate());
-            buffer.release();
+            ByteBuf again = allocator.allocate();
+            assertEquals(slot(buffer), slot(again));
+            again.release();
         });
     }
 
@@ -210,9 +227,10 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             }
             assertEquals(0, buffer.refCnt());
 
-            assertSame(buffer, allocator.allocate());
+            ByteBuf again = allocator.allocate();
+            assertEquals(slot(buffer), slot(again));
             assertEquals(0, allocator.fallbackAllocations());
-            buffer.release();
+            again.release();
             spare.release();
         });
     }
@@ -257,8 +275,10 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             assertEquals(1, ringAllocator.fallbackAllocations());
             allocator.fail = false;
 
+            long released = slot(held[0]);
             held[0].release();
-            assertSame(held[0], ringAllocator.allocate());
+            held[0] = ringAllocator.allocate();
+            assertEquals(released, slot(held[0]));
             for (ByteBuf buffer : held) {
                 buffer.release();
             }
@@ -446,15 +466,18 @@ public class IoUringRecyclingBufferRingAllocatorTest {
     @Test
     @Timeout(60)
     public void concurrentReleasesKeepEveryInvariant() throws Exception {
-        final UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
-        final IoUringRecyclingBufferRingAllocator ringAllocator =
-                new IoUringRecyclingBufferRingAllocator(allocator, (short) 32, BUFFER_SIZE, 1);
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
+        assertConcurrentReleasesKeepEveryInvariant(allocator,
+                new IoUringRecyclingBufferRingAllocator(allocator, (short) 32, BUFFER_SIZE, 1));
+    }
+
+    private static void assertConcurrentReleasesKeepEveryInvariant(
+            UnpooledByteBufAllocator allocator, IoUringRecyclingBufferRingAllocator ringAllocator) throws Exception {
         final int releasers = 3;
         final int iterations = 200_000;
         final BlockingQueue<ByteBuf> handoff = new ArrayBlockingQueue<ByteBuf>(32);
-        // Identity, not content: ByteBuf.equals()/hashCode() look at the bytes, which change after allocation.
-        final Set<ByteBuf> live = Collections.synchronizedSet(
-                Collections.newSetFromMap(new IdentityHashMap<ByteBuf, Boolean>()));
+        // By address, as a leak-tracked hand-out is a new wrapper of the same slot every time.
+        final Set<Long> live = Collections.synchronizedSet(new HashSet<Long>());
         final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
         final ByteBuf poison = Unpooled.EMPTY_BUFFER;
 
@@ -481,9 +504,14 @@ public class IoUringRecyclingBufferRingAllocatorTest {
                 SplittableRandom random = new SplittableRandom(42);
                 for (int i = 0; i < iterations; i++) {
                     ByteBuf buffer = ringAllocator.allocate();
-                    assertEquals(1, buffer.refCnt());
-                    assertEquals(0, buffer.readableBytes());
-                    assertTrue(live.add(buffer), "handed out while live");
+                    try {
+                        assertEquals(1, buffer.refCnt());
+                        assertEquals(0, buffer.readableBytes());
+                        assertTrue(live.add(slot(buffer)), "handed out while live");
+                    } catch (Throwable t) {
+                        buffer.release();
+                        throw t;
+                    }
                     buffer.writeLong(i).writeLong(~i);
                     switch (random.nextInt(4)) {
                         case 0:
@@ -497,9 +525,7 @@ public class IoUringRecyclingBufferRingAllocatorTest {
                         case 2:
                             // A slice goes to another thread, the owner keeps the parent and releases it first.
                             ByteBuf slice = buffer.retainedSlice(0, 16);
-                            live.remove(buffer);
                             buffer.release();
-                            live.add(slice);
                             handoff.put(slice);
                             break;
                         default:
@@ -511,8 +537,6 @@ public class IoUringRecyclingBufferRingAllocatorTest {
                             } else {
                                 ByteBuf dup = buffer.retainedDuplicate();
                                 buffer.release();
-                                live.remove(buffer);
-                                live.add(dup);
                                 handoff.put(dup);
                                 buffer.release();
                             }
@@ -530,15 +554,18 @@ public class IoUringRecyclingBufferRingAllocatorTest {
                 long fallbacks = ringAllocator.fallbackAllocations();
                 List<ByteBuf> all = new ArrayList<ByteBuf>();
                 Set<Long> addresses = new HashSet<Long>();
-                for (int i = 0; i < 66; i++) {
-                    ByteBuf buffer = ringAllocator.allocate();
-                    all.add(buffer);
-                    assertTrue(addresses.add(IoUring.memoryAddress(buffer)), "same address twice");
-                    assertEquals(1, buffer.refCnt());
-                }
-                assertEquals(fallbacks, ringAllocator.fallbackAllocations());
-                for (ByteBuf buffer : all) {
-                    buffer.release();
+                try {
+                    for (int i = 0; i < 66; i++) {
+                        ByteBuf buffer = ringAllocator.allocate();
+                        all.add(buffer);
+                        assertTrue(addresses.add(IoUring.memoryAddress(buffer)), "same address twice");
+                        assertEquals(1, buffer.refCnt());
+                    }
+                    assertEquals(fallbacks, ringAllocator.fallbackAllocations());
+                } finally {
+                    for (ByteBuf buffer : all) {
+                        buffer.release();
+                    }
                 }
             } catch (InterruptedException e) {
                 throw new AssertionError(e);
@@ -548,13 +575,17 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         assertEquals(0, ringAllocator.foreignThreadAllocations());
     }
 
-    private static void checkMarkerAndRelease(Set<ByteBuf> live, ByteBuf buffer) {
-        if (buffer.readableBytes() >= 16) {
-            long marker = buffer.getLong(buffer.readerIndex());
-            assertEquals(~marker, buffer.getLong(buffer.readerIndex() + 8), "payload changed under us");
+    private static void checkMarkerAndRelease(Set<Long> live, ByteBuf buffer) {
+        try {
+            if (buffer.readableBytes() >= 16) {
+                long marker = buffer.getLong(buffer.readerIndex());
+                assertEquals(~marker, buffer.getLong(buffer.readerIndex() + 8), "payload changed under us");
+            }
+            // Out of the set before the release that may bring the slot home, so the owner can hand it out again.
+            assertTrue(live.remove(slot(buffer)), "released but not live");
+        } finally {
+            buffer.release();
         }
-        assertTrue(live.remove(buffer), "released but not live");
-        buffer.release();
     }
 
     /**
@@ -611,6 +642,235 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             assertNull(failure.get(), "round " + round);
             assertEquals(0, allocator.metric().usedDirectMemory(), "round " + round);
             assertEquals(0, ringAllocator.fallbackAllocations(), "round " + round);
+        }
+    }
+
+    @Test
+    public void trackedHandOutIsALeakAwareWrapperOfItsSlot() throws Exception {
+        UnpooledByteBufAllocator memory = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator allocator =
+                new IoUringRecyclingBufferRingAllocator(memory, (short) 1, BUFFER_SIZE, 1);
+        try (LeakCollector leaks = new LeakCollector(ResourceLeakDetector.Level.PARANOID, TEST_FRAMES)) {
+            onEventLoopThread(() -> {
+                ByteBuf buffer = allocator.allocate();
+                ByteBuf wrapped = buffer.unwrap();
+                try {
+                    assertNotNull(wrapped, "not leak-aware");
+                    assertNotSame(buffer, wrapped);
+                    assertEquals(slot(wrapped), slot(buffer));
+                } finally {
+                    buffer.release();
+                }
+                ByteBuf again = allocator.allocate();
+                try {
+                    assertNotSame(buffer, again);
+                    assertSame(wrapped, again.unwrap(), "the released slot did not go home");
+                } finally {
+                    again.release();
+                }
+            });
+            assertEquals(0, memory.metric().usedDirectMemory());
+            assertEquals(0, leaks.await(1, 20), leaks.records::toString);
+        }
+    }
+
+    @Test
+    public void trackedBuffersReleasedOnAndOffTheOwnerAreNotReported() throws Exception {
+        UnpooledByteBufAllocator memory = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator allocator =
+                new IoUringRecyclingBufferRingAllocator(memory, (short) 1, BUFFER_SIZE, 1);
+        try (LeakCollector leaks = new LeakCollector(ResourceLeakDetector.Level.PARANOID, TEST_FRAMES)) {
+            onEventLoopThread(() -> assertReleasedBuffersComeBack(allocator));
+            // The owner is gone and nothing references its region: a tracker left open is reported now.
+            assertEquals(0, memory.metric().usedDirectMemory());
+            assertEquals(0, leaks.await(1, 20), leaks.records::toString);
+        }
+    }
+
+    @Test
+    public void trackedBuffersReleasedAfterTheOwnerTerminatedAreNotReported() throws Exception {
+        UnpooledByteBufAllocator memory = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator allocator =
+                new IoUringRecyclingBufferRingAllocator(memory, (short) 4, BUFFER_SIZE, 1);
+        try (LeakCollector leaks = new LeakCollector(ResourceLeakDetector.Level.PARANOID, TEST_FRAMES)) {
+            BlockingQueue<ByteBuf> inFlight = new ArrayBlockingQueue<ByteBuf>(1);
+            Thread loop = new FastThreadLocalThread(() -> inFlight.add(allocator.allocate()));
+            loop.start();
+            loop.join();
+            inFlight.take().release();
+            assertEquals(0, memory.metric().usedDirectMemory());
+
+            onEventLoopThread(() -> {
+                ByteBuf buffer = allocator.allocate();
+                try {
+                    FastThreadLocal.removeAll();
+                } finally {
+                    buffer.release();
+                }
+                assertEquals(0, memory.metric().usedDirectMemory());
+            });
+            assertEquals(0, leaks.await(1, 20), leaks.records::toString);
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    public void concurrentReleasesOfSampledBuffersKeepEveryInvariant() throws Exception {
+        // At SIMPLE only a sample of the hand-outs is tracked, so a slot goes out tracked and untracked in turn.
+        UnpooledByteBufAllocator memory = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator allocator =
+                new IoUringRecyclingBufferRingAllocator(memory, (short) 32, BUFFER_SIZE, 1);
+        try (LeakCollector leaks = new LeakCollector(ResourceLeakDetector.Level.SIMPLE, TEST_FRAMES)) {
+            assertConcurrentReleasesKeepEveryInvariant(memory, allocator);
+            // So that every buffer allocated while waiting has the detector look for collected ones.
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+            assertEquals(0, leaks.await(1, 20), leaks.records::toString);
+        }
+    }
+
+    @Test
+    public void untrackedBufferStaysWithTheRegionWhenLeakDetectionIsDisabled() throws Exception {
+        IoUringRecyclingBufferRingAllocator allocator =
+                new IoUringRecyclingBufferRingAllocator(new UntrackedAllocator(), (short) 1, BUFFER_SIZE, 1);
+        try (LeakCollector ignored = new LeakCollector(ResourceLeakDetector.Level.DISABLED, TEST_FRAMES)) {
+            onEventLoopThread(() -> {
+                // Nothing is wrapped: the very same buffer comes back.
+                ByteBuf buffer = allocator.allocate();
+                buffer.release();
+                assertSame(buffer, allocator.allocate());
+                buffer.release();
+                assertReleasedBuffersComeBack(allocator);
+
+                WeakReference<ByteBuf> dropped = allocateAndDropASlice(allocator);
+                for (int i = 0; i < 5; i++) {
+                    System.gc();
+                }
+                assertNotNull(dropped.get(), "the region let go of an untracked buffer");
+            });
+        }
+    }
+
+    /** What the creation stack of every buffer this class allocates contains. */
+    private static final String TEST_FRAMES = IoUringRecyclingBufferRingAllocatorTest.class.getName();
+
+    /**
+     * Sets the leak detection level and a {@link ByteBufUtil#setLeakListener leak listener} that collects the
+     * records of every leak containing {@code marker}, until closed.
+     */
+    private static final class LeakCollector implements AutoCloseable {
+        final List<String> records = Collections.synchronizedList(new ArrayList<String>());
+        private final ResourceLeakDetector.Level previous = ResourceLeakDetector.getLevel();
+
+        LeakCollector(ResourceLeakDetector.Level level, String marker) {
+            ResourceLeakDetector.setLevel(level);
+            ByteBufUtil.setLeakListener((resourceType, records) -> {
+                if (records.contains(marker)) {
+                    this.records.add(records);
+                }
+            });
+        }
+
+        /**
+         * Collects garbage and has the detector look for collected buffers until {@code expected} leaks were
+         * reported or {@code rounds} are over, and returns how many were.
+         */
+        int await(int expected, int rounds) {
+            for (int round = 0; round < rounds && records.size() < expected; round++) {
+                System.gc();
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new AssertionError(e);
+                }
+                // The detector reports what was collected when it tracks the next buffer.
+                UnpooledByteBufAllocator.DEFAULT.directBuffer(1).release();
+            }
+            return records.size();
+        }
+
+        @Override
+        public void close() {
+            // There is no getter for the listener that was set before: none is, by default.
+            ByteBufUtil.setLeakListener(null);
+            ResourceLeakDetector.setLevel(previous);
+        }
+    }
+
+    /**
+     * Owner release, then a release from another thread that the owner can only get back through the hand-back
+     * queue: both come back as the same slot. Needs a region of two.
+     */
+    private static void assertReleasedBuffersComeBack(IoUringRecyclingBufferRingAllocator allocator) {
+        ByteBuf buffer = allocator.allocate();
+        long address = slot(buffer);
+        buffer.writeByte('a');
+        buffer.release();
+        ByteBuf again = allocator.allocate();
+        ByteBuf spare = null;
+        try {
+            assertEquals(address, slot(again));
+            // With both out, the next allocate() is served by the hand-back queue or not at all.
+            spare = allocator.allocate();
+            Thread releaser = new Thread(again::release);
+            again = null;
+            releaser.start();
+            try {
+                releaser.join();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+            ByteBuf third = allocator.allocate();
+            try {
+                assertEquals(address, slot(third));
+                third.touch("hint").retain().release();
+            } finally {
+                third.release();
+            }
+            assertEquals(0, allocator.fallbackAllocations());
+        } finally {
+            if (again != null) {
+                again.release();
+            }
+            if (spare != null) {
+                spare.release();
+            }
+        }
+    }
+
+    /**
+     * What IoUringBufferRing hands the pipeline is a slice of the buffer, and the pipeline drops it here. Returns
+     * only a weak reference to the buffer, so nothing on the caller's stack keeps it alive.
+     */
+    private static WeakReference<ByteBuf> allocateAndDropASlice(IoUringRecyclingBufferRingAllocator allocator) {
+        ByteBuf buffer = allocator.allocate();
+        buffer.writeByte('a');
+        buffer.retainedSlice(0, 1);
+        buffer.release();
+        return new WeakReference<ByteBuf>(buffer);
+    }
+
+    /**
+     * Direct memory that is not leak-tracked itself, so that a region an unreleased buffer holds on to, which is
+     * never released, is freed by the garbage collector without being reported.
+     */
+    private static final class UntrackedAllocator extends AbstractByteBufAllocator {
+        UntrackedAllocator() {
+            super(true);
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
         }
     }
 

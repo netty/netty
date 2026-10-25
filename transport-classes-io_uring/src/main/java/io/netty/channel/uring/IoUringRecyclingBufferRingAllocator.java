@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledDirectByteBuf;
@@ -53,6 +54,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * a buffer of it is still in flight then, once that last buffer is released. Buffers may be released from any
  * thread, and one that allocates on a thread which does not clean up its {@link FastThreadLocal}s is served from
  * the {@link ByteBufAllocator} instead of being given a region of its own.
+ *
+ * <p>Buffers are leak-tracked like those of any {@link ByteBufAllocator}, as
+ * {@link io.netty.util.ResourceLeakDetector} samples them. A buffer that is never released is lost to its region for
+ * good, so that region is never released either.
  *
  * <p>The region is sized for the buffers the ring keeps alive, so it pays off when the pipeline releases what it
  * reads before the ring comes back for more: buffers that are handed further down and released much later are the
@@ -184,6 +189,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
      */
     private final class Region {
         private final Thread owner = Thread.currentThread();
+        // null for a slot that is out leak-tracked: then only what holds the buffer keeps it reachable.
         private final Slot[] slots = new Slot[maxBuffers];
         private final int[] unused = new int[maxBuffers];
         // A slot can be in here at most once, and the capacity is the slot count, so offering never fails.
@@ -208,14 +214,30 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             if (numUnused == 0) {
                 return refill();
             }
-            return slots[unused[--numUnused]].reuse();
+            return handOut();
+        }
+
+        private ByteBuf handOut() {
+            int index = unused[numUnused - 1];
+            Slot slot = slots[index];
+            ByteBuf buffer = (ByteBuf) slot;
+            ByteBuf tracked = LeakTracking.track(buffer);
+            // Popped and reused only now: if tracking throws, the slot is still on the stack, in slots[] and released.
+            numUnused--;
+            slot.reuse();
+            if (tracked != buffer) {
+                // Only a tracked slot leaves slots[], so it is collected and reported if it is never released,
+                // while an untracked one costs no reference store on its way out and back.
+                slots[index] = null;
+            }
+            return tracked;
         }
 
         void put(Slot slot) {
             // Only before closing: afterwards the stack is mutated under the monitor in complete() alone, and the
             // owner can still release a buffer that a FastThreadLocal removed after the region's own one held.
             if (Thread.currentThread() == owner && !closing) {
-                unused[numUnused++] = slot.index();
+                home(slot);
                 return;
             }
             boolean offered = handback.offer(slot);
@@ -255,7 +277,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
 
         private ByteBuf refill() {
             if (drain() || extend()) {
-                return slots[unused[--numUnused]].reuse();
+                return handOut();
             }
             fallbackAllocations.incrementAndGet();
             // A used up region is no reason to fail a read, so it is not reported by throwing. The allocator can
@@ -266,9 +288,18 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
 
         private boolean drain() {
             for (Slot slot = handback.poll(); slot != null; slot = handback.poll()) {
-                unused[numUnused++] = slot.index();
+                home(slot);
             }
             return numUnused > 0;
+        }
+
+        // Only where the stack is mutated, so slots[] has the same single writer as unused[].
+        private void home(Slot slot) {
+            int index = slot.index();
+            if (slots[index] == null) {
+                slots[index] = slot;
+            }
+            unused[numUnused++] = index;
         }
 
         private boolean extend() {
@@ -390,6 +421,34 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             protected void deallocate() {
                 put(this);
             }
+        }
+    }
+
+    /**
+     * Only here to reach {@link AbstractByteBufAllocator#toLeakAwareBuffer(ByteBuf)}, so a slot is tracked by the
+     * same detector as every other {@link ByteBuf}. Never allocates.
+     */
+    private static final class LeakTracking extends AbstractByteBufAllocator {
+        private LeakTracking() {
+        }
+
+        static ByteBuf track(ByteBuf buffer) {
+            return toLeakAwareBuffer(buffer);
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            throw new UnsupportedOperationException();
         }
     }
 }
