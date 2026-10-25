@@ -140,7 +140,8 @@ public class ByteBufIndexOfBenchmark extends AbstractMicrobenchmark {
         case "adaptive":
             return AdaptiveByteBufAllocator.DEFAULT;
         default:
-            throw new IllegalArgumentException(name);
+            throw new IllegalArgumentException(
+                    "Unknown allocator: " + name + " (expected unpooled, pooled or adaptive)");
         }
     }
 

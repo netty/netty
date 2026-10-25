@@ -2538,8 +2538,8 @@ public abstract class AbstractByteBufTest {
 
     /**
      * Checks {@link ByteBuf#indexOf(int, int, byte)} for ranges starting at 0..9 and ending anywhere up to the
-     * capacity, with the needle absent, just before the range, and at every position in it, for needles with and
-     * without the high bit set.
+     * capacity, with the needle absent, just before the range, just after it, and at every position in it, for
+     * needles with and without the high bit set.
      */
     static void assertIndexOfEveryRangeAndPosition(ByteBuf buf) {
         int capacity = buf.capacity();
@@ -2554,6 +2554,10 @@ public abstract class AbstractByteBufTest {
                 }
                 for (int to = from; to <= capacity; to++) {
                     assertEquals(-1, buf.indexOf(from, to, needle));
+                    if (to < capacity) {
+                        buf.setByte(to, needle);
+                        assertEquals(-1, buf.indexOf(from, to, needle));
+                    }
                     for (int at = from; at < to; at++) {
                         buf.setByte(at, needle);
                         assertEquals(at, buf.indexOf(from, to, needle));
@@ -2563,6 +2567,9 @@ public abstract class AbstractByteBufTest {
                             buf.setByte(to - 1, other);
                         }
                         buf.setByte(at, other);
+                    }
+                    if (to < capacity) {
+                        buf.setByte(to, other);
                     }
                 }
                 if (from > 0) {
