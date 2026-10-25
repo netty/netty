@@ -593,7 +593,7 @@ public class FlowControlHandlerTest {
         channel.register();
 
         // Reset read timeout by some message
-        assertFalse(channel.writeInbound("1"));
+        assertFalse(channel.writeInbound("1", "2"));
         channel.flushInbound();
         channel.read();
 
