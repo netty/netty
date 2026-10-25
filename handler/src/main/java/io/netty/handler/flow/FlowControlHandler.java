@@ -75,14 +75,14 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     /**
      * Number of unsatisfied downstream {@code read()} calls. A downstream {@code read()} is considered unsatisfied
-     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} or
+     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} followed by
      * a cumulative {@code fireChannelReadComplete}.
      * <p>
-     * A {@code read()} can be satisfied in three ways, whichever comes first:
+     * A {@code read()} can be satisfied by {@code dequeue()}ing a message in three ways, whichever comes first:
      * <ul>
-     *     <li>inside the {@code read()} call itself, by {@code dequeue()}ing a message</li>
+     *     <li>inside the {@code read()} call itself</li>
      *     <li>in a {@code channelRead()}</li>
-     *     <li>in a {@code channelReadComplete()}</li>
+     *     <li>in a {@code handlerRemoved()}</li>
      * </ul>
      * A {@code read()} can be satisfied with auto-read on.
      * <p>
@@ -90,7 +90,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * only when either of the following happens:
      * <ul>
      *     <li>auto-read is off and {@code unsatisfiedReads} returns to zero after {@code dequeue()}ing, or</li>
-     *     <li>an upstream {@code channelReadComplete} arrives</li>
+     *     <li>auto-read is on and an upstream {@code channelReadComplete} arrives</li>
      * </ul>
      */
     private int unsatisfiedReads;

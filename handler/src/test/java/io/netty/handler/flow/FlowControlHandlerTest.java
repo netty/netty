@@ -805,7 +805,7 @@ public class FlowControlHandlerTest {
         channel.register();
 
         // Downstream issues a read() but upstream has no data and only fires channelReadComplete.
-        // FlowControlHandler must forward that channelReadComplete to satisfy the outstanding read.
+        // FlowControlHandler must NOT forward that channelReadComplete for unsatisfied read and auto-read off.
         channel.read();
 
         assertEquals(0, reads.get());
