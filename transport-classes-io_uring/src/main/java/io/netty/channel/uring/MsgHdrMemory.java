@@ -18,6 +18,8 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.ControlMessageDatagramPacket;
+import io.netty.channel.unix.ControlMessages;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
@@ -110,6 +112,26 @@ final class MsgHdrMemory {
                 cmsgDataOffset, segmentSize);
     }
 
+    /**
+     * Set up the {@code msghdr} to use the given memory for the control messages (ancillary data). When sending,
+     * the memory contains the encoded control messages. When receiving, the memory is used to receive the control
+     * messages.
+     */
+    void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length,
+             long controlAddress, int controlLength) {
+        int addressLength = setSocketAddress(socket, address);
+        Iov.set(iovMemory, bufferAddress, length);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, Buffer.memoryAddress(iovMemory), 1,
+                controlAddress, controlLength);
+    }
+
+    /**
+     * Returns the length of the control messages that were received.
+     */
+    int controlLength() {
+        return MsgHdr.getControlLen(msgHdrMemory);
+    }
+
     void set(long iovArray, int length) {
         MsgHdr.set(msgHdrMemory, iovArray, length);
     }
@@ -156,7 +178,8 @@ final class MsgHdrMemory {
         return SockaddrIn.hasPortIpv4(socketAddrMemory);
     }
 
-    DatagramPacket get(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
+    DatagramPacket get(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead,
+                       ControlMessages controlMessages) {
         InetSocketAddress sender;
         if (channel.socket.isIpv6()) {
             byte[] ipv6Bytes = handler.inet6AddressArray();
@@ -176,6 +199,9 @@ final class MsgHdrMemory {
 
         ByteBuf slice = buffer.slice(readerIndex, bufferLength)
                 .writerIndex(bytesRead);
+        if (controlMessages != null) {
+            return new ControlMessageDatagramPacket(slice.retain(), channel.localAddress(), sender, controlMessages);
+        }
         return new DatagramPacket(slice.retain(), channel.localAddress(), sender);
     }
 

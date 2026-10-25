@@ -19,6 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.unix.ControlMessageBuffer;
+import io.netty.channel.unix.ControlMessageDatagramPacket;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.ControlMessageEncoder;
+import io.netty.channel.unix.ControlMessages;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.SegmentedDatagramPacket;
@@ -44,6 +49,11 @@ final class NativeDatagramPacketArray {
     // up to IOV_MAX iovec across all messages in one sendmmsg(...) call.
     private final IovArray iovArray = new IovArray();
 
+    // We share one ControlMessageBuffer for all NativeDatagramPackets, which is used to store the control messages
+    // (ancillary data) that should be sent or received. The memory is allocated lazily once it is used for the first
+    // time.
+    private final ControlMessageBuffer controlMessageBuffer = new ControlMessageBuffer();
+
     // temporary array to copy the ipv4 part of ipv6-mapped-ipv4 addresses and then create a Inet4Address out of it.
     private final byte[] ipv4Bytes = new byte[4];
     private final MyMessageProcessor processor = new MyMessageProcessor();
@@ -57,15 +67,65 @@ final class NativeDatagramPacketArray {
     }
 
     boolean addWritable(ByteBuf buf, int index, int len) {
-        return add0(buf, index, len, 0, null);
+        return addWritable(buf, index, len, 0);
     }
 
-    private boolean add0(ByteBuf buf, int index, int len, int segmentLen, InetSocketAddress recipient) {
+    /**
+     * Add the given writable space of the {@link ByteBuf} which is used to receive a datagram. If
+     * {@code controlLen > 0} the given number of bytes will be reserved to receive the control messages.
+     */
+    boolean addWritable(ByteBuf buf, int index, int len, int controlLen) {
         if (count == packets.length) {
             // We already filled up to UIO_MAX_IOV messages. This is the max allowed per
             // recvmmsg(...) / sendmmsg(...) call, we will try again later.
             return false;
         }
+        int controlOffset = -1;
+        if (controlLen > 0) {
+            controlOffset = controlMessageBuffer.reserve(controlLen);
+            if (controlOffset == -1) {
+                // Not enough space left, we will try again later.
+                return false;
+            }
+        }
+        return add0(buf, index, len, 0, null, controlOffset, controlLen);
+    }
+
+    /**
+     * Ensure that the control messages of the given number of bytes can be received without the need to grow the
+     * underlying memory. This must only be called while the {@link NativeDatagramPacketArray} is empty.
+     */
+    void ensureControlCapacity(int capacity) {
+        assert count == 0;
+        controlMessageBuffer.ensureCapacity(capacity);
+    }
+
+    private boolean add0(ByteBuf buf, int index, int len, int segmentLen, InetSocketAddress recipient,
+                         ControlMessages controlMessages) {
+        if (count == packets.length) {
+            // We already filled up to UIO_MAX_IOV messages. This is the max allowed per
+            // recvmmsg(...) / sendmmsg(...) call, we will try again later.
+            return false;
+        }
+        if (len == 0) {
+            return true;
+        }
+        int controlOffset = -1;
+        int controlLen = 0;
+        if (controlMessages != null && !controlMessages.isEmpty()) {
+            controlLen = ControlMessageEncoder.encodedLength(controlMessages);
+            controlOffset = controlMessageBuffer.reserve(controlLen);
+            if (controlOffset == -1) {
+                // Not enough space to hold the control messages, we will try again later.
+                return false;
+            }
+            ControlMessageEncoder.encode(controlMessages, controlMessageBuffer.buffer(), controlOffset);
+        }
+        return add0(buf, index, len, segmentLen, recipient, controlOffset, controlLen);
+    }
+
+    private boolean add0(ByteBuf buf, int index, int len, int segmentLen, InetSocketAddress recipient,
+                         int controlOffset, int controlLen) {
         if (len == 0) {
             return true;
         }
@@ -75,7 +135,8 @@ final class NativeDatagramPacketArray {
             return false;
         }
         NativeDatagramPacket p = packets[count];
-        p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient);
+        p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, segmentLen, recipient,
+                controlOffset, controlLen);
 
         count++;
         return true;
@@ -104,10 +165,12 @@ final class NativeDatagramPacketArray {
     void clear() {
         this.count = 0;
         this.iovArray.clear();
+        this.controlMessageBuffer.clear();
     }
 
     void release() {
         iovArray.release();
+        controlMessageBuffer.release();
     }
 
     private final class MyMessageProcessor implements MessageProcessor {
@@ -121,6 +184,7 @@ final class NativeDatagramPacketArray {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buf = packet.content();
                 int segmentSize = 0;
+                ControlMessages controlMessages = null;
                 if (packet instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
                     int seg = ((io.netty.channel.unix.SegmentedDatagramPacket) packet).segmentSize();
                     // We only need to tell the kernel that we want to use UDP_SEGMENT if there are multiple
@@ -128,11 +192,14 @@ final class NativeDatagramPacketArray {
                     if (buf.readableBytes() > seg) {
                         segmentSize = seg;
                     }
+                } else if (packet instanceof ControlMessageDatagramPacket) {
+                    controlMessages = ((ControlMessageDatagramPacket) packet).controlMessages();
                 }
-                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient(),
+                        controlMessages);
             } else if (msg instanceof ByteBuf && connected) {
                 ByteBuf buf = (ByteBuf) msg;
-                added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null, null);
             } else {
                 added = false;
             }
@@ -182,10 +249,29 @@ final class NativeDatagramPacketArray {
 
         private int segmentSize;
 
-        private void init(long memoryAddress, int count, int segmentSize, InetSocketAddress recipient) {
+        // The memory address and length of the control messages (msg_control and msg_controllen). If controlAddress
+        // is 0 the native code uses its own buffer to receive the control messages it handles itself (like UDP_GRO).
+        // When receiving, controlLen is updated to the length of the received control messages.
+        private long controlAddress;
+        private int controlLen;
+
+        // Only used by java, this is the offset of the control messages in the ControlMessageBuffer.
+        private int controlOffset;
+
+        private void init(long memoryAddress, int count, int segmentSize, InetSocketAddress recipient,
+                          int controlOffset, int controlLen) {
             this.memoryAddress = memoryAddress;
             this.count = count;
             this.segmentSize = segmentSize;
+            if (controlOffset == -1) {
+                this.controlAddress = 0;
+                this.controlLen = 0;
+                this.controlOffset = 0;
+            } else {
+                this.controlAddress = controlMessageBuffer.memoryAddress(controlOffset);
+                this.controlLen = controlLen;
+                this.controlOffset = controlOffset;
+            }
 
             this.senderScopeId = 0;
             this.senderPort = -1;
@@ -213,7 +299,24 @@ final class NativeDatagramPacketArray {
             return senderPort >= 0;
         }
 
-        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress recipient) throws UnknownHostException {
+        /**
+         * Decode the control messages that were received.
+         */
+        ControlMessages decodeControlMessages(ControlMessageDecoder decoder) {
+            if (controlAddress == 0) {
+                return ControlMessages.EMPTY;
+            }
+            return decoder.decode(controlMessageBuffer.buffer(), controlOffset, controlLen);
+        }
+
+        /**
+         * Create a new {@link DatagramPacket} for the received datagram. If {@code controlMessages} is not
+         * {@code null} a {@link ControlMessageDatagramPacket} is returned, unless the datagram needs to be split
+         * because of {@code UDP_GRO}, in which case the caller is responsible to use the control messages for each
+         * segment.
+         */
+        DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress recipient, ControlMessages controlMessages)
+                throws UnknownHostException {
             InetSocketAddress sender = newAddress(senderAddr, senderAddrLen, senderPort, senderScopeId, ipv4Bytes);
             if (recipientAddrLen != 0) {
                 recipient = newAddress(recipientAddr, recipientAddrLen, recipientPort, recipientScopeId, ipv4Bytes);
@@ -225,6 +328,9 @@ final class NativeDatagramPacketArray {
             // UDP_GRO
             if (segmentSize > 0) {
                 return new SegmentedDatagramPacket(slice, segmentSize, recipient, sender);
+            }
+            if (controlMessages != null) {
+                return new ControlMessageDatagramPacket(slice, recipient, sender, controlMessages);
             }
             return new DatagramPacket(slice, recipient, sender);
         }

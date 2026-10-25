@@ -90,7 +90,7 @@ int netty_unix_socket_ipAddressLength(const struct sockaddr_storage* addr) {
     return 16;
 }
 
-static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
+static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, int controlLen, jobject local) {
     jclass datagramSocketAddressClass = NULL;
     jobject obj  = NULL;
     int port;
@@ -123,7 +123,7 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
 
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, datagramSocketAddressClass, datagramSocketAddressClassWeak, done);
 
-    obj = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, addressBytes, scopeId, port, len, local);
+    obj = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, addressBytes, scopeId, port, len, controlLen, local);
     if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
         obj = NULL;
         goto done;
@@ -450,7 +450,51 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
         return NULL;
     }
 
-    return createDatagramSocketAddress(env, &addr, res, NULL);
+    return createDatagramSocketAddress(env, &addr, res, 0, NULL);
+}
+
+static jobject _recvFromControl(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit, jlong controlAddress, jint controlLength) {
+    struct sockaddr_storage addr;
+    struct iovec iov;
+    struct msghdr msg = { 0 };
+    ssize_t res;
+    int err;
+
+    iov.iov_base = buffer + pos;
+    iov.iov_len = (size_t) (limit - pos);
+
+    msg.msg_name = &addr;
+    msg.msg_namelen = (socklen_t) sizeof(addr);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    if (controlLength > 0) {
+        msg.msg_control = (void*) (intptr_t) controlAddress;
+        msg.msg_controllen = controlLength;
+    }
+
+    do {
+        res = recvmsg(fd, &msg, 0);
+        // Keep on reading if we was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        if (err == EAGAIN || err == EWOULDBLOCK) {
+            // Nothing left to read
+            return NULL;
+        }
+        if (err == EBADF) {
+            netty_unix_errors_throwClosedChannelException(env);
+            return NULL;
+        }
+        if (err == ECONNREFUSED) {
+            netty_unix_errors_throwPortUnreachableException(env, "recvmsg() failed");
+            return NULL;
+        }
+        netty_unix_errors_throwIOExceptionErrorNo(env, "recvmsg() failed: ", err);
+        return NULL;
+    }
+
+    return createDatagramSocketAddress(env, &addr, res, (int) msg.msg_controllen, NULL);
 }
 
 static jobject _recvFromDomainSocket(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
@@ -807,6 +851,39 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
     return (jint) res;
 }
 
+static jint netty_unix_socket_sendToAddressesControl(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jlong controlAddress, jint controlLength, jint flags) {
+    struct sockaddr_storage addr;
+    socklen_t addrSize;
+    struct msghdr m = { 0 };
+
+    // address is NULL if the socket is connected.
+    if (address != NULL) {
+        if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
+            return -1;
+        }
+        m.msg_name = (void*) &addr;
+        m.msg_namelen = addrSize;
+    }
+    m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
+    m.msg_iovlen = length;
+    if (controlLength > 0) {
+        m.msg_control = (void*) (intptr_t) controlAddress;
+        m.msg_controllen = controlLength;
+    }
+
+    ssize_t res;
+    int err;
+    do {
+       res = sendmsg(fd, &m, flags);
+       // keep on writing if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
+}
+
 static jint netty_unix_socket_sendToDomainSocket(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit, jbyteArray socketPath) {
     // We check that GetDirectBufferAddress will not return NULL in OnLoad
     return _sendToDomainSocket(env, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit, socketPath);
@@ -862,6 +939,40 @@ static jobject netty_unix_socket_recvFrom(JNIEnv* env, jclass clazz, jint fd, jo
 
 static jobject netty_unix_socket_recvFromAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
     return _recvFrom(env, fd, (void *) (intptr_t) address, pos, limit);
+}
+
+static jobject netty_unix_socket_recvFromAddressControl(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit, jlong controlAddress, jint controlLength) {
+    return _recvFromControl(env, fd, (void *) (intptr_t) address, pos, limit, controlAddress, controlLength);
+}
+
+// Receive a datagram and its control messages without the address of the sender, which is useful for connected
+// sockets. Returns the number of bytes received in the upper 32 bits and the length of the received control messages
+// in the lower 32 bits, or -errno in the upper 32 bits if recvmsg(...) failed. This way no object needs to be created.
+static jlong netty_unix_socket_recvAddressControl(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit, jlong controlAddress, jint controlLength) {
+    struct iovec iov;
+    struct msghdr msg = { 0 };
+    ssize_t res;
+    int err;
+
+    iov.iov_base = (void*) (intptr_t) (address + pos);
+    iov.iov_len = (size_t) (limit - pos);
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    if (controlLength > 0) {
+        msg.msg_control = (void*) (intptr_t) controlAddress;
+        msg.msg_controllen = controlLength;
+    }
+
+    do {
+        res = recvmsg(fd, &msg, 0);
+        // Keep on reading if we was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return (jlong) (((uint64_t) (uint32_t) -err) << 32);
+    }
+    return (jlong) ((((uint64_t) (uint32_t) res) << 32) | (uint32_t) msg.msg_controllen);
 }
 
 static jobject netty_unix_socket_recvFromDomainSocket(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
@@ -1301,17 +1412,20 @@ static const JNINativeMethod fixed_method_table[] = {
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIII)I", (void *) netty_unix_socket_sendTo },
   { "sendToAddress", "(IZJII[BIII)I", (void *) netty_unix_socket_sendToAddress },
   { "sendToAddresses", "(IZJI[BIII)I", (void *) netty_unix_socket_sendToAddresses },
+  { "sendToAddressesControl", "(IZJI[BIIJII)I", (void *) netty_unix_socket_sendToAddressesControl },
   { "sendToDomainSocket", "(ILjava/nio/ByteBuffer;II[B)I", (void *) netty_unix_socket_sendToDomainSocket },
   { "sendToAddressDomainSocket", "(IJII[B)I", (void *) netty_unix_socket_sendToAddressDomainSocket },
   { "sendToAddressesDomainSocket", "(IJI[B)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
   // "recvFrom" has a dynamic signature
   // "recvFromAddress" has a dynamic signature
+  // "recvFromAddressControl" has a dynamic signature
   // "recvFromDomainSocket" has a dynamic signature
   // "recvFromAddressDomainSocket" has a dynamic signature
   { "send", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_socket_send },
   { "sendAddress", "(IJII)I", (void *) netty_unix_socket_sendAddress },
   { "recv", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_socket_recv },
   { "recvAddress", "(IJII)I", (void *) netty_unix_socket_recvAddress },
+  { "recvAddressControl", "(IJIIJI)J", (void *) netty_unix_socket_recvAddressControl },
   { "recvFd", "(I)I", (void *) netty_unix_socket_recvFd },
   { "sendFd", "(II)I", (void *) netty_unix_socket_sendFd },
   { "bindDomainSocket", "(I[B)I", (void *) netty_unix_socket_bindDomainSocket },
@@ -1348,8 +1462,8 @@ static const JNINativeMethod fixed_method_table[] = {
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    // 4 is for the dynamic method signatures.
-    return fixed_method_table_size + 4;
+    // 5 is for the dynamic method signatures.
+    return fixed_method_table_size + 5;
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
@@ -1374,6 +1488,13 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     NETTY_JNI_UTIL_PREPEND("(IJII)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFromAddress";
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromAddress;
+    netty_jni_util_free_dynamic_name(&dynamicTypeName);
+
+    ++dynamicMethod;
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND("(IJIIJI)L", dynamicTypeName,  dynamicMethod->signature, error);
+    dynamicMethod->name = "recvFromAddressControl";
+    dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromAddressControl;
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
@@ -1427,7 +1548,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
 
     // Respect shading...
     char parameters[1024] = {0};
-    snprintf(parameters, sizeof(parameters), "([BIIIL%s;)V", nettyClassName);
+    snprintf(parameters, sizeof(parameters), "([BIIIIL%s;)V", nettyClassName);
     netty_jni_util_free_dynamic_name(&nettyClassName);
     NETTY_JNI_UTIL_GET_METHOD(env, datagramSocketAddressClass, datagramSocketAddrMethodId, "<init>", parameters, done);
 

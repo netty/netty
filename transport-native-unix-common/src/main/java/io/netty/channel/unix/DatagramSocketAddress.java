@@ -31,12 +31,15 @@ public final class DatagramSocketAddress extends InetSocketAddress {
 
     // holds the amount of received bytes
     private final int receivedAmount;
+    // holds the length of the received control messages (ancillary data)
+    private final int controlLength;
     private final DatagramSocketAddress localAddress;
 
-    DatagramSocketAddress(byte[] addr, int scopeId, int port, int receivedAmount, DatagramSocketAddress local)
-            throws UnknownHostException {
+    DatagramSocketAddress(byte[] addr, int scopeId, int port, int receivedAmount, int controlLength,
+                          DatagramSocketAddress local) throws UnknownHostException {
         super(newAddress(addr, scopeId), port);
         this.receivedAmount = receivedAmount;
+        this.controlLength = controlLength;
         localAddress = local;
     }
 
@@ -46,6 +49,13 @@ public final class DatagramSocketAddress extends InetSocketAddress {
 
     public int receivedAmount() {
         return receivedAmount;
+    }
+
+    /**
+     * Returns the number of bytes of control messages (ancillary data) that were received, or {@code 0} if none.
+     */
+    public int controlLength() {
+        return controlLength;
     }
 
     private static InetAddress newAddress(byte[] bytes, int scopeId) throws UnknownHostException {

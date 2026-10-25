@@ -27,6 +27,12 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.ControlMessageBuffer;
+import io.netty.channel.unix.ControlMessageDatagramPacket;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.ControlMessageEncoder;
+import io.netty.channel.unix.ControlMessages;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
@@ -282,6 +288,13 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             return true;
         }
 
+        if (msg instanceof ControlMessageDatagramPacket) {
+            ControlMessages controlMessages = ((ControlMessageDatagramPacket) msg).controlMessages();
+            if (!controlMessages.isEmpty()) {
+                return doWriteMessageWithControlMessages(data, remoteAddress, controlMessages);
+            }
+        }
+
         final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
@@ -320,6 +333,32 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         return writtenBytes > 0;
     }
 
+    private boolean doWriteMessageWithControlMessages(ByteBuf data, InetSocketAddress remoteAddress,
+                                                      ControlMessages controlMessages) throws IOException {
+        NativeArrays nativeArrays = (NativeArrays) registration().attachment();
+        IovArray array = nativeArrays.cleanIovArray();
+        array.add(data, data.readerIndex(), data.readableBytes());
+        int cnt = array.count();
+        assert cnt != 0;
+
+        ControlMessageBuffer controlMessageBuffer = nativeArrays.cleanControlMessageBuffer();
+        int controlLength = ControlMessageEncoder.encodedLength(controlMessages);
+        int controlOffset = controlMessageBuffer.reserve(controlLength);
+        ControlMessageEncoder.encode(controlMessages, controlMessageBuffer.buffer(), controlOffset);
+
+        final long writtenBytes;
+        // macOS and the BSDs fail with EISCONN if an address is specified for a connected socket.
+        if (remoteAddress == null || connected && remoteAddress.equals(remoteAddress())) {
+            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt, null, 0,
+                    controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+        } else {
+            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                    remoteAddress.getAddress(), remoteAddress.getPort(),
+                    controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+        }
+        return writtenBytes > 0;
+    }
+
     private static IOException translateForConnected(Errors.NativeIoException e) {
         // We need to correctly translate connect errors to match NIO behaviour.
         if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
@@ -339,6 +378,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
+        if (msg instanceof ControlMessageDatagramPacket) {
+            ControlMessageDatagramPacket packet = (ControlMessageDatagramPacket) msg;
+            checkUnresolved(packet);
+            ControlMessages controlMessages = packet.controlMessages();
+            // Fail fast if the control messages can't be sent.
+            ControlMessageEncoder.encodedLength(controlMessages);
+            ByteBuf content = packet.content();
+            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                    new ControlMessageDatagramPacket(newDirectBuffer(packet, content), packet.recipient(),
+                            controlMessages) : msg;
+        }
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
             checkUnresolved(packet);
@@ -398,6 +448,63 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         connected = false;
     }
 
+    private DatagramPacket recvWithControlMessages(KQueueRecvByteAllocatorHandle allocHandle, ByteBuf byteBuf,
+                                                   ControlMessageDecoder decoder, boolean connected)
+            throws IOException {
+        final long memoryAddress;
+        final int pos;
+        final int limit;
+        if (byteBuf.hasMemoryAddress()) {
+            memoryAddress = byteBuf.memoryAddress();
+            pos = byteBuf.writerIndex();
+            limit = byteBuf.capacity();
+        } else {
+            ByteBuffer nioData = byteBuf.internalNioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+            memoryAddress = Buffer.memoryAddress(nioData);
+            pos = nioData.position();
+            limit = nioData.limit();
+        }
+        ControlMessageBuffer controlMessageBuffer =
+                ((NativeArrays) registration().attachment()).cleanControlMessageBuffer();
+        int controlLength = decoder.controlLength();
+        int controlOffset = controlMessageBuffer.reserve(controlLength);
+        if (connected) {
+            // We don't need to retrieve the address of the sender, which allows to not create any objects.
+            final long res;
+            try {
+                res = socket.recvAddressControl(memoryAddress, pos, limit,
+                        controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+            } catch (Errors.NativeIoException e) {
+                throw translateForConnected(e);
+            }
+            int bytesRead = (int) (res >> 32);
+            if (bytesRead < 0) {
+                allocHandle.lastBytesRead(-1);
+                return null;
+            }
+            ControlMessages controlMessages = decoder.decode(controlMessageBuffer.buffer(), controlOffset, (int) res);
+            allocHandle.lastBytesRead(bytesRead);
+            byteBuf.writerIndex(byteBuf.writerIndex() + bytesRead);
+            return new ControlMessageDatagramPacket(byteBuf, (InetSocketAddress) localAddress(),
+                    (InetSocketAddress) remoteAddress(), controlMessages);
+        }
+        DatagramSocketAddress remoteAddress = socket.recvFromAddress(memoryAddress, pos, limit,
+                controlMessageBuffer.memoryAddress(controlOffset), controlLength);
+        if (remoteAddress == null) {
+            allocHandle.lastBytesRead(-1);
+            return null;
+        }
+        ControlMessages controlMessages = decoder.decode(
+                controlMessageBuffer.buffer(), controlOffset, remoteAddress.controlLength());
+        InetSocketAddress localAddress = remoteAddress.localAddress();
+        if (localAddress == null) {
+            localAddress = (InetSocketAddress) localAddress();
+        }
+        allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+        byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+        return new ControlMessageDatagramPacket(byteBuf, localAddress, remoteAddress, controlMessages);
+    }
+
     final class KQueueDatagramChannelUnsafe extends AbstractKQueueUnsafe {
 
         @Override
@@ -420,9 +527,18 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                     do {
                         byteBuf = allocHandle.allocate(allocator);
                         allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+                        // Fetch it for each read as it might be changed by the user while we are reading.
+                        ControlMessageDecoder decoder = KQueueDatagramChannel.this.config.controlMessageDecoder();
 
                         final DatagramPacket packet;
-                        if (connected) {
+                        if (decoder != null) {
+                            packet = recvWithControlMessages(allocHandle, byteBuf, decoder, connected);
+                            if (packet == null) {
+                                byteBuf.release();
+                                byteBuf = null;
+                                break;
+                            }
+                        } else if (connected) {
                             try {
                                 allocHandle.lastBytesRead(doReadBytes(byteBuf));
                             } catch (Errors.NativeIoException e) {

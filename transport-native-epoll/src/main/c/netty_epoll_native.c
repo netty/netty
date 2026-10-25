@@ -139,6 +139,8 @@ static jfieldID packetRecipientPortFieldId = NULL;
 static jfieldID packetSegmentSizeFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
 static jfieldID packetCountFieldId = NULL;
+static jfieldID packetControlAddressFieldId = NULL;
+static jfieldID packetControlLenFieldId = NULL;
 
 static const char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
@@ -495,7 +497,12 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetRecipientAddrFieldId);
         jint addrLen = (*env)->GetIntField(env, packet, packetRecipientAddrLenFieldId);
         jint packetSegmentSize = (*env)->GetIntField(env, packet, packetSegmentSizeFieldId);
-        if (packetSegmentSize > 0) {
+        jlong controlAddress = (*env)->GetLongField(env, packet, packetControlAddressFieldId);
+        if (controlAddress != 0) {
+            // The control messages were already encoded in java.
+            msg[i].msg_hdr.msg_control = (void*) (intptr_t) controlAddress;
+            msg[i].msg_hdr.msg_controllen = (*env)->GetIntField(env, packet, packetControlLenFieldId);
+        } else if (packetSegmentSize > 0) {
             msg[i].msg_hdr.msg_control = controls[i];
             msg[i].msg_hdr.msg_controllen = sizeof(controls[i]);
             struct cmsghdr *cm = CMSG_FIRSTHDR(&msg[i].msg_hdr);
@@ -563,6 +570,9 @@ static void init_packet_address(JNIEnv* env, jobject packet, struct sockaddr_sto
 
 static void init_packet(JNIEnv* env, jobject packet, struct msghdr* msg, int len) {
     (*env)->SetIntField(env, packet, packetCountFieldId, len);
+    // The length of the control messages that were received, this is used by java to decode the control messages if
+    // it did provide the buffer for these.
+    (*env)->SetIntField(env, packet, packetControlLenFieldId, (jint) msg->msg_controllen);
 
     init_packet_address(env, packet, (struct sockaddr_storage*) msg->msg_name, packetSenderAddrFieldId, packetSenderAddrLenFieldId, packetSenderScopeIdFieldId, packetSenderPortFieldId);
 
@@ -592,8 +602,15 @@ static jint netty_epoll_native_recvmsg0(JNIEnv* env, jclass clazz, jint fd, jboo
     msg.msg_namelen = (socklen_t) addrSize;
     msg.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
     msg.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
-    msg.msg_control = control;
-    msg.msg_controllen = sizeof(control);
+    jlong controlAddress = (*env)->GetLongField(env, packet, packetControlAddressFieldId);
+    if (controlAddress != 0) {
+        // Use the buffer that was provided by java, which also has enough space for GRO and IP_RECVORIGDSTADDR.
+        msg.msg_control = (void*) (intptr_t) controlAddress;
+        msg.msg_controllen = (*env)->GetIntField(env, packet, packetControlLenFieldId);
+    } else {
+        msg.msg_control = control;
+        msg.msg_controllen = sizeof(control);
+    }
     ssize_t res;
     int err;
     do {
@@ -636,8 +653,15 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         msg[i].msg_hdr.msg_name = addr + i;
         msg[i].msg_hdr.msg_namelen = (socklen_t) storageSize;
 
-        msg[i].msg_hdr.msg_control = controls + i * controlSize;
-        msg[i].msg_hdr.msg_controllen = controlSize;
+        jlong controlAddress = (*env)->GetLongField(env, packet, packetControlAddressFieldId);
+        if (controlAddress != 0) {
+            // Use the buffer that was provided by java, which also has enough space for GRO and IP_RECVORIGDSTADDR.
+            msg[i].msg_hdr.msg_control = (void*) (intptr_t) controlAddress;
+            msg[i].msg_hdr.msg_controllen = (*env)->GetIntField(env, packet, packetControlLenFieldId);
+        } else {
+            msg[i].msg_hdr.msg_control = controls + i * controlSize;
+            msg[i].msg_hdr.msg_controllen = controlSize;
+        }
     }
 
     ssize_t res;
@@ -918,6 +942,8 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetSegmentSizeFieldId, "segmentSize", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetMemoryAddressFieldId, "memoryAddress", "J", done);
     NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetCountFieldId, "count", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetControlAddressFieldId, "controlAddress", "J", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, nativeDatagramPacketCls, packetControlLenFieldId, "controlLen", "I", done);
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 
@@ -966,6 +992,8 @@ done:
         packetSegmentSizeFieldId = NULL;
         packetMemoryAddressFieldId = NULL;
         packetCountFieldId = NULL;
+        packetControlAddressFieldId = NULL;
+        packetControlLenFieldId = NULL;
     }
     return ret;
 }
@@ -997,6 +1025,8 @@ static void netty_epoll_native_JNI_OnUnload(JNIEnv* env) {
     packetSegmentSizeFieldId = NULL;
     packetMemoryAddressFieldId = NULL;
     packetCountFieldId = NULL;
+    packetControlAddressFieldId = NULL;
+    packetControlLenFieldId = NULL;
 }
 
 // Invoked by the JVM when statically linked

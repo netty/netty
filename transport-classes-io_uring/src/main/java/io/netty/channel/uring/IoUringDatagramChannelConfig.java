@@ -24,17 +24,22 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.unix.ControlMessage;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.UnixChannelOption;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
+import java.util.Set;
 
 final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
+    private volatile ControlMessageDecoder controlMessageDecoder;
 
     IoUringDatagramChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -52,7 +57,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 IoUringChannelOption.SO_REUSEPORT, IoUringChannelOption.IP_FREEBIND,
                 IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
-                IoUringChannelOption.IP_MULTICAST_ALL);
+                IoUringChannelOption.IP_MULTICAST_ALL, UnixChannelOption.RECEIVE_CONTROL_MESSAGES);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -103,11 +108,14 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         if (option == IoUringChannelOption.IP_MULTICAST_ALL) {
             return (T) Boolean.valueOf(isIpMulticastAll());
         }
+        if (option == UnixChannelOption.RECEIVE_CONTROL_MESSAGES) {
+            return (T) getReceiveControlMessages();
+        }
         return super.getOption(option);
     }
 
     @Override
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
@@ -141,6 +149,8 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
             setMaxDatagramPayloadSize((Integer) value);
         } else if (option == IoUringChannelOption.IP_MULTICAST_ALL) {
             setIpMulticastAll((Boolean) value);
+        } else if (option == UnixChannelOption.RECEIVE_CONTROL_MESSAGES) {
+            setReceiveControlMessages((Set<ControlMessage<?>>) value);
         } else {
             return super.setOption(option, value);
         }
@@ -496,6 +506,33 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      */
     public int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
+    }
+
+    /**
+     * Returns the {@link ControlMessage}s that are received together with each datagram.
+     * See {@link UnixChannelOption#RECEIVE_CONTROL_MESSAGES}.
+     */
+    public Set<ControlMessage<?>> getReceiveControlMessages() {
+        return ControlMessageDecoder.types(controlMessageDecoder);
+    }
+
+    /**
+     * Set the {@link ControlMessage}s that should be received together with each datagram.
+     * See {@link UnixChannelOption#RECEIVE_CONTROL_MESSAGES}.
+     */
+    public synchronized IoUringDatagramChannelConfig setReceiveControlMessages(
+            Set<? extends ControlMessage<?>> controlMessages) {
+        try {
+            controlMessageDecoder = ControlMessageDecoder.update(
+                    ((IoUringDatagramChannel) channel).socket, controlMessageDecoder, controlMessages);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    ControlMessageDecoder controlMessageDecoder() {
+        return controlMessageDecoder;
     }
 
     /**

@@ -29,6 +29,11 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.ControlMessageBuffer;
+import io.netty.channel.unix.ControlMessageDatagramPacket;
+import io.netty.channel.unix.ControlMessageDecoder;
+import io.netty.channel.unix.ControlMessageEncoder;
+import io.netty.channel.unix.ControlMessages;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
@@ -81,6 +86,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     private final MsgHdrMemoryArray recvmsgHdrs = new MsgHdrMemoryArray((short) 256);
     private final MsgHdrMemoryArray sendmsgHdrs = new MsgHdrMemoryArray((short) 256);
     private final int[] sendmsgResArray = new int[sendmsgHdrs.capacity()];
+
+    // These buffers are used for the control messages (ancillary data) when doing recvmsg / sendmsg. The memory is
+    // allocated lazily once control messages are used for the first time. Like the MsgHdrMemoryArrays these must not
+    // be touched while there are outstanding operations that use them.
+    private final ControlMessageBuffer recvmsgControlMessages = new ControlMessageBuffer();
+    private final ControlMessageBuffer sendmsgControlMessages = new ControlMessageBuffer();
 
     /**
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
@@ -331,6 +342,10 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
             checkUnresolved(packet);
+            if (packet instanceof ControlMessageDatagramPacket) {
+                // Fail fast if the control messages can't be sent.
+                ControlMessageEncoder.encodedLength(((ControlMessageDatagramPacket) packet).controlMessages());
+            }
             ByteBuf content = packet.content();
             return !content.hasMemoryAddress() ?
                     packet.replace(newDirectBuffer(packet, content)) : msg;
@@ -384,6 +399,10 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         private ByteBuf readBuffer;
 
+        // The number of bytes that were reserved per datagram for the control messages of the outstanding reads.
+        // We need to keep this as the config might be changed while there are outstanding reads.
+        private int readControlLength;
+
         private final class WriteProcessor implements ChannelOutboundBuffer.MessageProcessor {
             private int written;
             @Override
@@ -430,8 +449,21 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                     allocHandle.lastBytesRead(res);
                     if (hdr.hasPort(IoUringDatagramChannel.this)) {
                         allocHandle.incMessagesRead(1);
-                        DatagramPacket packet = hdr.get(
-                                IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
+                        // Always use the current config, which might have been changed while the read was
+                        // outstanding. In this case the control messages that were requested later might be missing.
+                        ControlMessageDecoder decoder =
+                                ((IoUringDatagramChannelConfig) config()).controlMessageDecoder();
+                        final ControlMessages controlMessages;
+                        if (decoder == null) {
+                            controlMessages = null;
+                        } else if (readControlLength == 0) {
+                            controlMessages = ControlMessages.EMPTY;
+                        } else {
+                            controlMessages = decoder.decode(recvmsgControlMessages.buffer(),
+                                    data * readControlLength, hdr.controlLength());
+                        }
+                        DatagramPacket packet = hdr.get(IoUringDatagramChannel.this, registration().attachment(),
+                                byteBuf, res, controlMessages);
                         pipeline.fireChannelRead(packet);
                     }
                 }
@@ -483,6 +515,13 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
             int numDatagram = datagramSize == 0 ? 1 : Math.max(1, byteBuf.writableBytes() / datagramSize);
             numDatagram = Math.min(Math.min(submissionQueueRemaining, recvmsgHdrs.capacity()), numDatagram);
+
+            ControlMessageDecoder decoder = ((IoUringDatagramChannelConfig) config()).controlMessageDecoder();
+            readControlLength = decoder == null ? 0 : decoder.controlLength();
+            if (readControlLength > 0) {
+                // There are no outstanding reads, so it's safe to grow the memory if needed.
+                recvmsgControlMessages.ensureCapacity(numDatagram * readControlLength);
+            }
             int scheduled = scheduleRecvmsg(byteBuf, numDatagram, datagramSize);
             if (scheduled == 0) {
                 // We could not schedule any recvmmsg so we need to release the buffer as there will be no
@@ -517,7 +556,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // We can not continue reading before we did not submit the recvmsg(s) and received the results.
                 return false;
             }
-            msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
+            if (readControlLength > 0) {
+                // Each MsgHdrMemory uses its own part of the memory to receive the control messages.
+                int controlOffset = msgHdrMemory.idx() * readControlLength;
+                msgHdrMemory.set(socket, null, bufferAddress, bufferLength,
+                        recvmsgControlMessages.memoryAddress(controlOffset), readControlLength);
+            } else {
+                msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
+            }
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
@@ -552,6 +598,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 boolean writtenSomething = false;
                 int numWritten = sendmsgHdrs.length();
                 sendmsgHdrs.clear();
+                sendmsgControlMessages.clear();
                 ChannelOutboundBuffer outboundBuffer = outboundBuffer();
                 if (outboundBuffer == null) {
                     // The completion may arrive after close() or shutdownOutput() already dropped the
@@ -605,7 +652,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         private boolean scheduleWrite(Object msg, boolean first) {
             final ByteBuf data;
             final InetSocketAddress remoteAddress;
-            final int segmentSize;
+            int segmentSize = 0;
+            ControlMessages controlMessages = null;
             if (msg instanceof AddressedEnvelope) {
                 @SuppressWarnings("unchecked")
                 AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
@@ -614,28 +662,47 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 remoteAddress = envelope.recipient();
                 if (msg instanceof SegmentedDatagramPacket) {
                     segmentSize = ((SegmentedDatagramPacket) msg).segmentSize();
-                } else {
-                    segmentSize = 0;
+                } else if (msg instanceof ControlMessageDatagramPacket) {
+                    controlMessages = ((ControlMessageDatagramPacket) msg).controlMessages();
                 }
             } else {
                 data = (ByteBuf) msg;
                 remoteAddress = (InetSocketAddress) remoteAddress();
-                segmentSize = 0;
             }
 
             long bufferAddress = IoUring.memoryAddress(data) + data.readerIndex();
-            return scheduleSendmsg(data, remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
+            return scheduleSendmsg(data, remoteAddress, bufferAddress, data.readableBytes(), segmentSize,
+                    controlMessages, first);
         }
 
         private boolean scheduleSendmsg(ByteBuf data, InetSocketAddress remoteAddress, long bufferAddress,
-                                        int bufferLength, int segmentSize, boolean first) {
+                                        int bufferLength, int segmentSize, ControlMessages controlMessages,
+                                        boolean first) {
             MsgHdrMemory hdr = sendmsgHdrs.nextHdr();
             if (hdr == null) {
                 // There is no MsgHdrMemory left to use. We need to submit and wait for the writes to complete
                 // before we can write again.
                 return false;
             }
-            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+            if (controlMessages != null && !controlMessages.isEmpty()) {
+                if (sendmsgHdrs.length() == 1) {
+                    // There are no other outstanding writes, so we can re-use all the memory.
+                    sendmsgControlMessages.clear();
+                }
+                int controlLength = ControlMessageEncoder.encodedLength(controlMessages);
+                int controlOffset = sendmsgControlMessages.reserve(controlLength);
+                if (controlOffset == -1) {
+                    // There is not enough memory left for the control messages. We need to submit and wait for the
+                    // writes to complete before we can write again, the memory will grow by then.
+                    sendmsgHdrs.restoreNextHdr(hdr);
+                    return false;
+                }
+                ControlMessageEncoder.encode(controlMessages, sendmsgControlMessages.buffer(), controlOffset);
+                hdr.set(socket, remoteAddress, bufferAddress, bufferLength,
+                        sendmsgControlMessages.memoryAddress(controlOffset), controlLength);
+            } else {
+                hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+            }
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
@@ -660,6 +727,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             super.unregistered();
             sendmsgHdrs.release();
             recvmsgHdrs.release();
+            sendmsgControlMessages.release();
+            recvmsgControlMessages.release();
             assert readBuffer == null;
         }
     }

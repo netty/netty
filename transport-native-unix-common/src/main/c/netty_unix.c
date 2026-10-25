@@ -16,6 +16,7 @@
 #include "netty_unix_jni.h"
 #include "netty_unix.h"
 #include "netty_unix_buffer.h"
+#include "netty_unix_cmsg.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_limits.h"
@@ -30,6 +31,7 @@ jint netty_unix_register(JNIEnv* env, const char* packagePrefix) {
     int filedescriptorOnLoadCalled = 0;
     int socketOnLoadCalled = 0;
     int bufferOnLoadCalled = 0;
+    int cmsgOnLoadCalled = 0;
 
     // Load all c modules that we depend upon
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
@@ -57,6 +59,11 @@ jint netty_unix_register(JNIEnv* env, const char* packagePrefix) {
     }
     bufferOnLoadCalled = 1;
 
+    if (netty_unix_cmsg_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
+        goto error;
+    }
+    cmsgOnLoadCalled = 1;
+
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
    if (limitsOnLoadCalled == 1) {
@@ -74,6 +81,9 @@ error:
    if (bufferOnLoadCalled == 1) {
       netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
    }
+   if (cmsgOnLoadCalled == 1) {
+      netty_unix_cmsg_JNI_OnUnLoad(env, packagePrefix);
+   }
    return JNI_ERR;
 }
 
@@ -83,5 +93,6 @@ void netty_unix_unregister(JNIEnv* env, const char* packagePrefix) {
     netty_unix_filedescriptor_JNI_OnUnLoad(env, packagePrefix);
     netty_unix_socket_JNI_OnUnLoad(env, packagePrefix);
     netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
+    netty_unix_cmsg_JNI_OnUnLoad(env, packagePrefix);
 }
 
