@@ -18,9 +18,11 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -49,5 +51,96 @@ public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBuf
         } finally {
             buf.release();
         }
+    }
+
+    @Test
+    public void testGettersRejectOutOfBoundsIndex() {
+        final ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getByte(8);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getByte(-1);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getShort(7);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getShortLE(7);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getUnsignedMedium(6);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getUnsignedMediumLE(6);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getInt(5);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getIntLE(5);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getLong(1);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getLongLE(1);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getLong(-1);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getLong(Integer.MAX_VALUE - 7);
+                }
+            });
+            assertOutOfBounds(new Executable() {
+                @Override
+                public void execute() {
+                    buf.getLong(Integer.MIN_VALUE);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    private static void assertOutOfBounds(Executable executable) {
+        assertThrows(IndexOutOfBoundsException.class, executable);
     }
 }
