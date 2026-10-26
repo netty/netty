@@ -48,6 +48,7 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -260,6 +261,73 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             }
         } finally {
             closeChannel(server);
+        }
+    }
+
+    @Test
+    public void testSendEmptyDatagramsInOneFlush(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testSendEmptyDatagramsInOneFlush);
+    }
+
+    public void testSendEmptyDatagramsInOneFlush(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final String[] sent = { "A", "", "B", "", "C" };
+        final List<String> received = new ArrayList<>();
+        // A trailing datagram, sent in its own flush, so that a duplicate of the batch would arrive first.
+        final CountDownLatch latch = new CountDownLatch(sent.length + 1);
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            sc = sb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
+                @Override
+                protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
+                    synchronized (received) {
+                        received.add(msg.content().toString(CharsetUtil.US_ASCII));
+                    }
+                    latch.countDown();
+                }
+            }).bind(newSocketAddress()).get();
+            cc = cb.handler(new SimpleChannelInboundHandler<Object>() {
+                @Override
+                public void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                    // Nothing will be received.
+                }
+            }).bind(newSocketAddress()).get();
+
+            SocketAddress localAddr = sc.localAddress();
+            SocketAddress addr = localAddr instanceof InetSocketAddress ?
+                    convertAnyAddress((InetSocketAddress) localAddr) : localAddr;
+            final Channel client = cc;
+            final SocketAddress remote = addr;
+            final List<Future<Void>> futures = new ArrayList<>(sent.length);
+            // Queue all datagrams before the flush so that they are written as one batch.
+            cc.executor().submit(() -> {
+                for (String s : sent) {
+                    ByteBuf buf = Unpooled.copiedBuffer(s, CharsetUtil.US_ASCII);
+                    futures.add(write(client, buf, remote, WrapType.NONE));
+                    // write() retained the buffer
+                    buf.release();
+                }
+                client.flush();
+            }).sync();
+            for (Future<Void> future : futures) {
+                future.sync();
+            }
+            ByteBuf end = Unpooled.copiedBuffer("END", CharsetUtil.US_ASCII);
+            Future<Void> endFuture = write(cc, end, addr, WrapType.NONE);
+            end.release();
+            cc.flush();
+            endFuture.sync();
+
+            // Each datagram must arrive exactly once, empty ones included.
+            assertTrue(latch.await(10, TimeUnit.SECONDS), "received " + received);
+            List<String> expected = new ArrayList<>(Arrays.asList(sent));
+            expected.add("END");
+            synchronized (received) {
+                assertEquals(expected, received);
+            }
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
         }
     }
 
