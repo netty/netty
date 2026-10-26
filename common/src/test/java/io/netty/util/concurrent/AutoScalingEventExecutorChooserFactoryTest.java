@@ -257,8 +257,11 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                          "Group should scale down to 1 active executor");
 
             // Simulate a slow trickle of new work (e.g., new connections) by calling next() a few times.
+            // Each task does a small but measurable amount of work: an empty task can be measured as taking 0ns on
+            // platforms with a coarse System.nanoTime() (e.g. Windows). The monitor would then fall back to
+            // treating the recent activity as full utilization and wrongly scale up.
             for (int i = 0; i < 5; i++) {
-                group.next().execute(() -> { });
+                group.next().execute(() -> busyTask(1, TimeUnit.MILLISECONDS));
                 Thread.sleep(20);
             }
 

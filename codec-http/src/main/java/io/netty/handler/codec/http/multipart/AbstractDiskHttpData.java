@@ -118,6 +118,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 // empty file
                 if (!file.createNewFile()) {
                     if (file.length() == 0) {
+                        setCompleted();
                         return;
                     } else {
                         if (!file.delete() || !file.createNewFile()) {
@@ -125,6 +126,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                         }
                     }
                 }
+                setCompleted();
                 return;
             }
             RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
