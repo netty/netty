@@ -145,6 +145,18 @@
           <version>${project.version}</version>
           <classifier>${native.classifier}</classifier>
         </dependency>
+        <!-- netty-tcnative (BoringSSL) - used to verify OpenSsl.isAvailable() in a native image (#11088) -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-tcnative-classes</artifactId>
+          <version>${tcnative.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>${tcnative.artifactId}</artifactId>
+          <version>${tcnative.version}</version>
+          <classifier>${tcnative.classifier}</classifier>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -223,6 +235,22 @@
                     <arg>--allow-incomplete-classpath</arg>
                     <arg>-Ob</arg>
                     <arg>--trace-class-initialization=org.bouncycastle.pqc.asn1.PQCObjectIdentifiers</arg>
+                  </buildArgs>
+                </configuration>
+              </execution>
+
+              <execution>
+                <id>openssl</id>
+                <phase>package</phase>
+                <goals><goal>compile-no-fork</goal></goals>
+                <configuration>
+                  <metadataRepository><enabled>false</enabled></metadataRepository>
+                  <imageName>native-image-openssl</imageName>
+                  <mainClass>io.netty.testsuite.svm.NativeImageOpenSsl</mainClass>
+                  <buildArgs>
+                    <arg>--report-unsupported-elements-at-runtime</arg>
+                    <arg>--allow-incomplete-classpath</arg>
+                    <arg>-Ob</arg>
                   </buildArgs>
                 </configuration>
               </execution>
