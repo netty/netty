@@ -1327,6 +1327,56 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
+    @Test
+    public void serverRejectsResponsePseudoHeaderInRequestContext() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        assertPseudoHeaderDirectionRejected(new DefaultHttp2Headers().status("200"));
+    }
+
+    @Test
+    public void clientRejectsRequestPseudoHeadersInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        assertPseudoHeaderDirectionRejected(request());
+    }
+
+    @Test
+    public void clientRejectsSingleRequestPseudoHeaderInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        // response containing valid :status along with an illegal :method
+        assertPseudoHeaderDirectionRejected(new DefaultHttp2Headers().status("200").method("GET"));
+    }
+
+    @Test
+    public void clientRejectsProtocolPseudoHeaderInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        // RFC 8441 :protocol is request-only
+        assertPseudoHeaderDirectionRejected(new DefaultHttp2Headers().status("200").set(":protocol", "websocket"));
+    }
+
+    @Test
+    public void clientAcceptsValidResponsePseudoHeaders() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                                       eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
+    private void assertPseudoHeaderDirectionRejected(final Http2Headers headers) throws Exception {
+        Http2Exception exception = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        assertTrue(Http2Exception.isStreamError(exception));
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(),
+                                                anyBoolean(), anyInt(), anyBoolean());
+    }
+
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
