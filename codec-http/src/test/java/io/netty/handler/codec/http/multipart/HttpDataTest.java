@@ -40,6 +40,16 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class HttpDataTest {
     private static final byte[] BYTES = new byte[64];
 
+    @Test
+    void testNonEmptyNameMustNotBecomeEmptyAfterCleaning() {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new MemoryAttribute(" \r\n\t "));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new DiskAttribute(" \r\n\t "));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new MixedAttribute(" \r\n\t ", 1L));
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     @ParameterizedTest(name = "{displayName}({0})")

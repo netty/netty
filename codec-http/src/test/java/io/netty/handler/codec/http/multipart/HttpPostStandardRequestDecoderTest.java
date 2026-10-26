@@ -26,11 +26,71 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.io.IOException;
+import java.util.List;
 
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpPostStandardRequestDecoderTest {
+
+    static HttpDataFactory[] emptyNameDataFactories() {
+        return new HttpDataFactory[] {
+                new DefaultHttpDataFactory(false),
+                new DefaultHttpDataFactory(true),
+                new DefaultHttpDataFactory(1L)
+        };
+    }
+
+    @ParameterizedTest
+    @MethodSource("emptyNameDataFactories")
+    void testDecodeEmptyNameAtEndOfInput(HttpDataFactory factory) throws IOException {
+        assertEmptyNamesDecoded(factory, "=value", new String[][] {{"", "value"}});
+        assertEmptyNamesDecoded(factory, "=", new String[][] {{"", ""}});
+    }
+
+    @ParameterizedTest
+    @MethodSource("emptyNameDataFactories")
+    void testDecodeRepeatedEmptyNames(HttpDataFactory factory) throws IOException {
+        assertEmptyNamesDecoded(factory, "&=first&&key=value&=&=last%2Bvalue&",
+                new String[][] {{"", "first"}, {"key", "value"}, {"", ""}, {"", "last+value"}});
+    }
+
+    private static void assertEmptyNamesDecoded(HttpDataFactory factory, String body, String[][] expected)
+            throws IOException {
+        for (int split = 0; split <= body.length(); split++) {
+            HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+            HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(factory, request);
+            DefaultHttpContent first = new DefaultHttpContent(
+                    Unpooled.copiedBuffer(body.substring(0, split), CharsetUtil.UTF_8));
+            DefaultHttpContent last = new DefaultLastHttpContent(
+                    Unpooled.copiedBuffer(body.substring(split), CharsetUtil.UTF_8));
+            try {
+                decoder.offer(first);
+                decoder.offer(last);
+                List<InterfaceHttpData> fields = decoder.getBodyHttpDatas();
+                assertEquals(expected.length, fields.size());
+                int emptyNames = 0;
+                for (int i = 0; i < expected.length; i++) {
+                    Attribute field = (Attribute) fields.get(i);
+                    assertEquals(expected[i][0], field.getName());
+                    assertEquals(expected[i][1], field.getValue());
+                    if (field.getName().isEmpty()) {
+                        emptyNames++;
+                    }
+                }
+                assertSame(fields.get(0), decoder.getBodyHttpData(""));
+                assertEquals(emptyNames, decoder.getBodyHttpDatas("").size());
+            } finally {
+                first.release();
+                last.release();
+                decoder.destroy();
+            }
+        }
+    }
 
     @Test
     void testDecodeAttributes() {
