@@ -411,12 +411,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         try {
-            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+            // A zero-length datagram is valid; sendto() returns 0 for it.
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0 || dataLen == 0;
         } catch (NativeIoException e) {
             if (remoteAddress == null) {
                 throw translateForConnected(e);

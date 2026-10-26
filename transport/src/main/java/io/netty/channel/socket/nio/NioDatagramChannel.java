@@ -286,10 +286,6 @@ public final class NioDatagramChannel
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         final ByteBuffer nioData = data.nioBufferCount() == 1 ? data.internalNioBuffer(data.readerIndex(), dataLen)
                                                               : data.nioBuffer(data.readerIndex(), dataLen);
         final int writtenBytes;
@@ -298,7 +294,8 @@ public final class NioDatagramChannel
         } else {
             writtenBytes = javaChannel().write(nioData);
         }
-        return writtenBytes > 0;
+        // A zero-length datagram is valid; send() and write() return 0 for it.
+        return writtenBytes > 0 || dataLen == 0;
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
