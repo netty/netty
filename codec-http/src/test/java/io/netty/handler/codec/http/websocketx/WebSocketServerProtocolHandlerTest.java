@@ -144,6 +144,21 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testNotAllowedSecWebSocketOriginRejected() {
+        EmbeddedChannel ch = createChannel(originConfig("http://example.com"), new MockOutboundHandler());
+        HttpRequest request = WebSocketRequestBuilder.successful();
+        request.headers().remove(HttpHeaderNames.ORIGIN);
+        request.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, "http://evil.example.com");
+        ch.writeInbound(request);
+
+        FullHttpResponse response = ch.readOutbound();
+        assertEquals(FORBIDDEN, response.status());
+        response.release();
+        assertFalse(ch.isOpen());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testMissingOriginNotRejected() {
         EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
         HttpRequest request = WebSocketRequestBuilder.successful();

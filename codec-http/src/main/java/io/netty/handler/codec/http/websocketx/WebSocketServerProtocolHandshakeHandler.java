@@ -128,8 +128,15 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         if (allowedOrigins.isEmpty()) {
             return true;
         }
-        // Every Origin header value must be allowed, a missing header means the request did not come from a browser.
-        for (String origin : req.headers().getAll(HttpHeaderNames.ORIGIN)) {
+        // Every Origin / Sec-WebSocket-Origin header value must be allowed, a missing header means the request did
+        // not come from a browser. Sec-WebSocket-Origin is what browsers speaking the older hybi-07 / hybi-08
+        // protocol versions send instead of Origin.
+        return areOriginsAllowed(req, HttpHeaderNames.ORIGIN, allowedOrigins) &&
+                areOriginsAllowed(req, HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, allowedOrigins);
+    }
+
+    private static boolean areOriginsAllowed(HttpRequest req, CharSequence headerName, Set<String> allowedOrigins) {
+        for (String origin : req.headers().getAll(headerName)) {
             if (!allowedOrigins.contains(origin.trim().toLowerCase(Locale.ROOT))) {
                 return false;
             }
