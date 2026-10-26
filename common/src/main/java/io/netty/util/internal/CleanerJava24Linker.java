@@ -126,18 +126,11 @@ public class CleanerJava24Linker implements Cleaner {
             Throwable error = null;
             try {
                 // First, we need to check if we have access to "restricted" methods through the Java Module system.
-                // java.lang.Module is not part of the Java 8 API we compile against, so we look it up.
-                MethodHandles.Lookup lookup = MethodHandles.lookup();
-                Class<?> moduleCls = Class.forName("java.lang.Module");
-                MethodHandle getModule = lookup.findVirtual(
-                        Class.class, "getModule", methodType(moduleCls));
-                MethodHandle isNativeAccessEnabledModule = lookup.findVirtual(
-                        moduleCls, "isNativeAccessEnabled", methodType(boolean.class));
-                MethodHandle isNativeAccessEnabledForClass = MethodHandles.filterArguments(
-                        isNativeAccessEnabledModule, 0, getModule);
-                boolean isNativeAccessEnabled =
-                        (boolean) isNativeAccessEnabledForClass.invokeExact(CleanerJava24Linker.class);
-                if (!isNativeAccessEnabled) {
+                // Class.getModule() is not part of the Java 8 API we compile against, so we look it up.
+                MethodHandle getModule = MethodHandles.lookup().findVirtual(
+                        Class.class, "getModule", methodType(Module.class));
+                Module module = (Module) getModule.invokeExact(CleanerJava24Linker.class);
+                if (!module.isNativeAccessEnabled()) {
                     throw new UnsupportedOperationException(
                             "Native access (restricted methods) is not enabled for the io.netty.common module.");
                 }
