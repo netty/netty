@@ -166,6 +166,7 @@
                not be visible to Surefire's forked JVM on Java 8. -->
           <classpathDependencyExcludes>
             <classpathDependencyExclude>io.netty:netty-varhandle-stub</classpathDependencyExclude>
+            <classpathDependencyExclude>io.netty:netty-ffm-stub</classpathDependencyExclude>
           </classpathDependencyExcludes>
         </configuration>
       </plugin>
