@@ -223,9 +223,11 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                             loop.execute(task);
                             loopStarted.set(true);
                             // Don't let the queue grow without bounds if the producer is faster than the event
-                            // loop, otherwise we may run into an OutOfMemoryError. Keep it non-empty so we still
-                            // race with the task removal on shutdown.
-                            while (loop.pendingTasks() > MAX_PENDING_TASKS && !loop.isShuttingDown()) {
+                            // loop, otherwise we may run into an OutOfMemoryError. Keep throttling while the loop
+                            // is shutting down as it still accepts tasks until it is fully shut down, and only stop
+                            // once it is shut down so the next execute(...) is rejected. Keep the queue non-empty
+                            // so we still race with the task removal on shutdown.
+                            while (loop.pendingTasks() > MAX_PENDING_TASKS && !loop.isShutdown()) {
                                 Thread.yield();
                             }
                         }
