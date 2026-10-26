@@ -113,10 +113,9 @@ public class CleanerJava24Linker implements Cleaner {
 
     /**
      * Checks that native access is enabled for this module, and that this platform has a 64-bit native linker
-     * that finds malloc and free.
+     * that finds malloc and free. This links no downcall, which is left to {@link Holder}.
      */
     private static final class Symbols {
-        private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
         static final MemorySegment MALLOC;
         static final MemorySegment FREE;
         static final Throwable UNAVAILABILITY_CAUSE;
@@ -151,28 +150,9 @@ public class CleanerJava24Linker implements Cleaner {
                 }
 
                 // Finally, we check that this platform has a native linker, and that it finds malloc and free.
-                Linker linker = Linker.nativeLinker();
-                long rtldDefault = rtldDefault();
-                SymbolLookup symbols = linker.defaultLookup();
-                if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
-                    MethodHandle dlsym = linker.downcallHandle(linker.defaultLookup().findOrThrow("dlsym"),
-                        FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
-                    try (Arena arena = Arena.ofConfined()) {
-                        long mallocAddr = (long) dlsym.invoke(rtldDefault, arena.allocateFrom("malloc"));
-                        long freeAddr = (long) dlsym.invoke(rtldDefault, arena.allocateFrom("free"));
-                        if (mallocAddr != 0 && freeAddr != 0) {
-                            malloc = MemorySegment.ofAddress(mallocAddr);
-                            free = MemorySegment.ofAddress(freeAddr);
-                        }
-                    }
-                }
-                if (malloc == null || malloc == MemorySegment.NULL || free == null || free == MemorySegment.NULL) {
-                    if (logger != null) {
-                        logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup");
-                    }
-                    malloc = symbols.findOrThrow("malloc");
-                    free = symbols.findOrThrow("free");
-                }
+                SymbolLookup symbols = Linker.nativeLinker().defaultLookup();
+                malloc = symbols.findOrThrow("malloc");
+                free = symbols.findOrThrow("free");
             } catch (Throwable throwable) {
                 malloc = null;
                 free = null;
@@ -182,27 +162,6 @@ public class CleanerJava24Linker implements Cleaner {
             FREE = free;
             UNAVAILABILITY_CAUSE = error;
         }
-
-        /**
-         * The value of the {@code RTLD_DEFAULT} pseudo-handle for {@code dlsym(3)} on this platform, or
-         * {@link #RTLD_DEFAULT_UNSUPPORTED} if we do not know it. The value is not standardised: glibc and musl use
-         * {@code (void*) 0}, while macOS and the BSDs use {@code (void*) -2}. Windows has no {@code dlsym},
-         * and a native image must keep using the default lookup because the resolved addresses would otherwise be
-         * captured in the image heap at build time.
-         */
-        private static long rtldDefault() {
-            if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-                return RTLD_DEFAULT_UNSUPPORTED;
-            }
-            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-            if (os.contains("linux")) {
-                return 0L;
-            }
-            if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
-                return -2L;
-            }
-            return RTLD_DEFAULT_UNSUPPORTED;
-        }
     }
 
     /**
@@ -211,15 +170,53 @@ public class CleanerJava24Linker implements Cleaner {
      * a direct buffer.
      */
     private static final class Holder {
+        private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
         private static final MethodHandle INVOKE_MALLOC;
         private static final MethodHandle INVOKE_FREE;
 
         static {
             Linker linker = Linker.nativeLinker();
-            INVOKE_MALLOC = linker.downcallHandle(Symbols.MALLOC,
+            MemorySegment malloc = Symbols.MALLOC;
+            MemorySegment free = Symbols.FREE;
+            // The default lookup only searches libc, so prefer what dlsym(RTLD_DEFAULT) finds: it honours an
+            // allocator interposed with LD_PRELOAD, like the PLT of libjvm does for Unsafe.allocateMemory.
+            long rtldDefault = rtldDefault();
+            if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
+                try {
+                    MethodHandle dlsym = linker.downcallHandle(linker.defaultLookup().findOrThrow("dlsym"),
+                        FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
+                    try (Arena arena = Arena.ofConfined()) {
+                        long mallocAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("malloc"));
+                        long freeAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("free"));
+                        if (mallocAddr != 0 && freeAddr != 0) {
+                            malloc = MemorySegment.ofAddress(mallocAddr);
+                            free = MemorySegment.ofAddress(freeAddr);
+                        }
+                    }
+                } catch (Throwable throwable) {
+                    logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup", throwable);
+                }
+            }
+            INVOKE_MALLOC = linker.downcallHandle(malloc,
                 FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
-            INVOKE_FREE = linker.downcallHandle(Symbols.FREE,
+            INVOKE_FREE = linker.downcallHandle(free,
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG));
+        }
+
+        /**
+         * The value of the {@code RTLD_DEFAULT} pseudo-handle for {@code dlsym(3)} on this platform, or
+         * {@link #RTLD_DEFAULT_UNSUPPORTED} if we do not know it. The value is not standardised: glibc and musl use
+         * {@code (void*) 0}, while macOS and the BSDs use {@code (void*) -2}. Windows has no {@code dlsym}.
+         */
+        private static long rtldDefault() {
+            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+            if (os.contains("linux")) {
+                return 0L;
+            }
+            if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
+                return -2L;
+            }
+            return RTLD_DEFAULT_UNSUPPORTED;
         }
 
         static long malloc(long size) {
