@@ -280,8 +280,8 @@ public final class WebSocketServerProtocolConfig {
          * versions), which must match exactly (scheme, host and port). Handshake requests carrying an
          * origin that is not allowed are rejected with {@code 403 Forbidden} and the connection is closed.
          * <p>
-         * Requests without an {@code Origin} or {@code Sec-WebSocket-Origin} header are not subject to this check, as they do not originate from a
-         * browser (which always sends the header on WebSocket handshakes).
+         * Requests without an {@code Origin} or {@code Sec-WebSocket-Origin} header are not subject to this check,
+         * as they do not originate from a browser (which always sends the header on WebSocket handshakes).
          * <p>
          * If not configured (the default) the {@code Origin} header is <strong>not</strong> validated. Applications
          * that rely on ambient credentials such as cookies <strong>must</strong> configure this to prevent
