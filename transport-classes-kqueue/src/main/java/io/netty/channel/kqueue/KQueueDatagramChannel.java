@@ -301,10 +301,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
@@ -361,7 +357,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             }
         }
 
-        return writtenBytes > 0;
+        // A zero-length datagram is valid; sendto() returns 0 for it.
+        return writtenBytes > 0 || dataLen == 0;
     }
 
     private static IOException translateForConnected(Errors.NativeIoException e) {
