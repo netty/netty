@@ -61,8 +61,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
@@ -1016,8 +1016,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ThreadLocalRandom.current().nextBytes(data);
             ByteBuffer enc = wrapIntoHeapBuffer(client, data, MAX_PLAINTEXT_LENGTH);
 
-            // The engine copies a heap buffer to direct memory to decrypt it. As the destination only has room for
-            // one record, every unwrap(...) should copy at most one full record and not all the records that are left.
+            // Every unwrap(...) should only copy the record that fits, not all the records that are left.
             ByteBuffer plain = ByteBuffer.allocateDirect(MAX_PLAINTEXT_LENGTH);
             ByteBuffer received = ByteBuffer.allocate(data.length);
             alloc.directBytes = 0;
@@ -1059,13 +1058,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ByteBuffer second = enc.duplicate();
             second.position(encLength - 512);
 
-            // The engine copies at most as many bytes of the first buffer at once as full records with the plaintext
-            // that fits would take. Small records have more overhead, so it has to copy the first buffer in parts.
+            // Small records have more overhead than the engine allows for, so it copies the first buffer in parts.
             ReferenceCountedOpenSslEngine serverEngine = unwrapEngine(server);
             assertThat(first.remaining()).isGreaterThan(
                     data.length + data.length / MAX_PLAINTEXT_LENGTH * serverEngine.maxWrapOverhead());
 
-            // All of the first buffer must still be decrypted before the second one.
+            // The first buffer must still be decrypted before the second one.
             ByteBuffer plain = ByteBuffer.allocateDirect(data.length);
             SSLEngineResult result = serverEngine.unwrap(
                     new ByteBuffer[] { first, second }, new ByteBuffer[] { plain });
@@ -1150,10 +1148,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     /**
-     * Unwraps records of random length that are passed to the server engine in random parts, split over a random
-     * number of source buffers and unwrapped into a random number of destination buffers of random capacity. The
-     * plaintext must arrive intact, and every call that is passed all data and as much space as the engine asks for
-     * must make progress.
+     * Unwraps random records, passed in random parts over random source buffers, into random destination buffers.
      */
     private void unwrapRandomRecordsIntoRandomBuffers(SSLEngineTestParam param, SSLEngine client, SSLEngine server)
             throws Exception {
@@ -1172,7 +1167,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     private static void unwrapRandomRecords(BufferType type, long seed, SSLEngine client,
                                             ReferenceCountedOpenSslEngine server) throws SSLException {
-        Random random = new Random(seed);
+        SplittableRandom random = new SplittableRandom(seed);
         int[] recordLengths = new int[1 + random.nextInt(16)];
         int plaintextLength = 0;
         for (int i = 0; i < recordLengths.length; i++) {
@@ -1193,7 +1188,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             plaintextLength += recordLengths[i];
         }
         byte[] plaintext = new byte[plaintextLength];
-        random.nextBytes(plaintext);
+        PlatformDependent.splittableRandomNextBytes(random, plaintext);
         ByteBuffer enc = ByteBuffer.allocate(recordLengths.length * client.getSession().getPacketBufferSize());
         for (int i = 0, offset = 0; i < recordLengths.length; offset += recordLengths[i++]) {
             SSLEngineResult result = client.wrap(ByteBuffer.wrap(plaintext, offset, recordLengths[i]), enc);
@@ -1256,11 +1251,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         assertEquals(ByteBuffer.wrap(plaintext), received, "seed " + seed);
     }
 
-    /**
-     * Returns {@code length} bytes of {@code data} from {@code offset}, split over random source buffers, some of
-     * which are empty, and which may start at a position other than {@code 0}.
-     */
-    private static ByteBuffer[] newRandomSrcs(BufferType type, Random random, byte[] data, int offset, int length) {
+    private static ByteBuffer[] newRandomSrcs(BufferType type, SplittableRandom random, byte[] data, int offset,
+                                              int length) {
         List<ByteBuffer> srcs = new ArrayList<ByteBuffer>();
         int remaining = length;
         do {
@@ -1277,11 +1269,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return srcs.toArray(new ByteBuffer[0]);
     }
 
-    /**
-     * Returns random destination buffers, some of which are tiny or empty, with at least {@code minCapacity} bytes of
-     * space in total.
-     */
-    private static ByteBuffer[] newRandomDsts(BufferType type, Random random, int minCapacity) {
+    private static ByteBuffer[] newRandomDsts(BufferType type, SplittableRandom random, int minCapacity) {
         ByteBuffer[] dsts = new ByteBuffer[1 + random.nextInt(3)];
         int capacity = 0;
         for (int i = 0; i < dsts.length; i++) {
@@ -1312,10 +1300,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return dsts;
     }
 
-    /**
-     * Returns a buffer with {@code length} bytes remaining, which starts at a random position.
-     */
-    private static ByteBuffer newRandomBuffer(BufferType type, Random random, int length) {
+    private static ByteBuffer newRandomBuffer(BufferType type, SplittableRandom random, int length) {
         int position = random.nextInt(16);
         boolean direct = type == BufferType.Direct || type == BufferType.Mixed && random.nextBoolean();
         ByteBuffer buffer = direct ? ByteBuffer.allocateDirect(position + length) :
@@ -1360,10 +1345,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         };
     }
 
-    /**
-     * Unlike the client engine, the server engine is not in jdkCompatibilityMode, so a single
-     * {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} may decrypt several records.
-     */
     private SSLEngine[] newEnginesWithNonJdkCompatibilityModeServer(SSLEngineTestParam param,
                                                                     ByteBufAllocator serverAlloc) throws Exception {
         newContexts(param);
@@ -1391,13 +1372,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .build());
     }
 
-    /**
-     * Wraps {@code data} into records of {@code recordLength} bytes of plaintext each and returns them in a heap
-     * buffer ready to be read.
-     */
     private static ByteBuffer wrapIntoHeapBuffer(SSLEngine client, byte[] data, int recordLength)
             throws SSLException {
-        // A record is at most getPacketBufferSize() - MAX_PLAINTEXT_LENGTH bytes longer than its plaintext.
         int maxOverhead = client.getSession().getPacketBufferSize() - MAX_PLAINTEXT_LENGTH;
         ByteBuffer enc = ByteBuffer.allocate(data.length / recordLength * (recordLength + maxOverhead));
         for (int offset = 0; offset < data.length; offset += recordLength) {

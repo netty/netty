@@ -197,9 +197,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024;
 
     /**
-     * The JDK {@link SSLEngine} requires at least {@code packetLength - 5 - 16} bytes of space in the destination
-     * buffer to unwrap a record, no matter which cipher suite is used: every {@code estimateFragmentSize(...)} in
-     * {@code sun.security.ssl.SSLCipher} subtracts at least the 5 byte record header and 16 bytes of tag or MAC.
+     * The JDK {@link SSLEngine} wants at least {@code packetLength - 5 - 16} bytes to unwrap a record, as it subtracts
+     * the 5 byte header and at least 16 bytes of tag or MAC for every cipher suite.
      */
     private static final int JDK_MIN_UNWRAP_OVERHEAD = 5 + 16;
 
@@ -252,8 +251,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             @Override
             int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
-                // OpenSSL / BoringSSL reject records with more than MAX_PLAINTEXT_LENGTH bytes of plaintext, and
-                // ReferenceCountedOpenSslEngine.unwrap(...) does not ask for more space than that.
+                // The plaintext of a record is never longer than MAX_PLAINTEXT_LENGTH.
                 return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
@@ -308,9 +306,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             @Override
             int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
-                // Conscrypt is always used in jdkCompatibilityMode, so length is one full record. Its engine does not
-                // compare the length of a record with the capacity of the destination, and decrypts at most
-                // MAX_PLAINTEXT_LENGTH bytes from it.
+                // Conscrypt does not need more space than the plaintext, which is at most MAX_PLAINTEXT_LENGTH.
                 return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
@@ -389,9 +385,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             @Override
             int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
-                // The JDK SSLEngine is always used in jdkCompatibilityMode, so length is one full record. Space for
-                // the plaintext is enough, but the engine also wants room for everything but the header and the
-                // tag / MAC (which includes the TLSv1.3 content type byte). Use whichever is larger.
+                // length is a single record, which may need a bit more space than MAX_PLAINTEXT_LENGTH.
                 return length <= MAX_PLAINTEXT_LENGTH ? length : Math.max(MAX_PLAINTEXT_LENGTH,
                         length - JDK_MIN_UNWRAP_OVERHEAD);
             }
@@ -416,12 +410,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         abstract int calculatePendingData(SslHandler handler, int guess);
 
-        /**
-         * Returns the capacity of the first buffer to unwrap {@code length} bytes of inbound data into. This can be
-         * smaller than {@code length} as the cipher overhead of a record does not end up in the plaintext. If the
-         * buffer is too small anyway, {@link #unwrap(ChannelHandlerContext, ByteBuf, int)} handles the resulting
-         * {@link Status#BUFFER_OVERFLOW} by allocating a larger one.
-         */
         abstract int calculateInitialUnwrapBufSize(SslHandler handler, int length);
 
         abstract boolean jdkCompatibilityMode(SSLEngine engine);

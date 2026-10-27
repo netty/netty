@@ -250,12 +250,9 @@ public class SslHandlerUnwrapBufferSizeTest {
             }
 
             if (receiver.isOpenSsl()) {
-                // The OpenSSL engine copies data from heap buffers to direct memory to decrypt it. It should only copy
-                // what it can decrypt into the buffer it is given, and not copy all the rest of a read again for
-                // every record in it. When a read completes a record that the engine holds the start of from an
-                // earlier read, it doesn't know how much of the record is left and may copy more of the read than it
-                // consumes: at most the read or one full record, and only once per record. Every unwrap(...) may
-                // also copy up to maxWrapOverhead bytes more than the records it consumes.
+                // The OpenSSL engine copies heap buffers to direct memory. It may copy more than it consumes when a
+                // read completes a record that started in an earlier read, up to the read or one record, and up to
+                // maxWrapOverhead per record.
                 ReferenceCountedOpenSslEngine engine =
                         (ReferenceCountedOpenSslEngine) server.pipeline().get(SslHandler.class).engine();
                 long wireBytes = 0;

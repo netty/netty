@@ -769,13 +769,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     /**
-     * It is assumed this method is called in a synchronized block!
-     * <br>
-     * Calculates how many encrypted bytes to write into the BIO at most when there is space for
-     * {@code plaintextLength} bytes of plaintext. This is at least one record of the maximum size this engine writes,
-     * longer records are written into the BIO in parts.
+     * Calculates the max number of encrypted bytes to write into the BIO for the given plaintextLength, which is at
+     * least {@link #maxEncryptedPacketLength0()}.
      */
-    private int calculateMaxLengthForUnwrap(long plaintextLength) {
+    private synchronized int calculateMaxLengthForUnwrap(long plaintextLength) {
         long records = (plaintextLength + MAX_PLAINTEXT_LENGTH - 1) / MAX_PLAINTEXT_LENGTH;
         return (int) min(MAX_VALUE, max(maxEncryptedPacketLength0(), plaintextLength + records * maxWrapOverhead));
     }
@@ -1261,8 +1258,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                 final int packetLengthDataOnly = packetLength - SSL_RECORD_HEADER_LENGTH;
                 if (packetLengthDataOnly > capacity) {
-                    // Not enough space in the destination buffer so signal the caller that the buffer needs to be
-                    // increased.
                     if (packetLengthDataOnly > MAX_RECORD_SIZE) {
                         // The packet length MUST NOT exceed 2^14 [1]. However we do accommodate more data to support
                         // legacy use cases which may violate this condition (e.g. OpenJDK's SslEngineImpl). If the max
@@ -1272,10 +1267,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
                                                 session.getApplicationBufferSize());
                     }
-                    // The plaintext of a record is never longer than MAX_PLAINTEXT_LENGTH, as (Boring)SSL rejects
-                    // records that would decrypt to more. A destination that holds that much is big enough, even
-                    // if the record is longer because of the cipher overhead.
+                    // The plaintext is never longer than MAX_PLAINTEXT_LENGTH, so we never need more space than that.
                     if (min(packetLengthDataOnly, MAX_PLAINTEXT_LENGTH) > capacity) {
+                        // Not enough space in the destination buffer so signal the caller that the buffer needs to be
+                        // increased.
                         session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                         return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
                     }
@@ -1323,8 +1318,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                         }
                     } else if (!src.isDirect() && sslPending0() >= capacity - bytesProduced) {
-                        // The plaintext SSL has already decrypted fills the space left in dsts, so none of src can be
-                        // consumed by this call and there is no need to copy it.
+                        // Already decrypted data fills the destination buffers, so there is no need to copy src.
                         bioWriteCopyBuf = null;
                         pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                     } else {
@@ -1332,9 +1326,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // stated in the SSLEngine javadocs.
                         pendingEncryptedBytes = min(packetLength, remaining);
                         if (!src.isDirect()) {
-                            // A heap buffer is copied before it is written into the BIO. Only copy what can be
-                            // decrypted into the space left in dsts, so that the rest is not copied again by every
-                            // following call when src holds more records than dsts have room for.
+                            // Only copy what can be decrypted into the destination buffers.
                             pendingEncryptedBytes = min(pendingEncryptedBytes,
                                     calculateMaxLengthForUnwrap(capacity - bytesProduced));
                         }
@@ -1416,8 +1408,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                         if (bioWriteCopyBuf != null && pendingEncryptedBytes == 0 && packetLength > 0 &&
                                 src.hasRemaining()) {
-                            // Only part of src was copied into the BIO and all of it was consumed, so copy the next
-                            // part of src.
+                            // Only part of src was copied, so copy the rest before moving to the next buffer.
                             continue;
                         }
                         if (++srcsOffset >= srcsEndOffset) {
