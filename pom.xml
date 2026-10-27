@@ -103,7 +103,7 @@
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
                 netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
                 netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
-                netty-dev-tools,netty-example,testsuite-jpms,netty-jfr-stub,netty-varhandle-stub
+                netty-dev-tools,netty-example,testsuite-jpms,netty-jfr-stub,netty-varhandle-stub,netty-ffm-stub
               </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
@@ -773,7 +773,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.23.0</brotli4j.version>
+    <brotli4j.version>1.24.0</brotli4j.version>
     <aalto.version>1.3.4</aalto.version>
     <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
@@ -845,6 +845,7 @@
     <module>microbench</module>
     <module>jfr-stub</module>
     <module>varhandle-stub</module>
+    <module>ffm-stub</module>
     <module>bom</module>
   </modules>
 

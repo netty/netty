@@ -196,6 +196,17 @@ public class ByteBufUtilTest {
         needle.release();
     }
 
+    @Test
+    public void testIndexOfEmptyNeedle() {
+        ByteBuf haystack = Unpooled.copiedBuffer("abc", CharsetUtil.US_ASCII);
+        assertEquals(0, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.readerIndex(1);
+        assertEquals(1, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.readerIndex(3);
+        assertEquals(3, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.release();
+    }
+
     @ParameterizedTest
     @ValueSource(ints = { 0, 1, 2, 3 })
     public void testIndexOfMatchesNaiveSearch(int needleReaderIndex) {

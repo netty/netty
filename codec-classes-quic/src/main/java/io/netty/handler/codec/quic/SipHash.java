@@ -94,19 +94,19 @@ final class SipHash {
         assert left < Long.BYTES;
         switch (left) {
             case 7:
-                b |= (long) input.get(position + len + 6) << 48;
+                b |= (input.get(position + len + 6) & 0xFFL) << 48;
             case 6:
-                b |= (long) input.get(position + len + 5) << 40;
+                b |= (input.get(position + len + 5) & 0xFFL) << 40;
             case 5:
-                b |= (long) input.get(position + len + 4) << 32;
+                b |= (input.get(position + len + 4) & 0xFFL) << 32;
             case 4:
-                b |= (long) input.get(position + len + 3) << 24;
+                b |= (input.get(position + len + 3) & 0xFFL) << 24;
             case 3:
-                b |= (long) input.get(position + len + 2) << 16;
+                b |= (input.get(position + len + 2) & 0xFFL) << 16;
             case 2:
-                b |= (long) input.get(position + len + 1) << 8;
+                b |= (input.get(position + len + 1) & 0xFFL) << 8;
             case 1:
-                b |= input.get(position + len);
+                b |= input.get(position + len) & 0xFFL;
                 break;
             case 0:
                 break;
