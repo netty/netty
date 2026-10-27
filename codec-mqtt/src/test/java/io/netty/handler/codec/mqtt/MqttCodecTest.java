@@ -448,6 +448,75 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testSetMaxBytesInMessageAppliesToSubsequentMessages() throws Exception {
+        final int smallMaxBytesInMessage = 16;
+        final int largeMaxBytesInMessage = 256;
+        final byte[] payload = new byte[64]; // > smallMaxBytesInMessage, < largeMaxBytesInMessage
+
+        final MqttDecoder decoder = new MqttDecoder(smallMaxBytesInMessage);
+        assertEquals(smallMaxBytesInMessage, decoder.maxBytesInMessage());
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        try {
+            decoder.setMaxBytesInMessage(largeMaxBytesInMessage);
+            assertEquals(largeMaxBytesInMessage, decoder.maxBytesInMessage());
+
+            // too large for the limit the decoder was constructed with, but accepted now it has been raised
+            assertTrue(channel.writeInbound(encodePublish(payload)));
+            MqttPublishMessage accepted = channel.readInbound();
+            try {
+                assertTrue(accepted.decoderResult().isSuccess());
+                assertEquals(payload.length, accepted.payload().readableBytes());
+            } finally {
+                ReferenceCountUtil.release(accepted);
+            }
+
+            // Lowering it again rejects the same message. A rejection leaves the decoder in BAD_MESSAGE, where it
+            // discards everything until the connection is closed, so this has to be the last thing asked of it.
+            decoder.setMaxBytesInMessage(smallMaxBytesInMessage);
+            assertTrue(channel.writeInbound(encodePublish(payload)));
+            MqttMessage rejected = channel.readInbound();
+            try {
+                assertTrue(rejected.decoderResult().isFailure());
+                assertInstanceOf(TooLongFrameException.class, rejected.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(rejected);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testSetMaxBytesInMessageRejectsNonPositive() {
+        final MqttDecoder decoder = new MqttDecoder(16);
+        assertThrows(IllegalArgumentException.class, () -> decoder.setMaxBytesInMessage(0));
+        assertThrows(IllegalArgumentException.class, () -> decoder.setMaxBytesInMessage(-1));
+        assertEquals(16, decoder.maxBytesInMessage());
+    }
+
+    /**
+     * Encodes a QoS 0 PUBLISH whose total size is dominated by {@code payload}.
+     */
+    private static ByteBuf encodePublish(byte[] payload) {
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        byteBuf.writeByte(0x30); // PUBLISH, DUP=0, QoS=0, RETAIN=0
+        byte[] topic = "t".getBytes(CharsetUtil.UTF_8);
+        int remainingLength = 2 + topic.length + payload.length;
+        do {
+            int digit = remainingLength % 128;
+            remainingLength /= 128;
+            if (remainingLength > 0) {
+                digit |= 0x80;
+            }
+            byteBuf.writeByte(digit);
+        } while (remainingLength > 0);
+        byteBuf.writeShort(topic.length);
+        byteBuf.writeBytes(topic);
+        byteBuf.writeBytes(payload);
+        return byteBuf;
+    }
+
+    @Test
     public void testPublishMessageIncompleteVariableHeaderStillFailsWhenCurrentPacketTooLarge() throws Exception {
         // Same hand-crafting rationale as the test above: a malformed (incomplete-topic) PUBLISH
         // is needed so variable-header decoding asks for REPLAY, which is the code path under test.
