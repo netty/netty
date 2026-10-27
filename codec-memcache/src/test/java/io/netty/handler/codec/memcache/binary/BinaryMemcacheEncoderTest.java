@@ -244,4 +244,30 @@ public class BinaryMemcacheEncoderTest {
             extras.release();
         }
     }
+
+    @Test
+    public void shouldRejectKeyModifiedAfterSetKey() {
+        ByteBuf key = Unpooled.copiedBuffer("k", CharsetUtil.UTF_8);
+        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+        request.setKey(key);
+        key.writeByte(0x80).writeByte(BinaryMemcacheOpcodes.FLUSH).writeZero(22);
+
+        assertThrows(EncoderException.class, () -> channel.writeOutbound(request));
+        assertEquals(0, key.refCnt());
+        assertEquals(0, request.refCnt());
+        assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void shouldRejectExtrasModifiedAfterSetExtras() {
+        ByteBuf extras = Unpooled.buffer().writeZero(8);
+        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+        request.setExtras(extras);
+        extras.writeZero(4);
+
+        assertThrows(EncoderException.class, () -> channel.writeOutbound(request));
+        assertEquals(0, extras.refCnt());
+        assertEquals(0, request.refCnt());
+        assertNull(channel.readOutbound());
+    }
 }
