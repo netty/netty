@@ -30,143 +30,56 @@ import java.util.Locale;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_LONG;
 
+/**
+ * Allocates direct buffers with malloc and free from libc, linked through the Foreign Function &amp; Memory API.
+ */
 public class CleanerJava24Linker implements Cleaner {
     private static final InternalLogger logger;
-
-    private static final MethodHandle INVOKE_MALLOC;
-    private static final MethodHandle INVOKE_FREE;
-
-    private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
+    private static final boolean SUPPORTED;
 
     static {
-        boolean suitableJavaVersion;
+        Throwable error;
         if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-            // native image supports this since 25, but we don't use PlatformDependent0 here, since
-            // we need to initialize CleanerJava24Linker at build time.
-            String v = System.getProperty("java.specification.version");
-            try {
-                suitableJavaVersion = Integer.parseInt(v) >= 25;
-            } catch (NumberFormatException e) {
-                suitableJavaVersion = false;
-            }
-            // also need to prevent initializing the logger at build time
+            // A native image can only link the downcalls that were registered when the image was built, and
+            // linking on first use is too late to fall back to another cleaner, so a native image never uses
+            // this one. We don't use PlatformDependent0 or the logger here, since this class may be initialized
+            // at build time.
             logger = null;
+            error = new UnsupportedOperationException(
+                    "Linking to malloc and free is not supported in a native image.");
         } else {
+            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
             // Only attempt to use MemorySegments on Java 24 or greater, where warnings about Unsafe
             // memory access operations start to appear.
             // The following JDK bugs do NOT affect our implementation because the memory segments we
             // create are associated with the GLOBAL_SESSION:
             // - https://bugs.openjdk.org/browse/JDK-8357145
             // - https://bugs.openjdk.org/browse/JDK-8357268
-            suitableJavaVersion = PlatformDependent0.javaVersion() >= 24;
-            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
-        }
-
-        MethodHandle mallocMethod;
-        MethodHandle freeMethod;
-        Throwable error;
-
-        if (suitableJavaVersion) {
-            try {
-                // First, we need to check if we have access to "restricted" methods through the Java Module system.
-                boolean isNativeAccessEnabled = CleanerJava24Linker.class.getModule().isNativeAccessEnabled();
-                if (!isNativeAccessEnabled) {
-                    throw new UnsupportedOperationException(
-                            "Native access (restricted methods) is not enabled for the io.netty.common module.");
+            if (PlatformDependent0.javaVersion() >= 24) {
+                try {
+                    error = Symbols.UNAVAILABILITY_CAUSE;
+                } catch (Throwable throwable) {
+                    error = throwable;
                 }
-
-                // Second, we need to check the size of a pointer address. For simplicity, we'd like to assume the size
-                // of an address is the same as a Java long. So effectively, we're only enabled on 64-bit platforms.
-                if (ADDRESS.byteSize() != Long.BYTES) {
-                    throw new UnsupportedOperationException(
-                            "Linking to malloc and free is only supported on 64-bit platforms.");
-                }
-
-                Linker linker = Linker.nativeLinker();
-                SymbolLookup defaultLookup = linker.defaultLookup();
-                // The default lookup only searches the JDK's libsyslookup and its dependencies, bypassing
-                // allocators interposed with LD_PRELOAD. Search the global scope, as a PLT relocation would,
-                // so these buffers use the same allocator as Unsafe.allocateMemory.
-                MemorySegment mallocPtr = null;
-                MemorySegment freePtr = null;
-                long rtldDefault = rtldDefault();
-                if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
-                    try (Arena arena = Arena.ofConfined()) {
-                        MethodHandle dlsym = linker.downcallHandle(defaultLookup.findOrThrow("dlsym"),
-                                FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, ADDRESS));
-                        long mallocAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("malloc"));
-                        long freeAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("free"));
-                        if (mallocAddr != 0 && freeAddr != 0) {
-                            mallocPtr = MemorySegment.ofAddress(mallocAddr);
-                            freePtr = MemorySegment.ofAddress(freeAddr);
-                            if (logger != null) {
-                                logger.debug("malloc/free resolved via dlsym(RTLD_DEFAULT)");
-                            }
-                        } else if (logger != null) {
-                            logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup");
-                        }
-                    } catch (Throwable t) {
-                        if (logger != null) {
-                            logger.debug("Failed to resolve malloc/free via dlsym, using default lookup", t);
-                        }
-                    }
-                }
-                // Resolve both symbols together so an interposed malloc is never paired with libc's free.
-                if (mallocPtr == null) {
-                    mallocPtr = defaultLookup.findOrThrow("malloc");
-                    freePtr = defaultLookup.findOrThrow("free");
-                }
-                mallocMethod = linker.downcallHandle(mallocPtr, FunctionDescriptor.of(JAVA_LONG, JAVA_LONG));
-                freeMethod = linker.downcallHandle(freePtr, FunctionDescriptor.ofVoid(JAVA_LONG));
-
-                error = null;
-            } catch (Throwable throwable) {
-                mallocMethod = null;
-                freeMethod = null;
-                error = throwable;
+            } else {
+                error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
             }
-        } else {
-            mallocMethod = null;
-            freeMethod = null;
-            error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
-        }
-
-        if (logger != null) {
             if (error == null) {
                 logger.debug("java.nio.ByteBuffer.cleaner(): available");
             } else {
                 logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
             }
         }
-        INVOKE_MALLOC = mallocMethod;
-        INVOKE_FREE = freeMethod;
+        SUPPORTED = error == null;
     }
 
     static boolean isSupported() {
-        return INVOKE_MALLOC != null;
-    }
-
-    /**
-     * The platform's RTLD_DEFAULT pseudo-handle, or RTLD_DEFAULT_UNSUPPORTED if unknown.
-     * Native images keep the default lookup so addresses are not captured in the image heap at build time.
-     */
-    private static long rtldDefault() {
-        if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-            return RTLD_DEFAULT_UNSUPPORTED;
-        }
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (os.contains("linux")) {
-            return 0L;
-        }
-        if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
-            return -2L;
-        }
-        return RTLD_DEFAULT_UNSUPPORTED;
+        return SUPPORTED;
     }
 
     @Override
     public CleanableDirectBuffer allocate(int capacity) {
-        return new CleanableDirectBufferImpl(capacity);
+        return CleanableDirectBufferImpl.allocate(capacity);
     }
 
     @Override
@@ -180,14 +93,9 @@ public class CleanerJava24Linker implements Cleaner {
     }
 
     static long malloc(int capacity) {
-        final long addr;
-        try {
-            // Always allocate at least 1 byte, to avoid relying on non-portable behavior
-            // of malloc(3) for zero size allocations.
-            addr = (long) INVOKE_MALLOC.invokeExact(Math.max(capacity, 1L));
-        } catch (Throwable e) {
-            throw new Error(e); // Should not happen.
-        }
+        // Always allocate at least 1 byte, to avoid relying on non-portable behavior
+        // of malloc(3) for zero size allocations.
+        long addr = Holder.malloc(Math.max(capacity, 1L));
         if (addr == 0) {
             throw new OutOfMemoryError("malloc(2) failed to allocate " + capacity + " bytes");
         }
@@ -195,10 +103,118 @@ public class CleanerJava24Linker implements Cleaner {
     }
 
     static void free(long memoryAddress) {
-        try {
-            INVOKE_FREE.invokeExact(memoryAddress);
-        } catch (Throwable e) {
-            throw new Error(e); // Should not happen.
+        Holder.free(memoryAddress);
+    }
+
+    /**
+     * Checks that native access is enabled for this module, and that this platform has a 64-bit native linker
+     * that finds malloc and free. This links no downcall, which is left to {@link Holder}.
+     */
+    private static final class Symbols {
+        static final MemorySegment MALLOC;
+        static final MemorySegment FREE;
+        static final Throwable UNAVAILABILITY_CAUSE;
+
+        static {
+            MemorySegment malloc = null;
+            MemorySegment free = null;
+            Throwable error = null;
+            try {
+                // First, we need to check if we have access to "restricted" methods through the Java Module system.
+                if (!CleanerJava24Linker.class.getModule().isNativeAccessEnabled()) {
+                    throw new UnsupportedOperationException(
+                            "Native access (restricted methods) is not enabled for the io.netty.common module.");
+                }
+
+                // Second, we need to check the size of a pointer address. For simplicity, we'd like to assume the size
+                // of an address is the same as a Java long. So effectively, we're only enabled on 64-bit platforms.
+                if (ADDRESS.byteSize() != Long.BYTES) {
+                    throw new UnsupportedOperationException(
+                            "Linking to malloc and free is only supported on 64-bit platforms.");
+                }
+
+                // Finally, we check that this platform has a native linker, and that it finds malloc and free.
+                SymbolLookup symbols = Linker.nativeLinker().defaultLookup();
+                malloc = symbols.findOrThrow("malloc");
+                free = symbols.findOrThrow("free");
+            } catch (Throwable throwable) {
+                malloc = null;
+                free = null;
+                error = throwable;
+            }
+            MALLOC = malloc;
+            FREE = free;
+            UNAVAILABILITY_CAUSE = error;
+        }
+    }
+
+    /**
+     * Links malloc and free on first use rather than when {@link PlatformDependent} is initialized,
+     * because creating the downcall handles is a startup cost for applications that may never allocate
+     * a direct buffer.
+     */
+    private static final class Holder {
+        private static final long RTLD_DEFAULT_UNSUPPORTED = Long.MIN_VALUE;
+        private static final MethodHandle INVOKE_MALLOC;
+        private static final MethodHandle INVOKE_FREE;
+
+        static {
+            Linker linker = Linker.nativeLinker();
+            MemorySegment malloc = Symbols.MALLOC;
+            MemorySegment free = Symbols.FREE;
+            // The default lookup only searches libc, so prefer what dlsym(RTLD_DEFAULT) finds: it honours an
+            // allocator interposed with LD_PRELOAD, like the PLT of libjvm does for Unsafe.allocateMemory.
+            long rtldDefault = rtldDefault();
+            if (rtldDefault != RTLD_DEFAULT_UNSUPPORTED) {
+                try {
+                    MethodHandle dlsym = linker.downcallHandle(linker.defaultLookup().findOrThrow("dlsym"),
+                        FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, ADDRESS));
+                    try (Arena arena = Arena.ofConfined()) {
+                        long mallocAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("malloc"));
+                        long freeAddr = (long) dlsym.invokeExact(rtldDefault, arena.allocateFrom("free"));
+                        if (mallocAddr != 0 && freeAddr != 0) {
+                            malloc = MemorySegment.ofAddress(mallocAddr);
+                            free = MemorySegment.ofAddress(freeAddr);
+                        }
+                    }
+                } catch (Throwable throwable) {
+                    logger.debug("dlsym(RTLD_DEFAULT) did not resolve malloc/free, using default lookup", throwable);
+                }
+            }
+            INVOKE_MALLOC = linker.downcallHandle(malloc, FunctionDescriptor.of(JAVA_LONG, JAVA_LONG));
+            INVOKE_FREE = linker.downcallHandle(free, FunctionDescriptor.ofVoid(JAVA_LONG));
+        }
+
+        /**
+         * The value of the {@code RTLD_DEFAULT} pseudo-handle for {@code dlsym(3)} on this platform, or
+         * {@link #RTLD_DEFAULT_UNSUPPORTED} if we do not know it. The value is not standardised: glibc and musl use
+         * {@code (void*) 0}, while macOS and the BSDs use {@code (void*) -2}. Windows has no {@code dlsym}.
+         */
+        private static long rtldDefault() {
+            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+            if (os.contains("linux")) {
+                return 0L;
+            }
+            if (os.contains("mac") || os.contains("darwin") || os.contains("bsd")) {
+                return -2L;
+            }
+            return RTLD_DEFAULT_UNSUPPORTED;
+        }
+
+        static long malloc(long size) {
+            try {
+                return (long) INVOKE_MALLOC.invokeExact(size);
+            } catch (Throwable e) {
+                throw new Error(e); // Should not happen.
+            }
+        }
+
+        static void free(long memoryAddress) {
+            try {
+                INVOKE_FREE.invokeExact(memoryAddress);
+            } catch (Throwable e) {
+                throw new Error(e); // Should not happen.
+            }
         }
     }
 
@@ -206,7 +222,14 @@ public class CleanerJava24Linker implements Cleaner {
         private final ByteBuffer buffer;
         private final long memoryAddress;
 
-        private CleanableDirectBufferImpl(int capacity) {
+        CleanableDirectBufferImpl(ByteBuffer buffer, long memoryAddress) {
+            this.buffer = buffer;
+            this.memoryAddress = memoryAddress;
+        }
+
+        // Creates the ByteBuffer close to the caller: C2 only scalar-replaces it when the whole (deep)
+        // DirectByteBuffer construction fits within MaxInlineLevel of the caller.
+        static CleanableDirectBuffer allocate(int capacity) {
             PlatformDependent.incrementMemoryCounter(capacity);
             long addr;
             try {
@@ -216,8 +239,8 @@ public class CleanerJava24Linker implements Cleaner {
                 throw e;
             }
             try {
-                memoryAddress = addr;
-                buffer = MemorySegment.ofAddress(addr).reinterpret(capacity).asByteBuffer();
+                return new CleanableDirectBufferImpl(
+                        MemorySegment.ofAddress(addr).reinterpret(capacity).asByteBuffer(), addr);
             } catch (Throwable throwable) {
                 PlatformDependent.decrementMemoryCounter(capacity);
                 Error error = new Error(throwable);
