@@ -18,11 +18,9 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
-
-import static java.lang.invoke.MethodType.methodType;
 
 /**
  * Provide a way to clean direct {@link ByteBuffer} instances on Java 24+,
@@ -31,7 +29,7 @@ import static java.lang.invoke.MethodType.methodType;
 final class CleanerJava25 implements Cleaner {
     private static final InternalLogger logger;
 
-    private static final MethodHandle INVOKE_ALLOCATOR;
+    private static final boolean SUPPORTED;
 
     static {
         boolean suitableJavaVersion;
@@ -54,102 +52,15 @@ final class CleanerJava25 implements Cleaner {
             logger = InternalLoggerFactory.getInstance(CleanerJava25.class);
         }
 
-        MethodHandle method;
         Throwable error;
         if (suitableJavaVersion) {
             try {
-                // Here we compose and construct a MethodHandle that takes an 'int' capacity argument,
-                // and produces a 'CleanableDirectBufferImpl' instance.
-                // The method handle will create a new shared Arena instance, allocate a MemorySegment from it,
-                // convert the MemorySegment to a ByteBuffer and a memory address, and then pass both the Arena,
-                // the ByteBuffer, and the memory address to the CleanableDirectBufferImpl constructor,
-                // returning the resulting object.
-                //
-                // Effectively, we are recreating the following the Java code through MethodHandles alone:
-                //
-                //    Arena arena = Arena.ofShared();
-                //    MemorySegment segment = arena.allocate(size);
-                //    return new CleanableDirectBufferImpl(
-                //              (AutoCloseable) arena,
-                //              segment.asByteBuffer(),
-                //              segment.address());
-                //
-                // First, we need the types we'll use to set this all up.
-                Class<?> arenaCls = Class.forName("java.lang.foreign.Arena");
-                Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
-                Class<CleanableDirectBufferImpl> bufCls = CleanableDirectBufferImpl.class;
-                // Acquire the private look up, so we can access the package-private 'CleanableDirectBufferImpl'
-                // constructor.
-                MethodHandles.Lookup lookup = MethodHandles.lookup();
-
-                // ofShared.type() = ()Arena
-                MethodHandle ofShared = lookup.findStatic(arenaCls, "ofShared", methodType(arenaCls));
-
-                // Try to access shared Arena which might fail on GraalVM 25.0.0 if not enabled
-                // See https://github.com/netty/netty/issues/15762
-                Object shared = ofShared.invoke();
-                ((AutoCloseable) shared).close();
-
-                // allocate.type() = (Arena,long)MemorySegment
-                MethodHandle allocate = lookup.findVirtual(arenaCls, "allocate", methodType(memsegCls, long.class));
-                // asByteBuffer.type() = (MemorySegment)ByteBuffer
-                MethodHandle asByteBuffer = lookup.findVirtual(memsegCls, "asByteBuffer", methodType(ByteBuffer.class));
-                // address.type() = (MemorySegment)long
-                MethodHandle address = lookup.findVirtual(memsegCls, "address", methodType(long.class));
-                // bufClsCtor.type() = (AutoCloseable,ByteBuffer,long)CleanableDirectBufferImpl
-                MethodHandle bufClsCtor = lookup.findConstructor(bufCls,
-                        methodType(void.class, AutoCloseable.class, ByteBuffer.class, long.class));
-                // The 'allocate' method takes a 'long' capacity, but we'll be providing an 'int'.
-                // Explicitly cast the 'long' to 'int' so we can use 'invokeExact'.
-                // allocateInt.type() = (Arena,int)MemorySegment
-                MethodHandle allocateInt = MethodHandles.explicitCastArguments(allocate,
-                        methodType(memsegCls, arenaCls, int.class));
-                // Use the 'asByteBuffer' and 'address' methods as a filter, to transform the constructor into a method
-                // that takes two MemorySegment arguments instead of a ByteBuffer and a long argument.
-                // ctorArenaMemsegMemseg.type() = (Arena,MemorySegment,MemorySegment)CleanableDirectBufferImpl
-                MethodHandle ctorArenaMemsegMemseg = MethodHandles.explicitCastArguments(
-                        MethodHandles.filterArguments(bufClsCtor, 1, asByteBuffer, address),
-                        methodType(bufCls, arenaCls, memsegCls, memsegCls));
-                // Our method now takes two MemorySegment arguments, but we actually only want to pass one.
-                // Specifically, we want to get both the ByteBuffer and the memory address from the same MemorySegment
-                // instance.
-                // We permute the argument array such that the first MemorySegment argument gest passed to both
-                // parameters, and then the second parameter value gets ignored.
-                // ctorArenaMemsegNull.type() = (Arena,MemorySegment,MemorySegment)CleanableDirectBufferImpl
-                MethodHandle ctorArenaMemsegNull = MethodHandles.permuteArguments(ctorArenaMemsegMemseg,
-                        methodType(bufCls, arenaCls, memsegCls, memsegCls), 0, 1, 1);
-                // With the second MemorySegment argument ignored, we can statically bind it to 'null' to effectively
-                // drop it from our parameter list.
-                MethodHandle ctorArenaMemseg = MethodHandles.insertArguments(
-                        ctorArenaMemsegNull, 2, new Object[]{null});
-                // Use the 'allocateInt' method to transform the last MemorySegment argument of the constructor,
-                // into an (Arena,int) argument pair.
-                // ctorArenaArenaInt.type() = (Arena,Arena,int)CleanableDirectBufferImpl
-                MethodHandle ctorArenaArenaInt = MethodHandles.collectArguments(ctorArenaMemseg, 1, allocateInt);
-                // Our method now takes two Arena arguments, but we actually only want to pass one. Specifically, it's
-                // very important that it's the same arena we use for both allocation and deallocation.
-                // We permute the argument array such that the first Arena argument gets passed to both parameters,
-                // and the second parameter value gets ignored.
-                // ctorArenaNullInt.type() = (Arena,Arena,int)CleanableDirectBufferImpl
-                MethodHandle ctorArenaNullInt = MethodHandles.permuteArguments(ctorArenaArenaInt,
-                        methodType(bufCls, arenaCls, arenaCls, int.class), 0, 0, 2);
-                // With the second Arena parameter value ignored, we can statically bind it to 'null' to effectively
-                // drop it from our parameter list.
-                // ctorArenaInt.type() = (Arena,int)CleanableDirectBufferImpl
-                MethodHandle ctorArenaInt = MethodHandles.insertArguments(ctorArenaNullInt, 1, new Object[]{null});
-                // Now we just need to create our Arena instance. We fold the Arena parameter into the 'ofShared'
-                // static method, so we effectively bind the argument to the result of calling that method.
-                // Since 'ofShared' takes no further parameters, we effectively eliminate the first parameter.
-                // This creates our method handle that takes an 'int' and returns a 'CleanableDirectBufferImpl'.
-                // ctorInt.type() = (int)CleanableDirectBufferImpl
-                method = MethodHandles.foldArguments(ctorArenaInt, ofShared);
+                Arenas.checkShared();
                 error = null;
             } catch (Throwable throwable) {
-                method = null;
                 error = throwable;
             }
         } else {
-            method = null;
             error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
         }
         if (logger != null) {
@@ -159,19 +70,18 @@ final class CleanerJava25 implements Cleaner {
                 logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
             }
         }
-        INVOKE_ALLOCATOR = method;
+        SUPPORTED = error == null;
     }
 
     static boolean isSupported() {
-        return INVOKE_ALLOCATOR != null;
+        return SUPPORTED;
     }
 
-    @SuppressWarnings("OverlyStrongTypeCast") // The cast is needed for 'invokeExact' semantics.
     @Override
     public CleanableDirectBuffer allocate(int capacity) {
         PlatformDependent.incrementMemoryCounter(capacity);
         try {
-            return (CleanableDirectBufferImpl) INVOKE_ALLOCATOR.invokeExact(capacity);
+            return Arenas.allocate(capacity);
         } catch (RuntimeException e) {
             PlatformDependent.decrementMemoryCounter(capacity);
             throw e; // Propagate the runtime exceptions that the Arena would normally throw.
@@ -193,12 +103,26 @@ final class CleanerJava25 implements Cleaner {
         return true;
     }
 
+    private static final class Arenas {
+        static void checkShared() {
+            // Try to access shared Arena which might fail on GraalVM 25.0.0 if not enabled
+            // See https://github.com/netty/netty/issues/15762
+            Arena.ofShared().close();
+        }
+
+        static CleanableDirectBufferImpl allocate(int capacity) {
+            // Each buffer gets its own shared arena, which is closed to free the memory.
+            Arena arena = Arena.ofShared();
+            MemorySegment segment = arena.allocate(capacity);
+            return new CleanableDirectBufferImpl(arena, segment.asByteBuffer(), segment.address());
+        }
+    }
+
     private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {
         private final AutoCloseable closeable;
         private final ByteBuffer buffer;
         private final long memoryAddress;
 
-        // NOTE: must be at least package-protected to allow calls from the method handles!
         CleanableDirectBufferImpl(AutoCloseable closeable, ByteBuffer buffer, long memoryAddress) {
             this.closeable = closeable;
             this.buffer = buffer;
