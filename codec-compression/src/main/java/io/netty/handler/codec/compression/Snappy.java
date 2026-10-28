@@ -124,9 +124,7 @@ public final class Snappy {
 
                     nextHash = hash(in, nextIndex, shift);
 
-                    // equivalent to Short.toUnsignedInt
-                    // use unsigned short cast to avoid loss precision when 32767 <= length <= 65355
-                    candidate = baseIndex + (table[hash] & 0xffff);
+                    candidate = candidate(table[hash], inIndex, baseIndex);
 
                     table[hash] = (short) (inIndex - baseIndex);
                 }
@@ -151,7 +149,7 @@ public final class Snappy {
                     int prevHash = hash(in, insertTail, shift);
                     table[prevHash] = (short) (inIndex - baseIndex - 1);
                     int currentHash = hash(in, insertTail + 1, shift);
-                    candidate = baseIndex + (table[currentHash] & 0xFFFF);
+                    candidate = candidate(table[currentHash], insertTail + 1, baseIndex);
                     table[currentHash] = (short) (inIndex - baseIndex);
                 }
                 while (isMatch(in, insertTail + 1, candidate));
@@ -168,12 +166,23 @@ public final class Snappy {
     }
 
     /**
-     * Returns {@code true} if the 4 bytes at the candidate are the same as at the index and the candidate can be
-     * referenced with a copy.
+     * Returns the position of the closest earlier occurrence of the hash table entry, that is at most
+     * {@link #MAX_COPY_OFFSET} bytes before the index.
+     * <p>
+     * The hash table only stores the lower 16 bits of a position, so for an input longer than 65535 bytes we
+     * need to restore the upper bits from the index. The result is only a candidate and needs to be verified with
+     * {@link #isMatch(ByteBuf, int, int)}.
+     */
+    private static int candidate(short entry, int index, int baseIndex) {
+        return index - ((index - baseIndex - (entry & 0xFFFF)) & MAX_COPY_OFFSET);
+    }
+
+    /**
+     * Returns {@code true} if the candidate is before the index (so it can be referenced with a copy) and the
+     * 4 bytes at the candidate are the same as at the index.
      */
     private static boolean isMatch(ByteBuf in, int index, int candidate) {
-        // The hash table only stores the lower 16 bits of the position, so the candidate may be too far away.
-        return index - candidate <= MAX_COPY_OFFSET && in.getInt(index) == in.getInt(candidate);
+        return candidate < index && in.getInt(index) == in.getInt(candidate);
     }
 
     /**

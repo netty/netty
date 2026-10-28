@@ -353,11 +353,16 @@ public class SnappyTest {
     @Test
     public void testEncodeLargeInputWithMatchesWithinMaxCopyOffset() {
         // Repeat a block that is smaller than the max offset so we still find matches in the large input.
+        Random random = new Random(42);
         byte[] period = new byte[1000];
-        new Random(42).nextBytes(period);
+        random.nextBytes(period);
         byte[] data = new byte[200000];
         for (int i = 0; i < data.length; i++) {
             data[i] = period[i % period.length];
+            // Break the match once per period so new matches must be found through the hash table.
+            if (i % period.length == 0) {
+                data[i] = (byte) random.nextInt();
+            }
         }
 
         ByteBuf in = Unpooled.wrappedBuffer(data);
