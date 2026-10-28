@@ -304,6 +304,28 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void mergedDataFramesShouldCloseStreamOnceTheLastFrameIsWritten() throws Exception {
+        Http2Stream stream = createStream(STREAM_ID, false);
+
+        ChannelPromise promise1 = newPromise();
+        encoder.writeData(ctx, STREAM_ID, dummyData(), 0, false, promise1);
+        ChannelPromise promise2 = newPromise();
+        encoder.writeData(ctx, STREAM_ID, dummyData(), 0, true, promise2);
+
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        FlowControlled mergedPayload = capturedWrites.get(0);
+        assertTrue(mergedPayload.merge(ctx, capturedWrites.get(1)));
+        mergedPayload.write(ctx, 16);
+        assertEquals(0, mergedPayload.size());
+        mergedPayload.writeComplete();
+
+        // The stream must be closed with the promise of the frame that ended it, not with the promise of the first
+        // frame, which may have completed long before the rest of the data was written.
+        verify(lifecycleManager).closeStreamLocal(stream, promise2);
+        verify(lifecycleManager, never()).closeStreamLocal(stream, promise1);
+    }
+
+    @Test
     public void dataFramesShouldMergeUseVoidPromise() throws Exception {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData().retain();
