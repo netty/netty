@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -102,6 +103,80 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             }
         });
         ch.finishAndReleaseAll();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {100, 103})
+    public void encodeInformationalResponseWithoutContentLength(int code) throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        // Like the 100 (Continue) that HttpServerExpectContinueHandler writes.
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(code), Unpooled.EMPTY_BUFFER);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        response.headers().set("link", "</style.css>; rel=preload; as=style");
+        assertTrue(ch.writeOutbound(response));
+
+        Http2HeadersFrame headersFrame = ch.readOutbound();
+        assertEquals(String.valueOf(code), headersFrame.headers().status().toString());
+        assertFalse(headersFrame.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+        assertEquals("</style.css>; rel=preload; as=style", headersFrame.headers().get("link").toString());
+        assertFalse(headersFrame.isEndStream());
+
+        assertNull(ch.readOutbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void encodeInformationalFullResponseDropsContent() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        ByteBuf content = Unpooled.copiedBuffer("ignored", CharsetUtil.UTF_8);
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, content);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+        assertTrue(ch.writeOutbound(response));
+        assertEquals(0, content.refCnt());
+
+        Http2HeadersFrame headersFrame = ch.readOutbound();
+        assertEquals("100", headersFrame.headers().status().toString());
+        assertFalse(headersFrame.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+        assertFalse(headersFrame.isEndStream());
+
+        assertNull(ch.readOutbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void encode100ContinueThenFinalResponse() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+        continueResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, hello.readableBytes());
+        assertTrue(ch.writeOutbound(continueResponse, response));
+
+        Http2HeadersFrame continueFrame = ch.readOutbound();
+        Http2HeadersFrame headersFrame = ch.readOutbound();
+        Http2DataFrame dataFrame = ch.readOutbound();
+        try {
+            assertEquals("100", continueFrame.headers().status().toString());
+            assertFalse(continueFrame.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+            assertFalse(continueFrame.isEndStream());
+
+            assertEquals("200", headersFrame.headers().status().toString());
+            assertEquals("11", headersFrame.headers().get(HttpHeaderNames.CONTENT_LENGTH).toString());
+            assertFalse(headersFrame.isEndStream());
+
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
+            assertTrue(dataFrame.isEndStream());
+        } finally {
+            dataFrame.release();
+        }
+
+        assertNull(ch.readOutbound());
+        assertFalse(ch.finish());
     }
 
     @Test
