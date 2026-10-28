@@ -200,11 +200,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * The JDK {@link SSLEngine} wants at least {@code packetLength - 5 - 16} bytes to unwrap a record, as it subtracts
      * the 5 byte header and at least 16 bytes of tag or MAC for every cipher suite.
      * <p>
-     * See the {@code BUFFER_OVERFLOW} check in
-     * <a href="https://github.com/openjdk/jdk/blob/691779725369c6e6b69e80c173a9c36582b0fb78/src/java.base/share/classes/sun/security/ssl/SSLEngineImpl.java#L670-L675">SSLEngineImpl</a>
-     * and, for example, the AEAD
-     * <a href="https://github.com/openjdk/jdk/blob/691779725369c6e6b69e80c173a9c36582b0fb78/src/java.base/share/classes/sun/security/ssl/SSLCipher.java#L1969-L1971">estimateFragmentSize</a>
-     * it calls (record header and tag size subtracted from the packet length).
+     * The {@code BUFFER_OVERFLOW} check calls {@code estimateFragmentSize(packetLen)}:
+     * https://github.com/openjdk/jdk/blob/6917797/src/java.base/share/classes/sun/security/ssl/SSLEngineImpl.java#L672
+     * which for AEAD ciphers subtracts the header and tag size from the packet length:
+     * https://github.com/openjdk/jdk/blob/6917797/src/java.base/share/classes/sun/security/ssl/SSLCipher.java#L1969
      */
     private static final int JDK_MIN_UNWRAP_OVERHEAD = 5 + 16;
 
