@@ -36,8 +36,8 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        int extrasLength = checkLength(msg.extras(), msg.extrasLength() & 0xFF, "extras");
-        int keyLength = checkLength(msg.key(), msg.keyLength() & 0xFFFF, "key");
+        int extrasLength = verifyLength(msg.extras(), msg.extrasLength() & 0xFF, "extras");
+        int keyLength = verifyLength(msg.key(), msg.keyLength() & 0xFFFF, "key");
         ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + extrasLength + keyLength);
 
         encodeHeader(buf, msg);
@@ -48,10 +48,10 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
     }
 
     /**
-     * The header is written from the lengths recorded in the message, so the key and extras buffers must not
-     * have changed since they were set. Otherwise the header would not describe the bytes that follow it.
+     * The header is written from the lengths recorded in the message, so the readable bytes of the key and extras
+     * must still equal those recorded lengths. Otherwise the header would not describe the bytes that follow it.
      */
-    private static int checkLength(ByteBuf buf, int expectedLength, String name) {
+    private static int verifyLength(ByteBuf buf, int expectedLength, String name) {
         int actualLength = buf == null ? 0 : buf.readableBytes();
         if (actualLength != expectedLength) {
             throw new EncoderException(name + " length: " + actualLength + " (expected: " + expectedLength + ')');
