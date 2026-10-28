@@ -21,8 +21,18 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import javax.net.ssl.SSLEngine;
 
-final class ZlibCertificateCompressionAlgorithm implements OpenSslCertificateCompressionAlgorithm {
-    static final ZlibCertificateCompressionAlgorithm INSTANCE = new ZlibCertificateCompressionAlgorithm();
+/**
+ * The zlib certificate compression algorithm (ID 1) as defined by
+ * <a href="https://datatracker.ietf.org/doc/html/rfc8879">RFC 8879</a>.
+ * <p>
+ * This is the default algorithm used by {@link OpenSslCertificateCompressionConfig}. Use it to keep zlib when
+ * supplying a custom configuration. The singleton is thread-safe.
+ */
+public final class ZlibCertificateCompressionAlgorithm implements OpenSslCertificateCompressionAlgorithm {
+    /**
+     * The shared instance.
+     */
+    public static final ZlibCertificateCompressionAlgorithm INSTANCE = new ZlibCertificateCompressionAlgorithm();
 
     // The zlib algorithm identifier assigned by RFC 8879.
     private static final int ALGORITHM_ID = 1;
