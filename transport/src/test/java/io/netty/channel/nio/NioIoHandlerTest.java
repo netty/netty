@@ -31,8 +31,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioIoHandlerTest {
@@ -132,5 +134,87 @@ public class NioIoHandlerTest {
         channel.close();
         handler.prepareToDestroy();
         handler.destroy();
+    }
+
+    @Test
+    void testMillisBeforeDeadlineRoundsUp() {
+        long now = 1_000_000_000L;
+        // The timeout is only 0 if the deadline is within 5 microseconds, or already reached.
+        assertEquals(0, NioIoHandler.millisBeforeDeadline(now - 1, now));
+        assertEquals(0, NioIoHandler.millisBeforeDeadline(now, now));
+        assertEquals(0, NioIoHandler.millisBeforeDeadline(now + 1, now));
+        assertEquals(0, NioIoHandler.millisBeforeDeadline(now + 4_999, now));
+        // Everything from 5 microseconds up to 1 ms is rounded up to 1 ms, also less than 0.5 ms.
+        // After that the timeout grows by 1 ms every ms, 5 microseconds early.
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 5_000, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 100_000, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 499_999, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 500_000, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 999_999, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 1_000_000, now));
+        assertEquals(1, NioIoHandler.millisBeforeDeadline(now + 1_004_999, now));
+        assertEquals(2, NioIoHandler.millisBeforeDeadline(now + 1_005_000, now));
+        assertEquals(2, NioIoHandler.millisBeforeDeadline(now + 2_004_999, now));
+        assertEquals(3, NioIoHandler.millisBeforeDeadline(now + 2_005_000, now));
+        assertEquals(1_000, NioIoHandler.millisBeforeDeadline(now + TimeUnit.SECONDS.toNanos(1), now));
+    }
+
+    @Test
+    void testMillisBeforeDeadlineDoesNotOverflow() {
+        long maxMillis = Long.MAX_VALUE / 1_000_000L;
+        // Far deadlines are capped, they must never look like a deadline that is already reached.
+        assertEquals(maxMillis, NioIoHandler.millisBeforeDeadline(Long.MAX_VALUE - 1, 0));
+        assertEquals(maxMillis, NioIoHandler.millisBeforeDeadline(Long.MAX_VALUE - 995_000L, 0));
+        assertEquals(maxMillis, NioIoHandler.millisBeforeDeadline(Long.MAX_VALUE - 995_001L, 0));
+        assertEquals(maxMillis, NioIoHandler.millisBeforeDeadline(Long.MAX_VALUE - 1_000_000L, 0));
+        assertTrue(NioIoHandler.millisBeforeDeadline(Long.MAX_VALUE - 10_000_000L, 0) > 0);
+    }
+
+    @Test
+    void testNoBusySpinIfDeadlineIsLessThanHalfAMillisecondAway() throws Exception {
+        final long[] deadline = new long[1];
+        final ThreadAwareExecutor executor = new ThreadAwareExecutor() {
+            @Override
+            public boolean isExecutorThread(Thread thread) {
+                return true;
+            }
+
+            @Override
+            public void execute(Runnable command) {
+                throw new UnsupportedOperationException();
+            }
+        };
+        IoHandlerContext context = new IoHandlerContext() {
+            @Override
+            public boolean canBlock() {
+                return true;
+            }
+
+            @Override
+            public long delayNanos(long currentTimeNanos) {
+                return Math.max(0, deadline[0] - currentTimeNanos);
+            }
+
+            @Override
+            public long deadlineNanos() {
+                return deadline[0];
+            }
+        };
+        IoHandler handler = NioIoHandler.newFactory().newHandler(executor);
+        try {
+            deadline[0] = System.nanoTime() + TimeUnit.MICROSECONDS.toNanos(300);
+            // An event loop calls run(...) again as long as the scheduled task is not due. If run(...) returns
+            // without sleeping, as it did when the timeout was rounded to the nearest millisecond, this loops
+            // thousands of times until the deadline is reached.
+            int iterations = 0;
+            while (System.nanoTime() < deadline[0]) {
+                handler.run(context);
+                iterations++;
+            }
+            assertTrue(iterations <= 3, "run(...) returned " + iterations + " times before the deadline");
+        } finally {
+            handler.prepareToDestroy();
+            handler.destroy();
+        }
     }
 }
