@@ -770,11 +770,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     /**
      * Calculates the max number of encrypted bytes to write into the BIO for the given plaintextLength, which is at
-     * least {@link #maxEncryptedPacketLength0()}.
+     * least {@link #maxEncryptedPacketLength()}.
+     * <p>
+     * This method is intentionally not synchronized, it is only called while the engine lock is held by unwrap.
      */
-    private synchronized int calculateMaxLengthForUnwrap(long plaintextLength) {
+    private int calculateMaxLengthForUnwrap(long plaintextLength) {
         long records = (plaintextLength + MAX_PLAINTEXT_LENGTH - 1) / MAX_PLAINTEXT_LENGTH;
-        return (int) min(MAX_VALUE, max(maxEncryptedPacketLength0(), plaintextLength + records * maxWrapOverhead));
+        return (int) min(MAX_VALUE, max(maxEncryptedPacketLength(), plaintextLength + records * maxWrapOverhead));
     }
 
     final synchronized int sslPending() {
