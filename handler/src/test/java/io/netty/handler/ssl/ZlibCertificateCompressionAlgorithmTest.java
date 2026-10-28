@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,6 +77,26 @@ class ZlibCertificateCompressionAlgorithmTest {
     void rejectsMalformedInput() {
         assertThrows(DataFormatException.class,
                 () -> algorithm.decompress(null, 16, new byte[] { 1, 2, 3, 4 }));
+    }
+
+    @Test
+    void rejectsPresetDictionary() {
+        byte[] certificate = "certificate-chain".getBytes(StandardCharsets.US_ASCII);
+        Deflater deflater = new Deflater();
+        byte[] buffer = new byte[certificate.length + 64];
+        int length;
+        try {
+            deflater.setDictionary("dictionary".getBytes(StandardCharsets.US_ASCII));
+            deflater.setInput(certificate);
+            deflater.finish();
+            length = deflater.deflate(buffer);
+        } finally {
+            deflater.end();
+        }
+        byte[] compressed = Arrays.copyOf(buffer, length);
+
+        assertThrows(DataFormatException.class,
+                () -> algorithm.decompress(null, certificate.length, compressed));
     }
 
     @Test
