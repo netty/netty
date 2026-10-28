@@ -478,7 +478,12 @@ public final class Snappy {
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readIntLE();
+            // The length - 1 is stored as unsigned 32-bit integer.
+            long literalLength = in.readUnsignedIntLE();
+            if (literalLength >= Integer.MAX_VALUE) {
+                throw new DecompressionException("Literal length too large: " + (literalLength + 1));
+            }
+            length = (int) literalLength;
             break;
         default:
             length = tag >> 2 & 0x3F;
