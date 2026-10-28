@@ -1470,8 +1470,8 @@ public class LocalChannelTest {
     private static void testPeerWritesMoreThanOneReadAndClosesDeliversAllData(
             EventLoopGroup serverGroup, EventLoopGroup clientGroup) throws Exception {
         final int messages = 100;
-        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<>();
-        final List<Object> received = new ArrayList<>();
+        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<Integer>();
+        final List<Object> received = new ArrayList<Object>();
 
         ServerBootstrap sb = new ServerBootstrap()
                 .group(serverGroup)
@@ -1525,8 +1525,8 @@ public class LocalChannelTest {
     @Timeout(30)
     public void testPeerWritesAndClosesDeliversAllBufferedDataWithAutoReadOff() throws Exception {
         final int messages = 100;
-        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<>();
-        final List<Integer> received = new ArrayList<>();
+        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<Integer>();
+        final List<Integer> received = new ArrayList<Integer>();
 
         // The accepted channel never calls read(). Like the epoll and kqueue transports when they see the peer's
         // FIN, it gets the data that is still buffered before it becomes inactive.
