@@ -42,6 +42,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -57,6 +58,8 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.Collections;
+import java.util.List;
 
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
@@ -68,9 +71,6 @@ import static io.netty.util.internal.StringUtil.className;
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIoUringChannel.class);
     final LinuxSocket socket;
-    // Owns every in-flight write operation this channel is tracking -- the pooled slot array, the overflow map,
-    // the foreign slot array, and the single stream slot. See WriteOperationTracker for the four namespaces.
-    final WriteOperationTracker writeTracker = new WriteOperationTracker();
     private final IoUringIoHandle ioHandle = new IoUringIoHandleImpl();
     protected volatile boolean active;
 
@@ -107,6 +107,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean inputClosedSeenErrorOnRead;
     private boolean socketIsEmpty;
     private Promise<Void> deregisterPromise;
+    // Only one primary write batch is submitted at a time. Notifications belong to older zero-copy writes.
+    final WriteOpsSnapshot currentWrite = new WriteOpsSnapshot();
+    // References retained before outbound messages are released. Non-null until the batch completes, even when empty.
+    List<ReferenceCounted> retainedWriteBuffers;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
@@ -282,6 +286,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+    final MsgHdrMemory writeMsgHdr() {
+        if (msgHdrMemoryArray == null) {
+            msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
+        }
+        return msgHdrMemoryArray.hdr(0);
+    }
+
     private void freeMsgHdrArray() {
         if (msgHdrMemoryArray != null) {
             msgHdrMemoryArray.release();
@@ -310,7 +321,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
 
-            boolean cancelConnect = false;
+            boolean cancelConnect = connectId != 0;
             try {
                 Promise<Void> connectPromise = AbstractIoUringChannel.this.connectPromise;
                 if (connectPromise != null) {
@@ -346,19 +357,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    /**
-     * Retains every in-flight write's references before handing off to {@link #doShutdown0(ChannelShutdownType,
-     * Promise)}, so a write completion that races the shutdown still finds a live reference to release instead of
-     * one the outbound buffer already dropped. Only outbound shutdown needs this: an inbound shutdown never touches
-     * the outbound buffer, so there is no matching release for a retain done here.
-     */
     @Override
     protected final void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         if (type.direction() == ChannelShutdownDirection.Outbound) {
             // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the
             // output.
             removeFastOpenData();
-            writeTracker.retainAll();
         }
         doShutdown0(type, promise);
     }
@@ -512,7 +516,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final boolean isWriteFlushedScheduled() {
-        return (ioState & POLL_OUT_SCHEDULED) != 0;
+        if ((ioState & POLL_OUT_SCHEDULED) != 0) {
+            return true;
+        }
+        ChannelOutboundBuffer in = outboundBuffer();
+        if (in != null && !in.isEmpty() && !isActive()) {
+            // writeFlushedNow() fails flushed messages when the channel is inactive.
+            prepareToDiscardOutboundMessages(in);
+        }
+        return false;
     }
 
     // Write completions may carry an id that fell back out of the short range, so they get the untruncated
@@ -558,10 +570,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_CONNECT:
                     connectComplete(op, res, flags, userData);
-
-                    // once the connect was completed we can also free some resources that are not needed anymore.
-                    freeMsgHdrArray();
-                    freeRemoteAddressMemory();
                     break;
                 case Native.IORING_OP_CLOSE:
                     if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -605,15 +613,40 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void unregistered() {
         freeMsgHdrArray();
         freeRemoteAddressMemory();
-        // No further completion arrives once a channel is deregistered, so references a shutdown retained on a
-        // slot via doShutdown(...) -> writeTracker.retainAll() would otherwise leak forever.
-        writeTracker.releaseAll();
+        assert retainedWriteBuffers == null;
     }
 
     @Override
     protected RecvByteBufAllocator.Handle newRecvBufAllocHandle() {
         return new IoUringRecvByteAllocatorHandle(
                 (RecvByteBufAllocator.ExtendedHandle) super.newRecvBufAllocHandle());
+    }
+
+    final long submitWrite(IoUringIoOps ops) {
+        long id = registration().submit(ops);
+        if (id != 0) {
+            currentWrite.copyFrom(ops);
+        }
+        return id;
+    }
+
+    // Must be called before AbstractChannel fails flushed messages that in-flight writes may still use.
+    final void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
+        if (retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
+            return;
+        }
+        retainedWriteBuffers = numOutstandingWrites != 0 ? retainWriteBuffers(buffer) :
+                Collections.<ReferenceCounted>emptyList();
+    }
+
+    List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+        return Collections.emptyList();
+    }
+
+    void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
+        for (ReferenceCounted buffer : buffers) {
+            ReferenceCountUtil.safeRelease(buffer);
+        }
     }
 
     /**
@@ -941,8 +974,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 schedulePollOut();
             }
         } else if (!socket.isOutputShutdown()) {
-            // Try writing again
-            writeFlushedNow();
+            // Try writing again. POLL_OUT_SCHEDULED is clear, so writeFlushed() retains in-flight writes if inactive.
+            writeFlushed();
         }
     }
 
@@ -955,45 +988,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * @param data  the data that was passed when submitting the op.
      */
     private void writeComplete(byte op, int res, int flags, long data) {
-        writeTracker.complete(data, op, flags);
-        if ((ioState & CONNECT_SCHEDULED) != 0) {
-            // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
-            // TCP_FASTOPEN_CONNECT.
-            freeMsgHdrArray();
-            if (res > 0) {
-                // Connect complete!
-                // Complete the connect before removing the written bytes, so listeners of the initial write
-                // see an active channel and are able to write and close it like on any other connected
-                // channel. Mark the write as scheduled until the bytes were removed, as otherwise a flush that
-                // is triggered by channelActive() would send the initial data a second time. If the output is
-                // shutdown in the meantime, the bytes are removed by doShutdown(...).
-                fastOpenBytes = res;
-                assert (ioState & WRITE_SCHEDULED) == 0;
-                ioState |= WRITE_SCHEDULED;
-                try {
-                    // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    connectComplete(op, 0, flags, data);
-                    removeFastOpenData();
-                } finally {
-                    ioState &= ~WRITE_SCHEDULED;
-                }
-
-                // Write what is left of the initial data and everything that was flushed in the meantime.
-                if ((ioState & POLL_OUT_SCHEDULED) == 0) {
-                    scheduleWriteIfNeeded(outboundBuffer(), false);
-                }
-            } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
-                // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
-                // In this case, our TCP connection will be established normally, but no data was transmitted at
-                // this time. We'll just transmit the data with normal writes later.
-                // Let's submit a normal connect.
-                removeFastOpenData();
-                submitConnect((InetSocketAddress) requestedRemoteAddress);
-            } else {
-                // There was an error, handle it as a normal connect error.
-                removeFastOpenData();
-                connectComplete(op, res, flags, data);
-            }
+        // UDP connect and ordinary writes can be in flight together,
+        // so CONNECT_SCHEDULED alone cannot identify TFO.
+        if ((ioState & CONNECT_SCHEDULED) != 0 && op == Native.IORING_OP_SENDMSG &&
+                (currentWrite.union3() & Native.MSG_FASTOPEN) != 0) {
+            completeFastOpenWrite(op, res, flags, (short) data);
             return;
         }
 
@@ -1002,12 +1001,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             --numOutstandingWrites;
         }
 
-        boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        boolean writtenAll = retainedWriteBuffers == null ?
+                writeComplete0(op, res, flags, data, numOutstandingWrites) :
+                writeCompleteAndReleaseBuffers(op, res, flags, data);
         // We might have consumed data from the ChannelOutboundBuffer lets call updateWritabilityIfNeeded() so
         // we propagate changes related to the writability state if required.
         updateWritabilityIfNeeded();
 
-        if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+        if (!writtenAll && delayedClose == null && (ioState & POLL_OUT_SCHEDULED) == 0) {
 
             // We were not able to write everything, let's register for POLLOUT
             schedulePollOut();
@@ -1016,12 +1017,64 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
         // while still removing messages internally in removeBytes(...) which then may corrupt state.
         if (numOutstandingWrites == 0) {
+            retainedWriteBuffers = null;
             ioState &= ~WRITE_SCHEDULED;
 
             // If we could write all and we did not schedule a pollout yet let us try to write again
             if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
                 scheduleWriteIfNeeded(outboundBuffer(), false);
             }
+        }
+    }
+
+    private boolean writeCompleteAndReleaseBuffers(byte op, int res, int flags, long data) {
+        // The socket may transfer these references to its zero-copy notification before we release them.
+        boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+            releaseWriteBuffers(retainedWriteBuffers, data);
+        }
+        return writtenAll;
+    }
+
+    private void completeFastOpenWrite(byte op, int res, int flags, short data) {
+        // TFO participates in the write count, but completes through the connect path.
+        assert numOutstandingWrites == 1;
+        --numOutstandingWrites;
+        connectId = 0;
+        freeMsgHdrArray();
+        try {
+            if (res > 0) {
+                // shutdownOutput() or an inactive flush may already have failed this batch.
+                if (retainedWriteBuffers == null) {
+                    fastOpenBytes = res;
+                }
+                // Complete connect before notifying the initial write. Keep WRITE_SCHEDULED set so
+                // connect listeners cannot submit the initial data again before it is removed.
+                connectComplete(op, 0, flags, data);
+                removeFastOpenData();
+            } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
+                // Without a fast-open cookie, connect normally and send the initial data later.
+                removeFastOpenData();
+                if (connectPromise != null && !connectPromise.isDone()) {
+                    submitConnect((InetSocketAddress) requestedRemoteAddress);
+                } else {
+                    connectComplete(op, Native.ERRNO_ECANCELED_NEGATIVE, flags, data);
+                }
+            } else {
+                // There was an error, handle it as a normal connect error.
+                removeFastOpenData();
+                connectComplete(op, res, flags, data);
+            }
+        } finally {
+            if (retainedWriteBuffers != null) {
+                releaseWriteBuffers(retainedWriteBuffers, data);
+            }
+            retainedWriteBuffers = null;
+            ioState &= ~WRITE_SCHEDULED;
+        }
+        // Write the remaining initial data and anything flushed by the connect or write listeners.
+        if (res > 0 && (ioState & POLL_OUT_SCHEDULED) == 0) {
+            scheduleWriteIfNeeded(outboundBuffer(), false);
         }
     }
 
@@ -1056,6 +1109,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      */
     void connectComplete(byte op, int res, int flags, long data) {
         ioState &= ~CONNECT_SCHEDULED;
+        connectId = 0;
         assert connectPromise != null;
         freeRemoteAddressMemory();
 
@@ -1136,24 +1190,20 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
                 if (initialData != null) {
-                    msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
-                    MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
+                    MsgHdrMemory hdr = writeMsgHdr();
                     fillTFOInitData(hdr, inetSocketAddress, initialData);
 
                     int fd = fd().intValue();
-                    IoRegistration registration = registration();
-                    short opsId = writeTracker.nextId();
-                    if (opsId == 0) {
-                        freeMsgHdrArray();
-                        submitConnect(inetSocketAddress);
-                    } else {
-                        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
-                                hdr.address(), opsId);
-                        writeTracker.record(opsId, ops.opcode(), initialData);
-                        connectId = registration.submit(ops);
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
+                            hdr.address(), nextOpsId());
+                    try {
+                        connectId = submitWrite(ops);
+                        if (connectId != 0) {
+                            numOutstandingWrites = 1;
+                            ioState |= WRITE_SCHEDULED;
+                        }
+                    } finally {
                         if (connectId == 0) {
-                            writeTracker.abandon(opsId, ops.opcode());
-                            // Directly release the memory if submitting failed.
                             freeMsgHdrArray();
                         } else {
                             fastOpenOutboundBuffer = outboundBuffer();
