@@ -721,16 +721,23 @@ public final class NioIoHandler implements IoHandler {
         }
     }
 
-    private static long millisBeforeDeadline(long selectDeadLineNanos, long currentTimeNanos) {
+    /**
+     * Returns the timeout in milliseconds for {@link Selector#select(long)} when the next scheduled task is due after
+     * the given deadline. The value is rounded up, so it is only {@code 0} if the deadline is less than 5 microseconds
+     * away. Rounding to the nearest millisecond would return {@code 0} for a deadline less than 0.5 ms away, and
+     * the event loop would then call {@link Selector#selectNow()} in a loop, burning CPU, until the deadline
+     * is reached.
+     */
+    static long millisBeforeDeadline(long selectDeadLineNanos, long currentTimeNanos) {
         assert selectDeadLineNanos != Long.MAX_VALUE;
         long nanosBeforeDeadline = selectDeadLineNanos - currentTimeNanos;
         // Prevent overflow when adding the rounding bias:
         // if we don't do this, it would appear as the deadline is already reached!
-        if (nanosBeforeDeadline >= Long.MAX_VALUE - 500_000L) {
+        if (nanosBeforeDeadline >= Long.MAX_VALUE - 995_000L) {
             return Long.MAX_VALUE / 1_000_000L;
         }
-        // Add 500_000 to round up to the nearest millisecond.
-        return (nanosBeforeDeadline + 500_000L) / 1_000_000L;
+        // Add 995_000 to round up to the next millisecond, the timeout is only 0 if the deadline is within 5 micros.
+        return (nanosBeforeDeadline + 995_000L) / 1_000_000L;
     }
 
     int selectNow() throws IOException {

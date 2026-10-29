@@ -105,6 +105,51 @@ public class SnappyTest {
     }
 
     @Test
+    public void testDecodeLiteralWith4ByteLength() {
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+            0x05, // preamble length
+            (byte) (63 << 2), // literal tag + 4 byte length
+            0x04, 0x00, 0x00, 0x00, // length - 1
+            0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
+        });
+        ByteBuf out = Unpooled.buffer(5);
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 0x6e, 0x65, 0x74, 0x74, 0x79 });
+        try {
+            snappy.decode(in, out);
+            assertEquals(expected, out);
+        } finally {
+            in.release();
+            out.release();
+            expected.release();
+        }
+    }
+
+    @Test
+    public void testDecodeLiteralWith4ByteLengthThatIsTooLarge() {
+        // The length - 1 is an unsigned 32-bit integer, none of these can be handled.
+        for (final int length : new int[] { 0x7FFFFFFF, 0x80000000, 0xFFFFFFFE, 0xFFFFFFFF }) {
+            final ByteBuf in = Unpooled.buffer();
+            in.writeByte(0x05); // preamble length
+            in.writeByte(63 << 2); // literal tag + 4 byte length
+            in.writeIntLE(length);
+            in.writeZero(16);
+            final ByteBuf out = Unpooled.buffer(5);
+            try {
+                assertThrows(DecompressionException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        snappy.decode(in, out);
+                    }
+                }, "length: " + length);
+            } finally {
+                in.release();
+                out.release();
+                snappy.reset();
+            }
+        }
+    }
+
+    @Test
     public void testDecodeCopyWithOffsetBeforeChunk() {
         final ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0a, // preamble length
@@ -242,6 +287,35 @@ public class SnappyTest {
         assertEquals(CharBuffer.wrap(srcStr),
             CharBuffer.wrap(outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII)));
 
+        in.release();
+        out.release();
+        outDecoded.release();
+    }
+
+    @Test
+    public void encodeWithNonZeroReaderIndex() throws Exception {
+        String srcStr = "Netty has been designed carefully with the experiences " +
+                   "earned from the implementation of a lot of protocols " +
+                   "such as FTP, SMTP, HTTP, and various binary and " +
+                   "text-based legacy protocols";
+        byte[] src = srcStr.getBytes(StandardCharsets.US_ASCII);
+        ByteBuf expectedIn = Unpooled.wrappedBuffer(src);
+        ByteBuf expected = Unpooled.buffer();
+        snappy.encode(expectedIn, expected, src.length);
+
+        ByteBuf in = Unpooled.buffer().writeZero(16).writeBytes(src);
+        in.skipBytes(16);
+        ByteBuf out = Unpooled.buffer();
+        snappy.encode(in, out, in.readableBytes());
+        assertEquals(expected, out, "Encoded result must not depend on the reader index");
+
+        ByteBuf outDecoded = Unpooled.buffer();
+        snappy.decode(out, outDecoded);
+        assertEquals(CharBuffer.wrap(srcStr),
+            CharBuffer.wrap(outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII)));
+
+        expectedIn.release();
+        expected.release();
         in.release();
         out.release();
         outDecoded.release();

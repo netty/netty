@@ -47,6 +47,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.unix.Errors.ioResult;
@@ -165,13 +166,23 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
-            return joinGroup(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+            return joinGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
         return promise;
+    }
+
+    /**
+     * Returns the interface to use when none was given: the one set via
+     * {@link io.netty.channel.ChannelOption#IP_MULTICAST_IF} or, if unset, the interface of the local address.
+     */
+    private NetworkInterface defaultMulticastInterface() throws SocketException {
+        NetworkInterface iface = config().getNetworkInterface();
+        if (iface == null) {
+            iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+        }
+        return iface;
     }
 
     @Override
@@ -218,8 +229,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     @Override
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+            return leaveGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -289,10 +299,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     public ChannelFuture block(
             InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
         try {
-            return block(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    sourceToBlock, promise);
+            return block(multicastAddress, defaultMulticastInterface(), sourceToBlock, promise);
         } catch (Throwable e) {
             promise.setFailure(e);
         }
