@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_1;
@@ -286,6 +287,22 @@ final class Bzip2BlockCompressor {
      */
     boolean isEmpty() {
         return blockLength == 0 && rleLength == 0;
+    }
+
+    /**
+     * Gets the number of bytes written to the block that were not yet closed. This is the length of the RLE'd data,
+     * so just an estimate of the number of bytes of input data.
+     */
+    int bufferedBytes() {
+        return blockLength + rleLength;
+    }
+
+    /**
+     * Gets a view of the given length on the array the block is stored in, without copying anything.
+     * The content of the view is not meaningful.
+     */
+    ByteBuf bufferedView(int length) {
+        return Unpooled.wrappedBuffer(block, 0, Math.min(length, block.length));
     }
 
     /**

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseNotifier;
 
@@ -36,7 +35,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
-public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
+public class Bzip2Encoder extends BufferingEncoder {
     /**
      * Current state of stream.
      */
@@ -94,7 +93,6 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
      */
     public Bzip2Encoder(final int blockSizeMultiplier) {
-        super(ByteBuf.class);
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
             throw new IllegalArgumentException(
                     "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
@@ -224,7 +222,19 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        writeBuffered(ctx, footer, promise, true);
+        return promise;
+    }
+
+    @Override
+    long bufferedBytes() {
+        final Bzip2BlockCompressor blockCompressor = this.blockCompressor;
+        return blockCompressor == null ? 0 : blockCompressor.bufferedBytes();
+    }
+
+    @Override
+    ByteBuf bufferedView(int length) {
+        return blockCompressor.bufferedView(length);
     }
 
     private ChannelHandlerContext ctx() {
