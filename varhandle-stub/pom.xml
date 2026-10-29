@@ -31,5 +31,37 @@
   <properties>
     <revapi.skip>true</revapi.skip>
   </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <!-- The stubs live in packages of java.base, which javadoc refuses to process. They are only used to
+               compile against and are not part of the API, so skip javadoc and ship an empty javadoc jar instead
+               (required for the release to Maven Central). -->
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <skipIfEmpty>false</skipIfEmpty>
+              <forceCreation>true</forceCreation>
+              <classesDirectory>${project.build.directory}/empty-javadoc</classesDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
 
