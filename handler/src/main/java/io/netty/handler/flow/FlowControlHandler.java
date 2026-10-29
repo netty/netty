@@ -75,14 +75,14 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     /**
      * Number of unsatisfied downstream {@code read()} calls. A downstream {@code read()} is considered unsatisfied
-     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} or
+     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} followed by
      * a cumulative {@code fireChannelReadComplete}.
      * <p>
-     * A {@code read()} can be satisfied in three ways, whichever comes first:
+     * A {@code read()} can be satisfied by {@code dequeue()}ing a message in three ways, whichever comes first:
      * <ul>
-     *     <li>inside the {@code read()} call itself, by {@code dequeue()}ing a message</li>
+     *     <li>inside the {@code read()} call itself</li>
      *     <li>in a {@code channelRead()}</li>
-     *     <li>in a {@code channelReadComplete()}</li>
+     *     <li>in a {@code handlerRemoved()}</li>
      * </ul>
      * A {@code read()} can be satisfied with auto-read on.
      * <p>
@@ -90,10 +90,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * only when either of the following happens:
      * <ul>
      *     <li>auto-read is off and {@code unsatisfiedReads} returns to zero after {@code dequeue()}ing, or</li>
-     *     <li>an upstream {@code channelReadComplete} arrives</li>
+     *     <li>auto-read is on and an upstream {@code channelReadComplete} arrives</li>
      * </ul>
      */
     private int unsatisfiedReads;
+
+    /**
+     * {@code true} if a manual {@code read()} is currently in progress.
+     * Prevents duplicate read-requests sent to upstream if auto-read is disabled.
+     */
+    private boolean manualReading;
 
     /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
@@ -104,6 +110,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         this(true);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param releaseMessages
+     *        Release all queued messages when channel becomes inactive,
+     *        {@code true} by default.
+     */
     public FlowControlHandler(boolean releaseMessages) {
         this.releaseMessages = releaseMessages;
     }
@@ -146,11 +159,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
-        if (!isQueueEmpty()) {
-            unsatisfiedReads = queue.size();
-            dequeue(ctx);
-            ctx.fireChannelReadComplete();
-        }
+        unsatisfiedReads = isQueueEmpty() ? 0 : queue.size();
+        dequeue(ctx);
         destroy();
     }
 
@@ -166,21 +176,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             unsatisfiedReads++;
         }
 
-        boolean didSatisfyARead = dequeue(ctx);
-        boolean isAutoRead = config.isAutoRead();
-        if (!didSatisfyARead || isAutoRead) {
-            assert unsatisfiedReads > 0 || isAutoRead;
-            // We either could not satisfy the read or auto-read is on.
-            // In both cases we need to delegate the read upstream.
+        boolean dequeued = dequeue(ctx);
+
+        if (config.isAutoRead()) {
+            // Forwarding `read` event unconditionally under auto-read.
+            // `setAutoRead(true)` re-arms read interest with nothing but `channel.read()`.
+            manualReading = false;
             ctx.read();
-        } else if (unsatisfiedReads == 0 && !dequeuing) {
-            // Auto-read is off, and we have satisfied all reads.
-            // As such, we can complete the current read cycle. && !dequeueing makes sure we are completing the
-            // read cycle only once in the top-most read() call.
-            ctx.fireChannelReadComplete();
-        } else {
-            // Auto-read is off, and either reads are still unsatisfied or we are nested in a dequeue.
-            // Wait for the outermost call, an upstream channelRead() or a channelReadComplete().
+        } else if (dequeued && unsatisfiedReads > 0 && !manualReading) {
+            manualReading = true;
+            ctx.read();
         }
     }
 
@@ -191,21 +196,19 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         }
 
         queue.offer(msg);
-
-        if (dequeue(ctx)) {
-            if (!config.isAutoRead() && unsatisfiedReads == 0 && !dequeuing) {
-                ctx.fireChannelReadComplete();
-            }
-        }
+        dequeue(ctx);
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped.
-        if (config.isAutoRead() || unsatisfiedReads > 0) {
-            unsatisfiedReads = 0;
+        manualReading = false;
+        if (config.isAutoRead()) {
+            // Forwarding `read-complete` event unconditionally under auto-read.
             ctx.fireChannelReadComplete();
+        } else if (unsatisfiedReads > 0) {
+            // Upstream completed the read cycle, initiating the next one.
+            manualReading = true;
+            ctx.read();
         }
     }
 
@@ -213,29 +216,44 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * Dequeues messages while auto-read is enabled or downstream reads are unsatisfied, and updates
      * {@code unsatisfiedReads} accordingly.
      *
+     * @return {@code true} if this call was a top-level invocation, {@code false} otherwise;
+     * actually dequeued messages count could be zero.
      * @see #read(ChannelHandlerContext)
      * @see #channelRead(ChannelHandlerContext, Object)
      */
     private boolean dequeue(ChannelHandlerContext ctx) {
-        boolean didSatisfyARead = false;
-
-        boolean wasDequeuing = dequeuing;
+        if (dequeuing) {
+            // If we are nested in a dequeue() call, delegating post-processing to the outermost call.
+            return false;
+        }
         dequeuing = true;
         try {
-            // fireChannelRead(...) may call ctx.read() and so this method may be re-entered. Because of that
-            // we need to check if queue was set to null in the meantime and, if so, break out of the loop.
-            while (queue != null && (config.isAutoRead() || unsatisfiedReads > 0)) {
-                Object msg = queue.poll();
-                if (msg == null) {
-                    break;
+            boolean fireReadComplete = false;
+
+            while (queue != null) {
+                if (config.isAutoRead() || unsatisfiedReads > 0) {
+                    Object msg = queue.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    if (unsatisfiedReads > 0) {
+                        unsatisfiedReads--;
+                    }
+                    fireReadComplete = true;
+                    ctx.fireChannelRead(msg);
+                    continue;
                 }
 
-                if (unsatisfiedReads > 0) {
-                    unsatisfiedReads--;
+                //assert !config.isAutoRead();
+                //assert unsatisfiedReads == 0;
+                if (fireReadComplete) {
+                    // We have satisfied all reads. As such, we can complete the current read cycle.
+                    fireReadComplete = false;
+                    ctx.fireChannelReadComplete();
+                    continue;
                 }
-                ctx.fireChannelRead(msg);
 
-                didSatisfyARead = true;
+                break;
             }
 
             if (queue != null && queue.isEmpty()) {
@@ -243,9 +261,9 @@ public class FlowControlHandler extends ChannelDuplexHandler {
                 queue = null;
             }
 
-            return didSatisfyARead;
+            return true;
         } finally {
-            dequeuing = wasDequeuing;
+            dequeuing = false;
         }
     }
 
