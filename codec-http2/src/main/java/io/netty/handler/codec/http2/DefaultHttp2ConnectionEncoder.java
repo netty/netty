@@ -401,7 +401,31 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
             ByteBuf payload, ChannelPromise promise) {
+        Http2Stream stream = connection.stream(streamId);
+        if (stream != null && !isFrameAllowedOnReservedStream(stream.state(), frameType)) {
+            promise = promise.unvoid();
+            Http2Exception error = connectionError(PROTOCOL_ERROR,
+                    "Cannot send frame type %d on reserved stream %d in state %s", frameType, streamId,
+                    stream.state());
+            ReferenceCountUtil.safeRelease(payload);
+            lifecycleManager.onError(ctx, true, error);
+            promise.tryFailure(error);
+            return promise;
+        }
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
+    }
+
+    private static boolean isFrameAllowedOnReservedStream(Http2Stream.State state, byte frameType) {
+        switch (state) {
+            case RESERVED_LOCAL:
+                return frameType == Http2FrameTypes.HEADERS || frameType == Http2FrameTypes.RST_STREAM ||
+                        frameType == Http2FrameTypes.PRIORITY;
+            case RESERVED_REMOTE:
+                return frameType == Http2FrameTypes.RST_STREAM || frameType == Http2FrameTypes.WINDOW_UPDATE ||
+                        frameType == Http2FrameTypes.PRIORITY;
+            default:
+                return true;
+        }
     }
 
     @Override
