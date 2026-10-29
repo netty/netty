@@ -5,7 +5,7 @@ services:
       context: ../
       dockerfile: docker/Dockerfile.cross_compile_aarch64
       args:
-        gcc_version: "10.2-2020.11"
+        gcc_version: "10.3-2021.07"
         java_version: "25-zulu"
       cache_from:
         - type=registry,ref=ghcr.io/netty/netty-build-cache:cross-aarch64-5.0

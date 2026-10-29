@@ -1134,6 +1134,27 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    void mustRejectChunkSizeWithNonAsciiCharacters() throws Exception {
+        String requestStr = "POST /one HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "1\u00ff\r\n" +
+                "a\r\n" +
+                "0\r\n" +
+                "\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.ISO_8859_1)));
+        HttpRequest request = channel.readInbound();
+        assertFalse(request.decoderResult().isFailure());
+        HttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isFailure());
+        assertThat(content.decoderResult().cause()).isInstanceOf(NumberFormatException.class);
+        content.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void mustRejectChunkSizeThatWouldCauseOverflow() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: localhost\r\n" +

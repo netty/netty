@@ -147,11 +147,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             case INET6:
             case INET:
                 try {
-                    NetworkInterface iface = config.getOption(ChannelOption.IP_MULTICAST_IF);
-                    if (iface == null) {
-                        iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
-                    }
-                    joinGroup(multicastAddress, iface, null, promise);
+                    joinGroup(multicastAddress, defaultMulticastInterface(), null, promise);
                 } catch (SocketException e) {
                     promise.setFailure(e);
                 }
@@ -160,6 +156,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 promise.setFailure(
                         new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
+    }
+
+    /**
+     * Returns the interface to use when none was given: the one set via
+     * {@link io.netty.channel.ChannelOption#IP_MULTICAST_IF} or, if unset, the interface of the local address.
+     */
+    private NetworkInterface defaultMulticastInterface() throws SocketException {
+        NetworkInterface iface = config.getOption(ChannelOption.IP_MULTICAST_IF);
+        if (iface == null) {
+            iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+        }
+        return iface;
     }
 
     @Override
@@ -214,9 +222,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(
-                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
+            leaveGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -291,9 +297,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             case INET6:
             case INET:
                 try {
-                    block(multicastAddress,
-                            NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
-                            sourceToBlock, promise);
+                    block(multicastAddress, defaultMulticastInterface(), sourceToBlock, promise);
                 } catch (Throwable e) {
                     promise.setFailure(e);
                 }
@@ -419,12 +423,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         try {
-            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+            // A zero-length datagram is valid; sendto() returns 0 for it.
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0 || dataLen == 0;
         } catch (NativeIoException e) {
             if (remoteAddress == null) {
                 throw translateForConnected(e);
