@@ -17,6 +17,9 @@ services:
   build-affected-only:
     image: netty:ubi9
 
+  build-native-quic:
+    image: netty:ubi9
+
   build-leak:
     image: netty:ubi9
 

@@ -23,6 +23,14 @@ RUN microdnf install -y \
  zip \
  zlib-devel
 
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. It is only available from
+# EPEL. The version call fails the image build if EPEL ever stops resolving, instead of leaving
+# that to be discovered halfway through a maven run.
+RUN rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    microdnf install -y patchelf && \
+    patchelf --version
+
 # Downloading and installing SDKMAN!
 ARG sdkman_install_sha256=7c2e84cbfdeefd2047ea6d3203cd1b889c67f6530b72f246a38379892be2e817
 ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
