@@ -325,6 +325,147 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
+    public void testAlertNotLostWhenHandshakeFailsAfterTask(SSLEngineTestParam param) throws Exception {
+        // The certificate verification is only offloaded to a task when using BoringSSL or AWS-LC.
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
+        assumeTrue(param instanceof OpenSslEngineTestParam && ((OpenSslEngineTestParam) param).useTasks);
+        // With TLSv1.3 the Certificate, CertificateVerify and Finished messages of the client are sent in one record.
+        // This means the CertificateVerify message is processed when the handshake is resumed after the certificate
+        // verification task was run.
+        assumeTrue(SslProtocols.TLS_v1_3.equals(param.combo().protocol));
+
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .keyManager(OpenSslX509KeyManagerFactory.newKeyless(ssc.certificate()))
+                // Produce an invalid signature for the CertificateVerify message.
+                .option(OpenSslContextOption.PRIVATE_KEY_METHOD, new OpenSslPrivateKeyMethod() {
+                    @Override
+                    public byte[] sign(SSLEngine engine, int signatureAlgorithm, byte[] input) {
+                        byte[] signature = new byte[256];
+                        ThreadLocalRandom.current().nextBytes(signature);
+                        return signature;
+                    }
+
+                    @Override
+                    public byte[] decrypt(SSLEngine engine, byte[] input) {
+                        throw new UnsupportedOperationException();
+                    }
+                })
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .clientAuth(ClientAuth.REQUIRE)
+                .sslProvider(sslServerProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            final ByteBuffer empty = allocateBuffer(param.type(), 0);
+            final ByteBuffer cTOs = allocateBuffer(param.type(), clientEngine.getSession().getPacketBufferSize());
+            final ByteBuffer sTOc = allocateBuffer(param.type(), serverEngine.getSession().getPacketBufferSize());
+            final ByteBuffer clientAppBuffer = allocateBuffer(
+                    param.type(), clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer serverAppBuffer = allocateBuffer(
+                    param.type(), serverEngine.getSession().getApplicationBufferSize());
+
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
+
+            boolean clientFinished = false;
+            boolean taskRunAfterClientFinished = false;
+            for (int i = 0; i < 16 && !taskRunAfterClientFinished; i++) {
+                cTOs.clear();
+                // With TLSv1.3 the client considers the handshake done once it produced its Finished message.
+                clientFinished |= wrapAll(clientEngine, empty, cTOs);
+                cTOs.flip();
+                while (cTOs.hasRemaining()) {
+                    SSLEngineResult result = serverEngine.unwrap(cTOs, serverAppBuffer);
+                    if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+                        runTasksIfNeeded(serverEngine);
+                        if (clientFinished) {
+                            // Once the certificate verification task is done the handshake is resumed and fails
+                            // because of the invalid CertificateVerify message.
+                            taskRunAfterClientFinished = true;
+                            break;
+                        }
+                    } else if (result.bytesConsumed() == 0) {
+                        break;
+                    }
+                }
+                if (taskRunAfterClientFinished) {
+                    break;
+                }
+                sTOc.clear();
+                wrapAll(serverEngine, empty, sTOc);
+                sTOc.flip();
+                while (sTOc.hasRemaining()) {
+                    SSLEngineResult result = clientEngine.unwrap(sTOc, clientAppBuffer);
+                    if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+                        runTasksIfNeeded(clientEngine);
+                    } else if (result.bytesConsumed() == 0) {
+                        break;
+                    }
+                }
+            }
+            assertTrue(taskRunAfterClientFinished);
+
+            // An alert was produced, so we need to call wrap(...) to send it to the remote peer. The handshake failure
+            // must only be propagated once the alert was written to the destination buffer.
+            assertEquals(HandshakeStatus.NEED_WRAP, serverEngine.getHandshakeStatus());
+            sTOc.clear();
+            SSLEngineResult result = serverEngine.wrap(empty, sTOc);
+            assertEquals(HandshakeStatus.NEED_WRAP, result.getHandshakeStatus());
+            assertThat(result.bytesProduced()).isPositive();
+            assertEquals(result.bytesProduced(), sTOc.position());
+
+            final SSLEngine server = serverEngine;
+            assertThrows(SSLHandshakeException.class, () -> server.wrap(empty, sTOc));
+
+            // The client must receive the alert.
+            sTOc.flip();
+            final SSLEngine client = clientEngine;
+            SSLException clientException = assertThrows(SSLException.class, () -> {
+                while (sTOc.hasRemaining()) {
+                    if (client.unwrap(sTOc, clientAppBuffer).bytesConsumed() == 0) {
+                        break;
+                    }
+                }
+            });
+            assertThat(clientException.getMessage()).contains("ALERT");
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
+    // Calls wrap(...) until nothing is produced anymore and returns true if the handshake was finished.
+    private static boolean wrapAll(SSLEngine engine, ByteBuffer src, ByteBuffer dst) throws SSLException {
+        boolean finished = false;
+        for (;;) {
+            SSLEngineResult result = engine.wrap(src, dst);
+            if (result.getHandshakeStatus() == HandshakeStatus.FINISHED) {
+                finished = true;
+            }
+            if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+                runTasksIfNeeded(engine);
+            } else if (result.bytesProduced() == 0) {
+                return finished;
+            }
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     public void testOnlySmallBufferNeededForWrap(SSLEngineTestParam param) throws Exception {
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
