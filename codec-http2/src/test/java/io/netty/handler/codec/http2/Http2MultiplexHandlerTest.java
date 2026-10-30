@@ -14,18 +14,25 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLException;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -137,6 +144,152 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
             assertFalse(childChannel.isOpen());
             assertTrue(childChannel.closeFuture().isDone());
             assertEquals(1, inactive.get());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void pushedStreamIsDeliveredToInboundChildChannel() throws Exception {
+        final LastInboundHandler pushHandler = new LastInboundHandler();
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                    @Override
+                    protected void initChannel(Http2StreamChannel ch) {
+                        ch.pipeline().addLast(pushHandler);
+                    }
+                }));
+        try {
+            Http2FrameInboundWriter frameInboundWriter = new Http2FrameInboundWriter(parent);
+            frameInboundWriter.writeInboundSettings(new Http2Settings());
+
+            Http2StreamChannel requestChannel = new Http2StreamChannelBootstrap(parent)
+                    .handler(new ChannelInboundHandlerAdapter()).open().syncUninterruptibly().getNow();
+            Http2Headers request = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/");
+            requestChannel.writeAndFlush(new DefaultHttp2HeadersFrame(request, true)).syncUninterruptibly();
+
+            Http2Headers pushRequest = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/push");
+            frameInboundWriter.writePushPromise(requestChannel.stream().id(), 2, pushRequest, 0);
+            final Http2Headers pushResponse = new DefaultHttp2Headers().status("200");
+            frameInboundWriter.writeInboundHeaders(2, pushResponse, 0, false);
+            frameInboundWriter.writeInboundData(2, bb("hello"), 0, true);
+
+            Http2HeadersFrame headersFrame = pushHandler.readInbound();
+            assertEquals(2, headersFrame.stream().id());
+            assertEquals(pushResponse, headersFrame.headers());
+            Http2DataFrame dataFrame = pushHandler.readInbound();
+            assertEquals("hello", dataFrame.content().toString(CharsetUtil.US_ASCII));
+            assertTrue(dataFrame.isEndStream());
+            dataFrame.release();
+            assertNull(pushHandler.readInbound());
+            pushHandler.checkException();
+
+            // A pushed stream is half-closed (local), so writing to it must fail.
+            final Http2StreamChannel pushChannel = (Http2StreamChannel) pushHandler.channel();
+            assertEquals(2, pushChannel.stream().id());
+            assertThrows(ClosedChannelException.class, new Executable() {
+                @Override
+                public void execute() {
+                    pushChannel.writeAndFlush(new DefaultHttp2HeadersFrame(pushResponse)).syncUninterruptibly();
+                }
+            });
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void resetOfPromisedStreamBeforeHeaders() {
+        final AtomicInteger pushChannels = new AtomicInteger();
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                    @Override
+                    protected void initChannel(Http2StreamChannel ch) {
+                        pushChannels.incrementAndGet();
+                    }
+                }));
+        try {
+            Http2FrameInboundWriter frameInboundWriter = new Http2FrameInboundWriter(parent);
+            frameInboundWriter.writeInboundSettings(new Http2Settings());
+
+            Http2StreamChannel requestChannel = new Http2StreamChannelBootstrap(parent)
+                    .handler(new ChannelInboundHandlerAdapter()).open().syncUninterruptibly().getNow();
+            Http2Headers request = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/");
+            requestChannel.writeAndFlush(new DefaultHttp2HeadersFrame(request, true)).syncUninterruptibly();
+
+            Http2Headers pushRequest = new DefaultHttp2Headers()
+                    .method("GET").scheme("https").authority("example.com").path("/push");
+            frameInboundWriter.writePushPromise(requestChannel.stream().id(), 2, pushRequest, 0);
+            frameInboundWriter.writeInboundRstStream(2, Http2Error.CANCEL.code());
+
+            parent.checkException();
+            assertTrue(parent.isActive());
+            assertTrue(requestChannel.isActive());
+            assertEquals(0, pushChannels.get());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void streamExceptionForStreamWithoutChildChannelIsPropagated() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            Http2FrameCodec.DefaultHttp2FrameStream stream = new Http2FrameCodec.DefaultHttp2FrameStream();
+            final Http2FrameStreamException exception = new Http2FrameStreamException(
+                    stream, Http2Error.PROTOCOL_ERROR, new IllegalStateException());
+            parent.pipeline().context(Http2FrameCodec.class).fireExceptionCaught(exception);
+
+            Http2FrameStreamException caught = assertThrows(Http2FrameStreamException.class, new Executable() {
+                @Override
+                public void execute() {
+                    parent.checkException();
+                }
+            });
+            assertSame(exception, caught);
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void dataFrameForStreamWithoutChildChannelIsReleased() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            ByteBuf content = bb("hello");
+            Http2DataFrame data = new DefaultHttp2DataFrame(content, false, 3)
+                    .stream(new Http2FrameCodec.DefaultHttp2FrameStream());
+            parent.pipeline().context(Http2FrameCodec.class).fireChannelRead(data);
+
+            parent.checkException();
+            assertEquals(0, content.refCnt());
+            assertTrue(parent.isActive());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void headersFrameForStreamWithoutChildChannelIsConnectionError() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            Http2HeadersFrame headers = new DefaultHttp2HeadersFrame(new DefaultHttp2Headers())
+                    .stream(new Http2FrameCodec.DefaultHttp2FrameStream());
+            parent.pipeline().context(Http2FrameCodec.class).fireChannelRead(headers);
+
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() {
+                    parent.checkException();
+                }
+            });
+            assertFalse(parent.isActive());
         } finally {
             parent.finishAndReleaseAll();
         }

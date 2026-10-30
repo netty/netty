@@ -69,7 +69,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         public boolean visit(Http2FrameStream stream) {
             final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
-            childChannel.trySetWritable();
+            if (childChannel != null) {
+                childChannel.trySetWritable();
+            }
             return true;
         }
     };
@@ -108,7 +110,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         public boolean visit(Http2FrameStream stream) {
             final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
-            childChannel.pipeline().fireUserEventTriggered(event);
+            if (childChannel != null) {
+                childChannel.pipeline().fireUserEventTriggered(event);
+            }
             return true;
         }
     }
