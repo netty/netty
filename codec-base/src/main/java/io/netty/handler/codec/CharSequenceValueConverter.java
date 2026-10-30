@@ -15,9 +15,8 @@
 package io.netty.handler.codec;
 
 import io.netty.util.AsciiString;
-import io.netty.util.internal.PlatformDependent;
 
-import java.text.ParseException;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 /**
@@ -126,8 +125,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
     public long convertToTimeMillis(CharSequence value) {
         Date date = DateFormatter.parseHttpDate(value);
         if (date == null) {
-            PlatformDependent.throwException(new ParseException("header can't be parsed into a Date: " + value, 0));
-            return 0;
+            throw new DateTimeParseException("header can't be parsed into a Date: " + value, value, 0);
         }
         return date.getTime();
     }

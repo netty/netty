@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.AGE;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
@@ -190,6 +191,13 @@ public class ReadOnlyHttpHeadersTest {
                         ACCEPT, APPLICATION_JSON, CONTENT_LENGTH);
             }
         });
+    }
+
+    @Test
+    public void validateDateTimeFail() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false, AGE, "not a date");
+        assertNull(headers.getTimeMillis(AGE));
+        assertEquals(-1L, headers.getTimeMillis(AGE, -1));
     }
 
     private static void assert3ParisEquals(Iterator<Entry<String, String>> itr) {
