@@ -422,15 +422,23 @@ public class OpenSslEngineTest extends SSLEngineTest {
             assertEquals(result.bytesProduced(), sTOc.position());
 
             final SSLEngine server = serverEngine;
-            assertThrows(SSLHandshakeException.class, () -> server.wrap(empty, sTOc));
+            assertThrows(SSLHandshakeException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    server.wrap(empty, sTOc);
+                }
+            });
 
             // The client must receive the alert.
             sTOc.flip();
             final SSLEngine client = clientEngine;
-            SSLException clientException = assertThrows(SSLException.class, () -> {
-                while (sTOc.hasRemaining()) {
-                    if (client.unwrap(sTOc, clientAppBuffer).bytesConsumed() == 0) {
-                        break;
+            SSLException clientException = assertThrows(SSLException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    while (sTOc.hasRemaining()) {
+                        if (client.unwrap(sTOc, clientAppBuffer).bytesConsumed() == 0) {
+                            break;
+                        }
                     }
                 }
             });
