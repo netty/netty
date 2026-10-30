@@ -1329,11 +1329,17 @@ void netty_boringssl_SSL_cleanup(JNIEnv* env, jclass clazz, jlong ssl) {
 
 int netty_boringssl_password_callback(char *buf, int bufsiz, int verify, void *cb) {
     char *password = (char *) cb;
-    if (password == NULL) {
+    if (password == NULL || bufsiz <= 0) {
         return 0;
     }
-    strncpy(buf, password, bufsiz);
-    return (int) strlen(buf);
+    size_t len = strlen(password);
+    if (len > (size_t) bufsiz) {
+        // The password does not fit into the buffer. Signal failure instead of silently truncating it.
+        return 0;
+    }
+    // The returned length is used by the caller, so there is no need to NUL-terminate the buffer.
+    memcpy(buf, password, len);
+    return (int) len;
 }
 
 jlong netty_boringssl_EVP_PKEY_parse(JNIEnv* env, jclass clazz, jbyteArray array, jstring password) {
