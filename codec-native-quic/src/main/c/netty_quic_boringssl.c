@@ -571,7 +571,16 @@ const SSL_PRIVATE_KEY_METHOD netty_boringssl_private_key_method = {
 
 // See https://www.openssl.org/docs/man1.0.2/man3/SSL_set_cert_cb.html for return values.
 static int quic_certificate_cb(SSL* ssl, void* arg) {
+    // Declare and initialize everything that is used in the done: block up-front as jumping to it would otherwise
+    // skip the initialization and so result in using uninitialized variables.
     jclass certificateTaskClass = NULL;
+    jobjectArray authMethods = NULL;
+    jobjectArray issuers = NULL;
+    jbyteArray types = NULL;
+    EVP_PKEY* pkey = NULL;
+    const STACK_OF(CRYPTO_BUFFER) *cchain = NULL;
+    CRYPTO_BUFFER** certs = NULL;
+    int ret = 0;
     JNIEnv *e = NULL;
     if (quic_get_java_env(&e) != JNI_OK) {
         return 0;
@@ -581,9 +590,6 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
 
     // Let's check if we retried the operation and so have stored a sslTask that runs the certificiate callback.
     if (ssl_task == NULL) {
-        jobjectArray authMethods = NULL;
-        jobjectArray issuers = NULL;
-        jbyteArray types = NULL;
         if (SSL_is_server(ssl) == 1) {
             const STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
             int len = sk_SSL_CIPHER_num(ciphers);
@@ -651,9 +657,8 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
         return 0;
     }
 
-    int ret = 0;
-    EVP_PKEY* pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
-    const STACK_OF(CRYPTO_BUFFER) *cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
+    pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
+    cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
 
     // Set both fields to 0 so destroy() will not destroy the native allocated memory.
     (*e)->SetLongField(e, ssl_task->task, certificateTaskClassKeyField, 0);
@@ -671,7 +676,7 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
     if (numCerts == 0) {
         goto done;
     }
-    CRYPTO_BUFFER** certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
+    certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
 
     if (certs == NULL) {
         goto done;
@@ -697,6 +702,9 @@ done:
         sk_CRYPTO_BUFFER_pop_free((STACK_OF(CRYPTO_BUFFER) *) cchain, CRYPTO_BUFFER_free);
     }
     NETTY_JNI_UTIL_DELETE_LOCAL(e, certificateTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, types);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, issuers);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, authMethods);
 
     return ret;
 }
