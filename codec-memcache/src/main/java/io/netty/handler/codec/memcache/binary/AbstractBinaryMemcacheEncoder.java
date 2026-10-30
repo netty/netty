@@ -17,6 +17,7 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder;
 import io.netty.util.internal.UnstableApi;
@@ -35,14 +36,27 @@ public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMess
 
     @Override
     protected ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg) {
-        ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + msg.extrasLength()
-            + msg.keyLength());
+        int extrasLength = verifyLength(msg.extras(), msg.extrasLength() & 0xFF, "extras");
+        int keyLength = verifyLength(msg.key(), msg.keyLength() & 0xFFFF, "key");
+        ByteBuf buf = ctx.alloc().buffer(MINIMUM_HEADER_SIZE + extrasLength + keyLength);
 
         encodeHeader(buf, msg);
         encodeExtras(buf, msg.extras());
         encodeKey(buf, msg.key());
 
         return buf;
+    }
+
+    /**
+     * The header is written from the lengths recorded in the message, so the readable bytes of the key and extras
+     * must still equal those recorded lengths. Otherwise the header would not describe the bytes that follow it.
+     */
+    private static int verifyLength(ByteBuf buf, int expectedLength, String name) {
+        int actualLength = buf == null ? 0 : buf.readableBytes();
+        if (actualLength != expectedLength) {
+            throw new EncoderException(name + " length: " + actualLength + " (expected: " + expectedLength + ')');
+        }
+        return actualLength;
     }
 
     /**
