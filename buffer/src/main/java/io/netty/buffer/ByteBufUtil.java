@@ -1350,6 +1350,11 @@ public final class ByteBufUtil {
 
     @SuppressWarnings("deprecation")
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
+        int capacity = src.capacity();
+        if (isOutOfBounds(readerIndex, len, capacity)) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + readerIndex + ") <= index + length("
+                    + len + ") <= " + "buf.capacity(" + capacity + ')');
+        }
         if (len == 0) {
             return StringUtil.EMPTY_STRING;
         }
