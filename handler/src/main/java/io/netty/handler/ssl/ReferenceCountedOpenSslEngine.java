@@ -909,7 +909,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         return newResult(status, 0, bytesProduced);
                     }
 
-                    if (pendingException != null) {
+                    if (pendingException != null && bytesProduced > 0) {
                         // The handshake failed but there is something that needs to be sent to the remote peer
                         // first (most likely an alert). The handshakeException will be propagated by the next
                         // wrap(...) call.

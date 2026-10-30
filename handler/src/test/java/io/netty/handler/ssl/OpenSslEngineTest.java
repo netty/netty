@@ -326,6 +326,17 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testAlertNotLostWhenHandshakeFailsAfterTask(SSLEngineTestParam param) throws Exception {
+        testAlertNotLostWhenHandshakeFailsAfterTask0(param, false);
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testAlertNotLostWhenHandshakeFailsAfterTaskEmptyDst(SSLEngineTestParam param) throws Exception {
+        testAlertNotLostWhenHandshakeFailsAfterTask0(param, true);
+    }
+
+    private void testAlertNotLostWhenHandshakeFailsAfterTask0(SSLEngineTestParam param, boolean emptyDstFirst)
+            throws Exception {
         // The certificate verification is only offloaded to a task when using BoringSSL or AWS-LC.
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         assumeTrue(param instanceof OpenSslEngineTestParam && ((OpenSslEngineTestParam) param).useTasks);
@@ -418,6 +429,15 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 }
             }
             assertTrue(taskRunAfterClientFinished);
+
+            if (emptyDstFirst) {
+                // An empty destination must signal overflow so the caller knows to provide more space for the alert.
+                SSLEngineResult emptyResult = serverEngine.wrap(empty, allocateBuffer(param.type(), 0));
+                assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, emptyResult.getStatus());
+                assertEquals(HandshakeStatus.NEED_WRAP, emptyResult.getHandshakeStatus());
+                assertEquals(0, emptyResult.bytesConsumed());
+                assertEquals(0, emptyResult.bytesProduced());
+            }
 
             // An alert was produced, so we need to call wrap(...) to send it to the remote peer. The handshake failure
             // must only be propagated once the alert was written to the destination buffer.
