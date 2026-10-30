@@ -16,6 +16,7 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
@@ -58,6 +59,7 @@ final class QuicheQuicConnection {
     private final ByteBuffer sendInfoBuffer2;
 
     private long connection;
+    private EventLoop eventLoop;
 
     QuicheQuicConnection(long connection, long ssl, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
         assert connection != -1;
@@ -140,6 +142,21 @@ final class QuicheQuicConnection {
         };
     }
 
+    boolean inEventLoop() {
+        EventLoop eventLoop = this.eventLoop;
+        return eventLoop != null && eventLoop.inEventLoop();
+    }
+
+    boolean exportKeyingMaterial(byte[] label, byte @Nullable [] context, byte[] out) {
+        assert inEventLoop();
+        synchronized (this) {
+            if (connection == -1) {
+                return false;
+            }
+            return BoringSSL.SSL_export_keying_material(ssl, label, context, out) == 1;
+        }
+    }
+
     @Nullable
     QuicConnectionAddress sourceId() {
         return connectionId(() -> Quiche.quiche_conn_source_id(connection));
@@ -186,7 +203,8 @@ final class QuicheQuicConnection {
         return connection;
     }
 
-    void init(InetSocketAddress local, InetSocketAddress remote, Consumer<String> sniSelectedCallback) {
+    void init(EventLoop eventLoop, InetSocketAddress local, InetSocketAddress remote,
+              Consumer<String> sniSelectedCallback) {
         assert connection != -1;
         assert recvInfoBuffer.refCnt() != 0;
         assert sendInfoBuffer.refCnt() != 0;
@@ -198,6 +216,7 @@ final class QuicheQuicConnection {
         QuicheSendInfo.setSendInfo(sendInfoBuffer1, local, remote);
         QuicheSendInfo.setSendInfo(sendInfoBuffer2, local, remote);
         engine.sniSelectedCallback = sniSelectedCallback;
+        this.eventLoop = eventLoop;
     }
 
     ByteBuffer nextRecvInfo() {
