@@ -81,7 +81,7 @@ public class SslErrorTest {
         // alert all the time, sigh.....
         clientProviders.add(SslProvider.JDK);
 
-        List<CertificateException> exceptions = new ArrayList<CertificateException>(6);
+        List<CertificateException> exceptions = new ArrayList<CertificateException>(7);
         exceptions.add(new CertificateExpiredException());
         exceptions.add(new CertificateNotYetValidException());
         exceptions.add(new CertificateRevokedException(
@@ -92,6 +92,9 @@ public class SslErrorTest {
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.EXPIRED));
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.NOT_YET_VALID));
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.REVOKED));
+
+        // A generic CertificateException as thrown by a TrustManager that does not trust the certificate.
+        exceptions.add(new CertificateException("Certificate not trusted"));
 
         List<Object[]> params = new ArrayList<Object[]>();
         for (SslProvider serverProvider: serverProviders) {
@@ -300,6 +303,8 @@ public class SslErrorTest {
                     verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "expired", "bad");
                 } else if (exception instanceof CertificateRevokedException) {
                     verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "revoked");
+                } else {
+                    verifyException(clientProvider, serverProduceError, unwrappedCause, promise, "bad");
                 }
             }
         }
