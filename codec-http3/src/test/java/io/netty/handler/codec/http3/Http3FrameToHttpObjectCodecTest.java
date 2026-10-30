@@ -68,6 +68,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
@@ -399,6 +400,31 @@ public class Http3FrameToHttpObjectCodecTest {
             assertThat(trailers.content().readableBytes(), is(0));
             assertThat(trailers.trailingHeaders().get("key"), is("value"));
             assertFalse(trailers instanceof FullHttpRequest);
+        } finally {
+            trailers.release();
+        }
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testDowngradeTrailersDropsProhibitedFields(boolean isServer) {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(isServer));
+        Http3Headers headers = new DefaultHttp3Headers();
+        headers.set("key", "value");
+        headers.set("trailer", "x");
+        headers.set("content-length", "0");
+
+        assertTrue(ch.writeInboundWithFin(new DefaultHttp3HeadersFrame(headers)));
+
+        LastHttpContent trailers = ch.readInbound();
+        try {
+            assertThat(trailers.content().readableBytes(), is(0));
+            assertThat(trailers.trailingHeaders().get("key"), is("value"));
+            assertFalse(trailers.trailingHeaders().contains(HttpHeaderNames.TRAILER));
+            assertFalse(trailers.trailingHeaders().contains(HttpHeaderNames.CONTENT_LENGTH));
         } finally {
             trailers.release();
         }
