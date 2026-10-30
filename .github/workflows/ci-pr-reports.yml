@@ -39,7 +39,7 @@ jobs:
       actions: read  # for dawidd6/action-download-artifact to query and download artifacts
       checks: write  # for scacap/action-surefire-report to publish result as PR check
       pull-requests: read  # for dawidd6/action-download-artifact to query commit hash
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     strategy:
       fail-fast: false
       matrix:
