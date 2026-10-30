@@ -214,6 +214,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private int maxWrapOverhead;
     private int maxWrapBufferSize;
     private Throwable pendingException;
+    // The number of bytes that could be written into the destination buffer of the current wrap(...) call when it was
+    // installed as the write sink of the network BIO, or -1 if we are not in wrap(...).
+    private int wrapSinkLength = -1;
 
     /**
      * Create a new instance.
@@ -809,6 +812,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
 
                 int bioLengthBefore = SSL.bioLengthByteBuffer(networkBIO);
+                wrapSinkLength = bioLengthBefore;
 
                 // Explicitly use outboundClosed as we want to drain any bytes that are still present.
                 if (outboundClosed) {
@@ -866,10 +870,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         if (bytesProduced > 0) {
                             return newResult(NEED_WRAP, 0, bytesProduced);
                         }
-                        // Nothing was produced see if there is a handshakeException that needs to be propagated
-                        // to the caller by calling handshakeException() which will return the right HandshakeStatus
-                        // if it can "recover" from the exception for now.
-                        return newResult(handshakeException(), 0, 0);
+                        // Nothing was produced. Fall through to handshake() which will call SSL_do_handshake() again
+                        // so OpenSSL has a chance to produce the alert (for example when the handshake was suspended
+                        // because of a task). The handshakeException will be propagated to the caller once there is
+                        // nothing left to produce.
                     }
 
                     status = handshake();
@@ -880,6 +884,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     if (status == NEED_TASK) {
                         return newResult(status, 0, bytesProduced);
+                    }
+
+                    if (pendingException != null && bytesProduced > 0) {
+                        // The handshake failed but there is something that needs to be sent to the remote peer
+                        // first (most likely an alert). The handshakeException will be propagated by the next
+                        // wrap(...) call.
+                        return newResult(NEED_WRAP, 0, bytesProduced);
                     }
 
                     if (bytesProduced > 0) {
@@ -1055,6 +1066,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
             } finally {
+                wrapSinkLength = -1;
                 SSL.bioClearByteBuffer(networkBIO);
                 if (bioReadCopyBuf == null) {
                     dst.position(dst.position() + bytesProduced);
@@ -1390,7 +1402,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
         // See https://github.com/netty/netty/issues/3900
-        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+        if (hasPendingNetworkData()) {
             // we seem to have data left that needs to be transferred and so the user needs
             // call wrap(...). Store the error so we can pick it up later.
             if (pendingException == null) {
@@ -1934,8 +1946,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return cert == null || cert.length == 0;
     }
 
+    /**
+     * Returns {@code true} if OpenSSL produced data that still needs to be sent to the remote peer. This is either data
+     * that is queued in the non-application buffer of the network BIO or data that was already written into the
+     * destination buffer of the current {@link #wrap(ByteBuffer[], int, int, ByteBuffer)} call.
+     */
+    private boolean hasPendingNetworkData() {
+        return SSL.bioLengthNonApplication(networkBIO) > 0 ||
+                wrapSinkLength > 0 && SSL.bioLengthByteBuffer(networkBIO) < wrapSinkLength;
+    }
+
     private SSLEngineResult.HandshakeStatus handshakeException() throws SSLException {
-        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+        if (hasPendingNetworkData()) {
             // There is something pending, we need to consume it first via a WRAP so we don't loose anything.
             return NEED_WRAP;
         }
