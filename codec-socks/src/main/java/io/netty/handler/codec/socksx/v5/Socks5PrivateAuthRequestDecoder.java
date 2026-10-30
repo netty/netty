@@ -27,20 +27,31 @@ import java.util.List;
 /**
  * Decodes a single {@link Socks5PrivateAuthRequest} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
- * other handler can remove or replace this decoder later.
+ * other handler can remove or replace this decoder later. On failed decode, this decoder will
+ * discard the received data, so that other handler closes the connection later.
  */
 public final class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder {
 
-    private boolean decoded;
+    private enum State {
+        INIT,
+        SUCCESS,
+        FAILURE
+    }
+
+    private State state = State.INIT;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            if (decoded) {
+            if (state == State.SUCCESS) {
                 int readableBytes = in.readableBytes();
                 if (readableBytes > 0) {
                     out.add(in.readRetainedSlice(readableBytes));
                 }
+                return;
+            }
+            if (state == State.FAILURE) {
+                in.skipBytes(in.readableBytes());
                 return;
             }
 
@@ -73,18 +84,19 @@ public final class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder 
             out.add(new DefaultSocks5PrivateAuthRequest(token));
 
             // Mark as decoded to handle remaining bytes in future calls
-            decoded = true;
+            state = State.SUCCESS;
         } catch (Exception e) {
-            fail(out, e);
+            fail(in, out, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ByteBuf in, List<Object> out, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
 
-        decoded = true;
+        state = State.FAILURE;
+        in.skipBytes(in.readableBytes());
 
         Socks5Message m = new
             DefaultSocks5PrivateAuthRequest(EmptyArrays.EMPTY_BYTES);
