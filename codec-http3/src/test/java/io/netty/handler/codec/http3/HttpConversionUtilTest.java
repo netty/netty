@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -249,6 +250,41 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.toHttp3Headers(inHeaders, out);
         assertEquals(1, out.size());
         assertSame("world", out.get("hello"));
+    }
+
+    @Test
+    public void cookieIsSplitAtSemicolonSpace() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, "one=foo; two=bar; three=baz");
+        Http3Headers out = new DefaultHttp3Headers();
+        HttpConversionUtil.toHttp3Headers(inHeaders, out);
+        assertEquals(asList("one=foo", "two=bar", "three=baz"), toStrings(out.getAll(COOKIE)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "one=foo;two=bar",        // semicolon not followed by a space
+            "one=foo;",               // trailing semicolon
+            "one=foo; ",              // trailing semicolon and space
+            "one=foo; two=bar;three", // mixed
+            "one=\uD83D\uDE43; two=\u00fc", // characters that do not fit into a byte
+    })
+    public void cookieThatCannotBeSplitIsKept(String cookie) {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, cookie);
+        Http3Headers out = new DefaultHttp3Headers();
+        HttpConversionUtil.toHttp3Headers(inHeaders, out);
+        // https://www.rfc-editor.org/rfc/rfc9114.html#section-4.2.1: the receiver joins the fields with "; ",
+        // so splitting must not change the value.
+        assertEquals(singletonList(cookie), toStrings(out.getAll(COOKIE)));
+    }
+
+    private static List<String> toStrings(List<CharSequence> values) {
+        List<String> strings = new ArrayList<>(values.size());
+        for (CharSequence value : values) {
+            strings.add(value.toString());
+        }
+        return strings;
     }
 
     @Test
