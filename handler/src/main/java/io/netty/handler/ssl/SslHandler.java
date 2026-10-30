@@ -196,6 +196,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024;
 
+    /**
+     * The JDK {@link SSLEngine} wants at least {@code packetLength - 5 - 16} bytes to unwrap a record, as it subtracts
+     * the 5 byte header and at least 16 bytes of tag or MAC for every cipher suite.
+     * <p>
+     * The {@code BUFFER_OVERFLOW} check calls {@code estimateFragmentSize(packetLen)}:
+     * https://github.com/openjdk/jdk/blob/6917797/src/java.base/share/classes/sun/security/ssl/SSLEngineImpl.java#L672
+     * which for AEAD ciphers subtracts the header and tag size from the packet length:
+     * https://github.com/openjdk/jdk/blob/6917797/src/java.base/share/classes/sun/security/ssl/SSLCipher.java#L1969
+     */
+    private static final int JDK_MIN_UNWRAP_OVERHEAD = 5 + 16;
+
     private enum SslEngineType {
         TCNATIVE(true, COMPOSITE_CUMULATOR) {
             @Override
@@ -241,6 +252,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             int calculatePendingData(SslHandler handler, int guess) {
                 int sslPending = ((ReferenceCountedOpenSslEngine) handler.engine).sslPending();
                 return sslPending > 0 ? sslPending : guess;
+            }
+
+            @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // The plaintext of a record is never longer than MAX_PLAINTEXT_LENGTH.
+                return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
             @Override
@@ -290,6 +307,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             int calculatePendingData(SslHandler handler, int guess) {
                 return guess;
+            }
+
+            @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // Conscrypt does not need more space than the plaintext, which is at most MAX_PLAINTEXT_LENGTH.
+                return Math.min(length, MAX_PLAINTEXT_LENGTH);
             }
 
             @Override
@@ -366,6 +389,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
+            int calculateInitialUnwrapBufSize(SslHandler handler, int length) {
+                // length is a single record, which may need a bit more space than MAX_PLAINTEXT_LENGTH.
+                return length <= MAX_PLAINTEXT_LENGTH ? length : Math.max(MAX_PLAINTEXT_LENGTH,
+                        length - JDK_MIN_UNWRAP_OVERHEAD);
+            }
+
+            @Override
             boolean jdkCompatibilityMode(SSLEngine engine) {
                 return true;
             }
@@ -384,6 +414,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException;
 
         abstract int calculatePendingData(SslHandler handler, int guess);
+
+        abstract int calculateInitialUnwrapBufSize(SslHandler handler, int length);
 
         abstract boolean jdkCompatibilityMode(SSLEngine engine);
 
@@ -1491,7 +1523,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         boolean wrapLater = false;
         boolean notifyClosure = false;
         boolean executedRead = false;
-        ByteBuf decodeOut = allocate(ctx, length);
+        ByteBuf decodeOut = allocate(ctx, engineType.calculateInitialUnwrapBufSize(this, length));
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
@@ -1582,7 +1614,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     break;
                 } else if (decodeOut == null) {
-                    decodeOut = allocate(ctx, length);
+                    decodeOut = allocate(ctx, engineType.calculateInitialUnwrapBufSize(this, length));
                 }
             } while (!ctx.isRemoved());
 
