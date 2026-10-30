@@ -13,6 +13,7 @@ Authoring rules for tests (JUnit 5, AssertJ, mocking, avoiding sleeps) are in AG
   - `ReferenceCountedOpenSslContext` instances must be released
   - Anything that implements `ReferenceCounted` must be released
   - When this is unclear, e.g. with `HttpObject` types, use `ReferenceCountUtil.safeRelease`
+  - Prefer `@ParameterizedTest` to test different variations vs adding multiple tests with a different name.
 
 ## Imports
 - Avoid star-imports, including for static imports

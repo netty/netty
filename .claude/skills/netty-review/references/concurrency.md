@@ -3,7 +3,7 @@
 ## Data Races & Atomicity
 - Shared mutable state accessed without synchronization
 - Check-then-act sequences (TOCTOU) that aren't atomic
-- Read-modify-write on non-atomic fields (e.g., `count++` on a plain int shared between threads)
+- Read-modify-write on non-atomic fields (e.g., `count++` on a plain or volatile int/long fields shared between threads)
 - Compound operations on concurrent collections that assume atomicity (e.g., `if (!map.containsKey(k)) map.put(k, v)` instead of `putIfAbsent`)
 - Non-atomic lazy initialization of shared fields
 
@@ -25,7 +25,7 @@
 - Passing a thread-confined object to another thread without safe handoff
 
 ## Netty-Specific Concerns
-- Calling `ByteBuf` read/write, or any other mutating method, from a thread that does not own the buffer (`retain` and `release` are thread-safe)
+- Calling `ByteBuf` read/write, or any other mutating method, from a thread that does not own the buffer (`retain`, `release` and `refCnt` are thread-safe)
 - Sharing a `ChannelHandler` instance across pipelines without `@Sharable` (or without overriding `ChannelHandlerAdapter.isSharable`), or marking a handler `@Sharable` when it holds mutable state
 - Assuming listeners of externally supplied `Promise` or `Future` instances will run on the `EventLoop` that attached the listener, creating visibility or ordering issues
 - Using blocking calls inside an `EventLoop` thread (blocking the I/O thread)

@@ -88,15 +88,18 @@
 - For platform-variant APIs (e.g., `sendfile` on macOS vs FreeBSD vs Linux), use `#ifdef __APPLE__` / `#else` blocks at the call site. Ensure the `#else` path works on all other supported BSDs
 
 ### Weak Symbols for Optional Functions
-- Use `__attribute__((weak))` (and `__attribute__((weak_import))` for macOS) to declare functions that may not be available at link time (`accept4`, `pipe2`, `epoll_create1`, `epoll_pwait2`). Check the function pointer for NULL at runtime before calling:
+- Use `__attribute__((weak))` (and `__attribute__((weak_import))` for macOS) to declare functions that may not be available at link time (`accept4`, `pipe2`, `epoll_create1`, `epoll_pwait2`). Guard the code block with `__APPLE__` specific `__builtin_available` check, and check the function pointer for NULL at runtime before calling:
   ```c
-  extern int epoll_create1(int flags) __attribute__((weak));
-  // ...
-  if (epoll_create1) {
-      efd = epoll_create1(EPOLL_CLOEXEC);
-  } else {
-      efd = epoll_create(126);
-  }
+  #ifdef __APPLE__
+      //  'pipe2' is only available on macOS 27.0 or newer
+      if (__builtin_available (macOS 27.0, *)) {
+  #endif // __APPLE__
+      if (pipe2) {
+          /* … making use of pipe2() … */
+       }
+  #ifdef __APPLE__
+       }
+  #endif // __APPLE__
   ```
 - Pair weak symbols with runtime feature-detection functions (e.g., `isSupportingSendmmsg`) that probe with a dummy syscall and check for `ENOSYS`
 
@@ -120,8 +123,10 @@
 - Every `malloc`/`calloc`/`realloc` must have a corresponding `free` on all code paths including the `goto error`/`goto done` cleanup path
 - Always null-check `malloc`/`calloc` return values. The project typically returns NULL or `goto`s the error label on allocation failure
 - `realloc` pitfall: `p = realloc(p, new_size)` leaks the original buffer on failure. Use a temp pointer
-- Prefer `calloc(count, size)` over `malloc(count * size)` — it zeros memory and avoids multiplication overflow
+- Prefer `calloc(count, size)` over `malloc(count * size)` — it zeros memory and avoids multiplication overflow.
+- Use `memset(p, 0, sizeof(p))` or equivalent to zero out data when not allocating
 - For small, fixed-size buffers (e.g., IPv6 addresses at 16 bytes), use stack-allocated arrays rather than `malloc`. The project convention is `jbyte addressBytes[16]` on the stack
+- Use zero-initialization when declaring stack-allocated structures and buffers, e.g. `char strerrbuf[256] = {0};`, to avoid separate zeroing calls to `memset`
 - For dynamically-sized allocations in hot paths (e.g., `struct mmsghdr msg[len]`), the project uses VLAs. Ensure the length comes from a bounded Java value (e.g., an array length parameter) and cannot be attacker-controlled to cause stack overflow
 - `free(NULL)` is safe and the project relies on this — conditional null-checks before `free` are not required
 - When JNI returns strings (`GetStringUTFChars`), always call `ReleaseStringUTFChars` on all paths. For byte arrays, prefer `GetByteArrayRegion` into a stack buffer (no release needed) over `GetByteArrayElements` (requires `ReleaseByteArrayElements`)
