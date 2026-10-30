@@ -1330,6 +1330,8 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
 
     jclass quiche_logger_class = NULL;
     char* name = NULL;
+    // Must be initialized before the first goto done as it is used in the done block.
+    JNINativeMethod* dynamicMethods = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -1341,7 +1343,7 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     }
     staticallyRegistered = 1;
 
-    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
         goto done;
     }
