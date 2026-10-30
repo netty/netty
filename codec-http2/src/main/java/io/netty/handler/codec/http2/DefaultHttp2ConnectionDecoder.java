@@ -305,6 +305,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "CONNECT request is missing mandatory :authority pseudo-header field.");
                 }
+                if (headers.scheme() != null) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "CONNECT request must not include :scheme pseudo-header field.");
+                }
+                if (headers.path() != null) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "CONNECT request must not include :path pseudo-header field.");
+                }
             } else {
                 if (headers.scheme() == null) {
                     throw streamError(streamId, PROTOCOL_ERROR,
