@@ -101,7 +101,7 @@ public class SslHandlerUnwrapBufferSizeTest {
     }
 
     static List<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (Engine receiver : Engine.values()) {
             for (Engine sender : new Engine[] { Engine.JDK, Engine.OPENSSL }) {
                 for (String protocol : new String[] { SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2 }) {
@@ -131,7 +131,7 @@ public class SslHandlerUnwrapBufferSizeTest {
      * default, so a suite that is added to a JDK later on that does is noticed.
      */
     static List<Object[]> enabledCipherSuites() throws Exception {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (Engine receiver : new Engine[] { Engine.JDK, Engine.BOUNCY_CASTLE }) {
             SSLEngine sslEngine;
             if (receiver == Engine.BOUNCY_CASTLE) {
@@ -338,7 +338,7 @@ public class SslHandlerUnwrapBufferSizeTest {
      * it is {@code 0}, in which case each outbound buffer is delivered as is. Returns the length of every TLS record
      * that was moved.
      */
-    private static List<Integer> transfer(EmbeddedChannel from, EmbeddedChannel to, int readSize) {
+    private static List<Integer> transfer(EmbeddedChannel from, EmbeddedChannel to, int readSize) throws Exception {
         List<Integer> records = new ArrayList<Integer>();
         ByteBuf all = readSize == 0 ? null : Unpooled.buffer();
         ByteBuf buf;
@@ -366,7 +366,7 @@ public class SslHandlerUnwrapBufferSizeTest {
     }
 
     private static final class AllocationRecordingAllocator extends AbstractByteBufAllocator {
-        final List<Integer> capacities = new ArrayList<Integer>();
+        final List<Integer> capacities = new ArrayList<>();
 
         AllocationRecordingAllocator() {
             super(false);
