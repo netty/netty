@@ -85,11 +85,20 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
                                                      AsciiString method, AsciiString path,
                                                      AsciiString scheme, AsciiString authority,
                                                      AsciiString... otherHeaders) {
+        List<AsciiString> pseudo = new ArrayList<>(8);
+        pseudo.add(PseudoHeaderName.METHOD.value());
+        pseudo.add(method);
+        pseudo.add(PseudoHeaderName.PATH.value());
+        pseudo.add(path);
+        pseudo.add(PseudoHeaderName.SCHEME.value());
+        pseudo.add(scheme);
+        // RFC 9113 §8.3.1: omit :authority when there is no authority to convey.
+        if (authority != null && !authority.isEmpty()) {
+            pseudo.add(PseudoHeaderName.AUTHORITY.value());
+            pseudo.add(authority);
+        }
         return new ReadOnlyHttp2Headers(validateHeaders,
-                new AsciiString[] {
-                  PseudoHeaderName.METHOD.value(), method, PseudoHeaderName.PATH.value(), path,
-                  PseudoHeaderName.SCHEME.value(), scheme, PseudoHeaderName.AUTHORITY.value(), authority
-                },
+                pseudo.toArray(new AsciiString[0]),
                 otherHeaders);
     }
 
