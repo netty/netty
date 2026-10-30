@@ -86,6 +86,216 @@ public class AbstractSniHandlerTest {
         }
     }
 
+    @Test
+    public void testExtractSniHostnameWithFollowingExtension() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
+            writeClientHelloPrefix(buffer, 4 + 5 + host.length + 4 + 1);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(5 + host.length);
+            buffer.writeShort(3 + host.length); // server_name_list length
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(host.length);
+            buffer.writeBytes(host);
+            buffer.writeShort(0xff01); // renegotiation_info
+            buffer.writeShort(1);
+            buffer.writeByte(0);
+
+            assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // The host_name entry must not extend past the server_name extension. Previously the name was only
+    // bounded by the end of all extensions, so its bytes could be taken from the following extension.
+    @Test
+    public void testExtractSniHostnameDoesNotReadPastServerNameExtension() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 9 + 4 + 5);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(9); // extension length
+            buffer.writeShort(7); // server_name_list length: covers exactly the rest of the extension
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(13); // name length: runs 9 bytes into the next extension
+            buffer.writeBytes("beta".getBytes(CharsetUtil.US_ASCII)); // last 4 bytes of the extension
+            buffer.writeBytes(".sni.test".getBytes(CharsetUtil.US_ASCII)); // next extension header + data
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsServerNameListLengthMismatch() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
+            writeClientHelloPrefix(buffer, 4 + 5 + host.length);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(5 + host.length);
+            buffer.writeShort(0); // server_name_list length: does not cover the entry
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(host.length);
+            buffer.writeBytes(host);
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsEmptyHostName() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 5);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(5);
+            buffer.writeShort(3); // server_name_list length
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(0); // empty name
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameAfterOtherExtension() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
+            writeClientHelloPrefix(buffer, 4 + 1 + 4 + 5 + host.length);
+            buffer.writeShort(0xff01); // renegotiation_info
+            buffer.writeShort(1);
+            buffer.writeByte(0);
+            writeServerNameExtension(buffer, 0, host);
+
+            assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsOversizedServerNameListLength() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 9 + 4 + 5);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(9); // extension length
+            buffer.writeShort(0xFFFF); // server_name_list length: far larger than the extension
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(13); // name length: runs 9 bytes into the next extension
+            buffer.writeBytes("beta".getBytes(CharsetUtil.US_ASCII));
+            buffer.writeBytes(".sni.test".getBytes(CharsetUtil.US_ASCII));
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // The list length is one byte larger than the data that is actually left in the extension.
+    @Test
+    public void testExtractSniHostnameRejectsServerNameListLengthOneTooLarge() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
+            writeClientHelloPrefix(buffer, 4 + 5 + host.length + 4 + 1);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(5 + host.length);
+            buffer.writeShort(3 + host.length + 1); // server_name_list length: one too large
+            buffer.writeByte(0); // host_name
+            buffer.writeShort(host.length);
+            buffer.writeBytes(host);
+            buffer.writeShort(0xff01); // renegotiation_info
+            buffer.writeShort(1);
+            buffer.writeByte(0);
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // The server_name_list length is 2 bytes, so an extension shorter than that can not hold it. The following
+    // extension must not be interpreted as the list length.
+    @Test
+    public void testExtractSniHostnameRejectsTooShortServerNameExtension() {
+        for (int extensionLength = 0; extensionLength < 2; extensionLength++) {
+            ByteBuf buffer = Unpooled.buffer();
+            try {
+                writeClientHelloPrefix(buffer, 4 + extensionLength + 4 + 8);
+                buffer.writeShort(0); // extension type: server_name
+                buffer.writeShort(extensionLength);
+                buffer.writeZero(extensionLength);
+                // Following extension that looks like a server_name_list holding a host name.
+                buffer.writeShort(0xff01);
+                buffer.writeShort(8);
+                buffer.writeShort(5); // would be a server_name_list length
+                buffer.writeByte(0); // would be host_name
+                buffer.writeShort(2); // would be the name length
+                buffer.writeBytes("ab".getBytes(CharsetUtil.US_ASCII));
+
+                assertNull(AbstractSniHandler.extractSniHostname(buffer), "extensionLength=" + extensionLength);
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsEmptyServerNameList() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 2);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(2);
+            buffer.writeShort(0); // server_name_list length: empty list
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsUnknownNameType() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
+            writeClientHelloPrefix(buffer, 4 + 5 + host.length);
+            writeServerNameExtension(buffer, 1, host);
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    private static void writeServerNameExtension(ByteBuf buffer, int nameType, byte[] host) {
+        buffer.writeShort(0); // extension type: server_name
+        buffer.writeShort(5 + host.length);
+        buffer.writeShort(3 + host.length); // server_name_list length
+        buffer.writeByte(nameType);
+        buffer.writeShort(host.length);
+        buffer.writeBytes(host);
+    }
+
+    private static void writeClientHelloPrefix(ByteBuf buffer, int extensionsLength) {
+        buffer.writeZero(34); // client_version (2) + random (32)
+        buffer.writeByte(0); // SessionID length
+        buffer.writeShort(0); // cipher_suites length
+        buffer.writeByte(0); // compression_methods length
+        buffer.writeShort(extensionsLength);
+    }
+
     private static ByteBuf validClientHelloBody(String hostname) {
         byte[] hostBytes = hostname.getBytes(CharsetUtil.US_ASCII);
         int serverNameListLength = 1 + 2 + hostBytes.length; // name type (1) + name length (2) + name
