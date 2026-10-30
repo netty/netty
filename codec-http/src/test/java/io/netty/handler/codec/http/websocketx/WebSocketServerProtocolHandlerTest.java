@@ -114,7 +114,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testNotAllowedOriginRejectedNonFull() {
+    public void testNotAllowedOriginRejectedNonFull() throws Exception {
         EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
         FullHttpRequest fullRequest = (FullHttpRequest) WebSocketRequestBuilder.successful();
         HttpRequest request = new DefaultHttpRequest(fullRequest.protocolVersion(), fullRequest.method(),
@@ -131,7 +131,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testNotAllowedOriginAmongMultipleHeadersRejected() {
+    public void testNotAllowedOriginAmongMultipleHeadersRejected() throws Exception {
         EmbeddedChannel ch = createChannel(originConfig("http://example.com"), new MockOutboundHandler());
         HttpRequest request = WebSocketRequestBuilder.successful();
         request.headers().add(HttpHeaderNames.ORIGIN, "http://evil.example.com");
@@ -145,7 +145,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testNotAllowedSecWebSocketOriginRejected() {
+    public void testNotAllowedSecWebSocketOriginRejected() throws Exception {
         EmbeddedChannel ch = createChannel(originConfig("http://example.com"), new MockOutboundHandler());
         HttpRequest request = WebSocketRequestBuilder.successful();
         request.headers().remove(HttpHeaderNames.ORIGIN);
@@ -160,7 +160,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testMissingOriginNotRejected() {
+    public void testMissingOriginNotRejected() throws Exception {
         EmbeddedChannel ch = createChannel(originConfig("https://other.example.com"), new MockOutboundHandler());
         HttpRequest request = WebSocketRequestBuilder.successful();
         request.headers().remove(HttpHeaderNames.ORIGIN);
