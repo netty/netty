@@ -215,6 +215,10 @@ final class BoringSSLCertificateCallback {
                 return null;
             }
             key = BoringSSL.EVP_PKEY_parse(pemKey, password);
+            if (key == 0) {
+                // Parsing failed, there is no usable key material.
+                return null;
+            }
         }
         long chain = BoringSSL.CRYPTO_BUFFER_stack_new(ssl, certs);
         engine.setLocalCertificateChain(certificates);

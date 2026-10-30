@@ -1354,7 +1354,7 @@ jlong netty_boringssl_EVP_PKEY_parse(JNIEnv* env, jclass clazz, jbyteArray array
     int dataLen = (*env)->GetArrayLength(env, array);
     char* data = (char*) (*env)->GetByteArrayElements(env, array, 0);
     if (data == NULL) {
-        return -1;
+        return 0;
     }
     BIO* bio = BIO_new_mem_buf(data, dataLen);
 
@@ -1373,9 +1373,7 @@ jlong netty_boringssl_EVP_PKEY_parse(JNIEnv* env, jclass clazz, jbyteArray array
         (*env)->ReleaseStringUTFChars(env, password, charPass);
     }
     (*env)->ReleaseByteArrayElements(env, array, (jbyte*)data, JNI_ABORT);
-    if (key == NULL) {
-        return -1;
-    }
+    // If parsing failed key is NULL and so we return 0, which the Java side treats as failure.
     return (jlong) key;
 }
 
