@@ -847,6 +847,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                      ChannelPromise promise) {
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
+            // Per RFC 9113 §6.4 an IDLE stream (one that never existed) must not receive an RST_STREAM.
+            // Only send RST_STREAM if the stream may have existed on the remote side (e.g. it was created,
+            // closed, or explicitly reset before this call).
+            if (!connection().streamMayHaveExisted(streamId)) {
+                promise.unvoid().trySuccess();
+                return promise;
+            }
             return resetUnknownStream(ctx, streamId, errorCode, promise.unvoid());
         }
 

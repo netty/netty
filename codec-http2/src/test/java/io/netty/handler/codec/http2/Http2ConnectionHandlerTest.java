@@ -209,6 +209,9 @@ public class Http2ConnectionHandlerTest {
         when(connection.stream(NON_EXISTANT_STREAM_ID)).thenReturn(null);
         when(connection.numActiveStreams()).thenReturn(1);
         when(connection.stream(STREAM_ID)).thenReturn(stream);
+        // streamMayHaveExisted needs to return true for these tests so that resetStream() actually
+        // attempts to send RST_STREAM rather than short-circuiting per RFC 9113 idle stream rules.
+        when(connection.streamMayHaveExisted(anyInt())).thenReturn(true);
         when(connection.goAwaySent(anyInt(), anyLong(), any(ByteBuf.class))).thenReturn(true);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
