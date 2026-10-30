@@ -41,7 +41,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected AbstractHttpData(String name, Charset charset, long size) {
         ObjectUtil.checkNotNull(name, "name");
 
-        this.name = checkNonEmpty(cleanName(name), "name");
+        this.name = name.isEmpty() ? name : checkNonEmpty(cleanName(name), "name");
         if (charset != null) {
             setCharset(charset);
         }
