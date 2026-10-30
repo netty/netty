@@ -1120,6 +1120,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             Promise<Void> promise = connectPromise;
             connectPromise = null;
             if (res == 0) {
+                if (promise.isDone()) {
+                    // The promise was already completed, for example by close(), and the connect completion won the
+                    // race against the cancellation. Do not activate the channel or try to complete it again.
+                    return;
+                }
                 active = true;
                 if (local == null) {
                     local = socket.localAddress();
