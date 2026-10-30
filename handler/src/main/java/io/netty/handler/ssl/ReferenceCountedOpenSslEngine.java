@@ -75,6 +75,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -770,6 +771,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 
+    /**
+     * Calculates the max number of encrypted bytes to write into the BIO for the given plaintextLength, which is at
+     * least {@link #maxEncryptedPacketLength()}.
+     * <p>
+     * This method is intentionally not synchronized, it is only called while the engine lock is held by unwrap.
+     */
+    private int calculateMaxLengthForUnwrap(long plaintextLength) {
+        long records = (plaintextLength + MAX_PLAINTEXT_LENGTH - 1) / MAX_PLAINTEXT_LENGTH;
+        return (int) min(MAX_VALUE, max(maxEncryptedPacketLength(), plaintextLength + records * maxWrapOverhead));
+    }
+
     final synchronized int sslPending() {
         return sslPending0();
     }
@@ -1260,8 +1272,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                 final int packetLengthDataOnly = packetLength - SSL_RECORD_HEADER_LENGTH;
                 if (packetLengthDataOnly > capacity) {
-                    // Not enough space in the destination buffer so signal the caller that the buffer needs to be
-                    // increased.
                     if (packetLengthDataOnly > MAX_RECORD_SIZE) {
                         // The packet length MUST NOT exceed 2^14 [1]. However we do accommodate more data to support
                         // legacy use cases which may violate this condition (e.g. OpenJDK's SslEngineImpl). If the max
@@ -1270,10 +1280,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // [1] https://tools.ietf.org/html/rfc5246#section-6.2.1
                         throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
                                                 session.getApplicationBufferSize());
-                    } else {
-                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                     }
-                    return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    // The plaintext is never longer than MAX_PLAINTEXT_LENGTH, so we never need more space than that.
+                    if (min(packetLengthDataOnly, MAX_PLAINTEXT_LENGTH) > capacity) {
+                        // Not enough space in the destination buffer so signal the caller that the buffer needs to be
+                        // increased.
+                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
+                        return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    }
                 }
 
                 if (len < packetLength) {
@@ -1317,10 +1331,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             bioWriteCopyBuf = null;
                             pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                         }
+                    } else if (!src.isDirect() && sslPending0() >= capacity - bytesProduced) {
+                        // Already decrypted data fills the destination buffers, so there is no need to copy src.
+                        bioWriteCopyBuf = null;
+                        pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                     } else {
                         // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                         // stated in the SSLEngine javadocs.
                         pendingEncryptedBytes = min(packetLength, remaining);
+                        if (!src.isDirect()) {
+                            // Only copy what can be decrypted into the destination buffers.
+                            pendingEncryptedBytes = min(pendingEncryptedBytes,
+                                    calculateMaxLengthForUnwrap(capacity - bytesProduced));
+                        }
                         try {
                             bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
                         } catch (SSLException e) {
@@ -1397,6 +1420,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             }
                         }
 
+                        if (bioWriteCopyBuf != null && pendingEncryptedBytes == 0 && packetLength > 0 &&
+                                src.hasRemaining()) {
+                            // Only part of src was copied, so copy the rest before moving to the next buffer.
+                            continue;
+                        }
                         if (++srcsOffset >= srcsEndOffset) {
                             break;
                         }
