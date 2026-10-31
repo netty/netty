@@ -448,11 +448,13 @@ static jint netty_io_uring_register_iowq_max_workers(JNIEnv *env, jclass clazz, 
      int values[2];
      values[0] = maxBoundedValue;
      values[1] = maxUnboundedValue;
-     return sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_enable_rings(JNIEnv *env, jclass clazz, jint ringFd) {
-     return sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint ringFd) {
@@ -464,7 +466,7 @@ static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint rin
     if (ret == 1) {
         return up.offset;
     }
-    return -1;
+    return ret < 0 ? -errno : -1;
 }
 
 static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
@@ -488,8 +490,10 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
 
     int registerRes = sys_io_uring_register(ringFd, IORING_REGISTER_PBUF_RING, &reg, 1);
     if (registerRes < 0) {
+        // Remember the errno before munmap(...) is called as it may overwrite it.
+        int err = errno;
         munmap(br, ring_size);
-        return registerRes;
+        return -err;
     }
     br->tail = 0;
     return (jlong) br;
@@ -505,7 +509,7 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
     struct io_uring_buf_reg reg = { .bgid = (__u16) bgid };
     int registerRes = sys_io_uring_register(ringFd, IORING_UNREGISTER_PBUF_RING, &reg, 1);
     if (registerRes < 0) {
-        return registerRes;
+        return -errno;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
 
