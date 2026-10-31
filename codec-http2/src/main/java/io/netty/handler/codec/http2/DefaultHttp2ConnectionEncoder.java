@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
@@ -49,6 +50,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     private final Queue<OutstandingLocalSettings> outstandingLocalSettingsQueue =
             new ArrayDeque<OutstandingLocalSettings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
+
+    static final Http2Connection.PropertyKey HEAD_REQUEST_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
@@ -222,6 +225,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         throw new IllegalStateException("Stream " + stream.id() + " in unexpected state " +
                                                         stream.state());
                 }
+            }
+            // Check for HEAD method on local request streams (whether stream was just created or already existed)
+            if (!connection.isServer() && headers.method() != null &&
+                HttpMethod.HEAD.asciiName().contentEquals(headers.method())) {
+                stream.setProperty(HEAD_REQUEST_KEY, Boolean.TRUE);
             }
 
             // Trailing headers must go through flow control if there are other frames queued in flow control
