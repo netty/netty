@@ -18,6 +18,8 @@ package io.netty.handler.codec.http.cookie;
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -26,6 +28,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -288,5 +291,46 @@ public class ClientCookieDecoderTest {
         String emptyPath = "sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw;Domain=;Path=";
         Cookie cookie = ClientCookieDecoder.STRICT.decode(emptyPath);
         assertNull(cookie.path());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] strict={0} header={1}")
+    @CsvSource(delimiter = '|', value = {
+            "true  | 'a=b ; Path=/; Max-Age=60'",
+            "false | 'a=b ; Path=/; Max-Age=60'",
+            "true  | 'a = b; Path = /; Max-Age = 60'",
+            "false | 'a = b; Path = /; Max-Age = 60'",
+            "true  | 'a=b; Path=/ ; Max-Age=60 ; SameSite=Lax ;Secure'",
+            "false | 'a=b; Path=/ ; Max-Age=60 ; SameSite=Lax ;Secure'",
+            "true  | 'a=\tb\t;\tPath=/\t;\tMax-Age=60\t'",
+            "false | 'a=\tb\t;\tPath=/\t;\tMax-Age=60\t'",
+    })
+    public void testWhitespaceAroundNamesAndValuesIsRemoved(boolean strict, String header) {
+        // See https://www.rfc-editor.org/rfc/rfc6265#section-5.2
+        Cookie cookie = (strict ? ClientCookieDecoder.STRICT : ClientCookieDecoder.LAX).decode(header);
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.name()).isEqualTo("a");
+        assertThat(cookie.value()).isEqualTo("b");
+        assertThat(cookie.path()).isEqualTo("/");
+        assertThat(cookie.maxAge()).isEqualTo(60);
+        if (header.contains("SameSite")) {
+            assertThat(((DefaultCookie) cookie).sameSite()).isEqualTo(SameSite.Lax);
+            assertThat(cookie.isSecure()).isTrue();
+        }
+    }
+
+    @Test
+    public void testWhitespaceInsideValueIsKept() {
+        assertThat(ClientCookieDecoder.STRICT.decode("a=b c ; Path=/")).isNull();
+        Cookie cookie = ClientCookieDecoder.LAX.decode("a= b c ; Path=/");
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.value()).isEqualTo("b c");
+    }
+
+    @Test
+    public void testEmptyValueAfterWhitespace() {
+        Cookie cookie = ClientCookieDecoder.STRICT.decode("a=  ; Path=/");
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.value()).isEmpty();
+        assertThat(cookie.path()).isEqualTo("/");
     }
 }
