@@ -31,6 +31,7 @@ import java.util.Collection;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpHeaderValues.MULTIPART_MIXED;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
 import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
@@ -72,7 +73,10 @@ public class HttpServerKeepAliveHandlerTest {
                 { false, HttpVersion.HTTP_1_1, OK, null, NOT_SELF_DEFINED_MSG_LENGTH, null },                     // 11
                 { false, HttpVersion.HTTP_1_0, OK, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, null },               // 12
                 { true, HttpVersion.HTTP_1_1, NO_CONTENT, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null}, // 13
-                { false, HttpVersion.HTTP_1_0, NO_CONTENT, null, NOT_SELF_DEFINED_MSG_LENGTH, null}               // 14
+                { false, HttpVersion.HTTP_1_0, NO_CONTENT, null, NOT_SELF_DEFINED_MSG_LENGTH, null},              // 14
+                { true, HttpVersion.HTTP_1_1, NOT_MODIFIED, REQUEST_KEEP_ALIVE,
+                        NOT_SELF_DEFINED_MSG_LENGTH, null},                                                       // 15
+                { false, HttpVersion.HTTP_1_0, NOT_MODIFIED, null, NOT_SELF_DEFINED_MSG_LENGTH, null}             // 16
         });
     }
 
