@@ -71,6 +71,7 @@
 static jweak peerCredentialsClassWeak = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
+static jclass fileChannelImplClass = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID transferredFieldId = NULL;
 static jfieldID fdFieldId = NULL;
@@ -754,6 +755,12 @@ static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd
         netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
         return -1;
     }
+    // The field id of FileChannelImpl.fd is only valid for instances of this class. Using it with any other
+    // FileChannel implementation is undefined behaviour.
+    if ((*env)->IsInstanceOf(env, fileChannel, fileChannelImplClass) == JNI_FALSE) {
+        netty_unix_errors_throwRuntimeException(env, "DefaultFileRegion.file is not a sun.nio.ch.FileChannelImpl");
+        return -1;
+    }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
     if (fileDescriptor == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
@@ -879,7 +886,6 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     int ret = JNI_ERR;
     char* nettyClassName = NULL;
     jclass fileRegionCls = NULL;
-    jclass fileChannelCls = NULL;
     jclass fileDescriptorCls = NULL;
     jclass peerCredentialsClass = NULL;
     // Register the methods which are not referenced by static member variables
@@ -911,8 +917,8 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
     NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
 
-    NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
-    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, fileChannelImplClass, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelImplClass, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
 
     NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
     NETTY_JNI_UTIL_TRY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I");
@@ -925,12 +931,16 @@ done:
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
+    if (ret == JNI_ERR) {
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
+    }
     NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
     return ret;
 }
 
 void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, peerCredentialsClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, LINUXSOCKET_CLASSNAME);
 }
