@@ -1113,11 +1113,18 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         assert connectPromise != null;
         freeRemoteAddressMemory();
 
+        Promise<Void> promise = connectPromise;
+        if (promise.isDone()) {
+            // The promise was already completed, for example by close(), and the connect completion raced with the
+            // cancellation. Do not activate the channel, schedule a POLLOUT or try to complete the promise again.
+            connectPromise = null;
+            return;
+        }
+
         if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
             // connect not complete yet need to wait for poll_out event
             schedulePollOut();
         } else {
-            Promise<Void> promise = connectPromise;
             connectPromise = null;
             if (res == 0) {
                 active = true;
@@ -1136,7 +1143,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (readPending) {
                     doBeginReadNow();
                 }
-            } else if (!promise.isDone()) {
+            } else {
                 try {
                     Errors.throwConnectException("io_uring connect", res);
                 } catch (Throwable cause) {
