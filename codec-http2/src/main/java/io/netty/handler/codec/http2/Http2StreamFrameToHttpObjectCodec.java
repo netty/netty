@@ -163,6 +163,9 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             if (statusClass == HttpStatusClass.INFORMATIONAL && code != 101) {
                 if (res instanceof FullHttpResponse) {
                     final Http2Headers headers = toHttp2Headers(ctx, res);
+                    // Like HttpResponseEncoder, drop the Content-Length header of an informational response.
+                    // Its content is not written, and is released with the message.
+                    headers.remove(HttpHeaderNames.CONTENT_LENGTH);
                     out.add(new DefaultHttp2HeadersFrame(headers, false));
                     return;
                 } else {
