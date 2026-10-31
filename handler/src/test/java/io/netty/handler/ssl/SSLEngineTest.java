@@ -1318,6 +1318,24 @@ public abstract class SSLEngineTest {
         }
     }
 
+    /**
+     * Invalidates the {@link SSLSession} and asserts that it is not valid anymore.
+     * <p>
+     * Conscrypt implements {@code invalidate()} by setting the session timeout to {@code 0}, which makes
+     * {@code isValid()} evaluate {@code System.currentTimeMillis() < getCreationTime()}. The creation time is taken
+     * from the native clock, which can be slightly ahead of {@code System.currentTimeMillis()} (for example because of
+     * the coarse clock used by the JVM on Windows). Right after the handshake the session may therefore still look
+     * valid, so wait for the Java clock to catch up with the creation time before invalidating.
+     */
+    private static void invalidateAndAssertInvalid(SSLSession session) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (System.currentTimeMillis() < session.getCreationTime() && System.nanoTime() - deadline < 0) {
+            Thread.yield();
+        }
+        session.invalidate();
+        assertFalse(session.isValid(), () -> "session should be invalid: " + session);
+    }
+
     private static void verifyApplicationLevelProtocol(Channel channel, String expectedApplicationProtocol) {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
@@ -1409,8 +1427,7 @@ public abstract class SSLEngineTest {
 
             SSLSession session = serverEngine.getSession();
             assertTrue(session.isValid(), () -> "session should be valid: " + session);
-            session.invalidate();
-            assertFalse(session.isValid(), () -> "session should be invalid: " + session);
+            invalidateAndAssertInvalid(session);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
@@ -3287,8 +3304,7 @@ public abstract class SSLEngineTest {
             byte[] id = ids.nextElement();
             SSLSession session = context.getSession(id);
             if (session != null) {
-                session.invalidate();
-                assertFalse(session.isValid());
+                invalidateAndAssertInvalid(session);
                 assertNull(context.getSession(id));
             }
         }
