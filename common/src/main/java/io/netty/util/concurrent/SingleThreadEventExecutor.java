@@ -82,6 +82,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
     private static final AtomicLongFieldUpdater<SingleThreadEventExecutor> ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER =
             AtomicLongFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "accumulatedActiveTimeNanos");
+    private static final AtomicLongFieldUpdater<SingleThreadEventExecutor> LAST_ACTIVITY_TIME_NANOS_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "lastActivityTimeNanos");
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_IDLE_CYCLES_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "consecutiveIdleCycles");
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_BUSY_CYCLES_UPDATER =
@@ -102,8 +104,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
-    // A running total of nanoseconds this executor has spent in an "active" state.
+    // A running total of nanoseconds this executor has spent in an "active" state, only written by the event loop.
     private volatile long accumulatedActiveTimeNanos;
+    // The value of accumulatedActiveTimeNanos when getAndResetAccumulatedActiveTimeNanos() was last called.
+    private long lastCollectedActiveTimeNanos;
     // Timestamp of the last recorded activity (tasks + I/O).
     private volatile long lastActivityTimeNanos;
     /**
@@ -517,7 +521,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
-    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     protected boolean runAllTasks(long timeoutNanos) {
         fetchFromScheduledTaskQueue(taskQueue);
         Runnable task = pollTask();
@@ -530,7 +533,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         long runTasks = 0;
         long lastExecutionTime;
 
-        long workStartTime = ticker().nanoTime();
+        final long workStartTime = supportSuspension ? ticker().nanoTime() : 0;
         for (;;) {
             safeExecute(task);
 
@@ -552,9 +555,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
-        long workEndTime = ticker().nanoTime();
-        accumulatedActiveTimeNanos += workEndTime - workStartTime;
-        lastActivityTimeNanos = workEndTime;
+        if (supportSuspension) {
+            long workEndTime = ticker().nanoTime();
+            addActiveTime(workEndTime - workStartTime, workEndTime);
+        }
 
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
@@ -602,7 +606,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     protected void updateLastExecutionTime() {
         long now = getCurrentTimeNanos();
         lastExecutionTime = now;
-        lastActivityTimeNanos = now;
+        if (supportSuspension) {
+            LAST_ACTIVITY_TIME_NANOS_UPDATER.lazySet(this, now);
+        }
     }
 
     /**
@@ -623,20 +629,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @param nanos The active time in nanoseconds to add.
      */
-    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     protected void reportActiveIoTime(long nanos) {
         assert inEventLoop();
-        if (nanos > 0) {
-            accumulatedActiveTimeNanos += nanos;
-            lastActivityTimeNanos = ticker().nanoTime();
+        if (nanos > 0 && supportSuspension) {
+            addActiveTime(nanos, ticker().nanoTime());
         }
+    }
+
+    private void addActiveTime(long nanos, long now) {
+        // Only the event loop writes these fields, so lazySet is enough.
+        ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.lazySet(this, accumulatedActiveTimeNanos + nanos);
+        LAST_ACTIVITY_TIME_NANOS_UPDATER.lazySet(this, now);
     }
 
     /**
      * Returns the accumulated active time since the last call and resets the counter.
+     * <p>
+     * <strong>Note:</strong> This method is not thread-safe and must only be called by a single thread at a time,
+     * like the auto-scaling monitor.
      */
     protected long getAndResetAccumulatedActiveTimeNanos() {
-        return ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.getAndSet(this, 0);
+        long accumulated = accumulatedActiveTimeNanos;
+        long delta = accumulated - lastCollectedActiveTimeNanos;
+        lastCollectedActiveTimeNanos = accumulated;
+        return delta;
     }
 
     /**
