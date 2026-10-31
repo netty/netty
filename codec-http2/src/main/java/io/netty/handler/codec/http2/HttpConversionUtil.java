@@ -419,8 +419,9 @@ public final class HttpConversionUtil {
      * {@code false} otherwise.
      * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
      * {@code false} for response message.
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x, or if a field value
-     * contains a character that HTTP/1.x cannot carry.
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x, or if a field name or value
+     * contains a character that HTTP/1.x cannot carry. This validation always runs, regardless of the header
+     * validation flags of the output {@link HttpHeaders} or of the HTTP/2 codec.
      */
     public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders, HttpHeaders outputHeaders,
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
@@ -431,6 +432,13 @@ public final class HttpConversionUtil {
             if (index != -1) {
                 throw streamError(streamId, PROTOCOL_ERROR,
                         "Invalid HTTP/2 header value for '%s' at index %d encountered in translation to HTTP/1.x",
+                        entry.getKey(), index);
+            }
+            // The translator emits names as-is, so a control character in a name would split the message too.
+            index = HttpHeaderValidationUtil.validateValidHeaderValue(entry.getKey());
+            if (index != -1) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Invalid HTTP/2 header name '%s' at index %d encountered in translation to HTTP/1.x",
                         entry.getKey(), index);
             }
         }
