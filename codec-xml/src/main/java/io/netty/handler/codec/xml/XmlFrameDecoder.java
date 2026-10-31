@@ -246,7 +246,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
 
         int xmlElementLength = length;
 
-        if (openBracketsCount == 0 && xmlElementLength > 0) {
+        if (atLeastOneXmlElementFound && openBracketsCount == 0 && xmlElementLength > 0) {
             if (readerIndex + xmlElementLength >= bufferLength) {
                 xmlElementLength = in.readableBytes();
             }
