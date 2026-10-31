@@ -161,10 +161,12 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 // case, we don't want to loop around because there may be no more data
                 // available, causing us to exit the loop. Instead, we just want to perform
                 // the first pass at payload processing now.
-                // Wait until the entire payload has been read.
-                if (input.readableBytes() < payloadLength) {
+                // Wait until the entire payload has been read. The frame header is left in the buffer until then,
+                // so that a frame which is still incomplete when the input is closed can be detected.
+                if (input.readableBytes() - FRAME_HEADER_LENGTH < payloadLength) {
                     return;
                 }
+                readFrameHeader(input);
                 // Slice to work only on the frame being read
                 ByteBuf framePayload = input.readSlice(payloadLength);
                 // We have consumed the data for this frame, next time we read,
@@ -197,17 +199,15 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
-        if (in.readableBytes() - FRAME_HEADER_LENGTH < payloadLength) {
-            // Leave the frame header in the buffer until the whole frame has been received, so that a frame
-            // which is still incomplete when the input is closed can be detected.
-            return false;
-        }
-        in.skipBytes(3);
+        readingHeaders = false;
+        return true;
+    }
+
+    private void readFrameHeader(ByteBuf in) {
+        in.skipBytes(3); // payload length, already read by preProcessFrame(...)
         frameType = in.readByte();
         flags = new Http2Flags(in.readUnsignedByte());
         streamId = readUnsignedInt(in);
-        readingHeaders = false;
-        return true;
     }
 
     private void verifyFrameState() throws Http2Exception {
