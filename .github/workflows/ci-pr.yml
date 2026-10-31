@@ -154,7 +154,7 @@ jobs:
           # ALL, NONE or the comma separated list of modules, see .github/scripts/mvn_affected.sh
           NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
           NETTY_MVN: ./mvnw.cmd
-        run: ./.github/scripts/mvn_affected.ps1 -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -Drevapi.skip=true
+        run: ./.github/scripts/mvn_affected.ps1 -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true '-Drevapi.skip=true'
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
