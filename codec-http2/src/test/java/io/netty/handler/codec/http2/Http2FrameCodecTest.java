@@ -618,7 +618,12 @@ public class Http2FrameCodecTest {
 
         channel.close();
 
-        Http2Exception e = assertThrows(Http2Exception.class, inboundHandler::checkException);
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
         assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
     }
 
@@ -631,7 +636,12 @@ public class Http2FrameCodecTest {
 
         channel.close();
 
-        Http2Exception e = assertThrows(Http2Exception.class, inboundHandler::checkException);
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
         assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
     }
 
