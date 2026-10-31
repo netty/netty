@@ -657,4 +657,48 @@ public class HttpConversionUtilTest {
         assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
         assertEquals("meow", httpHeaders.get("cat"));
     }
+
+    @Test
+    public void mustRejectHeaderValueWithCrLf() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", "value\r\nInjected: yes");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectHeaderValueWithNul() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", "value\0injected");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectPathWithProhibitedByte() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).path("/some/path\r\nX-Injected: yes");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustAcceptEmptyHeaderValue() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-empty", "");
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertEquals("", outHeaders.get("x-empty"));
+    }
+
+    private static void assertConversionRejected(final Http2Headers inHeaders) {
+        // Validation of the produced HTTP/1.x headers is disabled, as in the default InboundHttp2ToHttpAdapter,
+        // so that only the conversion itself can reject the value.
+        final HttpHeaders outHeaders = new DefaultHttpHeaders(false);
+        Http2Exception exception = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, exception.error());
+        assertTrue(outHeaders.isEmpty());
+    }
 }

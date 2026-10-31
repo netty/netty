@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
@@ -418,10 +419,21 @@ public final class HttpConversionUtil {
      * {@code false} otherwise.
      * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
      * {@code false} for response message.
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
+     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x, or if a field value
+     * contains a character that HTTP/1.x cannot carry.
      */
     public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders, HttpHeaders outputHeaders,
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
+        // RFC 9113 Section 10.3 requires intermediaries to validate fields before translating a message to
+        // HTTP/1.x. The output headers may be built without validation, so this check must not depend on that flag.
+        for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
+            int index = HttpHeaderValidationUtil.validateValidHeaderValue(entry.getValue());
+            if (index != -1) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Invalid HTTP/2 header value for '%s' at index %d encountered in translation to HTTP/1.x",
+                        entry.getKey(), index);
+            }
+        }
         // Extended CONNECT (RFC 8441) changes the semantics of a CONNECT request: the server must not treat
         // ':authority' as an ordinary tunnel target the way it would for a regular CONNECT request. Preserve the
         // ':protocol' and ':path' pseudo-headers as extension headers so that code operating on the converted
