@@ -192,11 +192,17 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             // Wait until the entire framing section has been read.
             return false;
         }
-        payloadLength = in.readUnsignedMedium();
+        payloadLength = in.getUnsignedMedium(in.readerIndex());
         if (payloadLength > maxFrameSize) {
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
+        if (in.readableBytes() - FRAME_HEADER_LENGTH < payloadLength) {
+            // Leave the frame header in the buffer until the whole frame has been received, so that a frame
+            // which is still incomplete when the input is closed can be detected.
+            return false;
+        }
+        in.skipBytes(3);
         frameType = in.readByte();
         flags = new Http2Flags(in.readUnsignedByte());
         streamId = readUnsignedInt(in);
