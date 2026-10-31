@@ -1047,7 +1047,8 @@ static jint netty_unix_socket_sendFd(JNIEnv* env, jclass clazz, jint socketFd, j
     struct msghdr descriptorMessage = { 0 };
     struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
-    char iovecData[1];
+    // This byte is sent to the remote peer together with the fd, so make sure it is initialized.
+    char iovecData[1] = { 0 };
 
     descriptorMessage.msg_control = control;
     descriptorMessage.msg_controllen = sizeof(control);
