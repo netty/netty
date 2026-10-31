@@ -671,6 +671,10 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     struct sockaddr_storage addr;
     socklen_t address_len = sizeof(addr);
 
+    // The kernel only fills in the address family (and not the rest of the address) for AF_UNIX peers, so make sure
+    // we never read uninitialized memory when we encode the address below.
+    memset(&addr, 0, sizeof(addr));
+
     for (;;) {
 #ifdef SOCK_NONBLOCK
         if (accept4) {
