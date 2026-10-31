@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -32,7 +33,26 @@ import static io.netty.channel.unix.Limits.IOV_MAX;
 
 public final class UnixChannelUtil {
 
+    private static final Class<?> FILE_CHANNEL_IMPL_CLASS;
+
+    static {
+        Class<?> fileChannelImplClass;
+        try {
+            fileChannelImplClass = Class.forName("sun.nio.ch.FileChannelImpl", false, null);
+        } catch (ClassNotFoundException ignore) {
+            fileChannelImplClass = null;
+        }
+        FILE_CHANNEL_IMPL_CLASS = fileChannelImplClass;
+    }
+
     private UnixChannelUtil() {
+    }
+
+    /**
+     * Returns whether the given channel is an instance of {@code sun.nio.ch.FileChannelImpl}.
+     */
+    public static boolean isFileChannelImpl(FileChannel channel) {
+        return FILE_CHANNEL_IMPL_CLASS != null && FILE_CHANNEL_IMPL_CLASS.isInstance(channel);
     }
 
     /**
