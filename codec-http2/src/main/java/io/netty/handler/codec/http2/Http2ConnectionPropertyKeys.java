@@ -30,6 +30,16 @@ final class Http2ConnectionPropertyKeys {
 
     private static final AtomicInteger nextIndex = new AtomicInteger();
 
+    /**
+     * Tracks streams for which the initial (request) HEADERS frame used the HEAD method, so that
+     * {@link DefaultHttp2ConnectionDecoder} can allow a content-length/DATA mismatch on the matching response
+     * (RFC 9113, 8.1.1). This is a global key so it can be shared between the encoder and the decoder, even if the
+     * encoder is wrapped by a {@link DecoratingHttp2ConnectionEncoder}.
+     * <p>
+     * Must be declared after {@link #nextIndex} so that it is initialized once the counter is available.
+     */
+    static final Http2Connection.PropertyKey METHOD_IS_HEAD_KEY = newGlobalKey();
+
     private Http2ConnectionPropertyKeys() { }
 
     /**
