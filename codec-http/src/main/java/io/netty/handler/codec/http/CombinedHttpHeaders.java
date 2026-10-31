@@ -211,60 +211,93 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence value) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, value);
+            }
             return addEscapedValue(name, charSequenceEscaper().escape(name, value));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence... values) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, Iterable<? extends CharSequence> values) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object value) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, value);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), value));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Iterable<?> values) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object... values) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, CharSequence... values) {
+            if (cannotBeCombined(name)) {
+                return super.set(name, values);
+            }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, Iterable<? extends CharSequence> values) {
+            if (cannotBeCombined(name)) {
+                return super.set(name, values);
+            }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object value) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, value);
+            }
             set(name, commaSeparate(name, objectEscaper(), value));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object... values) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, values);
+            }
             set(name, commaSeparate(name, objectEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Iterable<?> values) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, values);
+            }
             set(name, commaSeparate(name, objectEscaper(), values));
             return this;
         }
