@@ -65,6 +65,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -259,6 +260,29 @@ public class InboundHttp2ToHttpAdapterTest {
         });
         awaitResponses();
         assertTrue(isStreamError(clientException));
+    }
+
+    @Test
+    public void clientRequestHeaderValueWithCrLfShouldThrow() throws Exception {
+        // The default InboundHttp2ToHttpAdapter does not validate the produced HTTP/1.x headers, so the
+        // conversion itself must reject a field value that HTTP/1.x cannot carry (RFC 9113 §10.3).
+        boostrapEnv(1, 1, 1, false);
+        final Http2Headers http2Headers = new DefaultHttp2Headers(false)
+                .method(new AsciiString("GET"))
+                .scheme(new AsciiString("https"))
+                .authority(new AsciiString("example.org"))
+                .path(new AsciiString("/some/path/resource2"))
+                .add("x-test", "value\r\nInjected: yes");
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                clientChannel.flush();
+            }
+        });
+        awaitResponses();
+        assertTrue(isStreamError(clientException));
+        verify(serverListener, times(0)).messageReceived(any(HttpObject.class));
     }
 
     @Test
@@ -605,7 +629,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     @Test
     public void serverResponseHeaderInformational() throws Exception {
-        boostrapEnv(1, 2, 1, 2, 1);
+        boostrapEnv(1, 2, 1, 2, 1, true);
         final FullHttpMessage request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/info/test",
                 true);
         HttpHeaders httpHeaders = request.headers();
@@ -720,11 +744,17 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount)
                 throws InterruptedException {
-        boostrapEnv(clientLatchCount, clientLatchCount, serverLatchCount, serverLatchCount, settingsLatchCount);
+        boostrapEnv(clientLatchCount, serverLatchCount, settingsLatchCount, true);
+    }
+
+    private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount,
+            boolean serverValidateHeaders) throws InterruptedException {
+        boostrapEnv(clientLatchCount, clientLatchCount, serverLatchCount, serverLatchCount, settingsLatchCount,
+                serverValidateHeaders);
     }
 
     private void boostrapEnv(int clientLatchCount, int clientLatchCount2, int serverLatchCount, int serverLatchCount2,
-            int settingsLatchCount) throws InterruptedException {
+            int settingsLatchCount, boolean serverValidateHeaders) throws InterruptedException {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         clientDelegator = null;
         serverDelegator = null;
@@ -753,10 +783,12 @@ public class InboundHttp2ToHttpAdapterTest {
                 serverHandler = new Http2ConnectionHandlerBuilder().frameListener(
                         new InboundHttp2ToHttpAdapterBuilder(connection)
                            .maxContentLength(maxContentLength)
-                           .validateHttpHeaders(true)
+                           .validateHttpHeaders(serverValidateHeaders)
                            .propagateSettings(true)
                            .build())
                    .connection(connection)
+                   // Disabling codec-level header validation lets a malformed field value reach the conversion.
+                   .validateHeaders(serverValidateHeaders)
                    .gracefulShutdownTimeoutMillis(0)
                    .build();
                 p.addLast(serverHandler);
