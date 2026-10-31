@@ -702,9 +702,11 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     }
     // accept4 was not present so need two more sys-calls ...
     if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1 || fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
+        // Remember the errno before we close the fd, as close(...) may overwrite it.
+        err = errno;
         // close the fd before report the error so we don't leak it.
         close(socketFd);
-        return -errno;
+        return -err;
     }
     return socketFd;
 }
