@@ -43,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -240,6 +242,45 @@ public class DnsAddressResolverGroupTest {
         }
     }
 
+    @Test
+    public void testWaiterIsCancelledWhenCloseRacesWithInflightInsert() throws Exception {
+        EventLoopGroup clients = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
+        EventLoop eventLoop1 = clients.next();
+        EventLoop eventLoop2 = clients.next();
+        BlockingPutIfAbsentMap<InetAddress> resolvesInProgress = new BlockingPutIfAbsentMap<InetAddress>();
+        ConcurrentMap<String, InflightNameResolver.InflightEntry<List<InetAddress>>> resolveAllsInProgress =
+                new ConcurrentHashMap<String, InflightNameResolver.InflightEntry<List<InetAddress>>>();
+        InflightNameResolver<InetAddress> resolver1 = new InflightNameResolver<InetAddress>(
+                eventLoop1, new HoldingNameResolver(), resolvesInProgress, resolveAllsInProgress);
+        InflightNameResolver<InetAddress> resolver2 = new InflightNameResolver<InetAddress>(
+                eventLoop2, new HoldingNameResolver(), resolvesInProgress, resolveAllsInProgress);
+        Promise<InetAddress> first = eventLoop1.newPromise();
+        Promise<InetAddress> waiter = eventLoop2.newPromise();
+        Thread resolvingThread = new Thread(() -> resolver1.resolve("netty.io", first));
+        try {
+            resolvingThread.start();
+            resolvesInProgress.awaitFirstPutStarted();
+
+            // Close while the map is still empty, then allow the late insert and attach a waiter
+            // before the first caller can observe that its resolver was closed.
+            resolver1.close();
+            resolvesInProgress.allowFirstPut();
+            resolvesInProgress.awaitFirstPutInserted();
+            resolver2.resolve("netty.io", waiter);
+            resolvesInProgress.allowFirstPutToReturn();
+            resolvingThread.join(TimeUnit.SECONDS.toMillis(5));
+
+            assertFalse(resolvingThread.isAlive(), "first resolve did not return");
+            assertTrue(first.isCancelled(), "first resolve must be cancelled");
+            assertTrue(waiter.await(5, TimeUnit.SECONDS), "waiter remained pending");
+            assertTrue(waiter.isCancelled(), "waiter must be cancelled with the closed entry");
+        } finally {
+            resolvesInProgress.allowFirstPut();
+            resolvesInProgress.allowFirstPutToReturn();
+            clients.shutdownGracefully();
+        }
+    }
+
     private InetAddress resolve(InetSocketAddressResolver resolver, SocketAddress socketAddress,
                                 final Promise<InetSocketAddress> promise)
             throws InterruptedException, ExecutionException {
@@ -341,6 +382,56 @@ public class DnsAddressResolverGroupTest {
 
         boolean awaitClosed(long timeout, TimeUnit unit) throws InterruptedException {
             return closed.await(timeout, unit);
+        }
+    }
+
+    private static final class BlockingPutIfAbsentMap<T>
+            extends ConcurrentHashMap<String, InflightNameResolver.InflightEntry<T>> {
+        private final CountDownLatch firstPutStarted = new CountDownLatch(1);
+        private final CountDownLatch allowFirstPut = new CountDownLatch(1);
+        private final CountDownLatch firstPutInserted = new CountDownLatch(1);
+        private final CountDownLatch allowFirstPutToReturn = new CountDownLatch(1);
+        private final AtomicInteger putCalls = new AtomicInteger();
+
+        @Override
+        public InflightNameResolver.InflightEntry<T> putIfAbsent(
+                String key, InflightNameResolver.InflightEntry<T> value) {
+            if (putCalls.getAndIncrement() == 0) {
+                firstPutStarted.countDown();
+                await(allowFirstPut);
+                InflightNameResolver.InflightEntry<T> existing = super.putIfAbsent(key, value);
+                firstPutInserted.countDown();
+                await(allowFirstPutToReturn);
+                return existing;
+            }
+            return super.putIfAbsent(key, value);
+        }
+
+        void awaitFirstPutStarted() throws InterruptedException {
+            assertTrue(firstPutStarted.await(5, TimeUnit.SECONDS), "first putIfAbsent was not reached");
+        }
+
+        void awaitFirstPutInserted() throws InterruptedException {
+            assertTrue(firstPutInserted.await(5, TimeUnit.SECONDS), "first entry was not inserted");
+        }
+
+        void allowFirstPut() {
+            allowFirstPut.countDown();
+        }
+
+        void allowFirstPutToReturn() {
+            allowFirstPutToReturn.countDown();
+        }
+
+        private static void await(CountDownLatch latch) {
+            try {
+                if (!latch.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("timed out waiting for test coordination");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
         }
     }
 }

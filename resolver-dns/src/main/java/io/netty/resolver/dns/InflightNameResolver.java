@@ -141,7 +141,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 // entry yet. Clean it up ourselves instead of starting a resolution that can no
                 // longer be completed.
                 resolveMap.remove(inetHost, newEntry);
-                promise.cancel(false);
+                newEntry.abort();
                 return promise;
             }
 
