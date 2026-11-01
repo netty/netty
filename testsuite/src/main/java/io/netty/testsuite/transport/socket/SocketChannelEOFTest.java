@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -42,6 +43,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -56,7 +58,6 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
     private static final long PAUSE_AFTER_BYTES = 128L * 1024;
     private static final long PAUSE_MILLIS = 750;
     private static final byte[] CHUNK = createChunk();
-    private static final byte[] EXPECTED_DIGEST = digest(PAYLOAD_BYTES);
 
     @Test
     @Timeout(30)
@@ -79,6 +80,55 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
                             }
                         });
                     ch = bootstrap.connect(address).sync().channel();
+                    handler.result().get(10, TimeUnit.SECONDS);
+                    server.result().get(10, TimeUnit.SECONDS);
+                } finally {
+                    server.close();
+                    if (ch != null) {
+                        ch.close().sync();
+                    }
+                }
+            }
+        });
+    }
+
+    @Test
+    @Timeout(30)
+    public void readAllPendingOnEOFBeforeConnectComplete(TestInfo info) throws Throwable {
+        run(info, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                final long payloadBytes = 2 * CHUNK_BYTES;
+                final PayloadServer server = new PayloadServer(payloadBytes);
+                Channel ch = null;
+                try {
+                    final SocketAddress address = server.bindAndAccept();
+                    final ReadHandler handler = new ReadHandler(payloadBytes, 0, 0);
+                    bootstrap.option(ChannelOption.AUTO_READ, false)
+                        .handler(new ChannelInitializer<SocketChannel>() {
+                            @Override
+                            protected void initChannel(SocketChannel channel) {
+                                channel.pipeline().addLast(handler);
+                            }
+                        });
+                    // Register first so the transport already watches for the EOF when the connect is started.
+                    ch = bootstrap.register().sync().channel();
+                    final Channel channel = ch;
+
+                    // Block the EventLoop after the connect was started until the remote peer sent all data and shut
+                    // down its output, so the EOF is received before the transport noticed that the connect is
+                    // complete.
+                    ChannelFuture connectFuture = ch.eventLoop().submit(new Callable<ChannelFuture>() {
+                        @Override
+                        public ChannelFuture call() throws Exception {
+                            ChannelFuture future = channel.connect(address);
+                            server.result().await(10, TimeUnit.SECONDS);
+                            // Give the FIN some time to arrive.
+                            Thread.sleep(100);
+                            return future;
+                        }
+                    }).get(10, TimeUnit.SECONDS);
+                    connectFuture.sync();
                     handler.result().get(10, TimeUnit.SECONDS);
                     server.result().get(10, TimeUnit.SECONDS);
                 } finally {
@@ -114,6 +164,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
     private static final class ReadHandler extends ChannelInboundHandlerAdapter {
 
         private final long expectedBytes;
+        private final byte[] expectedDigest;
         private final long pauseAfterBytes;
         private final long pauseMillis;
         private final MessageDigest digest;
@@ -124,6 +175,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
 
         private ReadHandler(long expectedBytes, long pauseAfterBytes, long pauseMillis) {
             this.expectedBytes = expectedBytes;
+            this.expectedDigest = digest(expectedBytes);
             this.pauseAfterBytes = pauseAfterBytes;
             this.pauseMillis = pauseMillis;
             try {
@@ -172,8 +224,8 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
                 if (failure != null) {
                     fail(failure);
                 }
-                assertEquals(PAYLOAD_BYTES, receivedBytes);
-                assertArrayEquals(EXPECTED_DIGEST, digest.digest());
+                assertEquals(expectedBytes, receivedBytes);
+                assertArrayEquals(expectedDigest, digest.digest());
             } catch (Throwable cause) {
                 result.setFailure(cause);
                 return;
@@ -246,7 +298,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
                         if (failure != null) {
                             fail(failure);
                         }
-                        assertEquals(PAYLOAD_BYTES, sent);
+                        assertEquals(sendBytes, sent);
                     }  catch (Throwable error) {
                         result.setFailure(error);
                         return;

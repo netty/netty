@@ -402,7 +402,8 @@ static jint _sendToDomainSocket(JNIEnv* env, jint fd, void* buffer, jint pos, ji
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 
@@ -671,6 +672,10 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     struct sockaddr_storage addr;
     socklen_t address_len = sizeof(addr);
 
+    // The kernel only fills in the address family (and not the rest of the address) for AF_UNIX peers, so make sure
+    // we never read uninitialized memory when we encode the address below.
+    memset(&addr, 0, sizeof(addr));
+
     for (;;) {
 #ifdef SOCK_NONBLOCK
         if (accept4) {
@@ -702,9 +707,11 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     }
     // accept4 was not present so need two more sys-calls ...
     if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1 || fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
+        // Remember the errno before we close the fd, as close(...) may overwrite it.
+        err = errno;
         // close the fd before report the error so we don't leak it.
         close(socketFd);
-        return -errno;
+        return -err;
     }
     return socketFd;
 }
@@ -828,7 +835,8 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
-        socket_path_len = sizeof(addr.sun_path);
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
+        return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
 
@@ -883,18 +891,24 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     }
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
     (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
+    // sun_path is not NUL terminated if the path fills it completely, so use a terminated copy for lstat/unlink.
+    char path[sizeof(addr.sun_path) + 1];
+    memcpy(path, addr.sun_path, sizeof(addr.sun_path));
+    path[sizeof(addr.sun_path)] = '\0';
+
     // Only remove a stale socket left behind by a previous run. Never remove any other kind of file (regular file,
     // directory, symlink, ...); if something else exists at the path bind(...) will fail with EADDRINUSE.
     struct stat st;
-    if (lstat((const char*) addr.sun_path, &st) == 0) {
-        if (S_ISSOCK(st.st_mode) && unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
+    if (lstat(path, &st) == 0) {
+        if (S_ISSOCK(st.st_mode) && unlink(path) == -1 && errno != ENOENT) {
             return -errno;
         }
     } else if (errno != ENOENT && errno != ENOTDIR) {
@@ -922,7 +936,8 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
     }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
-    if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+    // A path that fills sun_path completely is valid and does not need to be NUL terminated.
+    if (socket_path_len > sizeof(addr.sun_path)) {
         (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
@@ -1037,7 +1052,8 @@ static jint netty_unix_socket_sendFd(JNIEnv* env, jclass clazz, jint socketFd, j
     struct msghdr descriptorMessage = { 0 };
     struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
-    char iovecData[1];
+    // This byte is sent to the remote peer together with the fd, so make sure it is initialized.
+    char iovecData[1] = { 0 };
 
     descriptorMessage.msg_control = control;
     descriptorMessage.msg_controllen = sizeof(control);

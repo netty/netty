@@ -81,6 +81,7 @@ static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
 
+static jclass fileChannelImplClass = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
@@ -93,6 +94,7 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packageP
     netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, longArrayClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
 }
 
 void io_uring_setup_ring_pointers(struct io_uring_params *p,
@@ -222,6 +224,11 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
+static jint netty_io_uring_duplicateFd(JNIEnv* env, jclass clazz, jint fd) {
+    int duplicate = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+    return duplicate < 0 ? -errno : duplicate;
+}
+
 static jint netty_io_uring_close(JNIEnv* env, jclass clazz, jint fd) {
     if (close(fd) < 0) {
         // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and
@@ -241,6 +248,12 @@ static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion)
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
+        return -1;
+    }
+    // The field id of FileChannelImpl.fd is only valid for instances of this class. Using it with any other
+    // FileChannel implementation is undefined behaviour.
+    if ((*env)->IsInstanceOf(env, fileChannel, fileChannelImplClass) == JNI_FALSE) {
+        netty_unix_errors_throwRuntimeException(env, "DefaultFileRegion.file is not a sun.nio.ch.FileChannelImpl");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
@@ -912,6 +925,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
+    {"duplicateFd", "(I)I", (void *) netty_io_uring_duplicateFd },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
     {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
@@ -927,7 +941,6 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     int linuxsocketOnLoadCalled = 0;
     char* nettyClassName = NULL;
     jclass fileRegionCls = NULL;
-    jclass fileChannelCls = NULL;
     jclass fileDescriptorCls = NULL;
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -963,8 +976,8 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
 
     NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
 
-    NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
-    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, fileChannelImplClass, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelImplClass, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
 
     NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
     NETTY_JNI_UTIL_TRY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I");
@@ -984,6 +997,7 @@ done:
         if (linuxsocketOnLoadCalled == 1) {
             netty_io_uring_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
         }
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
     }
     return ret;
 }

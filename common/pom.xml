@@ -115,6 +115,12 @@
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-ffm-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>
@@ -160,6 +166,7 @@
                not be visible to Surefire's forked JVM on Java 8. -->
           <classpathDependencyExcludes>
             <classpathDependencyExclude>io.netty:netty-varhandle-stub</classpathDependencyExclude>
+            <classpathDependencyExclude>io.netty:netty-ffm-stub</classpathDependencyExclude>
           </classpathDependencyExcludes>
         </configuration>
       </plugin>

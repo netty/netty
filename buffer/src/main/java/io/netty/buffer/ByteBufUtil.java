@@ -252,7 +252,7 @@ public final class ByteBufUtil {
         int n = haystack.readableBytes();
         int m = needle.readableBytes();
         if (m == 0) {
-            return 0;
+            return haystack.readerIndex();
         }
 
         // When the needle has only one byte that can be read,

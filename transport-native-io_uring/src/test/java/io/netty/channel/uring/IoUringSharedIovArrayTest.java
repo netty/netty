@@ -29,6 +29,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringSharedIovArrayTest {
 
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
+
     @Test
     public void eachWriteMayUseIovMax() {
         IoUringSharedIovArray shared = new IoUringSharedIovArray(2 * Limits.IOV_MAX);

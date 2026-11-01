@@ -17,6 +17,9 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.CleanableDirectBuffer;
@@ -31,6 +34,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -137,6 +141,26 @@ public abstract class SocketTest<T extends Socket> {
         cleanableDirectBuffer.clean();
     }
 
+    @Test
+    public void testSendToDomainSocketWithTooLongPath() throws IOException {
+        byte[] path = new byte[4096];
+        Arrays.fill(path, (byte) 'a');
+        path[0] = '/';
+
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(1);
+        Socket domainSocket = Socket.newSocketDomainDgram();
+        try {
+            ByteBuffer buffer = cleanableDirectBuffer.buffer();
+            // The path must be rejected instead of silently being truncated and sent to a different address.
+            NativeIoException e = assertThrows(NativeIoException.class,
+                    () -> domainSocket.sendToDomainSocket(buffer, 0, 1, path));
+            assertEquals(Errors.ERRNO_ENAMETOOLONG_NEGATIVE, e.expectedErr());
+        } finally {
+            domainSocket.close();
+            cleanableDirectBuffer.clean();
+        }
+    }
+
     protected int level() {
         throw new TestAbortedException("Not supported");
     }
@@ -212,6 +236,33 @@ public abstract class SocketTest<T extends Socket> {
         } finally {
             regular.delete();
             socketFile.delete();
+        }
+    }
+
+    @Test
+    public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
+        int max = Limits.UDS_SUN_PATH_SIZE;
+        assertTrue(max >= 100);
+        // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
+        for (int i = 0; i < 100; i++) {
+            assertFalse(isConnectPathTooLong(max));
+        }
+        assertTrue(isConnectPathTooLong(max + 1));
+    }
+
+    private static boolean isConnectPathTooLong(int length) throws IOException {
+        StringBuilder path = new StringBuilder("/");
+        while (path.length() < length) {
+            path.append('a');
+        }
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.connect(new DomainSocketAddress(path.toString()));
+            return false;
+        } catch (IOException e) {
+            return e.getMessage() != null && e.getMessage().contains("too long");
+        } finally {
+            domainSocket.close();
         }
     }
 }
