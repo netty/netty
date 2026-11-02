@@ -1019,7 +1019,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Returns the underlying {@link FileChannel}, or {@code null} if the region is not open.
      * This method does not open the region.
      */
-    protected final FileChannel fileChannel(DefaultFileRegion region) {
+    protected FileChannel fileChannel(DefaultFileRegion region) {
         return region.fileChannel();
     }
 
