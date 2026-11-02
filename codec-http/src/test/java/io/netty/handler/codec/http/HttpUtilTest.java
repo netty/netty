@@ -111,11 +111,21 @@ public class HttpUtilTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "\t", "\u0000", "\u000B", "\f", "\u001B", "\u007F" })
-    public void defaultHttpRequestMustRejectControlCharactersInUri(String ctl) {
+    public void defaultHttpRequestMustRejectControlCharactersInUri(final String ctl) {
         assertThrows(IllegalArgumentException.class,
-                () -> new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
+            new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0");
+                }
+            });
         assertThrows(IllegalArgumentException.class,
-                () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
+            new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0");
+                }
+            });
     }
 
     @Test
