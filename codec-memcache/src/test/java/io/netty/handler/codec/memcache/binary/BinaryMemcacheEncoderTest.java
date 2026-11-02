@@ -249,12 +249,17 @@ public class BinaryMemcacheEncoderTest {
     @Test
     public void shouldRejectKeyModifiedAfterSetKey() {
         ByteBuf key = Unpooled.copiedBuffer("k", CharsetUtil.UTF_8);
-        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+        final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
         request.setKey(key);
         // Append a smuggled FLUSH request header: magic 0x80, opcode FLUSH and 22 zero bytes.
         key.writeByte(0x80).writeByte(BinaryMemcacheOpcodes.FLUSH).writeZero(22);
 
-        assertThrows(EncoderException.class, () -> channel.writeOutbound(request));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeOutbound(request);
+            }
+        });
         assertEquals(0, key.refCnt());
         assertEquals(0, request.refCnt());
         assertNull(channel.readOutbound());
@@ -263,11 +268,16 @@ public class BinaryMemcacheEncoderTest {
     @Test
     public void shouldRejectExtrasModifiedAfterSetExtras() {
         ByteBuf extras = Unpooled.buffer().writeZero(8);
-        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
+        final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
         request.setExtras(extras);
         extras.writeZero(4);
 
-        assertThrows(EncoderException.class, () -> channel.writeOutbound(request));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeOutbound(request);
+            }
+        });
         assertEquals(0, extras.refCnt());
         assertEquals(0, request.refCnt());
         assertNull(channel.readOutbound());
@@ -281,8 +291,18 @@ public class BinaryMemcacheEncoderTest {
         final ByteBuf oversizedKey = Unpooled.buffer().writeZero(65536);
         final ByteBuf oversizedExtras = Unpooled.buffer().writeZero(256);
         try {
-            assertThrows(IllegalArgumentException.class, () -> request.setKey(oversizedKey));
-            assertThrows(IllegalArgumentException.class, () -> request.setExtras(oversizedExtras));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.setKey(oversizedKey);
+                }
+            });
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.setExtras(oversizedExtras);
+                }
+            });
 
             assertEquals(1, key.refCnt());
             assertEquals(1, extras.refCnt());
@@ -326,10 +346,18 @@ public class BinaryMemcacheEncoderTest {
         final ByteBuf key = Unpooled.buffer().writeZero(65536);
         final ByteBuf extras = Unpooled.buffer().writeZero(256);
         try {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new DefaultFullBinaryMemcacheResponse(key, Unpooled.EMPTY_BUFFER));
-            assertThrows(IllegalArgumentException.class,
-                    () -> new DefaultFullBinaryMemcacheResponse(Unpooled.EMPTY_BUFFER, extras));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    new DefaultFullBinaryMemcacheResponse(key, Unpooled.EMPTY_BUFFER);
+                }
+            });
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    new DefaultFullBinaryMemcacheResponse(Unpooled.EMPTY_BUFFER, extras);
+                }
+            });
         } finally {
             key.release();
             extras.release();
@@ -340,10 +368,15 @@ public class BinaryMemcacheEncoderTest {
     public void shouldReleaseContentOfRejectedFullRequest() {
         ByteBuf key = Unpooled.copiedBuffer("k", CharsetUtil.UTF_8);
         ByteBuf content = Unpooled.copiedBuffer("memcache", CharsetUtil.UTF_8);
-        FullBinaryMemcacheRequest request = new DefaultFullBinaryMemcacheRequest(key, null, content);
+        final FullBinaryMemcacheRequest request = new DefaultFullBinaryMemcacheRequest(key, null, content);
         key.writeZero(4);
 
-        assertThrows(EncoderException.class, () -> channel.writeOutbound(request));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeOutbound(request);
+            }
+        });
         assertEquals(0, key.refCnt());
         assertEquals(0, content.refCnt());
         assertEquals(0, request.refCnt());
