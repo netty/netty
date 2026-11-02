@@ -265,6 +265,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -377,6 +379,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
+        removeFastOpenData();
         socket.shutdown(false, true);
     }
 
@@ -504,6 +508,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         // Overridden here just to be able to access this method from AbstractKQueueStreamChannel
         @Override
         protected Executor prepareToClose() {
+            // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+            removeFastOpenData();
             return super.prepareToClose();
         }
 

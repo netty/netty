@@ -87,7 +87,8 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
-                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The written data is removed once the connect is complete.
+                        fastOpenDataSent(outbound, initialData, Math.abs(bytesSent));
                         // The `connectx` method returns a negative number if connection is in-progress.
                         // So we should return `true` to indicate that connection was established, if it's positive.
                         return bytesSent > 0;
@@ -108,6 +109,8 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     private final class KQueueSocketChannelUnsafe extends KQueueStreamUnsafe {
         @Override
         protected Executor prepareToClose() {
+            // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+            removeFastOpenData();
             try {
                 // Check isOpen() first as otherwise it will throw a RuntimeException
                 // when call getSoLinger() as the fd is not valid anymore.
