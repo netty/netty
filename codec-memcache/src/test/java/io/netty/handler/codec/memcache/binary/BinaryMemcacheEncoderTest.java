@@ -162,7 +162,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeExtrasLongerThan127Bytes() {
+    public void shouldEncodeExtrasLongerThan127Bytes() throws Exception {
         ByteBuf key = Unpooled.copiedBuffer("netty", CharsetUtil.UTF_8);
         ByteBuf extras = Unpooled.buffer().writeZero(200);
         ByteBuf content = Unpooled.copiedBuffer("memcache", CharsetUtil.UTF_8);
@@ -197,19 +197,9 @@ public class BinaryMemcacheEncoderTest {
     public void shouldRejectKeyLongerThan65535Bytes() {
         final ByteBuf key = Unpooled.buffer().writeZero(65536);
         try {
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    new DefaultBinaryMemcacheRequest(key);
-                }
-            });
+            assertThrows(IllegalArgumentException.class, () -> new DefaultBinaryMemcacheRequest(key));
             final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    request.setKey(key);
-                }
-            });
+            assertThrows(IllegalArgumentException.class, () -> request.setKey(key));
             assertEquals(0, request.keyLength());
             assertEquals(0, request.totalBodyLength());
         } finally {
@@ -221,19 +211,10 @@ public class BinaryMemcacheEncoderTest {
     public void shouldRejectExtrasLongerThan255Bytes() {
         final ByteBuf extras = Unpooled.buffer().writeZero(256);
         try {
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras);
-                }
-            });
+            assertThrows(IllegalArgumentException.class,
+                    () -> new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras));
             final BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    request.setExtras(extras);
-                }
-            });
+            assertThrows(IllegalArgumentException.class, () -> request.setExtras(extras));
             assertEquals(0, request.extrasLength());
             assertEquals(0, request.totalBodyLength());
         } finally {
@@ -294,7 +275,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeMaximumKeyAndExtrasLengths() {
+    public void shouldEncodeMaximumKeyAndExtrasLengths() throws Exception {
         ByteBuf key = Unpooled.buffer().writeZero(65535);
         ByteBuf extras = Unpooled.buffer().writeZero(255);
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key, extras);
