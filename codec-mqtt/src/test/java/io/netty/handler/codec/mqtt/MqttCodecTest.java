@@ -353,18 +353,18 @@ public class MqttCodecTest {
 
     @EnabledIf("threadMxBeanAvailable")
     @Test
-    public void testSubAckWithHugeRemainingLengthDoesNotPreallocate() {
+    public void testSubAckWithHugeRemainingLengthDoesNotPreallocate() throws Exception {
         // Remaining length of 268,435,453 + 2 bytes packet id, but no payload bytes sent.
         testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0x90);
     }
 
     @EnabledIf("threadMxBeanAvailable")
     @Test
-    public void testUnsubAckWithHugeRemainingLengthDoesNotPreallocate() {
+    public void testUnsubAckWithHugeRemainingLengthDoesNotPreallocate() throws Exception {
         testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0xB0);
     }
 
-    private static void testAckWithHugeRemainingLengthDoesNotPreallocate(byte firstByte) {
+    private static void testAckWithHugeRemainingLengthDoesNotPreallocate(byte firstByte) throws Exception {
         java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
         assumeTrue(bean instanceof com.sun.management.ThreadMXBean);
         com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) bean;

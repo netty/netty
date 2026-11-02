@@ -63,7 +63,7 @@ public class DnsQueryProtectionTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         channel.finishAndReleaseAll();
     }
 
@@ -92,7 +92,7 @@ public class DnsQueryProtectionTest {
     }
 
     private Query query(DnsQueryProtection protection) {
-        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = channel.eventLoop().newPromise();
+        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = channel.executor().newPromise();
         DatagramDnsQueryContext ctx = new DatagramDnsQueryContext(channel, nameServerAddr, manager,
                 NoopDnsQueryLifecycleObserver.INSTANCE, 4096, true, 5000,
                 new DefaultDnsQuestion(NAME, DnsRecordType.A), new DnsRecord[0], promise, null, false, protection);

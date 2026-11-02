@@ -1559,7 +1559,7 @@ public class SslHandlerTest {
                             final SslHandler sslHandler = nextServerCtx.getAndSet(sslServerCtxSecond)
                                     .newHandler(ch.alloc());
                             ch.pipeline().addLast(sslHandler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent
@@ -1572,7 +1572,7 @@ public class SslHandlerTest {
                             });
                         }
                     })
-                    .bind(serverAddr).syncUninterruptibly().channel();
+                    .bind(serverAddr).get();
 
             // 1) Obtain a resumable session / ticket from the first server context without presenting a client
             //    certificate.
@@ -1659,7 +1659,7 @@ public class SslHandlerTest {
                             });
                         }
                     })
-                    .connect(serverAddr).syncUninterruptibly().channel();
+                    .connect(serverAddr).get();
 
             Object result = queue.poll(5, TimeUnit.SECONDS);
             if (result == null) {
