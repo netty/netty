@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.EncoderException;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,8 @@ import java.util.SplittableRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TcpDnsTest {
@@ -68,6 +71,61 @@ public class TcpDnsTest {
 
         assertFalse(encoder.finish());
         assertFalse(decoder.finish());
+    }
+
+    @Test
+    public void testResponseEncodeFailsIfMessageTooLarge() {
+        EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
+        DnsResponse response = new DefaultDnsResponse(1);
+        addLargeRecords(response);
+        try {
+            assertThrows(EncoderException.class, () -> channel.writeOutbound(response));
+            assertNull(channel.readOutbound());
+        } finally {
+            assertFalse(channel.finish());
+        }
+    }
+
+    @Test
+    public void testQueryEncodeFailsIfMessageTooLarge() {
+        EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsQueryEncoder());
+        DnsQuery query = new DefaultDnsQuery(1, DnsOpCode.QUERY);
+        addLargeRecords(query);
+        try {
+            assertThrows(EncoderException.class, () -> channel.writeOutbound(query));
+            assertNull(channel.readOutbound());
+        } finally {
+            assertFalse(channel.finish());
+        }
+    }
+
+    @Test
+    public void testResponseEncodeLengthPrefixOfLargeMessage() {
+        EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
+        DnsResponse response = new DefaultDnsResponse(1);
+        // Header (12 bytes) + name (1 byte) + type, class, ttl and rdlength (10 bytes) + content.
+        response.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                ".", DnsRecordType.TXT, 1, Unpooled.wrappedBuffer(new byte[0xFFFF - 12 - 1 - 10])));
+        try {
+            assertTrue(channel.writeOutbound(response));
+            ByteBuf encoded = channel.readOutbound();
+            try {
+                assertEquals(0xFFFF, encoded.readUnsignedShort());
+                assertEquals(0xFFFF, encoded.readableBytes());
+            } finally {
+                encoded.release();
+            }
+        } finally {
+            assertFalse(channel.finish());
+        }
+    }
+
+    private static void addLargeRecords(DnsMessage message) {
+        // Each record adds more than 30000 bytes so the message is larger than what fits into the 2 byte length.
+        for (int i = 0; i < 3; i++) {
+            message.addRecord(DnsSection.ADDITIONAL, new DefaultDnsRawRecord(
+                    "example.com.", DnsRecordType.TXT, 1, Unpooled.wrappedBuffer(new byte[30000])));
+        }
     }
 
     @Test

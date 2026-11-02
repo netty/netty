@@ -563,6 +563,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(padding, nextData.padding);
             endOfStream = nextData.endOfStream;
+            // The promise of the first frame may be completed long before the merged data is written in full.
+            // Use the promise of the last frame, so that the stream is only closed once all of its data was
+            // written. Otherwise a graceful shutdown could close the connection before the rest is flushed.
+            promise = nextData.promise;
             return true;
         }
     }

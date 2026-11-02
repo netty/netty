@@ -421,6 +421,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -538,6 +540,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected final void doShutdownOutput() throws Exception {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
+        removeFastOpenData();
         socket.shutdown(false, true);
     }
 

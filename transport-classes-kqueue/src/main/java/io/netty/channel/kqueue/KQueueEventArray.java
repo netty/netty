@@ -104,16 +104,19 @@ final class KQueueEventArray {
         try {
             int newCapacity = calculateBufferCapacity(newLength);
             CleanableDirectBuffer buffer = Buffer.allocateDirectBufferWithNativeOrder(newCapacity);
-            // Copy over the old content of the memory and reset the position as we always act on the buffer as if
-            // the position was never increased.
-            memory.position(0).limit(size);
-            buffer.buffer().put(memory);
+            // Copy over the old content of the memory (size is the number of kevents, not bytes) and reset the
+            // position as we always act on the buffer as if the position was never increased.
+            // Use a duplicate so we don't modify the position / limit of the current memory.
+            ByteBuffer oldContent = memory.duplicate();
+            oldContent.position(0).limit(calculateBufferCapacity(size));
+            buffer.buffer().put(oldContent);
             buffer.buffer().position(0);
 
             memoryCleanable.clean();
             memoryCleanable = buffer;
             memory = buffer.buffer();
             memoryAddress = Buffer.memoryAddress(memory);
+            capacity = newLength;
         } catch (OutOfMemoryError e) {
             if (throwIfFail) {
                 OutOfMemoryError error = new OutOfMemoryError(

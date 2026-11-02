@@ -172,6 +172,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
 
             // Check if session window size is reduced beyond allowable lower bound
             if (newSessionWindowSize < 0) {
+                spdyDataFrame.release();
                 issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
                 return;
             }

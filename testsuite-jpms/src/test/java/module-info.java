@@ -43,6 +43,8 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.codec.http2;
     requires io.netty.codec.http3;
     requires io.netty.codec.classes.quic;
+    requires org.bouncycastle.pkix;
+    requires org.bouncycastle.provider;
     requires org.jboss.marshalling;
 
     requires static org.slf4j;
