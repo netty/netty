@@ -84,10 +84,6 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private final AtomicInteger numRegistrations = new AtomicInteger();
 
-    // Only accessed from the event loop thread.
-
-    private boolean ioLoopExited;
-
     /**
      *  Creates a new instance
      *
@@ -236,11 +232,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         } while (!confirmShutdown() && !canSuspend());
 
         if (isShuttingDown()) {
-            // confirmShutdown() can return true without prepareToDestroy() having seen every registration, for
-            // example when shutdownGracefully(0, ...) is called while tasks are running or a registration task runs
-            // as part of confirmShutdown() itself. Close everything that is still registered now. The resulting close
-            // callbacks are run by the remaining confirmShutdown() calls of SingleThreadEventExecutor.
-            ioLoopExited = true;
+            // confirmShutdown() can return true without prepareToDestroy() having run after the last registration,
+            // for example when shutdownGracefully(0, ...) is called while tasks are running. Close everything that is
+            // still registered now. The resulting close callbacks are run by the remaining confirmShutdown() calls of
+            // SingleThreadEventExecutor. Registrations that run after this point are rejected in registerForIo0.
             ioHandler.prepareToDestroy();
         }
     }
@@ -312,8 +307,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
-        if (ioLoopExited) {
-            // The IO loop is gone, so nothing would ever close this registration again.
+        if (isShuttingDown()) {
+            // Once shutdown has started a new registration might never be closed: the IO loop may already have
+            // exited (or never run again, e.g. if it was suspending when shutdown started) and the remaining tasks
+            // only run as part of confirmShutdown(). Checking the state instead of a flag set by the IO loop covers
+            // every path, as the state is updated before any task can observe the shutdown.
             promise.setFailure(new RejectedExecutionException("IoEventLoop is shutting down"));
             return;
         }
