@@ -569,7 +569,7 @@ final class FastLz {
     }
 
     private static int readU16(ByteBuf data, int offset) {
-        if (offset + 1 >= data.readableBytes()) {
+        if (offset + 1 >= data.writerIndex()) {
             return data.getUnsignedByte(offset);
         }
         return data.getUnsignedByte(offset + 1) << 8 | data.getUnsignedByte(offset);
