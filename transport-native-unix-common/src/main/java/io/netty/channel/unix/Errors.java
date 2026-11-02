@@ -30,6 +30,7 @@ import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEA
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoECONNRESET;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEINPROGRESS;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENAMETOOLONG;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
@@ -48,6 +49,7 @@ import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strErro
 public final class Errors {
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
     public static final int ERRNO_ENOENT_NEGATIVE = -errnoENOENT();
+    public static final int ERRNO_ENAMETOOLONG_NEGATIVE = -errnoENAMETOOLONG();
     public static final int ERRNO_ENOTCONN_NEGATIVE = -errnoENOTCONN();
     public static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     public static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
