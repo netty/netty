@@ -139,6 +139,13 @@ public class DefaultHttp2ConnectionEncoderTest {
                 return ((Promise<Void>) in.getArguments()[4]).setSuccess(null);
             }
         }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), any(Promise.class));
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                ((Promise<Void>) in.getArguments()[1]).setSuccess(null);
+                return null;
+            }
+        }).when(writer).writeSettingsAck(eq(ctx), any(Promise.class));
         writtenData = new ArrayList<String>();
         writtenPadding = new ArrayList<Integer>();
         doAnswer(in -> {
@@ -995,5 +1002,38 @@ public class DefaultHttp2ConnectionEncoderTest {
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
+    }
+
+    @Test
+    public void tooManyOutstandingRemoteSettingsClosesConnection() {
+        when(remoteFlow.channelHandlerContext()).thenReturn(ctx);
+        when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+
+        for (int i = 0; i < DefaultHttp2ConnectionEncoder.MAX_OUTSTANDING_REMOTE_SETTINGS; i++) {
+            encoder.consumeReceivedSettings(new Http2Settings());
+        }
+        verify(lifecycleManager, never()).onError(any(ChannelHandlerContext.class), anyBoolean(), any(Throwable.class));
+        verify(ctx, never()).close();
+
+        // One more than the configured maximum should be treated as a connection error rather than being queued
+        // without bound.
+        encoder.consumeReceivedSettings(new Http2Settings());
+
+        ArgumentCaptor<Throwable> causeCaptor = ArgumentCaptor.forClass(Throwable.class);
+        verify(lifecycleManager).onError(eq(ctx), eq(false), causeCaptor.capture());
+        verify(ctx).close();
+        assertInstanceOf(Http2Exception.class, causeCaptor.getValue());
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM, ((Http2Exception) causeCaptor.getValue()).error());
+
+        // The queue must not have grown past the configured maximum: draining it should yield exactly that many
+        // acks and no more.
+        for (int i = 0; i < DefaultHttp2ConnectionEncoder.MAX_OUTSTANDING_REMOTE_SETTINGS; i++) {
+            Promise<Void> promise = newPromise();
+            encoder.writeSettingsAck(ctx, promise);
+            assertTrue(promise.isSuccess());
+        }
+        Promise<Void> promise = newPromise();
+        encoder.writeSettingsAck(ctx, promise);
+        assertFalse(promise.isSuccess());
     }
 }
