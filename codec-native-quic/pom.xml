@@ -1402,7 +1402,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-pkitesting</artifactId>
+      <artifactId>netty5-pkitesting</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

@@ -1022,7 +1022,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 .clientAuth(ClientAuth.REQUIRE)
                                 .earlyData(true)
                                 .build()),
-                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandler() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -1035,7 +1035,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         }
                         ctx.fireUserEventTriggered(evt);
                     }
-                }, new ChannelInboundHandlerAdapter() {
+                }, new ChannelInboundHandler() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -1071,7 +1071,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
@@ -1087,7 +1087,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             final CountDownLatch streamLatch = new CountDownLatch(1);
             CompletableFuture<Object> userEvents = new CompletableFuture<>();
             quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                .handler(new ChannelInboundHandlerAdapter() {
+                .handler(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {
@@ -1102,16 +1102,16 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         ctx.fireUserEventTriggered(evt);
                     }
                 })
-                .streamHandler(new ChannelInboundHandlerAdapter())
+                .streamHandler(new ChannelInboundHandler() { })
                 .remoteAddress(address)
                 .connect()
                 .addListener(future -> {
                     if (!future.isSuccess()) {
                         return;
                     }
-                    QuicChannel chan = (QuicChannel) future.get();
+                    QuicChannel chan = (QuicChannel) future.getNow();
                     chan.createStream(QuicStreamType.BIDIRECTIONAL,
-                        new ChannelInboundHandlerAdapter()).addListener(f -> {
+                        new ChannelInboundHandler() { }).addListener(f -> {
                         try {
                             Channel stream = (Channel) f.getNow();
                             stream.writeAndFlush(stream.alloc().buffer().writeInt(1));
@@ -2094,11 +2094,11 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
         Channel serverNoAuth = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor, sslServerCtxNoAuth),
-                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
-                new ChannelInboundHandlerAdapter());
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandler() { },
+                new ChannelInboundHandler() { });
         Channel serverRequireAuth = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor, sslServerCtxRequireAuth),
-                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         // The strict (ClientAuth.REQUIRE) server must observe a handshake failure, never a
@@ -2106,7 +2106,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         rejectionCause.compareAndSet(null, cause);
                         rejectionLatch.countDown();
                     }
-                }, new ChannelInboundHandlerAdapter());
+                }, new ChannelInboundHandler() { });
 
         InetSocketAddress addressNoAuth = (InetSocketAddress) serverNoAuth.localAddress();
         InetSocketAddress addressRequireAuth = (InetSocketAddress) serverRequireAuth.localAddress();
@@ -2121,7 +2121,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 c -> sslClientCtx.newEngine(c.alloc(), peerHost, peerPort)));
         try {
             QuicChannelBootstrap bootstrap = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .streamHandler(new ChannelInboundHandlerAdapter());
+                    .streamHandler(new ChannelInboundHandler() { });
 
             // 1) Obtain a resumable session / ticket from the lax (ClientAuth.NONE) server without presenting a
             //    client certificate.
