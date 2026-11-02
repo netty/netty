@@ -39,7 +39,7 @@ public final class UnixChannelUtil {
         Class<?> fileChannelImplClass;
         try {
             fileChannelImplClass = Class.forName("sun.nio.ch.FileChannelImpl", false, null);
-        } catch (ClassNotFoundException ignore) {
+        } catch (Throwable ignore) {
             fileChannelImplClass = null;
         }
         FILE_CHANNEL_IMPL_CLASS = fileChannelImplClass;
