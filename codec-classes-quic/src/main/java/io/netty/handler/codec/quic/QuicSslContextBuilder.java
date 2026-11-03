@@ -17,10 +17,12 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SessionIdContextBuilder;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.Mapping;
+import io.netty.util.SecureObjectIdentityHash;
 import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.KeyManager;
@@ -32,6 +34,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.File;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
@@ -163,6 +166,9 @@ public final class QuicSslContextBuilder {
     }
 
     private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
+    private static final byte[] SESSION_ID_CONTEXT_SEED =
+        "netty-server-session-id-context-v1".getBytes(StandardCharsets.ISO_8859_1);
+    private static final SecureObjectIdentityHash IDENTITY_HASHES = new SecureObjectIdentityHash();
 
     private final boolean forServer;
     private final Map<SslContextOption<?>, Object> options = new HashMap<>();
@@ -181,6 +187,9 @@ public final class QuicSslContextBuilder {
     private BoringSSLKeylog keylog;
     private Mapping<? super String, ? extends QuicSslContext> mapping;
     private String endpointIdentificationAlgorithm;
+    private final SessionIdContextBuilder sessionIdContextBuilder = new SessionIdContextBuilder(IDENTITY_HASHES)
+        .setSeed(SESSION_ID_CONTEXT_SEED)
+        .setClientAuth(clientAuth);
 
     private QuicSslContextBuilder(boolean forServer) {
         this.forServer = forServer;
@@ -293,6 +302,7 @@ public final class QuicSslContextBuilder {
         // forgets about them.
         this.trustCertCollection = trustCertCollection == null ? null :
             Arrays.copyOf(trustCertCollection, trustCertCollection.length);
+        sessionIdContextBuilder.setTrustedCertificates(this.trustCertCollection);
         return this;
     }
 
@@ -305,6 +315,7 @@ public final class QuicSslContextBuilder {
     public QuicSslContextBuilder trustManager(@Nullable TrustManagerFactory trustManagerFactory) {
         this.trustManagerFactory = trustManagerFactory;
         this.trustCertCollection = null;
+        sessionIdContextBuilder.setTrustManagerFactory(trustManagerFactory);
         return this;
     }
 
@@ -316,7 +327,9 @@ public final class QuicSslContextBuilder {
      * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
      */
     public QuicSslContextBuilder trustManager(TrustManager trustManager) {
-        return trustManager(new TrustManagerFactoryWrapper(trustManager));
+        trustManager(new TrustManagerFactoryWrapper(trustManager));
+        sessionIdContextBuilder.setTrustManager(trustManager);
+        return this;
     }
 
     /**
@@ -371,6 +384,7 @@ public final class QuicSslContextBuilder {
         // Remember the chain as (unlike a custom KeyManagerFactory) it can be used to tell if two contexts present
         // the same certificates. Needs to be done after the KeyManagerFactory was set as this forgets about it.
         this.keyCertChain = certChain == null ? null : Arrays.copyOf(certChain, certChain.length);
+        sessionIdContextBuilder.setKeyCertificateChain(this.keyCertChain);
         return this;
     }
 
@@ -383,6 +397,7 @@ public final class QuicSslContextBuilder {
         this.keyPassword = keyPassword;
         this.keyManagerFactory = keyManagerFactory;
         this.keyCertChain = null;
+        sessionIdContextBuilder.setKeyManagerFactory(keyManagerFactory);
         return this;
     }
 
@@ -394,7 +409,9 @@ public final class QuicSslContextBuilder {
      * {@link #keyManager(KeyManagerFactory, String)} also apply here.
      */
     public QuicSslContextBuilder keyManager(KeyManager keyManager, @Nullable String password) {
-        return keyManager(new KeyManagerFactoryWrapper(keyManager), password);
+        keyManager(new KeyManagerFactoryWrapper(keyManager), password);
+        sessionIdContextBuilder.setKeyManager(keyManager);
+        return this;
     }
 
     /**
@@ -432,6 +449,7 @@ public final class QuicSslContextBuilder {
             throw new UnsupportedOperationException("Only supported for server");
         }
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        sessionIdContextBuilder.setClientAuth(clientAuth);
         return this;
     }
 
@@ -458,11 +476,12 @@ public final class QuicSslContextBuilder {
         if (forServer) {
             return new QuicheQuicSslContext(true, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     trustCertCollection, keyManagerFactory, keyCertChain, keyPassword, mapping, earlyData, keylog,
-                    applicationProtocols, null, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    applicationProtocols, null, sessionIdContextBuilder, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return new QuicheQuicSslContext(false, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     trustCertCollection, keyManagerFactory, keyCertChain, keyPassword, mapping, earlyData, keylog,
-                    applicationProtocols, endpointIdentificationAlgorithm, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    applicationProtocols, endpointIdentificationAlgorithm, sessionIdContextBuilder,
+                    toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
