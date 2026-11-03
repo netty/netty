@@ -42,7 +42,9 @@ jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nano
     --(ts->tv_sec);
     ts->tv_nsec += NETTY_BILLION;
   }
-  const jboolean underflow = ts->tv_sec < seconds;
+  // tv_sec may be negative here because of the borrow above, so we need to compare it as signed value. Comparing it
+  // against the unsigned seconds would convert it to a huge unsigned value and so never detect the underflow.
+  const jboolean underflow = (int64_t) ts->tv_sec < (int64_t) seconds;
   ts->tv_sec -= seconds;
   ts->tv_nsec -= nanos;
   return underflow;

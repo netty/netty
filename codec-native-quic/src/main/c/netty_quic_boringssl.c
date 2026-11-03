@@ -97,6 +97,7 @@ static int sslTaskIdx = -1;
 static int sessionTicketCallbackIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
+static int verifyModeIdx = -1;
 
 static jint netty_boringssl_ssl_verify_none(JNIEnv* env, jclass clazz) {
     return SSL_VERIFY_NONE;
@@ -951,6 +952,10 @@ int quic_tlsext_servername_callback(SSL *ssl, int *out_alert, void *arg) {
         // Setting the SSL_CTX failed.
         return SSL_TLSEXT_ERR_ALERT_FATAL;
     }
+    // SSL_set_SSL_CTX(...) does not change the verify mode, which was taken from the initial SSL_CTX when the
+    // SSL was created. Apply the one of the selected SSL_CTX so its ClientAuth mode is enforced.
+    int verifyMode = (int) (intptr_t) SSL_CTX_get_ex_data(newCtx, verifyModeIdx);
+    SSL_set_custom_verify(ssl, verifyMode, quic_SSL_cert_custom_verify);
     return resultValue;
 }
 
@@ -1111,6 +1116,9 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     // Set callback which will inform when handshake is done
     SSL_CTX_set_ex_data(ctx, handshakeCompleteCallbackIdx, handshakeCompleteCallbackRef);
     SSL_CTX_set_info_callback(ctx, quic_SSL_info_callback);
+
+    // For preserving the verification mode on SNI context switch
+    SSL_CTX_set_ex_data(ctx, verifyModeIdx, (void*) (intptr_t) verifyMode);
 
     // So we can access this in quic_SSL_cert_custom_verify
     SSL_CTX_set_ex_data(ctx, verifyCallbackIdx, verifyCallbackRef);
@@ -1285,6 +1293,17 @@ static jlong netty_boringssl_SSLContext_setSessionCacheSize(JNIEnv* env, jclass 
     }
 
     return 0;
+}
+
+static jboolean netty_boringssl_SSLContext_setSessionIdContext(JNIEnv* env, jclass clazz, jlong ctx, jbyteArray sid_ctx) {
+    int len = (*env)->GetArrayLength(env, sid_ctx);
+    uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, sid_ctx, 0);
+    if (data == NULL) {
+        return JNI_FALSE;
+    }
+    int result = SSL_CTX_set_session_id_context((SSL_CTX*) ctx, data, len);
+    (*env)->ReleaseByteArrayElements(env, sid_ctx, (jbyte*) data, JNI_ABORT);
+    return result == 1 ? JNI_TRUE : JNI_FALSE;
 }
 
 static void netty_boringssl_SSLContext_set_early_data_enabled(JNIEnv* env, jclass clazz, jlong ctx, jboolean enabled){
@@ -1545,6 +1564,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
+  { "SSLContext_setSessionIdContext", "(J[B)Z", (void *) netty_boringssl_SSLContext_setSessionIdContext },
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSLContext_setSessionTicketKeys", "(JZ)V", (void *) netty_boringssl_SSLContext_setSessionTicketKeys },
   { "SSLContext_set1_groups_list", "(JLjava/lang/String;)I", (void *) netty_boringssl_SSLContext_set1_groups_list },
@@ -1715,6 +1735,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     sslTaskIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    verifyModeIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     sessionTicketCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;

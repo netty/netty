@@ -33,8 +33,10 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
@@ -72,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
@@ -335,6 +338,54 @@ public class MqttCodecTest {
         } finally {
             payload.release();
             chunk.release();
+        }
+    }
+
+    public static boolean threadMxBeanAvailable() {
+        try {
+            Class.forName("com.sun.management.ThreadMXBean");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testSubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        // Remaining length of 268,435,453 + 2 bytes packet id, but no payload bytes sent.
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0x90);
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testUnsubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0xB0);
+    }
+
+    private static void testAckWithHugeRemainingLengthDoesNotPreallocate(byte firstByte) {
+        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
+        assumeTrue(bean instanceof com.sun.management.ThreadMXBean);
+        com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) bean;
+        assumeTrue(threadBean.isThreadAllocatedMemorySupported() && threadBean.isThreadAllocatedMemoryEnabled());
+
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(268_435_455));
+        try {
+            ByteBuf packet = Unpooled.buffer();
+            packet.writeByte(firstByte);
+            packet.writeByte(0xFD).writeByte(0xFF).writeByte(0xFF).writeByte(0x7F);
+            packet.writeShort(1);
+
+            long threadId = Thread.currentThread().getId();
+            long before = threadBean.getThreadAllocatedBytes(threadId);
+            // The payload has not been received yet, so nothing must be decoded.
+            assertFalse(channel.writeInbound(packet));
+            long allocated = threadBean.getThreadAllocatedBytes(threadId) - before;
+            assertNull(channel.readInbound());
+            // The declared remaining length must not be used to preallocate memory.
+            assertTrue(allocated < 16 * 1024 * 1024, "Allocated too much memory: " + allocated);
+        } finally {
+            channel.finishAndReleaseAll();
         }
     }
 

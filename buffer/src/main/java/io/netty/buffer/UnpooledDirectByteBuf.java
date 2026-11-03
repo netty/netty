@@ -267,13 +267,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 2);
         return _getShortLE(index);
     }
 
     @Override
     public short getShort(int index) {
-        ensureAccessible();
+        checkIndex(index, 2);
         return _getShort(index);
     }
 
@@ -295,7 +295,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        ensureAccessible();
+        checkIndex(index, 3);
         return _getUnsignedMedium(index);
     }
 
@@ -315,13 +315,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 4);
         return _getIntLE(index);
     }
 
     @Override
     public int getInt(int index) {
-        ensureAccessible();
+        checkIndex(index, 4);
         return _getInt(index);
     }
 
@@ -343,13 +343,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 8);
         return _getLongLE(index);
     }
 
     @Override
     public long getLong(int index) {
-        ensureAccessible();
+        checkIndex(index, 8);
         return _getLong(index);
     }
 
@@ -459,14 +459,14 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setShortLE(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 2);
         _setShortLE(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 2);
         _setShort(index, value);
         return this;
     }
@@ -491,14 +491,14 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setMediumLE(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 3);
         _setMediumLE(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 3);
         _setMedium(index, value);
         return this;
     }
@@ -519,14 +519,14 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setIntLE(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 4);
         _setIntLE(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        ensureAccessible();
+        checkIndex(index, 4);
         _setInt(index, value);
         return this;
     }
@@ -551,14 +551,14 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        ensureAccessible();
+        checkIndex(index, 8);
         _setLong(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setLongLE(int index, long value) {
-        ensureAccessible();
+        checkIndex(index, 8);
         _setLongLE(index, value);
         return this;
     }
