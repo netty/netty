@@ -1219,6 +1219,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
+     * Called once a delegated task that was run directly completed. As we are wrapping or unwrapping then, what had
+     * to wait for the task is done later on the {@link EventExecutor}.
+     */
+    private void directDelegatedTaskCompleted() {
+        if (deferredCloseNotifyPromise != null || isStateSet(STATE_WRAP_SUSPENDED) && resumeWrapFuture.isDone()) {
+            try {
+                ctx.executor().execute(this::delegatedTaskCompleted);
+            } catch (RejectedExecutionException ignore) {
+                // The executor is shutting down, which closes the channel and so fails what is pending.
+            }
+        }
+    }
+
+    /**
      * This method will not call
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean, boolean, boolean)} or
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
@@ -1655,8 +1669,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             // Let's check if the handler was removed in the meantime and so pendingUnencryptedWrites is null.
             if (pendingUnencryptedWrites != null) {
-                // Don't wait for previous writes to complete, as the alert should be sent now.
+                // Don't wait for previous writes to complete, as the alert should be sent now. The outbound side is
+                // closed below anyway, and setting STATE_OUTBOUND_CLOSED makes sure that wrapping is not suspended.
                 clearState(STATE_WRAP_SUSPENDED);
+                setState(STATE_OUTBOUND_CLOSED);
                 // We need to flush one time as there may be an alert that we should send to the remote peer because
                 // of the SSLException reported here.
                 wrapAndFlush(ctx);
@@ -1930,6 +1946,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             // The task has completed, lets clear the state. If it is not completed we will clear the
                             // state once it is.
                             clearState(STATE_PROCESS_TASK);
+                            directDelegatedTaskCompleted();
                         }
                     }
                 } else {
@@ -1937,6 +1954,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         task.run();
                     } finally {
                         clearState(STATE_PROCESS_TASK);
+                        directDelegatedTaskCompleted();
                     }
                 }
             }

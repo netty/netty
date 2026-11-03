@@ -131,10 +131,16 @@ public class SslHandlerSlowTransportBenchmark extends AbstractSslHandlerBenchmar
 
     @Benchmark
     public void writeToSlowTransport() throws Exception {
+        long writtenBytes = clientTransport.writtenBytes;
         clientSslHandler.write(clientTransport, data.retainedSlice(), clientTransport.voidPromise());
         clientSslHandler.flush(clientTransport);
         while (clientTransport.hasPendingWrites()) {
             clientTransport.writeToSocket(transportWriteSize);
+        }
+        // Make sure that the SslHandler did not stop writing, as this would make the results look better.
+        if (clientTransport.writtenBytes - writtenBytes < writeSize) {
+            throw new IllegalStateException("Only " + (clientTransport.writtenBytes - writtenBytes) + " of " +
+                    writeSize + " bytes were written");
         }
         if (clientTransport.maxPendingBytes > maxPendingEncryptedBytes) {
             maxPendingEncryptedBytes = clientTransport.maxPendingBytes;
@@ -173,6 +179,7 @@ public class SslHandlerSlowTransportBenchmark extends AbstractSslHandlerBenchmar
         private final ArrayDeque<ChannelPromise> promises = new ArrayDeque<ChannelPromise>();
         private final byte[] socketBuffer = new byte[64 * 1024];
         long pendingBytes;
+        long writtenBytes;
         long maxPendingBytes;
 
         SlowTransportHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
@@ -223,6 +230,7 @@ public class SslHandlerSlowTransportBenchmark extends AbstractSslHandlerBenchmar
                 int length = Math.min(bytes, buf.readableBytes());
                 bytes -= length;
                 pendingBytes -= length;
+                writtenBytes += length;
                 while (length > 0) {
                     int n = Math.min(length, socketBuffer.length);
                     buf.readBytes(socketBuffer, 0, n);

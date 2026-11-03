@@ -52,6 +52,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.nio.channels.ClosedChannelException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +60,12 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -83,9 +89,11 @@ public class SslHandlerWrapBackpressureTest {
         try (Peers peers = new Peers(provider)) {
             byte[] data = newData();
             ChannelFuture first = peers.client.writeAndFlush(Unpooled.wrappedBuffer(data, 0, DATA_LENGTH / 2));
-            // The plaintext queued in the SslHandler makes the channel unwritable, which must not stop the
-            // SslHandler from wrapping it.
-            assertThat(peers.client.isWritable()).isFalse();
+            // The plaintext queued in the SslHandler alone is more than the high water mark, so the channel would stay
+            // unwritable even once all the encrypted data was written. This must not stop the SslHandler from
+            // wrapping it.
+            assertThat(peers.client.unsafe().outboundBuffer().totalPendingWriteBytes() - peers.holder.heldBytes)
+                    .isGreaterThan(HIGH_WATER_MARK);
             int heldBytes = peers.holder.heldBytes;
             assertThat(heldBytes).isPositive().isLessThanOrEqualTo(MAX_HELD_BYTES);
 
@@ -185,6 +193,88 @@ public class SslHandlerWrapBackpressureTest {
     @ParameterizedTest
     @EnumSource(SslProvider.class)
     @Timeout(30)
+    public void testAlertIsWrittenWhileWrapIsSuspended(SslProvider provider) throws Exception {
+        try (Peers peers = new Peers(provider)) {
+            ChannelFuture writeFuture = peers.client.writeAndFlush(Unpooled.wrappedBuffer(newData()));
+            assertThat(peers.holder.heldBytes).isGreaterThan(HIGH_WATER_MARK);
+            int writes = peers.holder.writes;
+
+            // The client receives a record that it can not decrypt. The alert must be written before the channel is
+            // closed, even though more than the high water mark is pending.
+            peers.server.writeAndFlush(Unpooled.wrappedBuffer(new byte[128]));
+            final ByteBuf records = Unpooled.buffer();
+            ByteBuf buf;
+            while ((buf = peers.server.readOutbound()) != null) {
+                records.writeBytes(buf);
+                buf.release();
+            }
+            int last = records.writerIndex() - 1;
+            records.setByte(last, ~records.getByte(last));
+            try {
+                peers.client.writeInbound(records);
+            } catch (DecoderException expected) {
+                // The JDK reports the error right away, OpenSSL once it wrote the alert.
+            }
+            assertThat(peers.holder.writes).isGreaterThan(writes);
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    public void testCloseOutboundFromDelegatedTaskThatRunsDirectly() throws Exception {
+        final AtomicReference<SslHandler> sslHandler = new AtomicReference<SslHandler>();
+        final AtomicReference<ChannelFuture> closeFuture = new AtomicReference<ChannelFuture>();
+        final AtomicInteger checks = new AtomicInteger();
+        // The JDK calls the TrustManager from a delegated task, which is run directly by default.
+        TrustManager trustManager = new EmptyExtendedX509TrustManager() {
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+                if (checks.incrementAndGet() == 2) {
+                    // Close while the renegotiation is in progress and wrapping is suspended.
+                    closeFuture.set(sslHandler.get().closeOutbound());
+                }
+            }
+        };
+        try (Peers peers = new Peers(SslProvider.JDK, SslProtocols.TLS_v1_2, null, trustManager)) {
+            sslHandler.set(peers.clientSslHandler);
+            // Suspend after every record. While renegotiating, the SslHandler only wraps one record each time.
+            peers.client.config().setWriteBufferWaterMark(new WriteBufferWaterMark(0, 1));
+            byte[] data = newData();
+            ChannelFuture writeFuture = peers.client.writeAndFlush(Unpooled.wrappedBuffer(data));
+
+            // The server starts a renegotiation with a full handshake, so the client checks the certificate again.
+            peers.serverSslHandler.engine().getSession().invalidate();
+            peers.serverSslHandler.renegotiate();
+            for (int i = 0; i < 100 && closeFuture.get() == null; i++) {
+                peers.holder.release();
+                // While renegotiating, the SslHandler only wraps one record each time. Flush again, which suspends
+                // wrapping as this record was not written yet.
+                peers.client.flush();
+                peers.transferToServer();
+                peers.transferToClient();
+            }
+            assertThat(closeFuture.get()).isNotNull();
+
+            // Once the task completed, the data must be wrapped and the close_notify written after it.
+            peers.client.runPendingTasks();
+            for (int i = 0; i < 100 && !closeFuture.get().isDone(); i++) {
+                peers.holder.release();
+            }
+            assertThat(writeFuture.isSuccess()).as(String.valueOf(writeFuture.cause())).isTrue();
+            assertThat(closeFuture.get().isSuccess()).as(String.valueOf(closeFuture.get().cause())).isTrue();
+
+            try {
+                peers.transferToServer();
+            } catch (DecoderException e) {
+                assertThat(e).hasCauseInstanceOf(SSLException.class);
+            }
+            peers.assertServerReceived(data);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SslProvider.class)
+    @Timeout(30)
     public void testFailedWriteFailsSuspendedData(SslProvider provider) throws Exception {
         try (Peers peers = new Peers(provider)) {
             ChannelFuture writeFuture = peers.client.writeAndFlush(Unpooled.wrappedBuffer(newData()));
@@ -262,7 +352,7 @@ public class SslHandlerWrapBackpressureTest {
             } catch (DecoderException e) {
                 // The JDK reports the close_notify that the server receives in the middle of the renegotiation it
                 // started as an error. This happens after it received all the data.
-                assertThat(e).hasMessageContaining("close_notify during handshake");
+                assertThat(e).hasCauseInstanceOf(SSLException.class);
             }
             peers.assertServerReceived(data);
         }
@@ -292,7 +382,7 @@ public class SslHandlerWrapBackpressureTest {
             try {
                 peers.transferToServer();
             } catch (DecoderException e) {
-                assertThat(e).hasMessageContaining("close_notify during handshake");
+                assertThat(e).hasCauseInstanceOf(SSLException.class);
             }
             peers.assertServerReceived(data);
         }
@@ -438,20 +528,30 @@ public class SslHandlerWrapBackpressureTest {
         final FlushHoldingHandler holder = new FlushHoldingHandler();
 
         Peers(SslProvider provider) throws Exception {
-            this(provider, null, null);
+            this(provider, null, null, null);
+        }
+
+        Peers(SslProvider provider, String protocol, ManualExecutor executor) throws Exception {
+            this(provider, protocol, executor, null);
         }
 
         /**
          * @param protocol the TLS protocol to use, or {@code null} for the default ones.
          * @param executor runs the delegated tasks of the client, or {@code null} to run them directly.
+         * @param trustManager the {@link TrustManager} of the client, or {@code null} to trust every certificate.
          */
-        Peers(SslProvider provider, String protocol, ManualExecutor executor) throws Exception {
+        Peers(SslProvider provider, String protocol, ManualExecutor executor, TrustManager trustManager)
+                throws Exception {
             assumeTrue(provider == SslProvider.JDK || OpenSsl.isAvailable(), "OpenSSL is not available");
             SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
             SslContextBuilder serverBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
                     .sslProvider(SslProvider.JDK);
-            SslContextBuilder clientBuilder = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE).sslProvider(provider);
+            SslContextBuilder clientBuilder = SslContextBuilder.forClient().sslProvider(provider);
+            if (trustManager == null) {
+                clientBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE);
+            } else {
+                clientBuilder.trustManager(trustManager);
+            }
             if (protocol != null) {
                 serverBuilder.protocols(protocol);
                 clientBuilder.protocols(protocol);
@@ -544,6 +644,8 @@ public class SslHandlerWrapBackpressureTest {
      */
     private static final class FlushHoldingHandler extends ChannelOutboundHandlerAdapter {
         private ChannelHandlerContext ctx;
+        /** The number of writes while the channel was active. */
+        int writes;
         int heldBytes;
         /** The bytes of the held back application data records, without handshake and alert records. */
         int appDataBytes;
@@ -556,6 +658,9 @@ public class SslHandlerWrapBackpressureTest {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             ByteBuf buf = (ByteBuf) msg;
+            if (ctx.channel().isActive()) {
+                writes++;
+            }
             heldBytes += buf.readableBytes();
             for (int i = buf.readerIndex(); i + 5 <= buf.writerIndex(); i += 5 + buf.getUnsignedShort(i + 3)) {
                 if (buf.getUnsignedByte(i) == APPLICATION_DATA) {
