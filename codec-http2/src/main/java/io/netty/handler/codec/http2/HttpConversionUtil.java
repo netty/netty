@@ -251,18 +251,19 @@ public final class HttpConversionUtil {
     public static FullHttpResponse toFullHttpResponse(int streamId, Http2Headers http2Headers, ByteBuf content,
                                                       boolean validateHttpHeaders)
                     throws Http2Exception {
-        HttpResponseStatus status = parseStatus(http2Headers.status());
-        // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
-        // HTTP/1.1 status line.
-        FullHttpResponse msg = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, content,
-                                                           validateHttpHeaders);
+        final FullHttpResponse msg;
         try {
+            HttpResponseStatus status = parseStatus(http2Headers.status());
+            // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
+            // HTTP/1.1 status line.
+            msg = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, content,
+                validateHttpHeaders);
             addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
         } catch (Http2Exception e) {
-            msg.release();
+            content.release();
             throw e;
         } catch (Throwable t) {
-            msg.release();
+            content.release();
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
         return msg;
@@ -312,19 +313,21 @@ public final class HttpConversionUtil {
      */
     public static FullHttpRequest toFullHttpRequest(int streamId, Http2Headers http2Headers, ByteBuf content,
                                                 boolean validateHttpHeaders) throws Http2Exception {
-        // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
-        final CharSequence method = checkNotNull(http2Headers.method(),
-                "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = extractPath(method, http2Headers);
-        FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
-                        .toString()), path.toString(), content, validateHttpHeaders);
+        final FullHttpRequest msg;
         try {
+            // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request
+            // line.
+            final CharSequence method = checkNotNull(http2Headers.method(),
+                    "method header cannot be null in conversion to HTTP/1.x");
+            final CharSequence path = extractPath(method, http2Headers);
+            msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
+                            .toString()), path.toString(), content, validateHttpHeaders);
             addHttp2ToHttpHeaders(streamId, http2Headers, msg, false);
         } catch (Http2Exception e) {
-            msg.release();
+            content.release();
             throw e;
         } catch (Throwable t) {
-            msg.release();
+            content.release();
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
         return msg;
@@ -344,13 +347,15 @@ public final class HttpConversionUtil {
      */
     public static HttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
-        // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
-        final CharSequence method = checkNotNull(http2Headers.method(),
-                "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = extractPath(method, http2Headers);
-        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
-                path.toString(), validateHttpHeaders);
+        final HttpRequest msg;
         try {
+            // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request
+            // line.
+            final CharSequence method = checkNotNull(http2Headers.method(),
+                    "method header cannot be null in conversion to HTTP/1.x");
+            final CharSequence path = extractPath(method, http2Headers);
+            msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
+                    path.toString(), validateHttpHeaders);
             addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, true);
         } catch (Http2Exception e) {
             throw e;
@@ -376,11 +381,12 @@ public final class HttpConversionUtil {
     public static HttpResponse toHttpResponse(final int streamId,
                                               final Http2Headers http2Headers,
                                               final boolean validateHttpHeaders) throws Http2Exception {
-        final HttpResponseStatus status = parseStatus(http2Headers.status());
-        // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
-        // HTTP/1.1 status line.
-        final HttpResponse msg = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
+        final HttpResponse msg;
         try {
+            final HttpResponseStatus status = parseStatus(http2Headers.status());
+            // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
+            // HTTP/1.1 status line.
+            msg = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
             addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, false);
         } catch (final Http2Exception e) {
             throw e;
