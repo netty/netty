@@ -28,6 +28,8 @@ import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
@@ -49,16 +51,12 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         return new EmbeddedChannel(new Bzip2Decoder());
     }
 
-    private void writeInboundDestroyAndExpectDecompressionException(ByteBuf in) {
+    private void writeInboundAndFinish(ByteBuf in) {
         try {
             channel.writeInbound(in);
         } finally {
-            assertThrows(DecompressionException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    destroyChannel();
-                }
-            });
+            // The decoder discards the rest of the input after an error
+            assertFalse(channel.finish());
         }
     }
 
@@ -69,7 +67,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         assertThrows(DecompressionException.class, new Executable() {
             @Override
             public void execute() {
-                writeInboundDestroyAndExpectDecompressionException(in);
+                writeInboundAndFinish(in);
             }
         }, "Unexpected stream identifier contents");
     }
@@ -147,14 +145,8 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect huffman groups number");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                destroyChannel();
-            }
-        });
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -169,14 +161,8 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect selectors number");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                destroyChannel();
-            }
-        });
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -188,7 +174,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         assertThrows(DecompressionException.class, new Executable() {
             @Override
             public void execute() {
-                writeInboundDestroyAndExpectDecompressionException(in);
+                writeInboundAndFinish(in);
             }
         }, "block CRC error");
     }
@@ -202,7 +188,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         assertThrows(DecompressionException.class, new Executable() {
             @Override
             public void execute() {
-                writeInboundDestroyAndExpectDecompressionException(in);
+                writeInboundAndFinish(in);
             }
         }, "start pointer invalid");
     }
@@ -312,14 +298,8 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect selector index");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                destroyChannel();
-            }
-        });
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     /**
@@ -337,6 +317,28 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "Bzip2 block Huffman code length not in range");
+    }
+
+    /**
+     * Regression test: after an error, the decoder used to continue from its inconsistent state when it got more
+     * input or when the channel was closed, which could fail with an {@link ArrayIndexOutOfBoundsException}.
+     */
+    @Test
+    public void testNoDecodingAfterError() {
+        final byte[] data = Bzip2MalformedStreams.tooFewSelectors();
+        // Keep some input in the cumulation for the second decode call
+        final ByteBuf in = Unpooled.wrappedBuffer(data, 0, data.length - 10);
+        DecompressionException e = assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(in);
+            }
+        });
+        assertEquals("error decoding block", e.getMessage());
+
+        // Further input is discarded
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(data, data.length - 10, 10)));
+        assertFalse(channel.finish());
     }
 
     @Override

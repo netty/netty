@@ -174,7 +174,7 @@ final class Bzip2HuffmanStageDecoder {
         // Move to next group selector if required
         if (++groupPosition % HUFFMAN_GROUP_RUN_LENGTH == 0) {
             groupIndex++;
-            if (groupIndex == selectors.length) {
+            if (groupIndex >= selectors.length) {
                 throw new DecompressionException("error decoding block");
             }
             currentTable = selectors[groupIndex] & 0xff;
