@@ -27,6 +27,8 @@ import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
@@ -48,11 +50,12 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         return new EmbeddedChannel(new Bzip2Decoder());
     }
 
-    private void writeInboundDestroyAndExpectDecompressionException(ByteBuf in) throws Exception {
+    private void writeInboundAndFinish(ByteBuf in) throws Exception {
         try {
             channel.writeInbound(in);
         } finally {
-            assertThrows(DecompressionException.class, this::destroyChannel);
+            // The decoder discards the rest of the input after an error
+            assertFalse(channel.finish());
         }
     }
 
@@ -61,7 +64,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final ByteBuf in = Unpooled.buffer();
         in.writeLong(1823080128301928729L); //random value
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "Unexpected stream identifier contents");
+                () -> writeInboundAndFinish(in), "Unexpected stream identifier contents");
     }
 
     @Test
@@ -109,29 +112,27 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testIncorrectHuffmanGroupsNumber() {
+    public void testIncorrectHuffmanGroupsNumber() throws Exception {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[25] = 0x70;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect huffman groups number");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, this::destroyChannel);
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
-    public void testIncorrectSelectorsNumber() {
+    public void testIncorrectSelectorsNumber() throws Exception {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[25] = 0x2F;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect selectors number");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, this::destroyChannel);
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -141,7 +142,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "block CRC error");
+                () -> writeInboundAndFinish(in), "block CRC error");
     }
 
     @Test
@@ -151,7 +152,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "start pointer invalid");
+                () -> writeInboundAndFinish(in), "start pointer invalid");
     }
 
     /**
@@ -245,12 +246,12 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
      * {@link DecompressionException}.
      */
     @Test
-    public void testSelectorIndexOutOfRange() {
+    public void testSelectorIndexOutOfRange() throws Exception {
         final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange());
-        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "incorrect selector index");
-        // Leftover cumulation bytes get reprocessed from stale decoder state when the
-        // channel is torn down, which can legitimately raise a second, unrelated exception.
-        assertThrows(DecompressionException.class, this::destroyChannel);
+        assertThrows(DecompressionException.class,
+                () -> channel.writeInbound(in), "incorrect selector index");
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     /**
@@ -264,6 +265,23 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange());
         assertThrows(DecompressionException.class,
             () -> channel.writeInbound(in), "Bzip2 block Huffman code length not in range");
+    }
+
+    /**
+     * Regression test: after an error, the decoder used to continue from its inconsistent state when it got more
+     * input or when the channel was closed, which could fail with an {@link ArrayIndexOutOfBoundsException}.
+     */
+    @Test
+    public void testNoDecodingAfterError() throws Exception {
+        final byte[] data = Bzip2MalformedStreams.tooFewSelectors();
+        // Keep some input in the cumulation for the second decode call
+        final ByteBuf in = Unpooled.wrappedBuffer(data, 0, data.length - 10);
+        DecompressionException e = assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
+        assertEquals("error decoding block", e.getMessage());
+
+        // Further input is discarded
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(data, data.length - 10, 10)));
+        assertFalse(channel.finish());
     }
 
     @Override
