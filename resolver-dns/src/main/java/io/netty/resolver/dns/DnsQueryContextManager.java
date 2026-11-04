@@ -109,7 +109,7 @@ final class DnsQueryContextManager {
             if (a instanceof Inet4Address) {
                 // Also add the mapping for the IPv4-compatible IPv6 address.
                 final Inet4Address a4 = (Inet4Address) a;
-                if (a4.isLoopbackAddress()) {
+                if (a4.equals(NetUtil.LOCALHOST4)) {
                     extraAddress = new InetSocketAddress(NetUtil.LOCALHOST6, port);
                 } else {
                     extraAddress = new InetSocketAddress(toCompactAddress(a4), port);
