@@ -54,7 +54,7 @@ public class DnsQueryContextManagerTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         channel.finishAndReleaseAll();
     }
 
@@ -180,7 +180,7 @@ public class DnsQueryContextManagerTest {
     }
 
     private DnsQueryContext newContext(InetSocketAddress nameServerAddr) {
-        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = channel.eventLoop().newPromise();
+        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = channel.executor().newPromise();
         return new DatagramDnsQueryContext(
                 channel,
                 nameServerAddr,
