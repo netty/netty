@@ -198,6 +198,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * running, see {@link #resumeWrap(ChannelFuture)}.
      */
     private static final int STATE_WRAP_SUSPENDED = 1 << 10;
+    /**
+     * Set when wrapping was suspended, and cleared once all the queued data was wrapped. While it is set, the queued
+     * data is wrapped before the outbound side of the {@link SSLEngine} is closed, as it would be failed otherwise.
+     * It stays set once wrapping resumed, as {@link #wrap(ChannelHandlerContext, boolean)} only wraps one record at a
+     * time while the {@link SSLEngine} is handshaking.
+     */
+    private static final int STATE_WRAP_PENDING = 1 << 11;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -1048,6 +1055,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (inUnwrap) {
                 setState(STATE_NEEDS_FLUSH);
             }
+            if (pendingUnencryptedWrites == null || pendingUnencryptedWrites.isEmpty()) {
+                clearState(STATE_WRAP_PENDING);
+            }
         }
     }
 
@@ -1068,7 +1078,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 isStateSet(STATE_OUTBOUND_CLOSED) || startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
             return false;
         }
-        setState(STATE_WRAP_SUSPENDED);
+        setState(STATE_WRAP_SUSPENDED | STATE_WRAP_PENDING);
         waitForPendingEncryptedWrite();
         return true;
     }
@@ -1154,15 +1164,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * Closes the outbound side of the {@link SSLEngine} and flushes, which writes the {@code close_notify} and
-     * notifies {@code promise} once it is written. If wrapping was suspended the pending data is wrapped first, as the
-     * {@link SSLEngine} would not wrap it anymore once its outbound side is closed.
+     * notifies {@code promise} once it is written. If wrapping was suspended, the data that is still queued is wrapped
+     * first, as the {@link SSLEngine} would not wrap it anymore once its outbound side is closed.
      *
      * @param deferred {@code true} if this is called once the delegated task we had to wait for completed.
      */
     private void closeOutboundAndFlush(ChannelHandlerContext ctx, ChannelPromise promise, boolean deferred)
             throws Exception {
         assert isStateSet(STATE_OUTBOUND_CLOSED);
-        final boolean wrapPending = deferred || isStateSet(STATE_WRAP_SUSPENDED) || deferredCloseNotifyPromise != null;
+        final boolean wrapPending = deferred || isStateSet(STATE_WRAP_SUSPENDED) || isStateSet(STATE_WRAP_PENDING) ||
+                deferredCloseNotifyPromise != null;
         if (wrapPending && pendingUnencryptedWrites != null && ctx.channel().isActive()) {
             if (!isStateSet(STATE_PROCESS_TASK)) {
                 clearState(STATE_WRAP_SUSPENDED);

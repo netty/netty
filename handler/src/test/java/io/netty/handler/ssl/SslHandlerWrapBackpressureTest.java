@@ -327,6 +327,19 @@ public class SslHandlerWrapBackpressureTest {
     @Timeout(30)
     public void testCloseDuringRenegotiationWrapsSuspendedData(boolean closeChannel, boolean taskRunning)
             throws Exception {
+        testCloseDuringRenegotiation(closeChannel, taskRunning, false);
+    }
+
+    @ParameterizedTest(name = "{index}: closeChannel={0}, taskRunning={1}")
+    @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    @Timeout(30)
+    public void testCloseAfterWrapResumesDuringRenegotiation(boolean closeChannel, boolean taskRunning)
+            throws Exception {
+        testCloseDuringRenegotiation(closeChannel, taskRunning, true);
+    }
+
+    private static void testCloseDuringRenegotiation(boolean closeChannel, boolean taskRunning,
+                                                     boolean resumeBeforeClose) throws Exception {
         try (Peers peers = new Peers(SslProvider.JDK, SslProtocols.TLS_v1_2,
                 taskRunning ? new ManualExecutor() : null)) {
             byte[] data = newData();
@@ -337,12 +350,20 @@ public class SslHandlerWrapBackpressureTest {
             peers.transferToClient();
             assertThat(peers.executor != null && peers.executor.hasTasks()).isEqualTo(taskRunning);
 
+            if (resumeBeforeClose) {
+                // The encrypted data is written, which resumes wrapping. As the engine is handshaking, the
+                // SslHandler only wraps one record and the rest of the held back data stays queued.
+                peers.holder.release();
+            }
+
             // All the data must be wrapped before the outbound side of the engine is closed, as it would be failed
             // otherwise. We can not wrap while a task runs, so this needs to wait for it.
             ChannelFuture closeFuture = closeChannel ? peers.client.close() : peers.clientSslHandler.closeOutbound();
-            assertThat(writeFuture.isDone()).isFalse();
+            assertThat(writeFuture.isDone()).as(String.valueOf(writeFuture.cause())).isFalse();
             peers.runTasks();
-            assertThat(peers.holder.appDataBytes).isGreaterThan(DATA_LENGTH);
+            if (!resumeBeforeClose) {
+                assertThat(peers.holder.appDataBytes).isGreaterThan(DATA_LENGTH);
+            }
             peers.holder.release();
             assertThat(writeFuture.isSuccess()).as(String.valueOf(writeFuture.cause())).isTrue();
             assertThat(closeFuture.isSuccess()).as(String.valueOf(closeFuture.cause())).isTrue();
