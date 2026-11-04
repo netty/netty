@@ -185,7 +185,6 @@ public class DnsQueryContextManagerTest {
                 channel,
                 nameServerAddr,
                 manager,
-                NoopDnsQueryLifecycleObserver.INSTANCE,
                 /* maxPayLoadSize */ 4096,
                 /* recursionDesired */ true,
                 /* queryTimeoutMillis */ 5000,
