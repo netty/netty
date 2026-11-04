@@ -574,6 +574,33 @@ public class HttpPostRequestDecoderTest {
         }
     }
 
+    // RFC 8187, section 3.2.1: '+' is an attr-char, only pct-encoding applies to an ext-value
+    @Test
+    public void testDecodeContentDispositionFieldParametersWithPlus() throws Exception {
+
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+
+        final String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename*=UTF-8''a+b%20c.txt\r\n\r\n" +
+                "foo\r\n" +
+                "\r\n" +
+                "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST,
+                "http://localhost",
+                Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertInstanceOf(FileUpload.class, part1, "the item should be a FileUpload");
+        assertEquals("a+b c.txt", ((FileUpload) part1).getFilename(), "'+' is not a space in an ext-value");
+        decoder.destroy();
+        assertTrue(req.release());
+    }
+
     // https://github.com/netty/netty/pull/7265
     @Test
     public void testDecodeContentDispositionFieldParameters() throws Exception {
