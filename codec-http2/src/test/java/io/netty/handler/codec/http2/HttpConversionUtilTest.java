@@ -335,6 +335,20 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void cookieWithInvalidPartThrowsIllegalArgumentException() {
+        final HttpHeaders inHeaders = new DefaultHttpHeaders();
+        // The second part " two=bar" starts with a space, which the HTTP/2 header validation rejects.
+        inHeaders.add(COOKIE, "one=foo;  two=bar");
+        final Http2Headers out = new DefaultHttp2Headers(true);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.toHttp2Headers(inHeaders, out);
+            }
+        });
+    }
+
+    @Test
     public void cookieNonAscii() {
         final HttpHeaders inHeaders = new DefaultHttpHeaders();
         inHeaders.add(COOKIE, "one=\uD83D\uDE43; two=ü");
