@@ -79,6 +79,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
@@ -104,6 +106,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -1437,6 +1440,244 @@ public class SslHandlerTest {
             } else {
                 throw (Throwable) obj;
             }
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testSessionResumptionRejectedAcrossDifferentClientAuthContextsTLSv12() throws Throwable {
+        testSessionResumptionRejectedAcrossDifferentClientAuthContexts(SslProtocols.TLS_v1_2);
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testSessionResumptionRejectedAcrossDifferentClientAuthContextsTLSv13() throws Throwable {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        testSessionResumptionRejectedAcrossDifferentClientAuthContexts(SslProtocols.TLS_v1_3);
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testSessionResumptionAcrossIdenticallyConfiguredContextsTLSv12() throws Throwable {
+        testSessionResumptionAcrossIdenticallyConfiguredContexts(SslProtocols.TLS_v1_2);
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testSessionResumptionAcrossIdenticallyConfiguredContextsTLSv13() throws Throwable {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        testSessionResumptionAcrossIdenticallyConfiguredContexts(SslProtocols.TLS_v1_3);
+    }
+
+    // Regression test for https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc :
+    // a session obtained through an OpenSSL SslContext configured with ClientAuth.NONE must never be resumable
+    // through a different OpenSSL SslContext configured with ClientAuth.REQUIRE, even when both contexts share
+    // the same session-ticket keys (a documented pattern for enabling resumption across a cluster or across
+    // SNI-selected virtual hosts). Otherwise an attacker could obtain a session on the lax context and replay it
+    // against the strict context to complete a handshake without ever presenting a client certificate.
+    private static void testSessionResumptionRejectedAcrossDifferentClientAuthContexts(String protocol)
+            throws Throwable {
+        ResumptionResult result = replaySessionAgainstOtherServerContext(protocol, ClientAuth.NONE,
+                ClientAuth.REQUIRE);
+        if (result.replayOutcome instanceof ByteBuf) {
+            ReferenceCountUtil.release(result.replayOutcome);
+            fail("a session obtained without a client certificate must not be resumable in a "
+                    + "ClientAuth.REQUIRE context");
+        }
+    }
+
+    // The session_id_context is derived from the configuration of the SslContext, so contexts that are configured
+    // identically (for example on different nodes of a cluster sharing session-ticket keys) must still be able to
+    // resume each others sessions.
+    private static void testSessionResumptionAcrossIdenticallyConfiguredContexts(String protocol) throws Throwable {
+        ResumptionResult result = replaySessionAgainstOtherServerContext(protocol, ClientAuth.NONE,
+                ClientAuth.NONE);
+        if (result.replayOutcome instanceof Throwable) {
+            throw (Throwable) result.replayOutcome;
+        }
+        assertInstanceOf(ByteBuf.class, result.replayOutcome);
+        ReferenceCountUtil.release(result.replayOutcome);
+        assertEquals(Arrays.asList(false, true), new ArrayList<Boolean>(result.serverReused));
+    }
+
+    private static final class ResumptionResult {
+        // Either the payload sent by the server on genuine handshake success (a ByteBuf) or the failure.
+        final Object replayOutcome;
+        // For every handshake the server successfully completed, whether it resumed an existing session.
+        final Queue<Boolean> serverReused;
+
+        ResumptionResult(Object replayOutcome, Queue<Boolean> serverReused) {
+            this.replayOutcome = replayOutcome;
+            this.serverReused = serverReused;
+        }
+    }
+
+    /**
+     * Obtains a session from a server context using {@code firstAuth} and replays it against another server
+     * context, which uses {@code secondAuth} but otherwise the same configuration and the same session-ticket key.
+     */
+    private static ResumptionResult replaySessionAgainstOtherServerContext(
+            String protocol, ClientAuth firstAuth, ClientAuth secondAuth) throws Throwable {
+        OpenSsl.ensureAvailability();
+
+        final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(protocol)
+                .build();
+        final SslContext sslServerCtxFirst = newOpenSslServerContext(cert, protocol, firstAuth);
+        final SslContext sslServerCtxSecond = newOpenSslServerContext(cert, protocol, secondAuth);
+
+        // Explicitly enable the session cache and deliberately share the same session-ticket keys between the
+        // server contexts, exactly the precondition the advisory calls out.
+        ((ReferenceCountedOpenSslContext) sslClientCtx).sessionContext().setSessionCacheEnabled(true);
+        OpenSslSessionTicketKey key = new OpenSslSessionTicketKey(new byte[OpenSslSessionTicketKey.NAME_SIZE],
+                new byte[OpenSslSessionTicketKey.HMAC_KEY_SIZE], new byte[OpenSslSessionTicketKey.AES_KEY_SIZE]);
+        ((OpenSslSessionContext) sslClientCtx.sessionContext()).setTicketKeys(key);
+        ((OpenSslSessionContext) sslServerCtxFirst.sessionContext()).setTicketKeys(key);
+        ((OpenSslSessionContext) sslServerCtxSecond.sessionContext()).setTicketKeys(key);
+
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+        // The server only ever sends this payload from a ChannelInboundHandler once the *server side* considers
+        // the handshake genuinely successful, so whether a client ends up receiving it is the ground truth for
+        // whether the server accepted the connection - unlike the client's own handshake future, which for
+        // TLSv1.3 can complete "successfully" locally (the client sends an empty Certificate message and
+        // considers its side done) slightly before the server's rejection alert arrives.
+        final byte[] bytes = { 1, 2, 3, 4 };
+        final Queue<Boolean> serverReused = new ConcurrentLinkedQueue<Boolean>();
+        // Both connections use the very same (fake) host/port so the client-side session cache treats them as the
+        // same peer, exactly like a client replaying a ticket against a different SNI-selected vhost behind the
+        // same listener would appear identical from the client's perspective.
+        final String peerHost = "resumption-test.netty.io";
+        final int peerPort = 443;
+        // The 1st accepted connection is served by the first context to mint a resumable session; every connection
+        // after that (i.e. the replay attempt) is served by the second context.
+        final AtomicReference<SslContext> nextServerCtx = new AtomicReference<SslContext>(sslServerCtxFirst);
+        LocalAddress serverAddr = new LocalAddress(SslHandlerTest.class.getSimpleName()
+                + ".replaySessionAgainstOtherServerContext." + protocol + '.' + firstAuth + '.' + secondAuth);
+        Channel sc = null;
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(LocalServerChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            final SslHandler sslHandler = nextServerCtx.getAndSet(sslServerCtxSecond)
+                                    .newHandler(ch.alloc());
+                            ch.pipeline().addLast(sslHandler);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                    if (evt instanceof SslHandshakeCompletionEvent
+                                            && ((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                                        serverReused.add(((ReferenceCountedOpenSslEngine) sslHandler.engine())
+                                                .isSessionReused());
+                                        ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    .bind(serverAddr).syncUninterruptibly().channel();
+
+            // 1) Obtain a resumable session / ticket from the first server context without presenting a client
+            //    certificate.
+            Object first = connectAndAwaitOutcome(group, sslClientCtx, serverAddr, peerHost, peerPort, bytes);
+            if (first instanceof Throwable) {
+                throw (Throwable) first;
+            }
+            assertInstanceOf(ByteBuf.class, first);
+            ReferenceCountUtil.release(first);
+
+            // 2) Reconnect using the very same client SslContext (so its session cache offers up the previously
+            //    obtained ticket), this time served by the second server context.
+            return new ResumptionResult(
+                    connectAndAwaitOutcome(group, sslClientCtx, serverAddr, peerHost, peerPort, bytes),
+                    serverReused);
+        } finally {
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully().syncUninterruptibly();
+            ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtxFirst);
+            ReferenceCountUtil.release(sslServerCtxSecond);
+        }
+    }
+
+    private static SslContext newOpenSslServerContext(SelfSignedCertificate cert, String protocol,
+                                                      ClientAuth clientAuth) throws SSLException {
+        SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(protocol)
+                .clientAuth(clientAuth);
+        if (clientAuth == ClientAuth.REQUIRE) {
+            // A trust configuration is needed to be able to require client certificates.
+            builder.trustManager(cert.cert());
+        }
+        return builder.build();
+    }
+
+    /**
+     * Connects to {@code serverAddr} and waits for a definitive outcome: either the {@code expectedBytes} payload
+     * (returned as a {@link ByteBuf}) sent by the server on genuine handshake success, or the {@link Throwable}
+     * which tore the connection down otherwise.
+     */
+    private static Object connectAndAwaitOutcome(EventLoopGroup group, SslContext sslClientCtx,
+                                                  LocalAddress serverAddr, String peerHost, int peerPort,
+                                                  final byte[] expectedBytes) throws Throwable {
+        final BlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
+        final AtomicBoolean resultSet = new AtomicBoolean();
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT,
+                peerHost, peerPort);
+        Channel cc = null;
+        try {
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(LocalChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new ByteToMessageDecoder() {
+                                @Override
+                                protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                                    if (in.readableBytes() == expectedBytes.length
+                                            && resultSet.compareAndSet(false, true)) {
+                                        queue.add(in.readBytes(expectedBytes.length));
+                                    }
+                                }
+
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    if (resultSet.compareAndSet(false, true)) {
+                                        queue.add(cause);
+                                    }
+                                }
+
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                    if (resultSet.compareAndSet(false, true)) {
+                                        queue.add(new ClosedChannelException());
+                                    }
+                                    super.channelInactive(ctx);
+                                }
+                            });
+                        }
+                    })
+                    .connect(serverAddr).syncUninterruptibly().channel();
+
+            Object result = queue.poll(5, TimeUnit.SECONDS);
+            if (result == null) {
+                throw new AssertionError("Timed out waiting for a definitive connection outcome");
+            }
+            return result;
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();

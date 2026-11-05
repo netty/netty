@@ -2081,8 +2081,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return NEED_WRAP;
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
+        byte[] peerCertificate = SSL.getPeerCertificate(ssl);
+        if (!clientMode && clientAuth == ClientAuth.REQUIRE && isEmpty(peerCertificate)) {
+            // Defense in depth: a client certificate is not re-requested when a session is resumed (e.g. via a
+            // session ticket), so a session which was established without a client certificate under a more
+            // lenient ClientAuth configuration must never be allowed to satisfy ClientAuth.REQUIRE here, even if
+            // the native library would otherwise consider the (abbreviated) handshake successful.
+            // See https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc
+            shutdown();
+            throw new SSLHandshakeException(
+                    "client did not present a certificate, but is required to under ClientAuth.REQUIRE");
+        }
         session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), SSL.getVersion(ssl),
-                SSL.getPeerCertificate(ssl), SSL.getPeerCertChain(ssl),
+                peerCertificate, SSL.getPeerCertChain(ssl),
                 SSL.getTime(ssl) * 1000L, parentContext.sessionTimeout() * 1000L);
         selectApplicationProtocol();
         return FINISHED;

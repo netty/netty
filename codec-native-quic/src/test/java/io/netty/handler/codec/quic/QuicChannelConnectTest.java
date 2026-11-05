@@ -33,6 +33,9 @@ import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
+import io.netty.util.AttributeKey;
 import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -64,6 +67,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.MGF1ParameterSpec;
@@ -76,6 +80,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -86,6 +91,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -984,6 +990,158 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testNoEarlyDataAcceptedWithClientAuthRequire(Executor executor) throws Throwable {
+        // A client certificate is not re-requested on resumption and can only be verified once the handshake
+        // completed, so a server using ClientAuth.REQUIRE must never hand 0-RTT data to the application.
+        final AttributeKey<Boolean> handshakeCompleted = AttributeKey.valueOf("handshakeCompleted");
+        X509Bundle ca = new CertificateBuilder()
+            .subject("CN=ca.netty.io")
+            .setKeyUsage(true, CertificateBuilder.KeyUsage.keyCertSign, CertificateBuilder.KeyUsage.digitalSignature)
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+        X509Bundle serverCert = new CertificateBuilder()
+            .setKeyUsage(false, CertificateBuilder.KeyUsage.digitalSignature)
+            .addExtendedKeyUsageServerAuth()
+            .subject("CN=server.netty.io")
+            .addSanDnsName("localhost")
+            .buildIssuedBy(ca);
+        X509Bundle clientCert = new CertificateBuilder()
+            .setKeyUsage(false, CertificateBuilder.KeyUsage.digitalSignature)
+            .addExtendedKeyUsageClientAuth()
+            .subject("CN=client.netty.io")
+            .buildIssuedBy(ca);
+        final CountDownLatch readLatch = new CountDownLatch(1);
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                        serverCert.toTempPrivateKeyPem(), null,
+                                        serverCert.toTempCertChainPem())
+                                .trustManager(ca.toTempRootCertPem())
+                                .applicationProtocols(QuicTestUtils.PROTOS)
+                                .clientAuth(ClientAuth.REQUIRE)
+                                .earlyData(true)
+                                .build()),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            ctx.channel().attr(handshakeCompleted).set(Boolean.TRUE);
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                }, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buffer = (ByteBuf) msg;
+                        try {
+                            if (ctx.channel().parent().attr(handshakeCompleted).get() != Boolean.TRUE) {
+                                errorRef.set(new AssertionFailedError("Early data was delivered before the " +
+                                        "handshake completed"));
+                            }
+                            readLatch.countDown();
+                            ctx.close();
+                            ctx.channel().parent().close();
+                        } finally {
+                            buffer.release();
+                        }
+                    }
+                });
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        QuicSslContext sslContext = QuicSslContextBuilder.forClient()
+                .trustManager(ca.toTempRootCertPem())
+                .keyManager(clientCert.toTempPrivateKeyPem(), null,
+                        clientCert.toTempCertChainPem())
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .earlyData(true)
+                .build();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor, sslContext)
+                .sslEngineProvider(q -> sslContext.newEngine(q.alloc(), "localhost", 9999)));
+
+        try {
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            QuicClientSessionCache cache = ((QuicheQuicSslContext) sslContext).getSessionCache();
+            // Spin until the session shows up in the cache, this might happen a bit after the connection is
+            // established.
+            while (!cache.hasSession("localhost", 9999)) {
+                Thread.sleep(100);
+            }
+            quicChannel.close().sync();
+
+            final CountDownLatch streamLatch = new CountDownLatch(1);
+            CompletableFuture<Object> userEvents = new CompletableFuture<>();
+            quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                .handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                                userEvents.complete(Boolean.TRUE);
+                            } else {
+                                userEvents.complete(Boolean.FALSE);
+                            }
+                        } else if (evt instanceof SslEarlyDataReadyEvent) {
+                            userEvents.completeExceptionally(new Exception("Early data was observed: " + evt));
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                })
+                .streamHandler(new ChannelInboundHandlerAdapter())
+                .remoteAddress(address)
+                .connect()
+                .addListener(future -> {
+                    if (!future.isSuccess()) {
+                        return;
+                    }
+                    QuicChannel chan = (QuicChannel) future.get();
+                    chan.createStream(QuicStreamType.BIDIRECTIONAL,
+                        new ChannelInboundHandlerAdapter()).addListener(f -> {
+                        try {
+                            Channel stream = (Channel) f.getNow();
+                            stream.writeAndFlush(stream.alloc().buffer().writeInt(1));
+                        } catch (Throwable error) {
+                            errorRef.set(error);
+                        } finally {
+                            streamLatch.countDown();
+                        }
+                    });
+                })
+                .get();
+
+            awaitAndCheckError(streamLatch, errorRef);
+            Object result = userEvents.get();
+            assertThat(result).isEqualTo(Boolean.TRUE);
+            // Data written after handshake completion reaches the server.
+            awaitAndCheckError(readLatch, errorRef);
+            assertSessionReused(quicChannel, true);
+            quicChannel.closeFuture().sync();
+            if (errorRef.get() != null) {
+                throw errorRef.get();
+            }
+        } finally {
+            server.close().sync();
+            channel.close().sync();
+            shutdown(executor);
+        }
+    }
+
     private static void awaitAndCheckError(CountDownLatch latch, AtomicReference<Throwable> errorRef) throws Throwable {
         while (!latch.await(500, TimeUnit.MILLISECONDS)) {
             if (errorRef.get() != null) {
@@ -1554,23 +1712,41 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @MethodSource("newSslTaskExecutors")
     public void testSniWithClientAuth(Executor executor) throws Throwable {
         String hostname = "quic.netty.io";
+        X509Bundle ca = new CertificateBuilder()
+            .subject("CN=ca.netty.io")
+            .setKeyUsage(true, CertificateBuilder.KeyUsage.keyCertSign, CertificateBuilder.KeyUsage.digitalSignature)
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+        X509Bundle serverCert = new CertificateBuilder()
+            .setKeyUsage(false, CertificateBuilder.KeyUsage.digitalSignature)
+            .addExtendedKeyUsageServerAuth()
+            .subject("CN=server.netty.io")
+            .addSanDnsName("localhost")
+            .addSanDnsName(hostname)
+            .buildIssuedBy(ca);
+        X509Bundle clientCert = new CertificateBuilder()
+            .setKeyUsage(false, CertificateBuilder.KeyUsage.digitalSignature)
+            .addExtendedKeyUsageClientAuth()
+            .subject("CN=client.netty.io")
+            .buildIssuedBy(ca);
 
         QuicSslContext sniServerSslContext = QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                serverCert.toTempPrivateKeyPem(), null,
+                serverCert.toTempCertChainPem())
+                .trustManager(ca.toTempRootCertPem())
                 .clientAuth(ClientAuth.REQUIRE)
                 .applicationProtocols(QuicTestUtils.PROTOS).build();
 
         QuicSslContext serverSslContext = QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                serverCert.toTempPrivateKeyPem(), null,
+                serverCert.toTempCertChainPem())
                 .sni(new DomainWildcardMappingBuilder<>(sniServerSslContext)
                         .add(hostname, sniServerSslContext).build())
                 .applicationProtocols(QuicTestUtils.PROTOS).build();
 
         CountDownLatch sniEventLatch = new CountDownLatch(1);
         CountDownLatch sslEventLatch = new CountDownLatch(1);
+        CompletableFuture<Certificate[]> peerCerts = new CompletableFuture<>();
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
                 TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
@@ -1582,6 +1758,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         } else if (evt instanceof SslHandshakeCompletionEvent) {
                             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                                 sslEventLatch.countDown();
+                                try {
+                                    Certificate[] peerCertificates = ((QuicChannel) ctx.channel()).sslEngine()
+                                        .getSession().getPeerCertificates();
+                                    peerCerts.complete(peerCertificates);
+                                } catch (Exception e) {
+                                    peerCerts.completeExceptionally(e);
+                                }
                             }
                         }
                         super.userEventTriggered(ctx, evt);
@@ -1592,9 +1775,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .keyManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .trustManager(ca.toTempRootCertPem())
+                .keyManager(clientCert.toTempPrivateKeyPem(), null,
+                        clientCert.toTempCertChainPem())
                 .applicationProtocols(QuicTestUtils.PROTOS).build();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
@@ -1608,12 +1791,17 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
 
+            sniEventLatch.await();
+            sslEventLatch.await();
             quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
-            sniEventLatch.await();
-            sslEventLatch.await();
+            Certificate[] certificates = peerCerts.get();
+            assertThat(certificates)
+                .isNotNull()
+                .isNotEmpty()
+                .contains(clientCert.getCertificate());
         } finally {
             server.close().sync();
             channel.close().sync();
@@ -1865,6 +2053,101 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             if (bytes == numBytes) {
                 latch.countDown();
             }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    @Timeout(10)
+    public void testSessionResumptionRejectedAcrossDifferentClientAuthContexts(Executor executor) throws Throwable {
+        // Regression test for https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc :
+        // a session obtained through a QuicSslContext configured with ClientAuth.NONE must never be resumable
+        // through a different QuicSslContext configured with ClientAuth.REQUIRE, even when both contexts share
+        // the same session-ticket keys (a documented pattern for enabling resumption across a cluster or across
+        // SNI-selected virtual hosts). Otherwise an attacker could obtain a session on the lax context and replay
+        // it against the strict context to complete a handshake without ever presenting a client certificate.
+        QuicSslContext sslServerCtxNoAuth = QuicSslContextBuilder.forServer(
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.key(), null,
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.cert())
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .clientAuth(ClientAuth.NONE)
+                .build();
+        QuicSslContext sslServerCtxRequireAuth = QuicSslContextBuilder.forServer(
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.key(), null,
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.cert())
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .clientAuth(ClientAuth.REQUIRE)
+                .build();
+        QuicSslContext sslClientCtx = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .build();
+
+        // Deliberately share the same session-ticket keys between the two server contexts.
+        SslSessionTicketKey key = new SslSessionTicketKey(new byte[SslSessionTicketKey.NAME_SIZE],
+                new byte[SslSessionTicketKey.HMAC_KEY_SIZE], new byte[SslSessionTicketKey.AES_KEY_SIZE]);
+        sslServerCtxNoAuth.sessionContext().setTicketKeys(key);
+        sslServerCtxRequireAuth.sessionContext().setTicketKeys(key);
+
+        CountDownLatch rejectionLatch = new CountDownLatch(1);
+        AtomicReference<Throwable> rejectionCause = new AtomicReference<>();
+
+        Channel serverNoAuth = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor, sslServerCtxNoAuth),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        Channel serverRequireAuth = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor, sslServerCtxRequireAuth),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        // The strict (ClientAuth.REQUIRE) server must observe a handshake failure, never a
+                        // silently accepted connection from a client that presented no certificate.
+                        rejectionCause.compareAndSet(null, cause);
+                        rejectionLatch.countDown();
+                    }
+                }, new ChannelInboundHandlerAdapter());
+
+        InetSocketAddress addressNoAuth = (InetSocketAddress) serverNoAuth.localAddress();
+        InetSocketAddress addressRequireAuth = (InetSocketAddress) serverRequireAuth.localAddress();
+
+        // Both connections use the very same (fake) peer host/port so the client-side session cache treats them
+        // as the same peer, exactly like a client replaying a ticket against a different SNI-selected vhost
+        // behind the same listener would appear identical from the client's perspective.
+        String peerHost = "resumption-test.netty.io";
+        int peerPort = 443;
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor).sslEngineProvider(
+                c -> sslClientCtx.newEngine(c.alloc(), peerHost, peerPort)));
+        try {
+            QuicChannelBootstrap bootstrap = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .streamHandler(new ChannelInboundHandlerAdapter());
+
+            // 1) Obtain a resumable session / ticket from the lax (ClientAuth.NONE) server without presenting a
+            //    client certificate.
+            QuicChannel quicChannel1 = bootstrap.remoteAddress(addressNoAuth).connect().get();
+            assertSessionReused(quicChannel1, false);
+            quicChannel1.close().sync();
+
+            // 2) Reconnect using the very same client QuicSslContext and fake peer host/port (so its session
+            //    cache offers up the previously obtained ticket), this time to the strict (ClientAuth.REQUIRE)
+            //    server. As the attacker never presents a client certificate, resuming the earlier session must
+            //    not succeed.
+            QuicChannel quicChannel2 = bootstrap.remoteAddress(addressRequireAuth).connect().get();
+            try {
+                assertTrue(rejectionLatch.await(10, TimeUnit.SECONDS),
+                        "the strict server never reported a handshake failure");
+                assertInstanceOf(SSLHandshakeException.class, rejectionCause.get());
+            } finally {
+                quicChannel2.close().sync();
+            }
+        } finally {
+            serverNoAuth.close().sync();
+            serverRequireAuth.close().sync();
+            channel.close().sync();
+
+            shutdown(executor);
         }
     }
 

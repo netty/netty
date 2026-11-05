@@ -37,6 +37,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,8 +167,12 @@ public final class QuicSslContextBuilder {
     private final boolean forServer;
     private final Map<SslContextOption<?>, Object> options = new HashMap<>();
     private TrustManagerFactory trustManagerFactory;
+    // The certificates trustManagerFactory was built from, or null if it was not built from plain certificates.
+    private X509Certificate[] trustCertCollection;
     private String keyPassword;
     private KeyManagerFactory keyManagerFactory;
+    // The certificate chain keyManagerFactory was built from, or null if it was not built from a plain chain.
+    private X509Certificate[] keyCertChain;
     private long sessionCacheSize = 20480;
     private long sessionTimeout = 300;
     private ClientAuth clientAuth = ClientAuth.NONE;
@@ -223,6 +228,9 @@ public final class QuicSslContextBuilder {
 
     /**
      * Enable / disable the usage of early data.
+     * <p>
+     * Early data is never accepted by a server that is configured with {@link ClientAuth#REQUIRE}, independent of
+     * this setting, as the client certificate can not be verified before the handshake completed.
      */
     public QuicSslContextBuilder earlyData(boolean enabled) {
         this.earlyData = enabled;
@@ -276,10 +284,16 @@ public final class QuicSslContextBuilder {
      */
     public QuicSslContextBuilder trustManager(X509Certificate @Nullable ... trustCertCollection) {
         try {
-            return trustManager(QuicheQuicSslContext.buildTrustManagerFactory0(trustCertCollection));
+            trustManager(QuicheQuicSslContext.buildTrustManagerFactory0(trustCertCollection));
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
+        // Remember the certificates as (unlike a custom TrustManagerFactory) they can be used to tell if two
+        // contexts trust the same certificates. Needs to be done after the TrustManagerFactory was set as this
+        // forgets about them.
+        this.trustCertCollection = trustCertCollection == null ? null :
+            Arrays.copyOf(trustCertCollection, trustCertCollection.length);
+        return this;
     }
 
     /**
@@ -290,6 +304,7 @@ public final class QuicSslContextBuilder {
      */
     public QuicSslContextBuilder trustManager(@Nullable TrustManagerFactory trustManagerFactory) {
         this.trustManagerFactory = trustManagerFactory;
+        this.trustCertCollection = null;
         return this;
     }
 
@@ -349,10 +364,14 @@ public final class QuicSslContextBuilder {
             KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
                     KeyManagerFactory.getDefaultAlgorithm());
             keyManagerFactory.init(ks, pass);
-            return keyManager(keyManagerFactory, keyPassword);
+            keyManager(keyManagerFactory, keyPassword);
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
+        // Remember the chain as (unlike a custom KeyManagerFactory) it can be used to tell if two contexts present
+        // the same certificates. Needs to be done after the KeyManagerFactory was set as this forgets about it.
+        this.keyCertChain = certChain == null ? null : Arrays.copyOf(certChain, certChain.length);
+        return this;
     }
 
     /**
@@ -363,6 +382,7 @@ public final class QuicSslContextBuilder {
             @Nullable KeyManagerFactory keyManagerFactory, @Nullable String keyPassword) {
         this.keyPassword = keyPassword;
         this.keyManagerFactory = keyManagerFactory;
+        this.keyCertChain = null;
         return this;
     }
 
@@ -381,7 +401,8 @@ public final class QuicSslContextBuilder {
      * Application protocol negotiation configuration. {@code null} disables support.
      */
     public QuicSslContextBuilder applicationProtocols(String @Nullable ... applicationProtocols) {
-        this.applicationProtocols = applicationProtocols;
+        this.applicationProtocols = applicationProtocols == null ? null :
+            Arrays.copyOf(applicationProtocols, applicationProtocols.length);
         return this;
     }
 
@@ -436,11 +457,11 @@ public final class QuicSslContextBuilder {
     public QuicSslContext build() {
         if (forServer) {
             return new QuicheQuicSslContext(true, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
-                    keyManagerFactory, keyPassword, mapping, earlyData, keylog,
+                    trustCertCollection, keyManagerFactory, keyCertChain, keyPassword, mapping, earlyData, keylog,
                     applicationProtocols, null, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return new QuicheQuicSslContext(false, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
-                    keyManagerFactory, keyPassword, mapping, earlyData, keylog,
+                    trustCertCollection, keyManagerFactory, keyCertChain, keyPassword, mapping, earlyData, keylog,
                     applicationProtocols, endpointIdentificationAlgorithm, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
