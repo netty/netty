@@ -79,6 +79,10 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         return file != null;
     }
 
+    FileChannel fileChannel() {
+        return file;
+    }
+
     /**
      * Explicitly open the underlying file-descriptor if not done yet.
      */
