@@ -43,7 +43,6 @@ import org.apache.mina.filter.codec.ProtocolDecoderOutput;
 import org.apache.mina.filter.codec.ProtocolEncoder;
 import org.apache.mina.filter.codec.ProtocolEncoderOutput;
 import org.apache.mina.transport.socket.DatagramAcceptor;
-import org.apache.mina.transport.socket.DatagramSessionConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -111,8 +110,6 @@ class TestDnsServer extends DnsServer {
                                 new TestDnsProtocolUdpCodecFactory(dropRecordType)));
             }
         });
-
-        ((DatagramSessionConfig) acceptor.getSessionConfig()).setReuseAddress(true);
 
         // Start the listener
         acceptor.bind();
