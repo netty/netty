@@ -533,7 +533,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
 
     @Override
     public boolean containsTimeMillis(CharSequence name, long value) {
-        return contains(name, String.valueOf(value));
+        return contains(name, INSTANCE.convertTimeMillis(value));
     }
 
     @Override
