@@ -145,8 +145,9 @@ public class IoUringFileRegionProviderTest {
             Future<Void> write = client.write(region);
             if (lazy) {
                 // Filtering a queued write must preserve the File constructor's lazy opening.
-                client.eventLoop().submit(() -> {
+                client.executor().submit(() -> {
                     assertThat(region.isOpen()).isFalse();
+                    return null;
                 }).sync();
             }
             client.flush();
