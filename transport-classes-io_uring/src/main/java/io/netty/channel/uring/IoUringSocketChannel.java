@@ -157,7 +157,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 // This should never happen, anyway fallback to single write.
                 return scheduleWriteSingle(in.current());
             }
-            //at least one buffer in the batch exceeds `IO_URING_WRITE_ZERO_COPY_THRESHOLD`.
+            // Only use zero copy if collection can reach a large buffer.
             if (zeroCopyBatch.scannedLarge() && zeroCopyBatch.allocateMerged(alloc())) {
                 try {
                     zeroCopyBatch.collect(in, iovArray, offset);
@@ -314,8 +314,8 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         }
 
         /**
-         * Returns {@code true} if one of the scanned messages reaches the threshold. The result is only valid
-         * once.
+         * Returns {@code true} if a scanned iovec reaches the threshold and the preceding small iovecs fit in the
+         * merged buffer. The result is only valid once.
          */
         boolean scannedLarge() {
             boolean large = hasLarge;
@@ -362,7 +362,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     long length = iovArray.length(i);
                     if (length < threshold) {
                         smallBytes += length;
-                    } else {
+                    } else if (smallBytes <= MERGED_MAX_SIZE) {
                         hasLarge = true;
                     }
                 }

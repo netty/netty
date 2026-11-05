@@ -17,7 +17,9 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -38,6 +40,8 @@ import io.netty.channel.unix.Buffer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -46,8 +50,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.channel.uring.IoUringRefCntZeroAwaiter.awaitRefCntZero;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,15 +119,63 @@ public class IoUringSendmsgZCIovTest {
         assertArrayEquals(new long[] {16, 32, 64}, recorded.iovLengths.get(0));
     }
 
-    @Test
-    public void testSmallBuffersThatDoNotFitIntoTheMergedBufferAreWrittenLater() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testSmallBuffersBeforeLargeBufferExceedMergedCapacityUseWritev(boolean composite) throws Exception {
         // 80KiB of small buffers do not fit into the merged buffer, which is limited to 64KiB by default.
         int small = 16 * 1024;
-        Recorded recorded = writeAndVerify(32 * 1024, messages(small, small, small, small, small, 64 * 1024));
+        FailingDirectByteBufAllocator allocator = new FailingDirectByteBufAllocator();
+        Recorded recorded = writeAndVerify(32 * 1024, allocator,
+                messages(composite, small, small, small, small, small, 64 * 1024));
 
-        assertEquals(Native.IORING_OP_SENDMSG_ZC, recorded.ops.get(0).opcode());
-        assertArrayEquals(new long[] {64 * 1024}, recorded.iovLengths.get(0));
-        assertTrue(recorded.ops.size() > 1);
+        assertThat(recorded.ops.get(0).opcode()).isEqualTo(Native.IORING_OP_WRITEV);
+        assertThat(recorded.iovLengths.get(0)).containsExactly(small, small, small, small, small, 64 * 1024);
+        assertThat(allocator.directAllocations.get()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testSmallBufferBeforeLargeBufferOnlyPartiallyFitsUseWritev(boolean composite) throws Exception {
+        int small = 24 * 1024;
+        FailingDirectByteBufAllocator allocator = new FailingDirectByteBufAllocator();
+        Recorded recorded = writeAndVerify(32 * 1024, allocator,
+                messages(composite, small, small, small, 64 * 1024));
+
+        assertThat(recorded.ops.get(0).opcode()).isEqualTo(Native.IORING_OP_WRITEV);
+        assertThat(recorded.iovLengths.get(0)).containsExactly(small, small, small, 64 * 1024);
+        assertThat(allocator.directAllocations.get()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testSmallBuffersBeforeLargeBufferExactlyFitMergedCapacity(boolean composite) throws Exception {
+        int small = 16 * 1024;
+        Recorded recorded = writeAndVerify(32 * 1024,
+                messages(composite, small, small, small, small, 64 * 1024));
+
+        assertThat(recorded.ops.get(0).opcode()).isEqualTo(Native.IORING_OP_SENDMSG_ZC);
+        assertThat(recorded.iovLengths.get(0)).containsExactly(64 * 1024, 64 * 1024);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testSmallBuffersAfterLargeBufferExceedMergedCapacityKeepZeroCopy(boolean composite) throws Exception {
+        int small = 16 * 1024;
+        Recorded recorded = writeAndVerify(32 * 1024,
+                messages(composite, 64 * 1024, small, small, small, small, small));
+
+        assertThat(recorded.ops.get(0).opcode()).isEqualTo(Native.IORING_OP_SENDMSG_ZC);
+        assertThat(recorded.iovLengths.get(0)).containsExactly(64 * 1024, 64 * 1024);
+    }
+
+    @Test
+    public void testMergedAllocationFailureUsesWritev() throws Exception {
+        FailingDirectByteBufAllocator allocator = new FailingDirectByteBufAllocator();
+        Recorded recorded = writeAndVerify(THRESHOLD, allocator, messages(16, 2048, 32));
+
+        assertThat(recorded.ops.get(0).opcode()).isEqualTo(Native.IORING_OP_WRITEV);
+        assertThat(recorded.iovLengths.get(0)).containsExactly(16, 2048, 32);
+        assertThat(allocator.directAllocations.get()).isEqualTo(1);
     }
 
     /**
@@ -129,6 +183,11 @@ public class IoUringSendmsgZCIovTest {
      * released.
      */
     private static Recorded writeAndVerify(int threshold, ByteBuf[]... batches) throws Exception {
+        return writeAndVerify(threshold, null, batches);
+    }
+
+    private static Recorded writeAndVerify(int threshold, ByteBufAllocator allocator, ByteBuf[]... batches)
+            throws Exception {
         ByteArrayOutputStream expected = new ByteArrayOutputStream();
         for (ByteBuf[] batch : batches) {
             for (ByteBuf message : batch) {
@@ -144,6 +203,9 @@ public class IoUringSendmsgZCIovTest {
             ServerChannel server = receivingServer(group, expected.size(), received);
             Channel client = connect(group, server);
             client.setOption(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, threshold);
+            if (allocator != null) {
+                client.config().setAllocator(allocator);
+            }
             client.eventLoop().execute(() -> {
                 for (ByteBuf[] batch : batches) {
                     for (ByteBuf message : batch) {
@@ -163,6 +225,11 @@ public class IoUringSendmsgZCIovTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    private static ByteBuf[] messages(boolean composite, int... sizes) {
+        ByteBuf[] messages = messages(sizes);
+        return composite ? new ByteBuf[] {Unpooled.compositeBuffer().addComponents(true, messages)} : messages;
     }
 
     private static ByteBuf[] messages(int... sizes) {
@@ -285,6 +352,26 @@ public class IoUringSendmsgZCIovTest {
     private static final class Recorded {
         final List<IoUringIoOps> ops = new CopyOnWriteArrayList<>();
         final List<long[]> iovLengths = new CopyOnWriteArrayList<>();
+    }
+
+    private static final class FailingDirectByteBufAllocator extends AbstractByteBufAllocator {
+        final AtomicInteger directAllocations = new AtomicInteger();
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return Unpooled.buffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            directAllocations.incrementAndGet();
+            throw new OutOfMemoryError("merged allocation failure");
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
     }
 
     private static final class RecordingIoUringIoHandler implements IoHandler {
