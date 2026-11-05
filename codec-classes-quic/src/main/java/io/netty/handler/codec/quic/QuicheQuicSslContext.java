@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SessionIdContextBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
@@ -164,13 +165,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
                          String[] applicationProtocols, String endpointIdentificationAlgorithm,
+                         SessionIdContextBuilder sessionIdContext,
                          Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         final X509TrustManager trustManager;
-        final boolean hasExternalTrustManagerFactorySpecified = trustManagerFactory != null;
         if (trustManagerFactory == null) {
             try {
                 trustManagerFactory =
@@ -290,14 +291,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 // Derive the session_id_context from what distinguishes this context, so sessions can not be
                 // resumed across QuicSslContext instances that differ in their ClientAuth mode or trust / key
                 // configuration, even if session-ticket keys or a session cache are shared between them.
-                // The trust and key material can only be digested if it was handed to us as plain certificates.
-                // Anything backed by a TrustManagerFactory / KeyManagerFactory we did not create ourselves is
-                // opaque to us, so we can not tell if two of them behave the same.
-                boolean opaqueConfiguration = keyCertChain == null ||
-                        (trustCertCollection == null && hasExternalTrustManagerFactorySpecified);
-                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(),
-                        deriveSessionIdContext(this.clientAuth, keyCertChain, trustCertCollection,
-                                opaqueConfiguration))) {
+                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(), sessionIdContext.build())) {
                     // Without a session_id_context we must not continue as resumption would not be scoped.
                     String msg = "failed to set session id context";
                     String lastError = BoringSSL.ERR_last_error();
