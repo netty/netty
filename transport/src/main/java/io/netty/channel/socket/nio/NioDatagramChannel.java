@@ -371,11 +371,14 @@ public final class NioDatagramChannel
 
     @Override
     public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+        final NetworkInterface iface;
         try {
-            joinGroup(multicastAddress, defaultMulticastInterface(), null, promise);
+            iface = defaultMulticastInterface();
         } catch (SocketException e) {
             promise.setFailure(e);
+            return;
         }
+        joinGroup(multicastAddress, iface, null, promise);
     }
 
     /**
@@ -502,7 +505,7 @@ public final class NioDatagramChannel
                     if (networkInterface.equals(key.networkInterface())) {
                         try {
                             key.block(sourceToBlock);
-                        } catch (IOException e) {
+                        } catch (Throwable e) {
                             promise.setFailure(e);
                             return;
                         }
@@ -520,11 +523,14 @@ public final class NioDatagramChannel
     @Override
     public void block(
             InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
+        final NetworkInterface iface;
         try {
-            block(multicastAddress, defaultMulticastInterface(), sourceToBlock, promise);
+            iface = defaultMulticastInterface();
         } catch (SocketException e) {
             promise.setFailure(e);
+            return;
         }
+        block(multicastAddress, iface, sourceToBlock, promise);
     }
 
     @Override
