@@ -16,13 +16,16 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.internal.EmptyArrays;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import java.net.Socket;
@@ -30,6 +33,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class QuicSslContextTest {
@@ -79,6 +83,15 @@ public class QuicSslContextTest {
                 return null;
             }
         }, null), 20, 50, null);
+    }
+
+    @Test
+    public void testBuilderAcceptsNullTrustAndKeyManagerFactory() {
+        assertDoesNotThrow(() -> QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .trustManager((TrustManagerFactory) null)
+                .keyManager((KeyManagerFactory) null, null)
+                .keyManager((KeyManagerFactory) null, "password"));
     }
 
     private void testSessionContextSettings(QuicSslContextBuilder builder, int size, int timeout,
