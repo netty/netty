@@ -18,7 +18,7 @@ package io.netty.channel.nio;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -63,7 +63,7 @@ public class NioEventLoopShutdownTest {
 
                 CountDownLatch taskStarted = new CountDownLatch(1);
                 CountDownLatch releaseTask = new CountDownLatch(1);
-                child.eventLoop().execute(() -> {
+                child.executor().execute(() -> {
                     taskStarted.countDown();
                     awaitQuietly(releaseTask);
                 });
@@ -94,7 +94,7 @@ public class NioEventLoopShutdownTest {
         Channel server = null;
         try {
             // Completes once the ServerBootstrapAcceptor queued the child registration on the worker.
-            ChannelInboundHandlerAdapter acceptObserver = new ChannelInboundHandlerAdapter() {
+            ChannelInboundHandler acceptObserver = new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     ctx.fireChannelRead(msg);
@@ -149,14 +149,14 @@ public class NioEventLoopShutdownTest {
                 }
             }
         };
-        NioSocketChannel channel = new NioSocketChannel();
+        NioSocketChannel channel = new NioSocketChannel(loop);
         try {
             loop.submit(() -> { }).sync();
             assertTrue(loop.trySuspend());
             assertTrue(ioLoopExited.await(10, TimeUnit.SECONDS));
 
             // The executor is still ST_SUSPENDING, so this only queues the registration without starting a thread.
-            loop.register(channel);
+            channel.register();
             Future<?> shutdown = loop.shutdownGracefully(0, 15, TimeUnit.SECONDS);
             resume.countDown();
             shutdown.sync();
@@ -164,13 +164,14 @@ public class NioEventLoopShutdownTest {
             assertTrue(channel.closeFuture().await(10, TimeUnit.SECONDS), "channel leaked after shutdown");
         } finally {
             resume.countDown();
-            channel.unsafe().closeForcibly();
+            // The event loop may already be terminated, so close the underlying socket directly.
+            ((AbstractNioChannel) channel).javaChannel().close();
             loop.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         }
     }
 
     private static Channel bind(EventLoopGroup boss, EventLoopGroup worker, CompletableFuture<Channel> accepted,
-                                ChannelInboundHandlerAdapter serverHandler) throws InterruptedException {
+                                ChannelInboundHandler serverHandler) throws InterruptedException {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(boss, worker)
                 .channel(NioServerSocketChannel.class)
@@ -184,7 +185,7 @@ public class NioEventLoopShutdownTest {
         if (serverHandler != null) {
             bootstrap.handler(serverHandler);
         }
-        return bootstrap.bind("127.0.0.1", 0).sync().channel();
+        return bootstrap.bind("127.0.0.1", 0).sync().getNow();
     }
 
     private static Socket connect(Channel server) throws IOException {
