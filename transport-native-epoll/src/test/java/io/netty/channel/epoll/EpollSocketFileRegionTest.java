@@ -25,6 +25,10 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketFileRegionTest;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -41,19 +45,21 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollSocketFileRegionTest extends SocketFileRegionTest {
 
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     public void testZipFileRegion(TestInfo testInfo) throws Throwable {
+        assumeTrue(PlatformDependent.javaVersion() >= 7);
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
+            @SuppressJava6Requirement(reason = "Guarded by version check")
             public void run(ServerBootstrap sb, Bootstrap cb) throws Throwable {
                 final byte[] data = new byte[256 * 1024 + 73];
                 new Random(0).nextBytes(data);
@@ -62,12 +68,12 @@ public class EpollSocketFileRegionTest extends SocketFileRegionTest {
                 URI uri = URI.create("jar:" + archive.resolve("file.zip").toUri());
                 Channel server = null;
                 Channel client = null;
-                final CompletableFuture<byte[]> received =
-                        new CompletableFuture<byte[]>();
+                final Promise<byte[]> received = ImmediateEventExecutor.INSTANCE.newPromise();
                 final AtomicReference<Channel> child =
                         new AtomicReference<Channel>();
-                try (FileSystem zip = FileSystems.newFileSystem(
-                        uri, Collections.singletonMap("create", "true"))) {
+                FileSystem zip = null;
+                try {
+                    zip = FileSystems.newFileSystem(uri, Collections.singletonMap("create", "true"));
                     Path path = zip.getPath("/file");
                     Files.write(path, data);
                     sb.childHandler(new SimpleChannelInboundHandler<ByteBuf>() {
@@ -85,13 +91,13 @@ public class EpollSocketFileRegionTest extends SocketFileRegionTest {
                             msg.readBytes(bytes, offset, length);
                             offset += length;
                             if (offset == bytes.length) {
-                                received.complete(bytes);
+                                received.trySuccess(bytes);
                             }
                         }
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            received.completeExceptionally(cause);
+                            received.tryFailure(cause);
                             ctx.close();
                         }
                     });
@@ -114,8 +120,14 @@ public class EpollSocketFileRegionTest extends SocketFileRegionTest {
                     if (server != null) {
                         server.close().syncUninterruptibly();
                     }
-                    Files.deleteIfExists(archive.resolve("file.zip"));
-                    Files.delete(archive);
+                    try {
+                        if (zip != null) {
+                            zip.close();
+                        }
+                    } finally {
+                        Files.deleteIfExists(archive.resolve("file.zip"));
+                        Files.delete(archive);
+                    }
                 }
             }
         });
