@@ -54,20 +54,17 @@
     </dependency>
     <!--
       Used by io.netty.nativeimage.ChannelHandlerMetadataUtil.
-      Optional, so they do not leak onto the test classpath of every module depending on this one;
-      modules running NativeImageHandlerMetadataTest declare them explicitly.
+      Not optional, so modules running NativeImageHandlerMetadataTest get them transitively.
     -->
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
       <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
