@@ -16,7 +16,8 @@ RUN apt update && apt install -y \
     cmake \
     ninja-build \
     perl \
-    golang
+    golang \
+    libclang-dev
 
 USER vscode
 RUN curl -s "https://beta.sdkman.io?ci=true" | bash
