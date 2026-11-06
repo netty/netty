@@ -18,7 +18,6 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.MqttDecoder.DecoderState;
@@ -68,6 +67,9 @@ import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS_MAXIMUM;
 import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
 import static io.netty.handler.codec.mqtt.MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE;
 import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect.MALFORMED_PACKET;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect.PROTOCOL_ERROR;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect.TOPIC_NAME_INVALID;
 import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlingPolicy;
 
 /**
@@ -247,7 +249,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         switch (messageType) {
             case PUBLISH:
                 if (qosLevel == 3) {
-                    throw new DecoderException("Illegal QOS Level in fixed header of PUBLISH message ("
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal QOS Level in fixed header of PUBLISH message ("
                             + qosLevel + ')');
                 }
                 break;
@@ -256,15 +259,16 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case SUBSCRIBE:
             case UNSUBSCRIBE:
                 if (dupFlag) {
-                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal BIT 3 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 1) {
-                    throw new DecoderException("Illegal QOS Level in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal QOS Level in fixed header of " + messageType
                             + " message, must be 1, found " + qosLevel);
                 }
                 if (retain) {
-                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal BIT 0 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 break;
@@ -281,20 +285,22 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case SUBACK:
             case UNSUBACK:
                 if (dupFlag) {
-                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal BIT 3 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 0) {
-                    throw new DecoderException("Illegal BIT 2 or 1 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal BIT 2 or 1 in fixed header of " + messageType
                             + " message, must be 0, found " + qosLevel);
                 }
                 if (retain) {
-                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal BIT 0 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 break;
             default:
-                throw new DecoderException("Unknown message type, do not know how to validate fixed header");
+                throw new MqttDecoderException(MALFORMED_PACKET,
+                        "Unknown message type, do not know how to validate fixed header");
         }
 
         int remainingLength = parseRemainingLength(buffer, messageType, maxAllowedRemainingBytes);
@@ -320,7 +326,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         }
 
         // MQTT protocol limits Remaining Length to 4 bytes
-        throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
+        throw new MqttDecoderException(MALFORMED_PACKET, "remaining length exceeds 4 digits (" + messageType + ')');
     }
 
     /**
@@ -365,7 +371,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 return null;
             default:
                 //shouldn't reach here
-                throw new DecoderException("Unknown message type: " + mqttFixedHeader.messageType());
+                throw new MqttDecoderException(MALFORMED_PACKET,
+                        "Unknown message type: " + mqttFixedHeader.messageType());
         }
     }
 
@@ -401,7 +408,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 // MQTT v3.1.1: The Server MUST validate that the reserved flag in the CONNECT Control Packet is
                 // set to zero and disconnect the Client if it is not zero.
                 // See https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349230
-                throw new DecoderException("non-zero reserved flag");
+                throw new MqttDecoderException(MALFORMED_PACKET, "non-zero reserved flag");
             }
         }
 
@@ -536,7 +543,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(ctx);
         final Result<String> decodedTopic = decodeString(buffer, maxAllowedRemainingBytes);
         if (!isValidPublishTopicName(decodedTopic.value)) {
-            throw new DecoderException("invalid publish topic name: " + decodedTopic.value + " (contains wildcards)");
+            throw new MqttDecoderException(TOPIC_NAME_INVALID,
+                    "invalid publish topic name: " + decodedTopic.value + " (contains wildcards)");
         }
         int numberOfBytesConsumed = decodedTopic.numberOfBytesConsumed;
         maxAllowedRemainingBytes -= decodedTopic.numberOfBytesConsumed;
@@ -569,7 +577,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static int decodeMessageId(ByteBuf buffer) {
         final int messageId = decodeMsbLsb(buffer);
         if (!isValidMessageId(messageId)) {
-            throw new DecoderException("invalid messageId: " + messageId);
+            throw new MqttDecoderException(PROTOCOL_ERROR, "invalid messageId: " + messageId);
         }
         return messageId;
     }
@@ -766,7 +774,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private void validateNoBytesRemain(int numberOfBytesConsumed) {
         bytesRemainingInVariablePart -= numberOfBytesConsumed;
         if (bytesRemainingInVariablePart != 0) {
-            throw new DecoderException(
+            throw new MqttDecoderException(MALFORMED_PACKET,
                     "non-zero remaining payload bytes: " +
                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
         }
@@ -827,13 +835,13 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             s = utf8Decoder.decode(nioBuf).toString();
         } catch (CharacterCodingException e) {
             buffer.skipBytes(length);
-            throw new DecoderException("invalid UTF-8 string in MQTT packet", e);
+            throw new MqttDecoderException(MALFORMED_PACKET, "invalid UTF-8 string in MQTT packet", e);
         }
         buffer.skipBytes(length);
         // The UTF-8 Encoded String MUST NOT include an encoding
         // of the null character U+0000. If received, this is a Malformed Packet.
         if (s.indexOf('\u0000') >= 0) {
-            throw new DecoderException("MQTT UTF-8 Encoded String must not contain U+0000");
+            throw new MqttDecoderException(MALFORMED_PACKET, "MQTT UTF-8 Encoded String must not contain U+0000");
         }
         return s;
     }
@@ -902,7 +910,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             multiplier *= 128;
         }
 
-        throw new DecoderException("MQTT protocol limits Remaining Length to 4 bytes");
+        throw new MqttDecoderException(MALFORMED_PACKET, "MQTT protocol limits Remaining Length to 4 bytes");
     }
 
     private static final class Result<T> {
@@ -1011,7 +1019,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                     break;
                 default:
                     //shouldn't reach here
-                    throw new DecoderException("Unknown property type: " + propertyIdValue);
+                    throw new MqttDecoderException(MALFORMED_PACKET, "Unknown property type: " + propertyIdValue);
             }
             if (numberOfBytesConsumed - propertiesLengthNumBytes > totalPropertiesLength) {
                 // The typed value of the last decoded property read past the declared Property
@@ -1019,7 +1027,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 // are left in the Properties field. MQTT 5.0 section 2.2.2.2 states a Property
                 // whose value is not of the specified data type is a Malformed Packet, so reject
                 // it instead of letting the read spill into the following packet section.
-                throw new DecoderException(
+                throw new MqttDecoderException(MALFORMED_PACKET,
                     "MQTT5 property overran declared Property Length: propertyId=" + propertyIdValue);
             }
         }
