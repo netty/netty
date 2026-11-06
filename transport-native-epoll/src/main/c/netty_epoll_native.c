@@ -400,8 +400,14 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
                     // is smaller then 1 ms.
                     millis >= millisThreshold ||
                     tvSec > 0) {
-                millis += tvSec * 1000;
-                result = netty_epoll_wait(env, efd, ev, len, millis);
+                // tvSec * 1000 can overflow an int for large delays, so calculate it with 64 bits and clamp it to
+                // INT_MAX. If we clamp epoll_wait(...) just returns earlier and the EventLoop will calculate the
+                // remaining delay again.
+                int64_t timeoutMillis = (int64_t) tvSec * 1000 + millis;
+                if (timeoutMillis > INT_MAX) {
+                    timeoutMillis = INT_MAX;
+                }
+                result = netty_epoll_wait(env, efd, ev, len, (int) timeoutMillis);
                 return EPOLL_WAIT_RESULT(result, armTimer);
             }
         }

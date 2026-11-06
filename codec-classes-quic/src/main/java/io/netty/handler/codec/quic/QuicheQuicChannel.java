@@ -33,6 +33,7 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
@@ -49,6 +50,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -272,12 +274,44 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         switch (connection.engine().getHandshakeStatus()) {
             case NOT_HANDSHAKING:
             case FINISHED:
+                SSLHandshakeException rejection = rejectIfClientCertificateRequiredButMissing(connection.engine());
+                if (rejection != null) {
+                    handshakeCompletionNotified = true;
+                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(rejection));
+                    // Terminate the connection with the "certificate_required" TLS alert (RFC 8446, Section 6.2)
+                    // mapped to a QUIC CRYPTO_ERROR (RFC 9000, Section 4.8): 0x100 + alert code.
+                    close(false, 0x100 + 116, Unpooled.EMPTY_BUFFER, newPromise());
+                    return;
+                }
                 handshakeCompletionNotified = true;
                 pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
                 break;
             default:
                 break;
         }
+    }
+
+    /**
+     * Defense in depth for https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc : a client
+     * certificate is not re-requested when a session is resumed (e.g. via a session ticket), so a session which
+     * was established without a client certificate under a more lenient {@link ClientAuth} configuration must
+     * never be allowed to satisfy {@link ClientAuth#REQUIRE} here, even if the underlying native library would
+     * otherwise consider the (abbreviated) handshake successful.
+     */
+    @Nullable
+    private static SSLHandshakeException rejectIfClientCertificateRequiredButMissing(QuicheQuicSslEngine engine) {
+        if (engine.getUseClientMode() || engine.ctx.clientAuth != ClientAuth.REQUIRE) {
+            return null;
+        }
+        try {
+            if (engine.getSession().getPeerCertificates().length > 0) {
+                return null;
+            }
+        } catch (SSLPeerUnverifiedException e) {
+            // Fall through, no client certificate was presented.
+        }
+        return new SSLHandshakeException(
+                "client did not present a certificate, but is required to under ClientAuth.REQUIRE");
     }
 
     @Override

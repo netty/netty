@@ -91,7 +91,8 @@ public class DnsQueryContextTest {
                     new DnsRecord[0],
                     dummyPromise,
                     /* socketBootstrap */ null,
-                    /* retryWithTcpOnTimeout */ false);
+                    /* retryWithTcpOnTimeout */ false,
+                    /* protection */ null);
 
             // Drain all 65536 IDs from the id space for nameServerAddr.
             DnsQueryIdSpace idSpace = new DnsQueryIdSpace();
@@ -124,7 +125,8 @@ public class DnsQueryContextTest {
                     new DnsRecord[0],
                     testPromise,
                     /* socketBootstrap */ null,
-                    /* retryWithTcpOnTimeout */ false);
+                    /* retryWithTcpOnTimeout */ false,
+                    /* protection */ null);
 
             // Invoke writeQuery — this should detect id == -1, call finishFailure(),
             // and return WITHOUT writing anything to the channel.
