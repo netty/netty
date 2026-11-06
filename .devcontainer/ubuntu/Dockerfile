@@ -17,7 +17,8 @@ RUN apt update && apt install -y \
     ninja-build \
     perl \
     golang \
-    libclang-dev
+    libclang-dev \
+    patchelf
 
 USER vscode
 RUN curl -s "https://beta.sdkman.io?ci=true" | bash
