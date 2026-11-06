@@ -30,6 +30,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,6 +39,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -246,7 +248,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
-            return new IoUringFileRegion((DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel fileChannel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened. Keep opening it deferred until the write.
+            if (fileChannel == null || UnixChannelUtil.isFileChannelImpl(fileChannel)) {
+                return new IoUringFileRegion(region);
+            }
         }
 
         if (msg instanceof FileRegion) {
