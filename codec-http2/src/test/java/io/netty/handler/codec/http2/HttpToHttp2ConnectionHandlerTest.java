@@ -31,13 +31,20 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
@@ -76,6 +83,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -404,6 +412,117 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertFalse(writeFuture.isSuccess());
         cause = writeFuture.cause();
         assertInstanceOf(Http2NoMoreStreamIdsException.class, cause);
+    }
+
+    @Test
+    public void testInformationalResponseDoesNotEndStream() throws Exception {
+        sendExpectContinueRequest();
+
+        // The server sends 100 (Continue) and then the final response on the same stream.
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.CONTINUE);
+        continueResponse.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture continueFuture = serverConnectedChannel.writeAndFlush(continueResponse);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture responseFuture = serverConnectedChannel.writeAndFlush(response);
+        assertWriteSucceeded(continueFuture);
+        assertWriteSucceeded(responseFuture);
+
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("100")),
+                eq(0), anyShort(), eq(false), eq(0), eq(false));
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("200")),
+                eq(0), anyShort(), eq(false), eq(0), eq(true));
+    }
+
+    @Test
+    public void testInformationalResponseContentIsDropped() throws Exception {
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                ByteBuf data = (ByteBuf) in.getArguments()[2];
+                receivedBuffers.add(data.toString(UTF_8));
+                return data.readableBytes() + (Integer) in.getArguments()[3];
+            }
+        }).when(clientListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+        sendExpectContinueRequest();
+
+        // As HttpResponseEncoder does, the content and the Content-Length of a 100 (Continue) are not sent.
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.CONTINUE,
+                Unpooled.copiedBuffer("dropped", UTF_8));
+        continueResponse.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        continueResponse.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 7);
+        ChannelFuture continueFuture = serverConnectedChannel.writeAndFlush(continueResponse);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("hello", UTF_8));
+        response.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture responseFuture = serverConnectedChannel.writeAndFlush(response);
+        assertWriteSucceeded(continueFuture);
+        assertWriteSucceeded(responseFuture);
+        assertEquals(0, continueResponse.refCnt());
+
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("100")),
+                eq(0), anyShort(), eq(false), eq(0), eq(false));
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("200")),
+                eq(0), anyShort(), eq(false), eq(0), eq(false));
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onDataRead(
+                any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0), eq(true));
+        assertEquals(Collections.singletonList("hello"), receivedBuffers);
+    }
+
+    @Test
+    public void testNonFullInformationalResponseDoesNotEndStream() throws Exception {
+        sendExpectContinueRequest();
+
+        // As with HttpResponseEncoder, the content up to and including the next LastHttpContent is not sent.
+        HttpResponse continueResponse = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.CONTINUE);
+        continueResponse.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture continueFuture = serverConnectedChannel.write(continueResponse);
+        HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer("dropped", UTF_8));
+        ChannelFuture contentFuture = serverConnectedChannel.write(content);
+        ChannelFuture lastContentFuture = serverConnectedChannel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        ChannelFuture responseFuture = serverConnectedChannel.writeAndFlush(response);
+        assertWriteSucceeded(continueFuture);
+        assertWriteSucceeded(contentFuture);
+        assertWriteSucceeded(lastContentFuture);
+        assertWriteSucceeded(responseFuture);
+        assertEquals(0, content.refCnt());
+
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("100")),
+                eq(0), anyShort(), eq(false), eq(0), eq(false));
+        verify(clientListener, timeout(SECONDS.toMillis(WAIT_TIME_SECONDS))).onHeadersRead(
+                any(ChannelHandlerContext.class), eq(3), eq(new DefaultHttp2Headers().status("200")),
+                eq(0), anyShort(), eq(false), eq(0), eq(true));
+        verify(clientListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
+                any(ByteBuf.class), anyInt(), anyBoolean());
+    }
+
+    private void sendExpectContinueRequest() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST, "/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
+        httpHeaders.set(HttpHeaderNames.HOST, "localhost");
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        httpHeaders.set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
+        ChannelPromise writePromise = newPromise();
+        clientChannel.writeAndFlush(request, writePromise);
+        assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writePromise.isSuccess());
+        awaitRequests();
+    }
+
+    private static void assertWriteSucceeded(ChannelFuture future) {
+        assertTrue(future.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(future.isSuccess(), String.valueOf(future.cause()));
     }
 
     @Test
