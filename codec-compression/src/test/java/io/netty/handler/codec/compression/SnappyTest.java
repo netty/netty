@@ -25,9 +25,11 @@ import org.junit.jupiter.api.function.Executable;
 import static io.netty.handler.codec.compression.Snappy.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 
 public class SnappyTest {
     private final Snappy snappy = new Snappy();
@@ -101,6 +103,51 @@ public class SnappyTest {
         } finally {
             in.release();
             out.release();
+        }
+    }
+
+    @Test
+    public void testDecodeLiteralWith4ByteLength() {
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+            0x05, // preamble length
+            (byte) (63 << 2), // literal tag + 4 byte length
+            0x04, 0x00, 0x00, 0x00, // length - 1
+            0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
+        });
+        ByteBuf out = Unpooled.buffer(5);
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 0x6e, 0x65, 0x74, 0x74, 0x79 });
+        try {
+            snappy.decode(in, out);
+            assertEquals(expected, out);
+        } finally {
+            in.release();
+            out.release();
+            expected.release();
+        }
+    }
+
+    @Test
+    public void testDecodeLiteralWith4ByteLengthThatIsTooLarge() {
+        // The length - 1 is an unsigned 32-bit integer, none of these can be handled.
+        for (final int length : new int[] { 0x7FFFFFFF, 0x80000000, 0xFFFFFFFE, 0xFFFFFFFF }) {
+            final ByteBuf in = Unpooled.buffer();
+            in.writeByte(0x05); // preamble length
+            in.writeByte(63 << 2); // literal tag + 4 byte length
+            in.writeIntLE(length);
+            in.writeZero(16);
+            final ByteBuf out = Unpooled.buffer(5);
+            try {
+                assertThrows(DecompressionException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        snappy.decode(in, out);
+                    }
+                }, "length: " + length);
+            } finally {
+                in.release();
+                out.release();
+                snappy.reset();
+            }
         }
     }
 
@@ -248,6 +295,35 @@ public class SnappyTest {
     }
 
     @Test
+    public void encodeWithNonZeroReaderIndex() throws Exception {
+        String srcStr = "Netty has been designed carefully with the experiences " +
+                   "earned from the implementation of a lot of protocols " +
+                   "such as FTP, SMTP, HTTP, and various binary and " +
+                   "text-based legacy protocols";
+        byte[] src = srcStr.getBytes(StandardCharsets.US_ASCII);
+        ByteBuf expectedIn = Unpooled.wrappedBuffer(src);
+        ByteBuf expected = Unpooled.buffer();
+        snappy.encode(expectedIn, expected, src.length);
+
+        ByteBuf in = Unpooled.buffer().writeZero(16).writeBytes(src);
+        in.skipBytes(16);
+        ByteBuf out = Unpooled.buffer();
+        snappy.encode(in, out, in.readableBytes());
+        assertEquals(expected, out, "Encoded result must not depend on the reader index");
+
+        ByteBuf outDecoded = Unpooled.buffer();
+        snappy.decode(out, outDecoded);
+        assertEquals(CharBuffer.wrap(srcStr),
+            CharBuffer.wrap(outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII)));
+
+        expectedIn.release();
+        expected.release();
+        in.release();
+        out.release();
+        outDecoded.release();
+    }
+
+    @Test
     public void testCalculateChecksum() {
         ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
                 'n', 'e', 't', 't', 'y'
@@ -292,6 +368,61 @@ public class SnappyTest {
             });
         } finally {
             input.release();
+        }
+    }
+
+    @Test
+    public void testEncodeLargeInputWithRepeatedDataFurtherAwayThanMaxCopyOffset() {
+        // Create data that repeats after more than 65535 bytes so the only matches are too far away to be referenced.
+        byte[] period = new byte[70000];
+        new Random(42).nextBytes(period);
+        byte[] data = new byte[period.length * 2];
+        System.arraycopy(period, 0, data, 0, period.length);
+        System.arraycopy(period, 0, data, period.length, period.length);
+
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        ByteBuf compressed = Unpooled.buffer();
+        ByteBuf decompressed = Unpooled.buffer();
+        try {
+            snappy.encode(in, compressed, data.length);
+            snappy.reset();
+            snappy.decode(compressed, decompressed);
+            assertEquals(Unpooled.wrappedBuffer(data), decompressed);
+        } finally {
+            in.release();
+            compressed.release();
+            decompressed.release();
+        }
+    }
+
+    @Test
+    public void testEncodeLargeInputWithMatchesWithinMaxCopyOffset() {
+        // Repeat a block that is smaller than the max offset so we still find matches in the large input.
+        Random random = new Random(42);
+        byte[] period = new byte[1000];
+        random.nextBytes(period);
+        byte[] data = new byte[200000];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = period[i % period.length];
+            // Break the match once per period so new matches must be found through the hash table.
+            if (i % period.length == 0) {
+                data[i] = (byte) random.nextInt();
+            }
+        }
+
+        ByteBuf in = Unpooled.wrappedBuffer(data);
+        ByteBuf compressed = Unpooled.buffer();
+        ByteBuf decompressed = Unpooled.buffer();
+        try {
+            snappy.encode(in, compressed, data.length);
+            assertTrue(compressed.readableBytes() < data.length / 10);
+            snappy.reset();
+            snappy.decode(compressed, decompressed);
+            assertEquals(Unpooled.wrappedBuffer(data), decompressed);
+        } finally {
+            in.release();
+            compressed.release();
+            decompressed.release();
         }
     }
 

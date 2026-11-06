@@ -19,17 +19,22 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@link AbstractDiskHttpData} test cases
@@ -62,6 +67,35 @@ public class AbstractDiskHttpDataTest {
                     "Arrays should not be equal");
         } finally {
             test.delete();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testGetWhenFileIsShorterThanItsLength() throws Exception {
+        TestHttpData test = new TestHttpData("test", UTF_8, 0);
+        File tmpFile = PlatformDependent.createTempFile(UUID.randomUUID().toString(), ".tmp", null);
+        try {
+            FileOutputStream fos = new FileOutputStream(tmpFile);
+            try {
+                fos.write(new byte[16]);
+            } finally {
+                fos.close();
+            }
+            // Simulate a file that is truncated after its length was obtained.
+            File shortFile = new File(tmpFile.getPath()) {
+                @Override
+                public long length() {
+                    return 32;
+                }
+            };
+            test.setContent(shortFile);
+            assertThrows(EOFException.class, test::get);
+            assertThrows(EOFException.class, test::getByteBuf);
+            assertThrows(EOFException.class, test::getString);
+        } finally {
+            test.delete();
+            assertTrue(tmpFile.delete());
         }
     }
 

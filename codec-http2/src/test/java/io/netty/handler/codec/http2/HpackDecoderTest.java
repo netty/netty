@@ -34,6 +34,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -822,6 +823,38 @@ public class HpackDecoderTest {
             assertEquals(PROTOCOL_ERROR, e.error());
         } finally {
             in.release();
+        }
+    }
+
+    @Test
+    public void receivedNonTokenHeaderNameIsRejected() throws Exception {
+        String[] names = {"bad\r\nname", "bad\nname", "bad\rname", "bad\u0000name", "bad:name", "bad name",
+                "bad;name", "bad\u00f0name", "Upper"};
+        for (String name : names) {
+            final ByteBuf in = Unpooled.buffer(200);
+            try {
+                HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+                // Disable validation on the encode side so the invalid name makes it onto the wire.
+                Http2Headers toEncode = new DefaultHttp2Headers(false);
+                toEncode.add("foo", "bar");
+                toEncode.add(new AsciiString(name.getBytes(CharsetUtil.ISO_8859_1)), AsciiString.of("v"));
+                hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+                final Http2Headers decoded = new DefaultHttp2Headers();
+
+                Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class,
+                        new Executable() {
+                            @Override
+                            public void execute() throws Throwable {
+                                hpackDecoder.decode(3, in, decoded, true);
+                            }
+                        });
+                assertEquals(3, e.streamId());
+                assertEquals(PROTOCOL_ERROR, e.error());
+            } finally {
+                in.release();
+            }
         }
     }
 

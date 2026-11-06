@@ -18,6 +18,9 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketChannelEOFTest;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 
@@ -26,5 +29,13 @@ public class IoUringSocketChannelEOFTest extends SocketChannelEOFTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
+    }
+
+    @Disabled("io_uring only submits the connect once the EventLoop is not blocked anymore, and only waits for " +
+            "POLLRDHUP once the connect is complete")
+    @Test
+    @Override
+    public void readAllPendingOnEOFBeforeConnectComplete(TestInfo info) throws Throwable {
+        super.readAllPendingOnEOFBeforeConnectComplete(info);
     }
 }

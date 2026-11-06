@@ -158,7 +158,9 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
                          ClientAuth clientAuth, @Nullable TrustManagerFactory trustManagerFactory,
-                         @Nullable KeyManagerFactory keyManagerFactory, String password,
+                         X509Certificate @Nullable [] trustCertCollection,
+                         @Nullable KeyManagerFactory keyManagerFactory,
+                         X509Certificate @Nullable [] keyCertChain, String password,
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
                          String[] applicationProtocols, String endpointIdentificationAlgorithm,
@@ -168,6 +170,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         final X509TrustManager trustManager;
+        final boolean hasExternalTrustManagerFactorySpecified = trustManagerFactory != null;
         if (trustManagerFactory == null) {
             try {
                 trustManagerFactory =
@@ -283,8 +286,33 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 BoringSSL.SSLContext_setSessionCacheTimeout(
                         nativeSslContext.address(), sessionTimeout);
                 this.sessionTimeout = sessionTimeout;
+
+                // Derive the session_id_context from what distinguishes this context, so sessions can not be
+                // resumed across QuicSslContext instances that differ in their ClientAuth mode or trust / key
+                // configuration, even if session-ticket keys or a session cache are shared between them.
+                // The trust and key material can only be digested if it was handed to us as plain certificates.
+                // Anything backed by a TrustManagerFactory / KeyManagerFactory we did not create ourselves is
+                // opaque to us, so we can not tell if two of them behave the same.
+                boolean opaqueConfiguration = keyCertChain == null ||
+                        (trustCertCollection == null && hasExternalTrustManagerFactorySpecified);
+                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(),
+                        deriveSessionIdContext(this.clientAuth, keyCertChain, trustCertCollection,
+                                opaqueConfiguration))) {
+                    // Without a session_id_context we must not continue as resumption would not be scoped.
+                    String msg = "failed to set session id context";
+                    String lastError = BoringSSL.ERR_last_error();
+                    if (lastError != null) {
+                        msg += ": " + lastError;
+                    }
+                    throw new IllegalStateException(msg);
+                }
             }
-            if (earlyData != null) {
+            if (server && this.clientAuth == ClientAuth.REQUIRE) {
+                // A client certificate is not re-requested when a session is resumed, and the peer certificates are
+                // only available once the handshake completed. Early data would hence be handed to the application
+                // before we are able to verify that the client authenticated itself, so never accept it here.
+                BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), false);
+            } else if (earlyData != null) {
                 BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), earlyData);
             }
             sessionCtx = new QuicheQuicSslSessionContext(this);

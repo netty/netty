@@ -1,37 +1,65 @@
 # Fork of https://github.com/AgentWorkforce/relay/blob/v12.2.2/.github/workflows/cancel-on-merge.yml
 name: Cancel PR Jobs on Merge
+
+# We use pull_request_target (and not pull_request) as the GITHUB_TOKEN of a pull_request run triggered by a PR from
+# a fork is read-only and so we would not be allowed to cancel anything. This is safe as this workflow never checks out
+# or executes any code of the PR and only uses the event payload to look up the runs to cancel.
+#
+# Be aware that pull_request_target uses the workflow file of the base branch of the PR, so this file needs to exist
+# on every branch we merge PRs into.
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
+
+permissions:
+  actions: write  # to cancel the workflow runs
 
 jobs:
   cancel:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel running workflows for this PR
-        uses: actions/github-script@v7
+      - name: Cancel running and queued workflows for this PR
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
-            const headSha = context.payload.pull_request.head.sha;
+            const pr = context.payload.pull_request;
 
-            // Get all running workflow runs for this commit
-            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+            // Everything that has not completed yet, which includes runs that are still waiting for a runner.
+            const active = new Set(['queued', 'in_progress', 'waiting', 'pending', 'requested']);
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
               owner,
               repo,
-              status: 'in_progress',
-              head_sha: headSha,
+              head_sha: pr.head.sha,
+              per_page: 100,
             });
 
-            // Cancel each running workflow
-            for (const run of runs.data.workflow_runs) {
-              console.log(`Cancelling workflow run ${run.id} (${run.name})`);
-              await github.rest.actions.cancelWorkflowRun({
-                owner,
-                repo,
-                run_id: run.id,
-              });
+            let cancelled = 0;
+            for (const run of runs) {
+              if (!active.has(run.status) || run.id === context.runId) {
+                continue;
+              }
+              // Only touch runs triggered by the PR itself and not by a push to a branch that happens to point to
+              // the same commit.
+              if (run.event !== 'pull_request') {
+                continue;
+              }
+              // Runs of fork PRs have no pull_requests attached, for all others make sure the run does not belong
+              // to another PR that uses the same head commit (for example one targeting a different branch).
+              if (run.pull_requests.length > 0 && !run.pull_requests.some(p => p.number === pr.number)) {
+                continue;
+              }
+
+              console.log(`Cancelling workflow run ${run.id} (${run.name}, ${run.status})`);
+              try {
+                await github.rest.actions.cancelWorkflowRun({ owner, repo, run_id: run.id });
+                cancelled++;
+              } catch (e) {
+                // Most likely the run completed in the meantime, there is nothing to free up in this case.
+                console.log(`Could not cancel workflow run ${run.id}: ${e.message}`);
+              }
             }
 
-            console.log(`Cancelled ${runs.data.workflow_runs.length} workflow runs`);
+            console.log(`Cancelled ${cancelled} workflow runs`);

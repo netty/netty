@@ -30,3 +30,14 @@ docker compose -f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-risc
 ```
 
 etc, etc
+
+## Pinned toolchain downloads
+
+The Dockerfiles verify downloaded toolchains (SDKMAN! installer, `rustup-init`, ARM GCC) against a pinned SHA-256 before using them.
+SDKMAN! does not version its installer script, so if a docker build fails with a checksum mismatch for `sdkman-install.sh`, review the new script and refresh the pinned hash in all Dockerfiles with:
+
+```
+docker/update-sdkman-sha.sh
+```
+
+Use `docker/update-sdkman-sha.sh --check` to only verify whether the pinned hashes are still current.

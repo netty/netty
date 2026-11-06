@@ -24,6 +24,7 @@ import org.mockito.Mockito;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -353,6 +354,36 @@ public class UnpooledTest {
         ByteBuf copied = copiedBuffer(sequence, charset);
         try {
             assertEquals(sequence, copied.toString(charset));
+        } finally {
+            copied.release();
+        }
+    }
+
+    @Test
+    public void testCopiedBufferCharBufferRegion() {
+        // CharBuffer.wrap(CharSequence) and read-only buffers are not backed by an accessible array.
+        testCopiedBufferCharBufferRegion(CharBuffer.wrap("hello world"));
+        testCopiedBufferCharBufferRegion(CharBuffer.wrap("hello world".toCharArray()).asReadOnlyBuffer());
+        // Array backed.
+        testCopiedBufferCharBufferRegion(CharBuffer.wrap("hello world".toCharArray()));
+    }
+
+    private static void testCopiedBufferCharBufferRegion(CharBuffer buffer) {
+        assertCopiedBufferRegion("llo w", buffer, 2, 5);
+        assertCopiedBufferRegion("world", buffer, 6, 5);
+
+        // The offset is relative to the position of the buffer.
+        buffer.position(1);
+        assertCopiedBufferRegion("lo wo", buffer, 2, 5);
+        assertCopiedBufferRegion("world", buffer, 5, 5);
+        assertEquals(1, buffer.position());
+        assertEquals(11, buffer.limit());
+    }
+
+    private static void assertCopiedBufferRegion(String expected, CharBuffer buffer, int offset, int length) {
+        ByteBuf copied = copiedBuffer(buffer, offset, length, CharsetUtil.US_ASCII);
+        try {
+            assertEquals(expected, copied.toString(CharsetUtil.US_ASCII));
         } finally {
             copied.release();
         }

@@ -158,6 +158,10 @@ public class AsciiStringCharacterTest {
         assertContains(a, b, false, false);
         a += "0";
         assertContains(a, b, false, true);
+
+        assertContains("aab", "ab", true, true);
+        assertContains("ababc", "abc", true, true);
+        assertContains("xxYz", "xyz", false, true);
     }
 
     private static void assertContains(String a, String b, boolean caseSensitiveEquals, boolean caseInsenstaiveEquals) {
@@ -301,6 +305,18 @@ public class AsciiStringCharacterTest {
         assertEquals("abc", new AsciiString("  abc").trim().toString());
         assertEquals("abc", new AsciiString("abc  ").trim().toString());
         assertEquals("abc", new AsciiString("  abc  ").trim().toString());
+    }
+
+    @Test
+    public void testStaticTrimCharSequence() {
+        // Neither String nor AsciiString, so the generic code path is used.
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc  ")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc  ")).toString());
+        assertEquals("a", AsciiString.trim(new StringBuilder(" a ")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("   ")).toString());
     }
 
     @Test

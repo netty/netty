@@ -18,6 +18,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -32,8 +33,10 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
@@ -71,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
@@ -312,6 +316,113 @@ public class MqttCodecTest {
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
         validateConnectPayload(message.payload(), decodedMessage.payload());
+    }
+
+    @Test
+    public void testPublishMessageRemainingLengthTooLarge() throws Exception {
+        // The remaining length is a Variable Byte Integer and so can not be larger than 268,435,455.
+        // Re-use the same slice to not allocate that much memory.
+        final ByteBuf chunk = Unpooled.buffer(1024 * 1024).writerIndex(1024 * 1024);
+        final CompositeByteBuf payload = Unpooled.compositeBuffer(300);
+        try {
+            for (int i = 0; i < 257; i++) {
+                payload.addComponent(true, chunk.retainedSlice());
+            }
+            final MqttPublishMessage message = MqttMessageBuilders.publish()
+                    .topicName("/abc")
+                    .qos(MqttQoS.AT_MOST_ONCE)
+                    .payload(payload)
+                    .build();
+
+            assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+        } finally {
+            payload.release();
+            chunk.release();
+        }
+    }
+
+    public static boolean threadMxBeanAvailable() {
+        try {
+            Class.forName("com.sun.management.ThreadMXBean");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testSubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        // Remaining length of 268,435,453 + 2 bytes packet id, but no payload bytes sent.
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0x90);
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testUnsubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0xB0);
+    }
+
+    private static void testAckWithHugeRemainingLengthDoesNotPreallocate(byte firstByte) {
+        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
+        assumeTrue(bean instanceof com.sun.management.ThreadMXBean);
+        com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) bean;
+        assumeTrue(threadBean.isThreadAllocatedMemorySupported() && threadBean.isThreadAllocatedMemoryEnabled());
+
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(268_435_455));
+        try {
+            ByteBuf packet = Unpooled.buffer();
+            packet.writeByte(firstByte);
+            packet.writeByte(0xFD).writeByte(0xFF).writeByte(0xFF).writeByte(0x7F);
+            packet.writeShort(1);
+
+            long threadId = Thread.currentThread().getId();
+            long before = threadBean.getThreadAllocatedBytes(threadId);
+            // The payload has not been received yet, so nothing must be decoded.
+            assertFalse(channel.writeInbound(packet));
+            long allocated = threadBean.getThreadAllocatedBytes(threadId) - before;
+            assertNull(channel.readInbound());
+            // The declared remaining length must not be used to preallocate memory.
+            assertTrue(allocated < 16 * 1024 * 1024, "Allocated too much memory: " + allocated);
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testSubscriptionIdentifierTooLarge() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+        final MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 268_435_456));
+        final MqttMessage message = MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode((byte) 0x80)
+                .properties(props)
+                .build();
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testSubscriptionIdentifierMaxValue() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+        final MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 268_435_455));
+        final MqttMessage message = MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode((byte) 0x80)
+                .properties(props)
+                .build();
+
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+        try {
+            // fixed header (2 bytes), packet id (2), reason code (1), properties length (1),
+            // property id (1) and the four bytes Variable Byte Integer
+            assertEquals(2 + 2 + 1 + 1 + 1 + 4, byteBuf.readableBytes());
+            assertEquals(2 + 1 + 1 + 1 + 4, byteBuf.getUnsignedByte(1));
+        } finally {
+            byteBuf.release();
+        }
     }
 
     @Test

@@ -995,7 +995,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (start == 0 && end == last) {
             return c;
         }
-        return c.subSequence(start, end);
+        return c.subSequence(start, end + 1);
     }
 
     /**
@@ -1584,18 +1584,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (b.length() == 0) {
             return true;
         }
-        int bStart = 0;
-        for (int i = 0; i < a.length(); ++i) {
-            if (cmp.equals(b.charAt(bStart), a.charAt(i))) {
-                // If b is consumed then true.
-                if (++bStart == b.length()) {
-                    return true;
-                }
-            } else if (a.length() - i < b.length()) {
-                // If there are not enough characters left in a for b to be contained, then false.
-                return false;
-            } else {
-                bStart = 0;
+        for (int i = 0, last = a.length() - b.length(); i <= last; ++i) {
+            if (regionMatchesCharSequences(a, i, b, 0, b.length(), cmp)) {
+                return true;
             }
         }
         return false;

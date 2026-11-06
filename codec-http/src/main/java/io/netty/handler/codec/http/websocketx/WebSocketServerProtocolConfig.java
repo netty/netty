@@ -18,10 +18,26 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
+
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * WebSocket server configuration.
+ * <p>
+ * <strong>Security note:</strong> By default no validation of the {@code Origin} header is performed during the
+ * handshake. Browsers do not apply the same-origin policy to WebSocket connections and send ambient credentials
+ * (like cookies) with the handshake request, so applications that authenticate WebSocket connections using such
+ * credentials are exposed to Cross-Site WebSocket Hijacking unless they validate the {@code Origin} header.
+ * Such applications <strong>must</strong> configure {@link Builder#allowedOrigins(String...)} (or perform an
+ * equivalent check in a handler placed before {@link WebSocketServerProtocolHandler}).
  */
 public final class WebSocketServerProtocolConfig {
 
@@ -37,6 +53,7 @@ public final class WebSocketServerProtocolConfig {
     private final WebSocketCloseStatus sendCloseFrame;
     private final boolean dropPongFrames;
     private final WebSocketDecoderConfig decoderConfig;
+    private final Set<String> allowedOrigins;
 
     private WebSocketServerProtocolConfig(
         String websocketPath,
@@ -47,7 +64,8 @@ public final class WebSocketServerProtocolConfig {
         boolean handleCloseFrames,
         WebSocketCloseStatus sendCloseFrame,
         boolean dropPongFrames,
-        WebSocketDecoderConfig decoderConfig
+        WebSocketDecoderConfig decoderConfig,
+        Set<String> allowedOrigins
     ) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
@@ -58,6 +76,7 @@ public final class WebSocketServerProtocolConfig {
         this.sendCloseFrame = sendCloseFrame;
         this.dropPongFrames = dropPongFrames;
         this.decoderConfig = decoderConfig == null ? WebSocketDecoderConfig.DEFAULT : decoderConfig;
+        this.allowedOrigins = allowedOrigins;
     }
 
     public String websocketPath() {
@@ -96,6 +115,14 @@ public final class WebSocketServerProtocolConfig {
         return decoderConfig;
     }
 
+    /**
+     * Returns the (lower-cased) origins that are allowed to open a WebSocket connection, or an empty set if the
+     * {@code Origin} header is not validated.
+     */
+    public Set<String> allowedOrigins() {
+        return allowedOrigins;
+    }
+
     @Override
     public String toString() {
         return "WebSocketServerProtocolConfig" +
@@ -108,6 +135,7 @@ public final class WebSocketServerProtocolConfig {
             ", sendCloseFrame=" + sendCloseFrame +
             ", dropPongFrames=" + dropPongFrames +
             ", decoderConfig=" + decoderConfig +
+            ", allowedOrigins=" + allowedOrigins +
             "}";
     }
 
@@ -118,7 +146,7 @@ public final class WebSocketServerProtocolConfig {
     public static Builder newBuilder() {
         return new Builder("/", null, false, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS,
             DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS, true, WebSocketCloseStatus.NORMAL_CLOSURE, true,
-            WebSocketDecoderConfig.DEFAULT);
+            WebSocketDecoderConfig.DEFAULT, Collections.<String>emptySet());
     }
 
     public static final class Builder {
@@ -132,6 +160,7 @@ public final class WebSocketServerProtocolConfig {
         private boolean dropPongFrames;
         private WebSocketDecoderConfig decoderConfig;
         private WebSocketDecoderConfig.Builder decoderConfigBuilder;
+        private Set<String> allowedOrigins;
 
         private Builder(WebSocketServerProtocolConfig serverConfig) {
             this(ObjectUtil.checkNotNull(serverConfig, "serverConfig").websocketPath(),
@@ -142,7 +171,8 @@ public final class WebSocketServerProtocolConfig {
                  serverConfig.handleCloseFrames(),
                  serverConfig.sendCloseFrame(),
                  serverConfig.dropPongFrames(),
-                 serverConfig.decoderConfig()
+                 serverConfig.decoderConfig(),
+                 serverConfig.allowedOrigins()
             );
         }
 
@@ -154,7 +184,8 @@ public final class WebSocketServerProtocolConfig {
                         boolean handleCloseFrames,
                         WebSocketCloseStatus sendCloseFrame,
                         boolean dropPongFrames,
-                        WebSocketDecoderConfig decoderConfig) {
+                        WebSocketDecoderConfig decoderConfig,
+                        Set<String> allowedOrigins) {
             this.websocketPath = websocketPath;
             this.subprotocols = subprotocols;
             this.checkStartsWith = checkStartsWith;
@@ -164,6 +195,7 @@ public final class WebSocketServerProtocolConfig {
             this.sendCloseFrame = sendCloseFrame;
             this.dropPongFrames = dropPongFrames;
             this.decoderConfig = decoderConfig;
+            this.allowedOrigins = allowedOrigins;
         }
 
         /**
@@ -241,6 +273,41 @@ public final class WebSocketServerProtocolConfig {
             return this;
         }
 
+        /**
+         * The origins (for example {@code https://example.com} or {@code http://localhost:8080}) that are allowed
+         * to open a WebSocket connection. Origins are compared case-insensitively against the {@code Origin}
+         * request header (and the {@code Sec-WebSocket-Origin} header used by the older hybi-07 and hybi-08 protocol
+         * versions), which must match exactly (scheme, host and port). Handshake requests carrying an
+         * origin that is not allowed are rejected with {@code 403 Forbidden} and the connection is closed.
+         * <p>
+         * Requests without an {@code Origin} or {@code Sec-WebSocket-Origin} header are not subject to this check,
+         * as they do not originate from a browser (which always sends the header on WebSocket handshakes).
+         * <p>
+         * If not configured (the default) the {@code Origin} header is <strong>not</strong> validated. Applications
+         * that rely on ambient credentials such as cookies <strong>must</strong> configure this to prevent
+         * Cross-Site WebSocket Hijacking.
+         *
+         * @param allowedOrigins the allowed origins, must not be empty.
+         */
+        public Builder allowedOrigins(String... allowedOrigins) {
+            return allowedOrigins(Arrays.asList(checkNonEmpty(allowedOrigins, "allowedOrigins")));
+        }
+
+        /**
+         * See {@link #allowedOrigins(String...)}.
+         *
+         * @param allowedOrigins the allowed origins, must not be empty.
+         */
+        public Builder allowedOrigins(Collection<String> allowedOrigins) {
+            checkNonEmpty(allowedOrigins, "allowedOrigins");
+            Set<String> origins = new LinkedHashSet<String>(allowedOrigins.size());
+            for (String origin : allowedOrigins) {
+                origins.add(checkNotNull(origin, "origin").toLowerCase(Locale.ROOT));
+            }
+            this.allowedOrigins = Collections.unmodifiableSet(origins);
+            return this;
+        }
+
         private WebSocketDecoderConfig.Builder decoderConfigBuilder() {
             if (decoderConfigBuilder == null) {
                 decoderConfigBuilder = decoderConfig.toBuilder();
@@ -291,7 +358,8 @@ public final class WebSocketServerProtocolConfig {
                 handleCloseFrames,
                 sendCloseFrame,
                 dropPongFrames,
-                decoderConfigBuilder == null ? decoderConfig : decoderConfigBuilder.build()
+                decoderConfigBuilder == null ? decoderConfig : decoderConfigBuilder.build(),
+                allowedOrigins
             );
         }
     }

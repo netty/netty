@@ -646,7 +646,7 @@ public final class Unpooled {
             }
 
             buf = buf.slice();
-            buf.limit(length);
+            buf.limit(offset + length);
             buf.position(offset);
             return copiedBuffer(buf, charset);
         }

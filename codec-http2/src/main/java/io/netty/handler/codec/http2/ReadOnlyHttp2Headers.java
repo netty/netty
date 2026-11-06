@@ -241,7 +241,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Byte getByte(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToByte(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToByte(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -253,7 +260,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Character getChar(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToChar(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToChar(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -265,7 +279,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Short getShort(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToShort(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToShort(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -277,7 +298,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Integer getInt(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToInt(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToInt(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -289,7 +317,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Long getLong(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToLong(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToLong(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -301,7 +336,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Float getFloat(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToFloat(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToFloat(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -313,7 +355,14 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public Double getDouble(CharSequence name) {
         AsciiString value = get0(name);
-        return value != null ? INSTANCE.convertToDouble(value) : null;
+        if (value != null) {
+            try {
+                return INSTANCE.convertToDouble(value);
+            } catch (RuntimeException ignore) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Override

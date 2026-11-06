@@ -153,7 +153,7 @@ final class QuicheSendInfo {
         long sec = Quiche.getPrimitiveValue(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_AT +
                 Quiche.TIMESPEC_OFFSETOF_TV_SEC, Quiche.SIZEOF_TIME_T);
         long nsec = Quiche.getPrimitiveValue(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_AT +
-                Quiche.TIMESPEC_OFFSETOF_TV_SEC, Quiche.SIZEOF_LONG);
+                Quiche.TIMESPEC_OFFSETOF_TV_NSEC, Quiche.SIZEOF_LONG);
         return TimeUnit.SECONDS.toNanos(sec) + nsec;
     }
 

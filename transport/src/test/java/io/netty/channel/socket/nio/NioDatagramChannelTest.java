@@ -28,12 +28,15 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramChannel> {
 
@@ -64,6 +67,30 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
         } finally {
             channelGroup.close().sync();
             group.shutdownGracefully().sync();
+        }
+    }
+
+    @Test
+    public void testLoopbackModeDisabled() throws IOException {
+        NioDatagramChannel channel = newNioChannel();
+        try {
+            NetworkChannel jdkChannel = jdkChannel(channel);
+            // Loopback is enabled by default.
+            assertTrue(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertFalse(channel.config().isLoopbackModeDisabled());
+            assertFalse(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+
+            assertTrue(channel.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true));
+            assertFalse(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertTrue(channel.config().isLoopbackModeDisabled());
+            assertTrue(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+
+            channel.config().setLoopbackModeDisabled(false);
+            assertTrue(jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP));
+            assertFalse(channel.config().isLoopbackModeDisabled());
+            assertFalse(channel.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        } finally {
+            channel.unsafe().closeForcibly();
         }
     }
 

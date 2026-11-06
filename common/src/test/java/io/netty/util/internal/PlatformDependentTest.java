@@ -24,6 +24,7 @@ import java.util.SplittableRandom;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -146,6 +147,28 @@ public class PlatformDependentTest {
 
         assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, 0));
         assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, -1));
+    }
+
+    @Test
+    public void testSplittableRandomNextBytesFallbackFillsEveryByte() {
+        long seed = r.nextLong();
+        for (int len = 0; len <= 64; len++) {
+            byte[] actual = new byte[len];
+            PlatformDependent.splittableRandomNextBytesFallback(new SplittableRandom(seed), actual);
+
+            // Same layout as SplittableRandom.nextBytes: one nextLong() per 8 bytes, low byte first,
+            // and one more for the remaining bytes.
+            SplittableRandom rng = new SplittableRandom(seed);
+            byte[] expected = new byte[len];
+            long val = 0;
+            for (int i = 0; i < len; i++) {
+                if ((i & 7) == 0) {
+                    val = rng.nextLong();
+                }
+                expected[i] = (byte) (val >>> ((i & 7) * Byte.SIZE));
+            }
+            assertArrayEquals(expected, actual, "length " + len);
+        }
     }
 
     @Test

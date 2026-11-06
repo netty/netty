@@ -173,7 +173,11 @@ public class FileDescriptor {
     }
 
     /**
-     * Open a new {@link FileDescriptor} for the given path.
+     * Open a new {@link FileDescriptor} for the given path, write-only.
+     * <p>
+     * <strong>WARNING:</strong> if {@code path} already exists it is <strong>truncated to zero length</strong>; if it
+     * does not exist it is <strong>created</strong> with mode {@code 0666 &amp; ~umask}. Do not pass untrusted or
+     * externally-derived paths to this method.
      */
     public static FileDescriptor from(String path) throws IOException {
         int res = open(checkNotNull(path, "path"));
@@ -184,7 +188,9 @@ public class FileDescriptor {
     }
 
     /**
-     * Open a new {@link FileDescriptor} for the given {@link File}.
+     * Open a new {@link FileDescriptor} for the given {@link File}, write-only.
+     * <p>
+     * <strong>WARNING:</strong> see {@link #from(String)}: an existing file is truncated and a missing one is created.
      */
     public static FileDescriptor from(File file) throws IOException {
         return from(checkNotNull(file, "file").getPath());
