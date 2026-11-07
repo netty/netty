@@ -177,7 +177,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "REGISTERED"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_REGISTERED"));
         }
         ctx.fireChannelRegistered();
     }
@@ -185,7 +185,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "UNREGISTERED"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_UNREGISTERED"));
         }
         ctx.fireChannelUnregistered();
     }
@@ -193,7 +193,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "ACTIVE"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_ACTIVE"));
         }
         ctx.fireChannelActive();
     }
@@ -201,7 +201,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "INACTIVE"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_INACTIVE"));
         }
         ctx.fireChannelInactive();
     }
@@ -209,7 +209,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "EXCEPTION", cause), cause);
+            logger.log(internalLevel, format(ctx, "EXCEPTION_CAUGHT", cause), cause);
         }
         ctx.fireExceptionCaught(cause);
     }
@@ -217,7 +217,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "USER_EVENT", evt));
+            logger.log(internalLevel, format(ctx, "USER_EVENT_TRIGGERED", evt));
         }
         ctx.fireUserEventTriggered(evt);
     }
@@ -267,7 +267,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "READ COMPLETE"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_READ_COMPLETE"));
         }
         ctx.fireChannelReadComplete();
     }
@@ -275,7 +275,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "READ", msg));
+            logger.log(internalLevel, format(ctx, "CHANNEL_READ", msg));
         }
         ctx.fireChannelRead(msg);
     }
@@ -291,7 +291,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, "WRITABILITY CHANGED"));
+            logger.log(internalLevel, format(ctx, "CHANNEL_WRITABILITY_CHANGED"));
         }
         ctx.fireChannelWritabilityChanged();
     }
@@ -302,6 +302,14 @@ public class LoggingHandler extends ChannelDuplexHandler {
             logger.log(internalLevel, format(ctx, "FLUSH"));
         }
         ctx.flush();
+    }
+
+    @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "READ"));
+        }
+        ctx.read();
     }
 
     /**
