@@ -40,6 +40,13 @@ class UnpooledSlicedByteBuf extends AbstractUnpooledSlicedByteBuf {
     }
 
     @Override
+    int _indexOf(int fromIndex, int toIndex, byte value) {
+        // one call into the parent, instead of one unwrap()._getLongLE per word
+        int ret = unwrap()._indexOf(idx(fromIndex), idx(toIndex), value);
+        return ret < 0 ? -1 : ret - idx(0);
+    }
+
+    @Override
     protected short _getShort(int index) {
         return unwrap()._getShort(idx(index));
     }
