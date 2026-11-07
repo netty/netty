@@ -61,6 +61,13 @@ public class DateFormatterTest {
     }
 
     @Test
+    public void testParseWithFullMonthName() {
+        // RFC 6265, section 5.1.1: month = ( "jan" / ... / "dec" ) *OCTET
+        assertEquals(DATE, parseHttpDate("Sunday, 06 November 1994 08:49:37 GMT"));
+        assertEquals(DATE, parseHttpDate("Sunday, 06-November-94 08:49:37 GMT"));
+    }
+
+    @Test
     public void testParseWithoutGMT() {
         assertEquals(DATE, parseHttpDate("Sun Nov 06 08:49:37 1994"));
     }
