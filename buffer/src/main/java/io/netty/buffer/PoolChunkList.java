@@ -27,6 +27,14 @@ import static java.lang.Math.*;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Holds {@link PoolChunk}s whose utilization falls within this list's configured thresholds.
+ * <p>
+ * The lists owned by a {@link PoolArena} form a linked chain. Allocation increases a chunk's utilization and
+ * may move it to the next list; freeing memory decreases utilization and may move it to the previous list.
+ * When a completely free chunk falls out of the lowest list, the arena can destroy it instead of retaining
+ * unused pooled memory.
+ */
 final class PoolChunkList<T> implements PoolChunkListMetric {
     private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.emptyIterator();
     private final PoolArena<T> arena;
@@ -38,7 +46,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private final int freeMinThreshold;
     private final int freeMaxThreshold;
 
-    // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
+    // Set once when PoolArena links the PoolChunkLists together.
     private PoolChunkList<T> prevList;
 
     // TODO: Test if adding padding helps under contention
