@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -656,5 +658,38 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, false);
         assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
         assertEquals("meow", httpHeaders.get("cat"));
+    }
+
+    @Test
+    public void toFullHttpRequestTestReleasesContentWithMissingMethod() {
+        // missing method throws
+        DefaultHttp2Headers h2Headers = new DefaultHttp2Headers();
+
+        ByteBuf buffer = Unpooled.buffer();
+        assertThrows(Http2Exception.class, () -> HttpConversionUtil.toFullHttpRequest(2, h2Headers, buffer, true));
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void toFullHttpRequestTestReleasesContentWithIllegalMethod() {
+        DefaultHttp2Headers h2Headers = new DefaultHttp2Headers();
+        h2Headers.path("/");
+        // HttpUtil.validateRequestLineTokens throws
+        h2Headers.method("invalid method");
+
+        ByteBuf buffer = Unpooled.buffer();
+        assertThrows(Http2Exception.class,
+                () -> HttpConversionUtil.toFullHttpRequest(2, h2Headers, buffer, true));
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void toFullHttpResponseTestReleasesContentWithIllegalStatus() {
+        DefaultHttp2Headers h2Headers = new DefaultHttp2Headers();
+        h2Headers.status("101");
+
+        ByteBuf buffer = Unpooled.buffer();
+        assertThrows(Http2Exception.class, () -> HttpConversionUtil.toFullHttpResponse(2, h2Headers, buffer, true));
+        assertEquals(0, buffer.refCnt());
     }
 }
