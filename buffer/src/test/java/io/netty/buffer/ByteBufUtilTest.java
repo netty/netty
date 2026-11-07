@@ -736,6 +736,28 @@ public class ByteBufUtilTest {
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
+    public void testWriteUtf8InvalidLeadingSurrogateFollowedByNonAscii(BufferType bufferType) {
+        // The character after an unpaired leading surrogate must still be encoded, like the JDK does.
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\u00E9b");
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\u4E2Db");
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\uD83D\uDE00b");
+    }
+
+    private void checkWriteUtf8SameAsJdk(BufferType bufferType, String seq) {
+        ByteBuf expected = Unpooled.wrappedBuffer(seq.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf = buffer(bufferType, 16);
+        try {
+            ByteBufUtil.writeUtf8(buf, seq);
+            assertEquals(ByteBufUtil.hexDump(expected), ByteBufUtil.hexDump(buf));
+            assertEquals(expected.readableBytes(), ByteBufUtil.utf8Bytes(seq));
+        } finally {
+            buf.release();
+            expected.release();
+        }
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
     public void testWriteUsAsciiString(BufferType bufferType) {
         AsciiString usAscii = new AsciiString("NettyRocks");
         int expectedCapacity = usAscii.length();
