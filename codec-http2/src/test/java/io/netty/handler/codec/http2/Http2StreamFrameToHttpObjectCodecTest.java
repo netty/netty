@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -421,6 +422,30 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             assertEquals(0, trailers.content().readableBytes());
             assertEquals("value", trailers.trailingHeaders().get("key"));
             assertThat(trailers).isNotInstanceOf(FullHttpRequest.class);
+        } finally {
+            trailers.release();
+        }
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testDowngradeTrailersDropsProhibitedFields(boolean isServer) throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(isServer));
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.set("key", "value");
+        headers.set("trailer", "x");
+        headers.set("content-length", "0");
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
+
+        LastHttpContent trailers = ch.readInbound();
+        try {
+            assertEquals(0, trailers.content().readableBytes());
+            assertEquals("value", trailers.trailingHeaders().get("key"));
+            assertFalse(trailers.trailingHeaders().contains(HttpHeaderNames.TRAILER));
+            assertFalse(trailers.trailingHeaders().contains(HttpHeaderNames.CONTENT_LENGTH));
         } finally {
             trailers.release();
         }
