@@ -21,7 +21,7 @@ docker run --rm \
   -v "$PWD/.github/scripts/musl-verify:/verify:ro" \
   -v "$HOME/.m2/repository/io/netty:/jars:ro" \
   -e MUSL_VARIANT=bare -e MUSL_DROP_ELFTOOLS=1 \
-  eclipse-temurin:21-jdk-alpine \
+  eclipse-temurin:25-jdk-alpine \
   sh -c 'apk add --no-cache --virtual .elftools binutils >/dev/null && sh /verify/verify.sh /jars'
 ```
 
@@ -29,7 +29,7 @@ docker run --rm \
 binutils depends on libgcc, so leaving it installed silently satisfies a `libgcc_s.so.1`
 `DT_NEEDED` and the bare run stops testing what it claims to.
 
-Swap the image for `eclipse-temurin:21-jdk-noble` as a glibc control: anything that fails on Alpine
+Swap the image for `eclipse-temurin:25-jdk-noble` as a glibc control: anything that fails on Alpine
 but also fails there is a broken harness, not a broken library.
 
 ## What each check is for

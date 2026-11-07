@@ -55,10 +55,12 @@ abspath() {
 
 # Discover rather than hardcode a path: the directory layout inside a downloaded artifact or a
 # mounted ~/.m2 differs, and -sources/-javadoc/-tests jars are published alongside the real ones.
-NATIVE_JAR=$(find "$IN" -name "netty-codec-native-quic-*-$CLS.jar" \
+# Netty 5 artifacts are named netty5-*; matching only those keeps 4.x jars that a restored Maven
+# cache may hold under the same io/netty groupId out of both the native jar and the classpath.
+NATIVE_JAR=$(find "$IN" -name "netty5-codec-native-quic-*-$CLS.jar" \
                         ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-tests.jar' | head -1)
 if [ -z "$NATIVE_JAR" ]; then
-  echo "$0: no netty-codec-native-quic $CLS jar under $IN" >&2
+  echo "$0: no netty5-codec-native-quic $CLS jar under $IN" >&2
   exit 2
 fi
 NATIVE_JAR=$(abspath "$NATIVE_JAR")
@@ -67,7 +69,7 @@ HERE=$(abspath "$HERE")
 # Everything else the check needs -- common, buffer, transport, resolver, handler, codec-base,
 # codec-classes-quic -- comes from the same tree. Taking the whole set rather than naming each one
 # keeps this working when netty's module split changes again.
-CLASSPATH=$(find "$IN" -name 'netty-*.jar' \
+CLASSPATH=$(find "$IN" -name 'netty5-*.jar' \
                        ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-tests.jar' \
             | while read -r j; do abspath "$j"; done | tr '\n' ':')
 # A trailing colon is an empty classpath entry, which java reads as the current directory. That is

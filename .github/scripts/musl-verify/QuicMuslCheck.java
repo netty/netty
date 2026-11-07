@@ -20,8 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -148,7 +150,7 @@ public final class QuicMuslCheck {
                     .group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(newServerCodec(keystorePath, password))
-                    .bind(new InetSocketAddress(loopback, 0)).sync().channel();
+                    .bind(new InetSocketAddress(loopback, 0)).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
             result("handshake", true, "server bound on " + loopback.getHostAddress() + ':' + port);
 
@@ -166,10 +168,10 @@ public final class QuicMuslCheck {
                     .group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(clientCodec)
-                    .bind(new InetSocketAddress(loopback, 0)).sync().channel();
+                    .bind(new InetSocketAddress(loopback, 0)).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(clientChannel)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(new InetSocketAddress(loopback, port))
                     .connect()
                     .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -178,10 +180,12 @@ public final class QuicMuslCheck {
             // A queue rather than a latch plus a field: it carries the echoed bytes and the
             // "stream closed with nothing" case in one place, and poll() gives the timeout.
             LinkedBlockingQueue<String> echoed = new LinkedBlockingQueue<String>();
-            QuicStreamChannel stream = quicChannel.createStream(
-                    QuicStreamType.BIDIRECTIONAL, new EchoCollector(echoed)).sync().getNow();
+            final QuicStreamChannel stream = quicChannel.createStream(
+                    QuicStreamType.BIDIRECTIONAL, new EchoCollector(echoed))
+                    .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            // Write the payload and send the FIN with it.
             stream.writeAndFlush(Unpooled.copiedBuffer(PAYLOAD, CharsetUtil.US_ASCII))
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    .addListener(f -> stream.shutdown(ChannelShutdownType.newOutbound()));
 
             String received = echoed.poll(TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (received == null) {
@@ -231,12 +235,13 @@ public final class QuicMuslCheck {
                 .streamHandler(new ChannelInitializer<QuicStreamChannel>() {
                     @Override
                     protected void initChannel(QuicStreamChannel ch) {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelInboundHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Echo straight back and send the FIN with it. The payload is a
                                 // handful of bytes, so it cannot arrive split.
-                                ctx.writeAndFlush(msg).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                ctx.writeAndFlush(msg).addListener(
+                                        f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
                             }
                         });
                     }
@@ -245,7 +250,7 @@ public final class QuicMuslCheck {
     }
 
     /** Collects the echoed bytes and hands them over once the peer has sent its FIN. */
-    private static final class EchoCollector extends ChannelInboundHandlerAdapter {
+    private static final class EchoCollector implements ChannelInboundHandler {
 
         private final LinkedBlockingQueue<String> out;
         private final StringBuilder received = new StringBuilder();
@@ -265,7 +270,17 @@ public final class QuicMuslCheck {
         }
 
         @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            // The peer's FIN: everything it is going to echo has been read by now.
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
+                out.offer(received.toString());
+            }
+        }
+
+        @Override
         public void channelInactive(ChannelHandlerContext ctx) {
+            // Fallback for a stream that closes without a FIN being seen; if channelShutdown
+            // already offered the result, this second entry is never read.
             out.offer(received.toString());
         }
 
@@ -277,7 +292,7 @@ public final class QuicMuslCheck {
     }
 
     /** The server needs one connection-level handler instance across every connection. */
-    private static final class SharableNoopHandler extends ChannelInboundHandlerAdapter {
+    private static final class SharableNoopHandler implements ChannelInboundHandler {
         @Override
         public boolean isSharable() {
             return true;
