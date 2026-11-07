@@ -240,9 +240,6 @@ public class InboundHttp2ToHttpAdapterTest {
     @Test
     public void clientRequestSingleHeaderNonAsciiShouldThrow() throws Exception {
         boostrapEnv(1, 1, 1);
-        // Disable validation on the client side so the non-ASCII header name reaches the wire; the
-        // server-side validation (RFC 9113 §8.2.1 requires field names to be valid HTTP/1.1 tokens)
-        // then rejects it, which surfaces as a stream error.
         final Http2Headers http2Headers = new DefaultHttp2Headers(false)
                 .method(new AsciiString("GET"))
                 .scheme(new AsciiString("https"))
@@ -250,15 +247,28 @@ public class InboundHttp2ToHttpAdapterTest {
                 .path(new AsciiString("/some/path/resource2"))
                 .add(new AsciiString("çã".getBytes(CharsetUtil.UTF_8)),
                         new AsciiString("Ãã".getBytes(CharsetUtil.UTF_8)));
+        final Http2Headers validHeaders = new DefaultHttp2Headers()
+                .method(new AsciiString("GET"))
+                .path(new AsciiString("/some/path/resource2"));
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true, newPromiseClient());
+                clientHandler.encoder().writeHeaders(ctxClient(), 5, validHeaders, 0, true, newPromiseClient());
                 clientChannel.flush();
             }
         });
+        awaitRequests();
+        ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
+        verify(serverListener).messageReceived(requestCaptor.capture());
+        capturedRequests = requestCaptor.getAllValues();
+        assertEquals(5, capturedRequests.get(0).headers().getInt(
+                HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text()).intValue());
+        assertEquals("/some/path/resource2", ((FullHttpRequest) capturedRequests.get(0)).uri());
         awaitResponses();
         assertTrue(isStreamError(clientException));
+        assertEquals(3, Http2Exception.streamId(clientException));
+        assertEquals(Http2Error.PROTOCOL_ERROR, clientException.error());
     }
 
     @Test
