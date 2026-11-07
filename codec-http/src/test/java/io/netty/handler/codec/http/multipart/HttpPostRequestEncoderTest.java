@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -503,6 +504,34 @@ public class HttpPostRequestEncoderTest {
 
         assertTrue(encoder.isEndOfInput());
         assertEquals(expectQueryStr.toString(), chunks.toString());
+        encoder.cleanFiles();
+    }
+
+    @Test
+    public void testMultipartNameCannotBreakOutOfContentDisposition() throws Exception {
+        final HttpRequest req = new DefaultHttpRequest(HTTP_1_1, POST, "/");
+        final HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, true);
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        assertThrows(ErrorDataEncoderException.class,
+                () -> encoder.addBodyAttribute("x\"; filename=\"evil.sh", "data"));
+        assertThrows(ErrorDataEncoderException.class,
+                () -> encoder.addBodyAttribute("x\\", "data"));
+        assertThrows(ErrorDataEncoderException.class,
+                () -> encoder.addBodyFileUpload("x\"; a=\"b", file1, "text/plain", false));
+        assertThrows(ErrorDataEncoderException.class,
+                () -> encoder.addBodyAttribute("x\u0000y", "data"));
+        assertTrue(encoder.getBodyListAttributes().isEmpty());
+        encoder.cleanFiles();
+    }
+
+    @Test
+    public void testUrlEncodedNameMayContainQuote() throws Exception {
+        final HttpRequest req = new DefaultHttpRequest(HTTP_1_1, POST, "/");
+        final HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
+        encoder.addBodyAttribute("a\"b", "c");
+        final FullHttpRequest finalized = assertInstanceOf(FullHttpRequest.class, encoder.finalizeRequest());
+        assertEquals("a%22b=c", finalized.content().toString(UTF_8));
+        finalized.release();
         encoder.cleanFiles();
     }
 
