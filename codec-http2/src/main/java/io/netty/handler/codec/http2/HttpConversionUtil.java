@@ -38,6 +38,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -126,6 +127,38 @@ public final class HttpConversionUtil {
     private static final AsciiString EMPTY_REQUEST_PATH = AsciiString.cached("/");
 
     private HttpConversionUtil() {
+    }
+
+    private static boolean sameAuthority(CharSequence scheme, CharSequence authority, CharSequence host) {
+        if (contentEqualsIgnoreCase(authority, host)) {
+            return true;
+        }
+        try {
+            URI authorityUri = new URI(null, authority.toString(), null, null, null);
+            URI hostUri = new URI(null, host.toString(), null, null, null);
+            String authorityHost = authorityUri.getHost();
+            String hostName = hostUri.getHost();
+            if (authorityHost == null || hostName == null || authorityUri.getRawUserInfo() != null ||
+                    hostUri.getRawUserInfo() != null) {
+                return false;
+            }
+            int authorityPort = authorityUri.getPort();
+            int hostPort = hostUri.getPort();
+            if (isDefaultPort(scheme, authorityPort)) {
+                authorityPort = -1;
+            }
+            if (isDefaultPort(scheme, hostPort)) {
+                hostPort = -1;
+            }
+            return authorityHost.equalsIgnoreCase(hostName) && authorityPort == hostPort;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
+    private static boolean isDefaultPort(CharSequence scheme, int port) {
+        return port == HTTP.port() && contentEqualsIgnoreCase(scheme, HTTP.name()) ||
+                port == HTTPS.port() && contentEqualsIgnoreCase(scheme, HTTPS.name());
     }
 
     /**
@@ -932,7 +965,8 @@ public final class HttpConversionUtil {
                         // as malformed, and RFC 9110 section 7.2 requires 'Host' be sent as a single field-value.
                         // Reject the request rather than emitting an HTTP/1.x message with duplicate Host headers.
                         if (hostHeaderFound) {
-                            if (!contentEqualsIgnoreCase(output.get(HttpHeaderNames.HOST), value)) {
+                            if (!sameAuthority(output.get(ExtensionHeaderNames.SCHEME.text()),
+                                    output.get(HttpHeaderNames.HOST), value)) {
                                 throw streamError(streamId, PROTOCOL_ERROR,
                                         "Conflicting ':authority' and 'host' headers found");
                             }
