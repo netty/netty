@@ -363,18 +363,19 @@ public abstract class WebSocketClientHandshaker {
         String receivedProtocol = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         receivedProtocol = receivedProtocol != null ? receivedProtocol.trim() : null;
         String expectedProtocol = expectedSubprotocol != null ? expectedSubprotocol : "";
+        String selectedSubprotocol = null;
         boolean protocolValid = false;
 
         if (expectedProtocol.isEmpty() && receivedProtocol == null) {
             // No subprotocol required and none received
             protocolValid = true;
-            setActualSubprotocol(expectedSubprotocol); // null or "" - we echo what the user requested
+            selectedSubprotocol = expectedSubprotocol; // null or "" - we echo what the user requested
         } else if (!expectedProtocol.isEmpty() && receivedProtocol != null && !receivedProtocol.isEmpty()) {
             // We require a subprotocol and received one -> verify it
             for (String protocol : expectedProtocol.split(",")) {
                 if (protocol.trim().equals(receivedProtocol)) {
                     protocolValid = true;
-                    setActualSubprotocol(receivedProtocol);
+                    selectedSubprotocol = receivedProtocol;
                     break;
                 }
             }
@@ -386,9 +387,23 @@ public abstract class WebSocketClientHandshaker {
                     receivedProtocol, expectedSubprotocol), response);
         }
 
-        setHandshakeComplete();
-
         final ChannelPipeline p = channel.pipeline();
+        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
+        final HttpClientCodec codec;
+        if (ctx == null) {
+            ctx = p.context(HttpClientCodec.class);
+            if (ctx == null) {
+                throw new IllegalStateException("ChannelPipeline does not contain " +
+                        "an HttpRequestEncoder or HttpClientCodec");
+            }
+            codec = (HttpClientCodec) ctx.handler();
+        } else {
+            codec = null;
+        }
+
+        final ChannelHandlerContext decoderCtx = ctx;
+        p.addAfter(decoderCtx.name(), "ws-decoder", newWebsocketDecoder());
+
         // Remove decompressor from pipeline if its in use
         HttpContentDecompressor decompressor = p.get(HttpContentDecompressor.class);
         if (decompressor != null) {
@@ -401,18 +416,9 @@ public abstract class WebSocketClientHandshaker {
             p.remove(aggregator);
         }
 
-        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
-        if (ctx == null) {
-            ctx = p.context(HttpClientCodec.class);
-            if (ctx == null) {
-                throw new IllegalStateException("ChannelPipeline does not contain " +
-                        "an HttpRequestEncoder or HttpClientCodec");
-            }
-            final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
+        if (codec != null) {
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
             codec.removeOutboundHandler();
-
-            p.addAfter(ctx.name(), "ws-decoder", newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
@@ -428,8 +434,6 @@ public abstract class WebSocketClientHandshaker {
                 // Remove the encoder part of the codec as the user may start writing frames after this method returns.
                 p.remove(HttpRequestEncoder.class);
             }
-            final ChannelHandlerContext context = ctx;
-            p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
@@ -437,10 +441,13 @@ public abstract class WebSocketClientHandshaker {
             channel.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    p.remove(context.handler());
+                    p.remove(decoderCtx.handler());
                 }
             });
         }
+
+        setActualSubprotocol(selectedSubprotocol);
+        setHandshakeComplete();
     }
 
     /**
