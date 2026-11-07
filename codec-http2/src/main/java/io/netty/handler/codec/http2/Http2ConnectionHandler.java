@@ -515,6 +515,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        super.decodeLast(ctx, in, out);
+        // An incomplete SETTINGS frame must be treated as a connection error of type PROTOCOL_ERROR.
+        // See https://www.rfc-editor.org/rfc/rfc9113.html#section-6.5
+        if (byteDecoder instanceof FrameDecoder && in.readableBytes() > 3 &&
+                in.getByte(in.readerIndex() + 3) == SETTINGS) {
+            onError(ctx, false, connectionError(PROTOCOL_ERROR,
+                    "Input closed with an incomplete SETTINGS frame (%d bytes received)", in.readableBytes()));
+        }
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         // Ensure we send the preface before we notify the bind promise as the user might try to write
         // directly in the listener attached to the promise and we need to ensure the preface is always the first
