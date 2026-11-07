@@ -22,7 +22,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Comparator;
 
-final class PreferredAddressTypeComparator implements Comparator<InetAddress> {
+final class PreferredAddressTypeComparator implements Comparator<DnsResolveResult> {
 
     private static final PreferredAddressTypeComparator IPv4 = new PreferredAddressTypeComparator(Inet4Address.class);
     private static final PreferredAddressTypeComparator IPv6 = new PreferredAddressTypeComparator(Inet6Address.class);
@@ -45,10 +45,10 @@ final class PreferredAddressTypeComparator implements Comparator<InetAddress> {
     }
 
     @Override
-    public int compare(InetAddress o1, InetAddress o2) {
-        if (o1.getClass() == o2.getClass()) {
+    public int compare(DnsResolveResult o1, DnsResolveResult o2) {
+        if (o1.address().getClass() == o2.address().getClass()) {
             return 0;
         }
-        return preferredAddressType.isAssignableFrom(o1.getClass()) ? -1 : 1;
+        return preferredAddressType.isAssignableFrom(o1.address().getClass()) ? -1 : 1;
     }
 }
