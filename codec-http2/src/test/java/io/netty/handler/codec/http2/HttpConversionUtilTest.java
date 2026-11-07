@@ -657,4 +657,102 @@ public class HttpConversionUtilTest {
         assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
         assertEquals("meow", httpHeaders.get("cat"));
     }
+
+    @Test
+    public void mustRejectHeaderValueWithCrLf() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", "value\r\nInjected: yes");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectHeaderValueWithNul() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", "value\0injected");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectPathWithProhibitedByte() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).path("/some/path\r\nX-Injected: yes");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustAcceptEmptyHeaderValue() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-empty", "");
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertEquals("", outHeaders.get("x-empty"));
+    }
+
+    @Test
+    public void mustRejectHeaderNameWithCrLf() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-evil\r\nInjected: 1", "ok");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectAuthorityWithProhibitedByte() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).authority("example.org:443\r\nInjected: x");
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @Test
+    public void mustRejectConnectAuthorityWithProhibitedByte() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false)
+                .method(HttpMethod.CONNECT.asciiName())
+                .authority("example.org:443\r\nInjected: x");
+
+        assertConversionRejected(inHeaders, false, true);
+    }
+
+    @Test
+    public void mustRejectTrailerValueWithCrLf() {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", "a\r\nb");
+
+        assertConversionRejected(inHeaders, true, true);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "\t"})
+    public void mustRejectWhitespaceOnlyHeaderValue(String value) {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", value);
+
+        assertConversionRejected(inHeaders);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"v", "a ", "\u0080"})
+    public void mustAcceptUnusualHeaderValue(String value) throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers(false).add("x-test", value);
+        HttpHeaders outHeaders = new DefaultHttpHeaders(false);
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertEquals(value, outHeaders.get("x-test"));
+    }
+
+    private static void assertConversionRejected(final Http2Headers inHeaders) {
+        assertConversionRejected(inHeaders, false, false);
+    }
+
+    private static void assertConversionRejected(final Http2Headers inHeaders, final boolean isTrailer,
+            final boolean isRequest) {
+        // Validation of the produced HTTP/1.x headers is disabled, as in the default InboundHttp2ToHttpAdapter,
+        // so that only the conversion itself can reject the value.
+        final HttpHeaders outHeaders = new DefaultHttpHeaders(false);
+        Http2Exception exception = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1,
+                        isTrailer, isRequest);
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, exception.error());
+        assertTrue(outHeaders.isEmpty());
+    }
 }
