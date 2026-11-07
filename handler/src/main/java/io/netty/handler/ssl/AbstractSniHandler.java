@@ -94,8 +94,16 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                 // SNI
                                 // See https://tools.ietf.org/html/rfc6066#page-6
                                 if (extensionType == 0) {
+                                    // The ServerNameList must be fully contained in the extension data,
+                                    // so all bounds checks below use the end of this extension rather
+                                    // than the end of all extensions.
+                                    final int extensionLimit = offset + extensionLength;
+                                    if (extensionLength < 2) {
+                                        break;
+                                    }
+                                    final int serverNameListLength = in.getUnsignedShort(offset);
                                     offset += 2;
-                                    if (extensionsLimit - offset < 3) {
+                                    if (serverNameListLength != extensionLength - 2 || serverNameListLength < 3) {
                                         break;
                                     }
 
@@ -106,7 +114,8 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                         final int serverNameLength = in.getUnsignedShort(offset);
                                         offset += 2;
 
-                                        if (extensionsLimit - offset < serverNameLength) {
+                                        // HostName is opaque<1..2^16-1>.
+                                        if (serverNameLength == 0 || extensionLimit - offset < serverNameLength) {
                                             break;
                                         }
 
