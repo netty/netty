@@ -33,6 +33,9 @@ import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,27 +45,50 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringSocketTestPermutation.class);
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
     static final short BGID = 0;
     static final EventLoopGroup IO_URING_GROUP = newGroup(false);
     static final EventLoopGroup IO_URING_INCREMENTAL_GROUP = newGroup(true);
 
+    // fixed | recycling; anything else picks one at random per group, like batchAllocation below.
+    private static final String BUFFER_RING_ALLOCATOR =
+            SystemPropertyUtil.get("io.netty.testsuite.iouring.bufferRingAllocator", "random");
+
     static IoUringIoHandlerConfig buildConfig(boolean incremental) {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         if (IoUring.isRegisterBufferRingSupported()) {
+            short bufferRingSize = 16;
+            int bufferSize = 1024;
             config.setBufferRingConfig(
                     IoUringBufferRingConfig.builder()
                             .bufferGroupId(BGID)
-                            .bufferRingSize((short) 16)
+                            .bufferRingSize(bufferRingSize)
                             .batchSize(8)
                             .incremental(incremental)
-                            .allocator(new IoUringFixedBufferRingAllocator(1024))
+                            .allocator(newBufferRingAllocator(bufferRingSize, bufferSize))
                             // Ensure we test both variants
                             .batchAllocation(ThreadLocalRandom.current().nextBoolean())
                             .build()
             );
         }
         return config;
+    }
+
+    private static IoUringBufferRingAllocator newBufferRingAllocator(short bufferRingSize, int bufferSize) {
+        boolean recycling;
+        if ("fixed".equals(BUFFER_RING_ALLOCATOR)) {
+            recycling = false;
+        } else if ("recycling".equals(BUFFER_RING_ALLOCATOR)) {
+            recycling = true;
+        } else {
+            recycling = ThreadLocalRandom.current().nextBoolean();
+        }
+        logger.debug("io_uring testsuite buffer ring allocator: {}", recycling ? "recycling" : "fixed");
+        // The ring is tiny on purpose, so the recycling allocator's extension and fallback paths run under the
+        // testsuite too, not only its happy path.
+        return recycling ? new IoUringRecyclingBufferRingAllocator(bufferRingSize, bufferSize)
+                         : new IoUringFixedBufferRingAllocator(bufferSize);
     }
 
     private static EventLoopGroup newGroup(boolean incremental) {
