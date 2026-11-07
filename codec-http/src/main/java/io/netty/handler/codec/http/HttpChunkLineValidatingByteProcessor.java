@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.ByteProcessor;
 
+import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -53,13 +54,16 @@ import java.util.BitSet;
  * }</pre>
  */
 final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
+    // Valid-at-finish states first; SIZE = 0 so default field value is the initial state
     private static final int SIZE = 0;
     private static final int CHUNK_EXT_NAME = 1;
-    private static final int CHUNK_EXT_VAL_START = 2;
-    private static final int CHUNK_EXT_VAL_QUOTED = 3;
-    private static final int CHUNK_EXT_VAL_QUOTED_ESCAPE = 4;
-    private static final int CHUNK_EXT_VAL_QUOTED_END = 5;
-    private static final int CHUNK_EXT_VAL_TOKEN = 6;
+    private static final int CHUNK_EXT_VAL_QUOTED_END = 2;
+    private static final int CHUNK_EXT_VAL_TOKEN = 3;
+    private static final int FIRST_INVALID_FINISH_STATE = 4;
+    // Invalid-at-finish states grouped at the end so finish() is a single range check
+    private static final int CHUNK_EXT_VAL_START = 4;
+    private static final int CHUNK_EXT_VAL_QUOTED = 5;
+    private static final int CHUNK_EXT_VAL_QUOTED_ESCAPE = 6;
 
     static final class Match extends BitSet {
         private static final long serialVersionUID = 49522994383099834L;
@@ -103,6 +107,14 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
                         .chars(" \t")
                         .chars("(),/:<=>?@[\\]{}", false),
                 new Match(CHUNK_EXT_VAL_START).chars("=")),
+        ChunkExtValQuotedEnd(
+                new Match(CHUNK_EXT_VAL_QUOTED_END).chars("\t "),
+                new Match(CHUNK_EXT_NAME).chars(";")),
+        ChunkExtValToken(
+                new Match(CHUNK_EXT_VAL_TOKEN)
+                        .range(0x21, 0x7E, true)
+                        .chars("(),/:<=>?@[\\]{};", false),
+                new Match(CHUNK_EXT_NAME).chars(";")),
         ChunkExtValStart(
                 new Match(CHUNK_EXT_VAL_START).chars(" \t"),
                 new Match(CHUNK_EXT_VAL_QUOTED).chars("\""),
@@ -122,14 +134,6 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
                         .chars("\t ")
                         .range(0x21, 0x7E)
                         .range(0x80, 0xFF)),
-        ChunkExtValQuotedEnd(
-                new Match(CHUNK_EXT_VAL_QUOTED_END).chars("\t "),
-                new Match(CHUNK_EXT_NAME).chars(";")),
-        ChunkExtValToken(
-                new Match(CHUNK_EXT_VAL_TOKEN)
-                        .range(0x21, 0x7E, true)
-                        .chars("(),/:<=>?@[\\]{};", false),
-                new Match(CHUNK_EXT_NAME).chars(";")),
         ;
 
         private final Match[] matches;
@@ -137,42 +141,43 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
         State(Match... matches) {
             this.matches = matches;
         }
-
-        State match(byte value) {
-            for (Match match : matches) {
-                if (match.get(value)) {
-                    return STATES_BY_ORDINAL[match.then];
-                }
-            }
-            if (this == Size) {
-                throw new NumberFormatException("Invalid chunk size");
-            } else {
-                throw new InvalidChunkExtensionException("Invalid chunk extension");
-            }
-        }
     }
 
-    private static final State[] STATES_BY_ORDINAL = State.values();
+    private static final byte[] TRANSITIONS = buildTable();
 
-    private State state = State.Size;
+    private static byte[] buildTable() {
+        State[] states = State.values();
+        byte[] table = new byte[states.length * 256];
+        Arrays.fill(table, (byte) -1);
+        for (State state : states) {
+            int base = state.ordinal() << 8;
+            for (Match m : state.matches) {
+                for (int i = m.nextSetBit(0); i >= 0; i = m.nextSetBit(i + 1)) {
+                    table[base | i] = (byte) m.then;
+                }
+            }
+        }
+        return table;
+    }
+
+    int state;
 
     @Override
     public boolean process(byte value) {
-        state = state.match(value);
+        int next = TRANSITIONS[state << 8 | (value & 0xFF)];
+        if (next < 0) {
+            if (state == SIZE) {
+                throw new NumberFormatException("Invalid chunk size");
+            }
+            throw new InvalidChunkExtensionException("Invalid chunk extension");
+        }
+        state = next;
         return true;
     }
 
     public void finish() {
-        switch (state) {
-            case ChunkExtValQuoted:
-            case ChunkExtValQuotedEscape:
-            case ChunkExtValStart:
-                throw new InvalidChunkExtensionException("Invalid chunk extension");
+        if (state >= FIRST_INVALID_FINISH_STATE) {
+            throw new InvalidChunkExtensionException("Invalid chunk extension");
         }
-        // Exhaustiveness check
-        assert state == State.Size ||
-                state == State.ChunkExtName ||
-                state == State.ChunkExtValQuotedEnd ||
-                state == State.ChunkExtValToken;
     }
 }
