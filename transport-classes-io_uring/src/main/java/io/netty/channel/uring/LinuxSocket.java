@@ -309,7 +309,7 @@ final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketStream(boolean ipv6) {
-        return new LinuxSocket(newSocketStream0(ipv6));
+        return new LinuxSocket(newSocketStream0(ipv6, false));
     }
 
     public static LinuxSocket newSocketStream() {
