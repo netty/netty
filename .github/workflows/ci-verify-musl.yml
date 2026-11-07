@@ -96,7 +96,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: netty-jars-${{ matrix.arch }}
-          path: ~/.m2/repository/io/netty/
+          # Only what this build installed: io/netty also holds whatever 4.x artifacts the
+          # restored Maven cache brought along (netty-jni-util and friends), and verify.sh
+          # must not see those.
+          path: ~/.m2/repository/io/netty/netty5-*/
           if-no-files-found: error
 
   musl-verify:
@@ -110,13 +113,13 @@ jobs:
           - leg: alpine-x86_64
             arch: x86_64
             platform: linux/amd64
-            image: eclipse-temurin:21-jdk-alpine
+            image: eclipse-temurin:25-jdk-alpine
             packages: ""
             variant: bare
           - leg: alpine-aarch64
             arch: aarch64
             platform: linux/arm64
-            image: eclipse-temurin:21-jdk-alpine
+            image: eclipse-temurin:25-jdk-alpine
             packages: ""
             variant: bare
           # gcompat is not expected to change the answer. It exists so that a bare failure is
@@ -125,13 +128,13 @@ jobs:
           - leg: alpine-x86_64-gcompat
             arch: x86_64
             platform: linux/amd64
-            image: eclipse-temurin:21-jdk-alpine
+            image: eclipse-temurin:25-jdk-alpine
             packages: "gcompat"
             variant: gcompat
           - leg: alpine-aarch64-gcompat
             arch: aarch64
             platform: linux/arm64
-            image: eclipse-temurin:21-jdk-alpine
+            image: eclipse-temurin:25-jdk-alpine
             packages: "gcompat"
             variant: gcompat
           # The control. Anything that fails on Alpine but also fails here is a broken harness, not
@@ -139,7 +142,7 @@ jobs:
           - leg: glibc-control-x86_64
             arch: x86_64
             platform: linux/amd64
-            image: eclipse-temurin:21-jdk-noble
+            image: eclipse-temurin:25-jdk-noble
             packages: ""
             variant: glibc-control
 
