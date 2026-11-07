@@ -335,6 +335,89 @@ public class CombinedHttpHeadersTest {
     }
 
     @Test
+    public void setCookieValueIsNotEscaped() {
+        final String cookie = "a=b; Expires=Wed, 21 Oct 2026 07:28:00 GMT";
+        final String quoted = "c=\"d\"; Path=/";
+
+        final CombinedHttpHeaders added = newCombinedHttpHeaders();
+        added.add(SET_COOKIE, cookie);
+        added.add("set-cookie", quoted);
+        assertSetCookieValues(added, cookie, quoted);
+
+        final CombinedHttpHeaders set = newCombinedHttpHeaders();
+        set.set("Set-Cookie", cookie);
+        assertSetCookieValues(set, cookie);
+    }
+
+    @Test
+    public void setCookieValuesAreNotFolded() {
+        final String cookie = "a=b; Expires=Wed, 21 Oct 2026 07:28:00 GMT";
+        final String other = "c=d";
+
+        final CombinedHttpHeaders added = newCombinedHttpHeaders();
+        added.add(SET_COOKIE, Arrays.asList(cookie, other));
+        assertSetCookieValues(added, cookie, other);
+
+        final CombinedHttpHeaders set = newCombinedHttpHeaders();
+        set.add(SET_COOKIE, "e=f");
+        set.set(SET_COOKIE, Arrays.asList(cookie, other));
+        assertSetCookieValues(set, cookie, other);
+    }
+
+    @Test
+    public void setCookieValuesAreNotFoldedByUnwrappedHeaders() {
+        final String cookie = "a=b; Expires=Wed, 21 Oct 2026 07:28:00 GMT";
+        final String other = "c=d";
+        final CharSequence[] values = {cookie, other};
+        final Object[] objects = {cookie, other};
+
+        CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.unwrap().add(SET_COOKIE, values);
+        assertSetCookieValues(headers, cookie, other);
+
+        headers = newCombinedHttpHeaders();
+        headers.unwrap().add(SET_COOKIE, Arrays.asList(values));
+        assertSetCookieValues(headers, cookie, other);
+
+        headers = newCombinedHttpHeaders();
+        headers.unwrap().addObject(SET_COOKIE, objects);
+        assertSetCookieValues(headers, cookie, other);
+
+        headers = newCombinedHttpHeaders();
+        headers.unwrap().set(SET_COOKIE, values);
+        assertSetCookieValues(headers, cookie, other);
+
+        headers = newCombinedHttpHeaders();
+        headers.unwrap().set(SET_COOKIE, Arrays.asList(values));
+        assertSetCookieValues(headers, cookie, other);
+
+        headers = newCombinedHttpHeaders();
+        headers.unwrap().setObject(SET_COOKIE, objects);
+        assertSetCookieValues(headers, cookie, other);
+    }
+
+    @Test
+    public void setCookieValueIsNotEscapedWhenCopiedFromOtherHeaders() {
+        final String cookie = "a=b; Expires=Wed, 21 Oct 2026 07:28:00 GMT";
+
+        final CombinedHttpHeaders fromDefault = newCombinedHttpHeaders();
+        fromDefault.add(new DefaultHttpHeaders().add(SET_COOKIE, cookie));
+        assertSetCookieValues(fromDefault, cookie);
+
+        final CombinedHttpHeaders combined = newCombinedHttpHeaders();
+        combined.add(SET_COOKIE, cookie);
+        final CombinedHttpHeaders fromCombined = newCombinedHttpHeaders();
+        fromCombined.add(combined);
+        assertSetCookieValues(fromCombined, cookie);
+    }
+
+    private static void assertSetCookieValues(CombinedHttpHeaders headers, String... expected) {
+        assertEquals(Arrays.asList(expected), headers.getAll(SET_COOKIE));
+        assertEquals(expected[0], headers.get(SET_COOKIE));
+        assertEquals(expected.length, headers.size());
+    }
+
+    @Test
     public void owsTrimming() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.set(HEADER_NAME, Arrays.asList("\ta", "   ", "  b ", "\t \t"));
