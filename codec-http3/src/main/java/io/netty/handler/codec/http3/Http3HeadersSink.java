@@ -240,8 +240,8 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
         if (index != -1) {
             throw new Http3HeadersValidationException(String.format(
-                    "Value of header '%s' contains prohibited character 0x%s at index %d.",
-                    name, Integer.toHexString(value.charAt(index)), index));
+                    "Value of header '%s' contains prohibited character 0x%02X at index %d.",
+                    name, (int) value.charAt(index), index));
         }
     }
 
