@@ -184,11 +184,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "bidiStreamsLeft");
     private volatile long bidiStreamsLeft;
 
-    // Whether the cached stream credits were refreshed from quiche at least once. Before the
+    // Whether the cached stream credits were refreshed from quiche at least once. Only updated
+    // and accessed from the event loop thread, so it needs no synchronization. Before the
     // first refresh the caches are 0 even though the peer may have announced credits, so the
     // fail-fast check in connectStream(...) must not fire yet; a rejected implicit open in
     // that window is instead handled by rolling back the allocated stream id.
-    private volatile boolean streamCreditsInitialized;
+    private boolean streamCreditsInitialized;
 
     private QuicheQuicChannel(Channel parent, boolean server, @Nullable ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
