@@ -444,9 +444,17 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
-     * Allow to configure a {@link Executor} that will be used to run expensive SSL operations.
+     * Configures the {@link Executor} for delegated TLS handshake tasks, including certificate selection
+     * and certificate verification.
+     * <p>
+     * Without a separate executor these tasks are executed on the QUIC event loop. If a key manager or trust
+     * manager performs blocking I/O (for example, to retrieve a certificate on a cache miss), supply an
+     * executor that runs these tasks off the event loop. In particular, dynamically loading certificate
+     * chains through {@link BoringSSLKeylessManagerFactory} requires offloading when retrieval can block.
+     * The executor does not make synchronous key manager methods asynchronous; its threads can still be
+     * blocked while waiting for a result.
      *
-     * @param sslTaskExecutor       the {@link Executor} that will be used to offload expensive SSL operations.
+     * @param sslTaskExecutor       the {@link Executor} used for delegated TLS tasks.
      * @return                      the instance itself.
      */
     public final B sslTaskExecutor(Executor sslTaskExecutor) {

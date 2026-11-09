@@ -52,6 +52,8 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     private final QuicheQuicSslSession session = new QuicheQuicSslSession();
     private volatile Certificate[] localCertificateChain;
     private List<SNIServerName> sniHostNames;
+    @Nullable
+    private volatile String requestedSniHostname;
     private boolean handshakeFinished;
     private String applicationProtocol;
     private boolean sessionReused;
@@ -81,11 +83,22 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         this.ctx.remove(this);
         this.ctx = ctx;
         long added = ctx.add(this);
+        selectSniHostname(hostname);
+        return added;
+    }
+
+    void selectSniHostname(@Nullable String hostname) {
+        requestedSniHostname = hostname;
         Consumer<String> sniSelectedCallback = this.sniSelectedCallback;
         if (sniSelectedCallback != null) {
             sniSelectedCallback.accept(hostname);
         }
-        return added;
+    }
+
+    @Override
+    @Nullable
+    public String getRequestedSniHostname() {
+        return requestedSniHostname;
     }
 
     @Nullable

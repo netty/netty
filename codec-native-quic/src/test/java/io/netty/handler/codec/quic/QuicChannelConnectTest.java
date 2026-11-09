@@ -32,6 +32,7 @@ import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
@@ -41,6 +42,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -84,6 +86,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,6 +96,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1822,9 +1826,20 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         testConnectKeyless0(executor, true);
     }
 
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectKeylessDynamicKeyManager(Executor executor) throws Throwable {
+        testConnectKeyless0(executor, false, true);
+    }
+
     public void testConnectKeyless0(Executor executor, boolean fail) throws Throwable {
+        testConnectKeyless0(executor, fail, false);
+    }
+
+    private void testConnectKeyless0(Executor executor, boolean fail, boolean dynamicKeyManager) throws Throwable {
         AtomicReference<Throwable> causeRef = new AtomicReference<>();
         AtomicBoolean signCalled = new AtomicBoolean();
+        AtomicBoolean certificateSelected = new AtomicBoolean();
         BoringSSLAsyncPrivateKeyMethod keyMethod = new BoringSSLAsyncPrivateKeyMethod() {
             @Override
             public Future<byte[]> sign(SSLEngine engine, int signatureAlgorithm, byte[] input) {
@@ -1863,8 +1878,61 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             }
         };
 
-        BoringSSLKeylessManagerFactory factory = BoringSSLKeylessManagerFactory.newKeyless(
-                keyMethod, QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate());
+        BoringSSLKeylessManagerFactory factory;
+        if (dynamicKeyManager) {
+            X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
+                @Override
+                public String[] getClientAliases(String keyType, Principal[] issuers) {
+                    return null;
+                }
+
+                @Override
+                public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                    return null;
+                }
+
+                @Override
+                public String[] getServerAliases(String keyType, Principal[] issuers) {
+                    return "RSA".equals(keyType) ? new String[] { "dynamic" } : null;
+                }
+
+                @Override
+                public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                    return null;
+                }
+
+                @Override
+                public X509Certificate[] getCertificateChain(String alias) {
+                    if (!"dynamic".equals(alias)) {
+                        return null;
+                    }
+                    return new X509Certificate[] { QuicTestUtils.SELF_SIGNED_CERTIFICATE.cert() };
+                }
+
+                @Override
+                public PrivateKey getPrivateKey(String alias) {
+                    throw new AssertionError("Keyless TLS must not request the delegate's private key");
+                }
+
+                @Override
+                public String chooseEngineClientAlias(String[] keyType, Principal[] issuers, SSLEngine engine) {
+                    return null;
+                }
+
+                @Override
+                public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+                    if (!"RSA".equals(keyType)) {
+                        return null;
+                    }
+                    certificateSelected.set(true);
+                    return "dynamic";
+                }
+            };
+            factory = BoringSSLKeylessManagerFactory.newKeyless(keyMethod, keyManager);
+        } else {
+            factory = BoringSSLKeylessManagerFactory.newKeyless(
+                    keyMethod, QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate());
+        }
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(factory, null)
                                 .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
@@ -1900,11 +1968,481 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 assertNull(causeRef.get());
             }
             assertTrue(signCalled.get());
+            if (dynamicKeyManager) {
+                assertTrue(certificateSelected.get());
+            }
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
 
+            shutdown(executor);
+        }
+    }
+
+    private enum KeylessSniTestMode {
+        SEQUENTIAL,
+        LAZY_LOADING,
+        CONCURRENT,
+        LOAD_FAILURE
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectKeylessDynamicKeyManagerWithSni(Executor executor) throws Throwable {
+        testConnectKeylessDynamicKeyManagerWithSni0(executor, KeylessSniTestMode.SEQUENTIAL);
+    }
+
+    @Test
+    public void testConnectKeylessDynamicKeyManagerWithSniLazyCertificateLoading() throws Throwable {
+        testConnectKeylessDynamicKeyManagerWithSni0(Executors.newSingleThreadExecutor(),
+                KeylessSniTestMode.LAZY_LOADING);
+    }
+
+    @Test
+    public void testConnectKeylessDynamicKeyManagerWithConcurrentSni() throws Throwable {
+        testConnectKeylessDynamicKeyManagerWithSni0(Executors.newFixedThreadPool(2), KeylessSniTestMode.CONCURRENT);
+    }
+
+    @Test
+    public void testConnectKeylessDynamicKeyManagerWithFailedCertificateLoading() throws Throwable {
+        testConnectKeylessDynamicKeyManagerWithSni0(Executors.newFixedThreadPool(2), KeylessSniTestMode.LOAD_FAILURE);
+    }
+
+    @Test
+    public void testConnectKeylessDynamicKeyManagerWithCertificateRotation() throws Throwable {
+        String hostname = "rotation.netty.io";
+        SelfSignedCertificate firstCertificate = new SelfSignedCertificate(hostname);
+        SelfSignedCertificate secondCertificate = new SelfSignedCertificate(hostname);
+        AtomicReference<SelfSignedCertificate> activeCertificate = new AtomicReference<>(firstCertificate);
+        AtomicInteger certificateSelections = new AtomicInteger();
+        AtomicInteger signatures = new AtomicInteger();
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        try {
+            BoringSSLAsyncPrivateKeyMethod keyMethod = new BoringSSLAsyncPrivateKeyMethod() {
+                @Override
+                public Future<byte[]> sign(SSLEngine engine, int signatureAlgorithm, byte[] input) {
+                    signatures.incrementAndGet();
+                    try {
+                        Certificate[] chain = engine.getSession().getLocalCertificates();
+                        assertNotNull(chain);
+                        assertEquals(1, chain.length);
+                        PrivateKey key;
+                        if (firstCertificate.cert().equals(chain[0])) {
+                            key = firstCertificate.key();
+                        } else if (secondCertificate.cert().equals(chain[0])) {
+                            key = secondCertificate.key();
+                        } else {
+                            throw new AssertionError("Unexpected certificate selected");
+                        }
+
+                        final Signature signature;
+                        if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA256) {
+                            signature = Signature.getInstance("SHA256withRSA");
+                        } else if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA256) {
+                            signature = Signature.getInstance("RSASSA-PSS");
+                            signature.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256,
+                                    32, 1));
+                        } else {
+                            throw new AssertionError("Unexpected signature algorithm " + signatureAlgorithm);
+                        }
+                        signature.initSign(key);
+                        signature.update(input);
+                        return ImmediateEventExecutor.INSTANCE.newSucceededFuture(signature.sign());
+                    } catch (Throwable cause) {
+                        return ImmediateEventExecutor.INSTANCE.newFailedFuture(cause);
+                    }
+                }
+
+                @Override
+                public Future<byte[]> decrypt(SSLEngine engine, byte[] input) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+
+            X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
+                @Override
+                public String[] getClientAliases(String keyType, Principal[] issuers) {
+                    return null;
+                }
+
+                @Override
+                public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                    return null;
+                }
+
+                @Override
+                public String[] getServerAliases(String keyType, Principal[] issuers) {
+                    return null;
+                }
+
+                @Override
+                public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                    return null;
+                }
+
+                @Override
+                public X509Certificate[] getCertificateChain(String alias) {
+                    if (!hostname.equals(alias)) {
+                        return null;
+                    }
+                    certificateSelections.incrementAndGet();
+                    return new X509Certificate[] { activeCertificate.get().cert() };
+                }
+
+                @Override
+                public PrivateKey getPrivateKey(String alias) {
+                    throw new AssertionError("Keyless TLS must not request the delegate's private key");
+                }
+
+                @Override
+                public String chooseEngineClientAlias(String[] keyType, Principal[] issuers, SSLEngine engine) {
+                    return null;
+                }
+
+                @Override
+                public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+                    if (!"RSA".equals(keyType)) {
+                        return null;
+                    }
+                    assertInstanceOf(QuicSslEngine.class, engine);
+                    assertEquals(hostname, ((QuicSslEngine) engine).getRequestedSniHostname());
+                    return hostname;
+                }
+            };
+
+            BoringSSLKeylessManagerFactory factory = BoringSSLKeylessManagerFactory.newKeyless(keyMethod, keyManager);
+            QuicSslContext serverContext = QuicSslContextBuilder.forServer(factory, null)
+                    .applicationProtocols(QuicTestUtils.PROTOS).build();
+            Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverContext),
+                    TestQuicTokenHandler.INSTANCE, QuicTestUtils.NOOP_HANDLER, QuicTestUtils.NOOP_HANDLER);
+            InetSocketAddress address = (InetSocketAddress) server.localAddress();
+            try {
+                QuicSslContext firstClientContext = QuicSslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).build();
+                Channel firstClient = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                        .sslEngineProvider(c -> firstClientContext.newEngine(c.alloc(), hostname, 8080)));
+                try {
+                    ChannelActiveVerifyHandler firstHandler = new ChannelActiveVerifyHandler();
+                    QuicChannel firstConnection = QuicTestUtils.newQuicChannelBootstrap(firstClient)
+                            .handler(firstHandler)
+                            .streamHandler(new ChannelInboundHandlerAdapter())
+                            .remoteAddress(address)
+                            .connect()
+                            .get(5, TimeUnit.SECONDS);
+                    assertEquals(firstCertificate.cert(),
+                            firstConnection.sslEngine().getSession().getPeerCertificates()[0]);
+                    int selectionsBeforeRotation = certificateSelections.get();
+                    int signaturesBeforeRotation = signatures.get();
+                    assertTrue(selectionsBeforeRotation > 0);
+                    assertTrue(signaturesBeforeRotation > 0);
+
+                    activeCertificate.set(secondCertificate);
+
+                    // A fresh client context prevents session resumption from hiding the certificate rotation.
+                    QuicSslContext secondClientContext = QuicSslContextBuilder.forClient()
+                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                            .applicationProtocols(QuicTestUtils.PROTOS).build();
+                    Channel secondClient = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                            .sslEngineProvider(c -> secondClientContext.newEngine(c.alloc(), hostname, 8080)));
+                    try {
+                        ChannelActiveVerifyHandler secondHandler = new ChannelActiveVerifyHandler();
+                        QuicChannel secondConnection = QuicTestUtils.newQuicChannelBootstrap(secondClient)
+                                .handler(secondHandler)
+                                .streamHandler(new ChannelInboundHandlerAdapter())
+                                .remoteAddress(address)
+                                .connect()
+                                .get(5, TimeUnit.SECONDS);
+                        assertEquals(secondCertificate.cert(),
+                                secondConnection.sslEngine().getSession().getPeerCertificates()[0]);
+                        assertEquals(firstCertificate.cert(),
+                                firstConnection.sslEngine().getSession().getPeerCertificates()[0]);
+                        assertTrue(certificateSelections.get() > selectionsBeforeRotation);
+                        assertTrue(signatures.get() > signaturesBeforeRotation);
+                        assertTrue(secondConnection.close().await().isSuccess());
+                        secondHandler.assertState();
+                    } finally {
+                        secondClient.close().sync();
+                    }
+                    assertTrue(firstConnection.close().await().isSuccess());
+                    firstHandler.assertState();
+                } finally {
+                    firstClient.close().sync();
+                }
+            } finally {
+                server.close().sync();
+            }
+        } finally {
+            firstCertificate.delete();
+            secondCertificate.delete();
+            shutdown(executor);
+        }
+    }
+
+    private void testConnectKeylessDynamicKeyManagerWithSni0(Executor executor, KeylessSniTestMode mode)
+            throws Throwable {
+        boolean lazyCertificateLoading = mode != KeylessSniTestMode.SEQUENTIAL;
+        boolean concurrentHandshakes = mode == KeylessSniTestMode.CONCURRENT || mode == KeylessSniTestMode.LOAD_FAILURE;
+        boolean failCertificateLoading = mode == KeylessSniTestMode.LOAD_FAILURE;
+        String firstHostname = "first.netty.io";
+        String secondHostname = "second.netty.io";
+        SelfSignedCertificate firstCertificate = new SelfSignedCertificate(firstHostname);
+        SelfSignedCertificate secondCertificate = new SelfSignedCertificate(secondHostname);
+        AtomicInteger certificateSelections = new AtomicInteger();
+        AtomicInteger signatures = new AtomicInteger();
+        CountDownLatch certificateLoadStarted = new CountDownLatch(1);
+        CountDownLatch certificateLoadRelease = new CountDownLatch(1);
+
+        BoringSSLAsyncPrivateKeyMethod keyMethod = new BoringSSLAsyncPrivateKeyMethod() {
+            @Override
+            public Future<byte[]> sign(SSLEngine engine, int signatureAlgorithm, byte[] input) {
+                signatures.incrementAndGet();
+                try {
+                    Certificate[] chain = engine.getSession().getLocalCertificates();
+                    assertNotNull(chain);
+                    assertEquals(1, chain.length);
+                    PrivateKey key;
+                    if (firstCertificate.cert().equals(chain[0])) {
+                        key = firstCertificate.key();
+                    } else if (secondCertificate.cert().equals(chain[0])) {
+                        key = secondCertificate.key();
+                    } else {
+                        throw new AssertionError("Unexpected certificate selected");
+                    }
+
+                    final Signature signature;
+                    if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA256) {
+                        signature = Signature.getInstance("SHA256withRSA");
+                    } else if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA256) {
+                        signature = Signature.getInstance("RSASSA-PSS");
+                        signature.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256,
+                                32, 1));
+                    } else {
+                        throw new AssertionError("Unexpected signature algorithm " + signatureAlgorithm);
+                    }
+                    signature.initSign(key);
+                    signature.update(input);
+                    return ImmediateEventExecutor.INSTANCE.newSucceededFuture(signature.sign());
+                } catch (Throwable cause) {
+                    return ImmediateEventExecutor.INSTANCE.newFailedFuture(cause);
+                }
+            }
+
+            @Override
+            public Future<byte[]> decrypt(SSLEngine engine, byte[] input) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
+            @Override
+            public String[] getClientAliases(String keyType, Principal[] issuers) {
+                return null;
+            }
+
+            @Override
+            public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                return null;
+            }
+
+            @Override
+            public String[] getServerAliases(String keyType, Principal[] issuers) {
+                return null;
+            }
+
+            @Override
+            public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                return null;
+            }
+
+            @Override
+            public X509Certificate[] getCertificateChain(String alias) {
+                certificateSelections.incrementAndGet();
+                if (firstHostname.equals(alias)) {
+                    if (lazyCertificateLoading) {
+                        certificateLoadStarted.countDown();
+                        try {
+                            if (!certificateLoadRelease.await(5, TimeUnit.SECONDS)) {
+                                throw new AssertionError("Certificate loading was not released");
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError("Certificate loading interrupted", e);
+                        }
+                    }
+                    if (failCertificateLoading) {
+                        throw new IllegalStateException("Certificate loading failed");
+                    }
+                    return new X509Certificate[] { firstCertificate.cert() };
+                }
+                if (secondHostname.equals(alias)) {
+                    return new X509Certificate[] { secondCertificate.cert() };
+                }
+                return null;
+            }
+
+            @Override
+            public PrivateKey getPrivateKey(String alias) {
+                throw new AssertionError("Keyless TLS must not request the delegate's private key");
+            }
+
+            @Override
+            public String chooseEngineClientAlias(String[] keyType, Principal[] issuers, SSLEngine engine) {
+                return null;
+            }
+
+            @Override
+            public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+                if (!"RSA".equals(keyType)) {
+                    return null;
+                }
+                assertInstanceOf(QuicSslEngine.class, engine);
+                String hostname = ((QuicSslEngine) engine).getRequestedSniHostname();
+                if (!firstHostname.equals(hostname) && !secondHostname.equals(hostname)) {
+                    throw new AssertionError("Unexpected SNI hostname " + hostname);
+                }
+                return hostname;
+            }
+        };
+
+        BoringSSLKeylessManagerFactory factory = BoringSSLKeylessManagerFactory.newKeyless(keyMethod, keyManager);
+        QuicSslContext serverContext = QuicSslContextBuilder.forServer(factory, null)
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
+        QuicSslContext clientContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
+        assertEquals(0, certificateSelections.get());
+        assertEquals(0, signatures.get());
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverContext),
+                TestQuicTokenHandler.INSTANCE, QuicTestUtils.NOOP_HANDLER, QuicTestUtils.NOOP_HANDLER);
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        try {
+            if (concurrentHandshakes) {
+                Channel firstClient = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                        .sslEngineProvider(c -> clientContext.newEngine(c.alloc(), firstHostname, 8080)));
+                Channel secondClient = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                        .sslEngineProvider(c -> clientContext.newEngine(c.alloc(), secondHostname, 8080)));
+                try {
+                    ChannelActiveVerifyHandler firstHandler = new ChannelActiveVerifyHandler();
+                    Future<QuicChannel> firstConnect = QuicTestUtils.newQuicChannelBootstrap(firstClient)
+                            .handler(firstHandler)
+                            .streamHandler(new ChannelInboundHandlerAdapter())
+                            .remoteAddress(address)
+                            .connect();
+                    assertTrue(certificateLoadStarted.await(5, TimeUnit.SECONDS));
+
+                    CountDownLatch eventLoopTaskComplete = new CountDownLatch(1);
+                    server.eventLoop().execute(eventLoopTaskComplete::countDown);
+                    assertTrue(eventLoopTaskComplete.await(5, TimeUnit.SECONDS));
+                    assertFalse(firstConnect.isDone());
+                    assertEquals(0, signatures.get());
+
+                    ChannelActiveVerifyHandler secondHandler = new ChannelActiveVerifyHandler();
+                    Future<QuicChannel> secondConnect = QuicTestUtils.newQuicChannelBootstrap(secondClient)
+                            .handler(secondHandler)
+                            .streamHandler(new ChannelInboundHandlerAdapter())
+                            .remoteAddress(address)
+                            .connect();
+                    QuicChannel secondQuicChannel = secondConnect.get(5, TimeUnit.SECONDS);
+                    assertEquals(secondCertificate.cert(),
+                            secondQuicChannel.sslEngine().getSession().getPeerCertificates()[0]);
+                    assertFalse(firstConnect.isDone());
+                    assertTrue(certificateSelections.get() >= 2);
+                    assertTrue(signatures.get() >= 1);
+                    assertTrue(secondQuicChannel.close().await().isSuccess());
+                    secondHandler.assertState();
+
+                    int signaturesBeforeCertificateLoad = signatures.get();
+                    certificateLoadRelease.countDown();
+                    if (failCertificateLoading) {
+                        assertTrue(firstConnect.await(10, TimeUnit.SECONDS));
+                        assertFalse(firstConnect.isSuccess());
+                        assertNotNull(firstConnect.cause());
+                        assertEquals(signaturesBeforeCertificateLoad, signatures.get());
+
+                        QuicSslContext recoveryContext = QuicSslContextBuilder.forClient()
+                                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                .applicationProtocols(QuicTestUtils.PROTOS).build();
+                        Channel recoveryClient = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                                .sslEngineProvider(c -> recoveryContext.newEngine(c.alloc(), secondHostname, 8080)));
+                        try {
+                            ChannelActiveVerifyHandler recoveryHandler = new ChannelActiveVerifyHandler();
+                            QuicChannel recoveryChannel = QuicTestUtils.newQuicChannelBootstrap(recoveryClient)
+                                    .handler(recoveryHandler)
+                                    .streamHandler(new ChannelInboundHandlerAdapter())
+                                    .remoteAddress(address)
+                                    .connect()
+                                    .get(5, TimeUnit.SECONDS);
+                            assertEquals(secondCertificate.cert(),
+                                    recoveryChannel.sslEngine().getSession().getPeerCertificates()[0]);
+                            assertTrue(recoveryChannel.close().await().isSuccess());
+                            recoveryHandler.assertState();
+                            assertTrue(signatures.get() > signaturesBeforeCertificateLoad);
+                        } finally {
+                            recoveryClient.close().sync();
+                        }
+                    } else {
+                        QuicChannel firstQuicChannel = firstConnect.get(5, TimeUnit.SECONDS);
+                        assertEquals(firstCertificate.cert(),
+                                firstQuicChannel.sslEngine().getSession().getPeerCertificates()[0]);
+                        assertTrue(firstQuicChannel.close().await().isSuccess());
+                        firstHandler.assertState();
+                        assertTrue(signatures.get() >= 2);
+                    }
+                } finally {
+                    certificateLoadRelease.countDown();
+                    firstClient.close().sync();
+                    secondClient.close().sync();
+                }
+                return;
+            }
+
+            String[] hostnames = { firstHostname, secondHostname };
+            X509Certificate[] expectedCertificates = { firstCertificate.cert(), secondCertificate.cert() };
+            for (int i = 0; i < hostnames.length; i++) {
+                String hostname = hostnames[i];
+                Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                        .sslEngineProvider(c -> clientContext.newEngine(c.alloc(), hostname, 8080)));
+                try {
+                    ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+                    QuicChannel quicChannel;
+                    try {
+                        Future<QuicChannel> connectFuture = QuicTestUtils.newQuicChannelBootstrap(channel)
+                                .handler(clientQuicChannelHandler)
+                                .streamHandler(new ChannelInboundHandlerAdapter())
+                                .remoteAddress(address)
+                                .connect();
+                        if (lazyCertificateLoading && i == 0) {
+                            assertTrue(certificateLoadStarted.await(5, TimeUnit.SECONDS));
+                            CountDownLatch eventLoopTaskComplete = new CountDownLatch(1);
+                            server.eventLoop().execute(eventLoopTaskComplete::countDown);
+                            assertTrue(eventLoopTaskComplete.await(5, TimeUnit.SECONDS));
+                            assertFalse(connectFuture.isDone());
+                            assertEquals(0, signatures.get());
+                            certificateLoadRelease.countDown();
+                        }
+                        quicChannel = connectFuture.get();
+                    } catch (ExecutionException e) {
+                        throw new AssertionError("QUIC handshake failed for " + hostname + ", certificate selections="
+                                + certificateSelections.get() + ", sign operations=" + signatures.get(), e);
+                    }
+                    assertEquals(expectedCertificates[i],
+                            quicChannel.sslEngine().getSession().getPeerCertificates()[0]);
+                    assertTrue(quicChannel.close().await().isSuccess());
+                    clientQuicChannelHandler.assertState();
+                } finally {
+                    channel.close().sync();
+                }
+            }
+            assertTrue(certificateSelections.get() >= 2);
+            assertTrue(signatures.get() >= 2);
+        } finally {
+            certificateLoadRelease.countDown();
+            server.close().sync();
+            firstCertificate.delete();
+            secondCertificate.delete();
             shutdown(executor);
         }
     }
