@@ -47,7 +47,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
     }
 
     public DefaultSocks5InitialRequest(Iterable<Socks5AuthMethod> authMethods) {
-        ObjectUtil.checkNotNull(authMethods, "authSchemes");
+        ObjectUtil.checkNotNull(authMethods, "authMethods");
 
         List<Socks5AuthMethod> list = new ArrayList<Socks5AuthMethod>();
         for (Socks5AuthMethod m: authMethods) {
