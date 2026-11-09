@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -110,7 +111,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             QuicStreamChannel serverStream = serverStreams.open(clientStream);
 
             if (reset) {
-                serverStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+                reset(serverStream);
             } else {
                 serverStream.shutdown(ChannelShutdownType.newOutbound()).sync();
             }
@@ -160,7 +161,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             QuicStreamChannel serverStream = serverStreams.open(clientStream);
 
             clientStream.shutdown(ChannelShutdownType.newOutbound()).sync();
-            serverStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+            reset(serverStream);
 
             // The output was ended already, the reset terminates the stream once it was reported.
             assertReset(collector);
@@ -198,7 +199,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             // The server resets its output, which it ended already. A RESET_STREAM is still sent (RFC 9000 allows it
             // in the "Data Sent" state), but quiche ignores it as the input was read completely: the stream is not
             // made readable again, so nothing should reach the pipeline.
-            serverStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+            reset(serverStream);
 
             // Round trip on another stream, so anything the server sent for the first stream was received.
             QuicStreamChannel barrier = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
@@ -239,7 +240,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
 
             // The stream is closed before its input is terminated, it stays tracked until the reset is received.
             clientStream.close().sync();
-            serverStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+            reset(serverStream);
 
             awaitStreamRemoved(clientStream);
 
@@ -280,7 +281,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             // still writing.
             serverStream.writeAndFlush(Unpooled.directBuffer(4 * WINDOW).writeZero(4 * WINDOW));
             clientStream.closeFuture().sync();
-            serverStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+            reset(serverStream);
 
             awaitStreamRemoved(clientStream);
 
@@ -307,7 +308,7 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
                     new ChannelInboundHandler() { }).get();
             clientStream.writeAndFlush(Unpooled.buffer().writeByte(0)).sync();
-            clientStream.shutdown(ChannelShutdownType.newOutbound((int) ERROR_CODE)).sync();
+            reset(clientStream);
             assertReset(serverCollector);
 
             // The remote created stream has no output, the application closes it once the input is terminated.
@@ -342,6 +343,16 @@ public class QuicStreamResetTest extends AbstractQuicTest {
         assertThat(event).isInstanceOf(QuicStreamResetException.class);
         assertThat(((QuicStreamResetException) event).applicationProtocolCode()).isEqualTo(ERROR_CODE);
         assertThat(collector.next()).isEqualTo("active=true, inputShutdown=true");
+    }
+
+    // Sends a RESET_STREAM for the output of the stream only. Shutting down the output of a stream with an error
+    // through the channel first sends a FIN, which the remote peer would see as a graceful end of input.
+    private static void reset(QuicStreamChannel stream) throws Exception {
+        QuicheQuicChannel parent = (QuicheQuicChannel) stream.parent();
+        Promise<Void> promise = parent.executor().newPromise();
+        parent.executor().execute(() ->
+                parent.streamShutdown(stream.streamId(), false, true, (int) ERROR_CODE, promise));
+        promise.sync();
     }
 
     private static boolean hasStream(QuicStreamChannel stream) throws Exception {
