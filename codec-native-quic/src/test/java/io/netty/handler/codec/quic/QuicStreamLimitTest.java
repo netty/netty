@@ -145,15 +145,15 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
                     @Override
                     public boolean isSharable() {
                         return true;
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             ctx.close();
                         }
                     }
@@ -179,17 +179,17 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect().get();
             latch.await();
             QuicStreamChannel stream = quicChannel.createStream(
-                    type, new ChannelInboundHandlerAdapter()).get();
+                    type, new ChannelInboundHandler() { }).get();
             assertEquals(0, quicChannel.peerAllowedStreams(type));
 
             // Second stream creation should fail as the limit is reached.
             Throwable cause = quicChannel.createStream(
-                    type, new ChannelInboundHandlerAdapter()).await().cause();
+                    type, new ChannelInboundHandler() { }).await().cause();
             assertInstanceOf(QuicException.class, cause);
 
             // Repeated failed creations while the limit is exhausted must not consume
@@ -198,7 +198,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             // past the limit.
             for (int i = 0; i < 5; i++) {
                 Throwable repeatedCause = quicChannel.createStream(
-                        type, new ChannelInboundHandlerAdapter()).await().cause();
+                        type, new ChannelInboundHandler() { }).await().cause();
                 assertInstanceOf(QuicException.class, repeatedCause);
             }
             stream.close().sync();
@@ -210,7 +210,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             // this and every later creation on the connection would keep failing with
             // STREAM_LIMIT_ERROR while peerAllowedStreams(...) reports capacity.
             QuicStreamChannel stream2 = quicChannel.createStream(
-                    type, new ChannelInboundHandlerAdapter()).get();
+                    type, new ChannelInboundHandler() { }).get();
             stream2.close().sync();
             quicChannel.close().sync();
 
