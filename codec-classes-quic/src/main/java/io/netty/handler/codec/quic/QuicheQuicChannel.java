@@ -893,6 +893,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         streams.remove(streamId);
     }
 
+    // Package-private for testing.
+    boolean hasStream(long streamId) {
+        assert eventLoop().inEventLoop();
+        return streams.containsKey(streamId);
+    }
+
     boolean isStreamLocalCreated(long streamId) {
         return (streamId & 0x1) == (server ? 1 : 0);
     }
