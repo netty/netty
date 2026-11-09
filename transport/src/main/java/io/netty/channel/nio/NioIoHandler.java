@@ -114,7 +114,7 @@ public final class NioIoHandler implements IoHandler {
 
     private NioIoHandler(ThreadAwareExecutor executor, SelectorProvider selectorProvider,
                          SelectStrategy strategy) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executionContext");
+        this.executor = ObjectUtil.checkNotNull(executor, "executor");
         this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "selectStrategy");
         final SelectorTuple selectorTuple = openSelector();
