@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -245,6 +246,56 @@ public class Http3HeadersSinkTest {
         sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "public.example.com");
         sink.accept(new AsciiString(HttpHeaderNames.HOST), "internal-admin.local");
         assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "a\r\nx-injected: 1", "a\rb", "a\nb", "a\u0000b" })
+    public void testInvalidHeaderValue(String value) {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        addMandatoryPseudoHeaders(sink, true);
+        sink.accept("x-foo", value);
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @Test
+    public void testInvalidPseudoHeaderValue() {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/\r\nx-injected: 1");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "value");
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "x foo", "x:foo", "x\r\nfoo", "x\u0000foo" })
+    public void testInvalidHeaderName(String name) {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        addMandatoryPseudoHeaders(sink, true);
+        sink.accept(name, "value");
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "connection", "keep-alive", "proxy-connection", "transfer-encoding", "upgrade" })
+    public void testConnectionSpecificHeader(String name) {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        addMandatoryPseudoHeaders(sink, true);
+        sink.accept(name, "value");
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @Test
+    public void testTeHeader() throws Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        addMandatoryPseudoHeaders(sink, true);
+        sink.accept("te", "trailers");
+        sink.finish();
+
+        Http3HeadersSink invalidSink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        addMandatoryPseudoHeaders(invalidSink, true);
+        invalidSink.accept("te", "gzip");
+        assertThrows(Http3HeadersValidationException.class, () -> invalidSink.finish());
     }
 
     private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {
