@@ -73,6 +73,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
     private ChannelHandlerContext ctx;
     private boolean sslHandlerChecked;
+    private boolean handshakeFailed;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -138,16 +139,19 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    // if the event is not produced because of an successful handshake we will receive the same
-                    // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
-                    // control over which exception we propagate down the ChannelPipeline.
-                    //
-                    // See https://github.com/netty/netty/issues/10342
+                    try {
+                        super.userEventTriggered(ctx, evt);
+                    } finally {
+                        this.notifyHandshakeFailure(ctx, handshakeEvent.cause());
+                    }
+
+                    return;
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                // Handshake failures are handled in exceptionCaught(...).
+                // consume later SSL decoder exceptions to avoid downstream warnings
+                // see https://github.com/netty/netty/issues/10342; timeouts and early closes may only emit this event
                 if (handshakeEvent.isSuccess()) {
                     removeSelfIfPresent(ctx);
                 }
@@ -192,17 +196,25 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         ctx.close();
     }
 
+    private void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if (!this.handshakeFailed) {
+            this.handshakeFailed = true;
+            this.handshakeFailure(ctx, cause);
+        }
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Throwable wrapped;
         if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
             try {
-                handshakeFailure(ctx, wrapped);
+                this.notifyHandshakeFailure(ctx, wrapped);
                 return;
             } finally {
                 removeSelfIfPresent(ctx);
             }
         }
+
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
         ctx.fireExceptionCaught(cause);
         ctx.close();
