@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.AsciiString;
 
@@ -186,7 +187,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
         if (validate) {
             try {
-                 validate(headers, name);
+                 validate(headers, name, value);
             } catch (Http3HeadersValidationException ex) {
                 validationException = ex;
                 return;
@@ -196,7 +197,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         headers.add(name, value);
     }
 
-    private void validate(Http3Headers headers, CharSequence name) {
+    private void validate(Http3Headers headers, CharSequence name, CharSequence value) {
         if (hasPseudoHeaderFormat(name)) {
             if (previousType == HeaderType.REGULAR_HEADER) {
                 throw new Http3HeadersValidationException(
@@ -220,7 +221,27 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
             request = pseudoHeader.isRequestOnly();
             previousType = currentHeaderType;
         } else {
+            // https://www.rfc-editor.org/rfc/rfc9114.html#section-4.2
+            if (HttpHeaderValidationUtil.validateToken(name) != -1) {
+                throw new Http3HeadersValidationException(String.format("Invalid header name '%s'.", name));
+            }
+            if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+                throw new Http3HeadersValidationException(
+                        String.format("Illegal connection-specific header '%s' encountered.", name));
+            }
+            if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+                throw new Http3HeadersValidationException(
+                        "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+            }
             previousType = HeaderType.REGULAR_HEADER;
+        }
+
+        // https://www.rfc-editor.org/rfc/rfc9114.html#section-10.3
+        int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
+        if (index != -1) {
+            throw new Http3HeadersValidationException(String.format(
+                    "Value of header '%s' contains prohibited character 0x%02X at index %d.",
+                    name, (int) value.charAt(index), index));
         }
     }
 
