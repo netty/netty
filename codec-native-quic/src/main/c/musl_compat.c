@@ -87,7 +87,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <link.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/sendfile.h>
@@ -330,6 +332,87 @@ NETTY_MUSL_COMPAT const char* gnu_get_libc_version(void) {
 NETTY_MUSL_COMPAT int __res_init(void) {
     return 0;
 }
+
+/*
+ * _dl_find_object is glibc 2.35+ (also backported to the 2.34 of RHEL 9 / UBI 9). libgcc's
+ * unwinder calls it from _Unwind_Find_FDE when it was built against such a glibc, and the choice
+ * is made when libgcc is compiled: the dl_iterate_phdr lookup is compiled out of that
+ * libgcc_eh.a, so no linker flag brings it back. Linking libgcc statically (see the linux
+ * profiles in pom.xml) therefore leaves a strong, undefined reference to a function musl does
+ * not have. musl defers it, so the library loads and the handshake works, but the first frame
+ * lookup -- a Rust panic or a C++ exception unwinding through this library -- dies on it. `ldd`
+ * reports it as "Error relocating ... _dl_find_object: symbol not found", which is how
+ * .github/scripts/musl-verify/verify.sh catches it.
+ *
+ * This is the lookup libgcc itself uses when _dl_find_object is unavailable
+ * (libgcc/unwind-dw2-fde-dip.c, _Unwind_IteratePhdrCallback): find the PT_LOAD segment that
+ * contains the address and hand back its PT_GNU_EH_FRAME, which is all _Unwind_Find_FDE reads
+ * (dlfo_eh_frame). The result is 0 for found and -1 for not found, as with glibc's.
+ *
+ * Compiled in only when <link.h> declares the function, i.e. on exactly the hosts whose libgcc
+ * references it: the CentOS 7 images have neither. The struct layout comes from the header for
+ * the same reason. DLFO_STRUCT_HAS_EH_DBASE is 0 on x86_64 and aarch64; it is non-zero only on
+ * targets this module is not built for, where there would be a dbase to fill in as well.
+ *
+ * Like the rest of this file it is weak and exported, so on glibc the definition in libc.so.6
+ * interposes it and this one is never reached.
+ */
+#if defined(DLFO_STRUCT_HAS_EH_DBASE) && !DLFO_STRUCT_HAS_EH_DBASE
+
+struct netty_dlfo_search {
+    uintptr_t pc;
+    struct dl_find_object* result;
+};
+
+static int netty_dlfo_callback(struct dl_phdr_info* info, size_t size, void* data) {
+    struct netty_dlfo_search* search = (struct netty_dlfo_search*) data;
+    uintptr_t map_start = UINTPTR_MAX;
+    uintptr_t map_end = 0;
+    uintptr_t eh_frame = 0;
+    int contains_pc = 0;
+    int i;
+    (void) size;
+
+    for (i = 0; i < info->dlpi_phnum; i++) {
+        const ElfW(Phdr)* phdr = &info->dlpi_phdr[i];
+        if (phdr->p_type == PT_LOAD) {
+            uintptr_t start = (uintptr_t) info->dlpi_addr + (uintptr_t) phdr->p_vaddr;
+            uintptr_t end = start + (uintptr_t) phdr->p_memsz;
+            if (start < map_start) {
+                map_start = start;
+            }
+            if (end > map_end) {
+                map_end = end;
+            }
+            if (search->pc >= start && search->pc < end) {
+                contains_pc = 1;
+            }
+        } else if (phdr->p_type == PT_GNU_EH_FRAME) {
+            eh_frame = (uintptr_t) info->dlpi_addr + (uintptr_t) phdr->p_vaddr;
+        }
+    }
+    if (!contains_pc) {
+        return 0;
+    }
+
+    search->result->dlfo_flags = 0;
+    search->result->dlfo_map_start = (void*) map_start;
+    search->result->dlfo_map_end = (void*) map_end;
+    /* Not read by libgcc, and there is no link_map to name on musl. */
+    search->result->dlfo_link_map = NULL;
+    /* NULL when the object has no PT_GNU_EH_FRAME, as with glibc; the caller treats it as a miss. */
+    search->result->dlfo_eh_frame = (void*) eh_frame;
+    return 1; /* stops dl_iterate_phdr */
+}
+
+NETTY_MUSL_COMPAT int _dl_find_object(void* address, struct dl_find_object* result) {
+    struct netty_dlfo_search search;
+    search.pc = (uintptr_t) address;
+    search.result = result;
+    return dl_iterate_phdr(netty_dlfo_callback, &search) != 0 ? 0 : -1;
+}
+
+#endif /* DLFO_STRUCT_HAS_EH_DBASE */
 
 #endif /* __GLIBC__ */
 
