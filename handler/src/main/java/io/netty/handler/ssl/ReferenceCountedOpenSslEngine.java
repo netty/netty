@@ -163,6 +163,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile boolean destroyed;
     // Credentials added via addCredential(); released in shutdown() to balance the retain() in addCredential().
     private List<OpenSslCredential> engineCredentials;
+    private long selectedCredentialAddress;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
     private boolean hasTLSv13Cipher;
@@ -619,6 +620,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
+            this.selectedCredentialAddress = 0;
 
             isInboundDone = outboundClosed = true;
         }
@@ -2052,12 +2054,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (code <= 0) {
             int sslError = SSL.getError(ssl, code);
             if (sslError == SSL.SSL_ERROR_WANT_READ || sslError == SSL.SSL_ERROR_WANT_WRITE) {
+                this.cacheSelectedCredential();
                 return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
             }
 
             if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
                     sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
                     sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
+                this.cacheSelectedCredential();
                 return NEED_TASK;
             }
 
@@ -2076,6 +2080,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // Everything else is considered as error
             throw shutdownWithError("SSL_do_handshake", sslError, errorNumber);
         }
+        this.cacheSelectedCredential();
         // We have produced more data as part of the handshake if this is the case the user should call wrap(...)
         if (SSL.bioLengthNonApplication(networkBIO) > 0) {
             return NEED_WRAP;
@@ -2483,6 +2488,63 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw new SSLException("Failed to get selected credential", e);
             }
         }
+    }
+
+    /**
+     * Returns whether the given credential was selected for this SSL connection. The credential must be added to this
+     * engine or its context. The result remains available after the handshake completes until this engine is shut down.
+     *
+     * @throws SSLException if an error occurs querying the selected credential.
+     */
+    public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
+        checkNotNull(credential, "credential");
+
+        if (this.destroyed || !this.containsCredential(credential)) {
+            return false;
+        }
+
+        if (this.selectedCredentialAddress == 0) {
+            try {
+                this.selectedCredentialAddress = SSL.getSelectedCredential(this.ssl);
+            } catch (Exception e) {
+                throw new SSLException("Failed to get selected credential", e);
+            }
+        }
+
+        return this.selectedCredentialAddress != 0 &&
+                ((OpenSslCredentialPointer) credential).credentialAddress() == this.selectedCredentialAddress;
+    }
+
+    private void cacheSelectedCredential() {
+        if (this.selectedCredentialAddress != 0 ||
+                (this.engineCredentials == null && this.parentContext.credentials.isEmpty())) {
+            return;
+        }
+
+        // remember the address before BoringSSL discards its handshake state
+        try {
+            this.selectedCredentialAddress = SSL.getSelectedCredential(this.ssl);
+        } catch (Exception e) {
+            logger.debug("Failed to cache the selected credential", e);
+        }
+    }
+
+    private boolean containsCredential(OpenSslCredential credential) {
+        if (this.engineCredentials != null) {
+            for (OpenSslCredential configuredCredential : this.engineCredentials) {
+                if (configuredCredential == credential) {
+                    return true;
+                }
+            }
+        }
+
+        for (OpenSslCredential configuredCredential : this.parentContext.credentials) {
+            if (configuredCredential == credential) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static long bufferAddress(ByteBuffer b) {
