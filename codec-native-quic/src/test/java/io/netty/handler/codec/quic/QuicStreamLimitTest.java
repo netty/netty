@@ -126,6 +126,107 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
+    public void testStreamCreationSucceedsAfterFailedCreationAndLimitRestoredViaClientBidirectional(
+            Executor executor) throws Throwable {
+        testStreamCreationSucceedsAfterFailedCreationAndLimitRestoredViaClient(executor, QuicStreamType.BIDIRECTIONAL);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamCreationSucceedsAfterFailedCreationAndLimitRestoredViaClientUnidirectional(
+            Executor executor) throws Throwable {
+        testStreamCreationSucceedsAfterFailedCreationAndLimitRestoredViaClient(executor, QuicStreamType.UNIDIRECTIONAL);
+    }
+
+    private static void testStreamCreationSucceedsAfterFailedCreationAndLimitRestoredViaClient(
+            Executor executor, QuicStreamType type) throws Throwable {
+        QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1)
+                        .initialMaxStreamsUnidirectional(1),
+                InsecureQuicTokenHandler.INSTANCE,
+                serverHandler, new ChannelInboundHandler() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
+                            ctx.close();
+                        }
+                    }
+                });
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(executor);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof QuicStreamLimitChangedEvent) {
+                    if (latch.getCount() == 0) {
+                        latch2.countDown();
+                    } else {
+                        latch.countDown();
+                    }
+                }
+                super.userEventTriggered(ctx, evt);
+            }
+        };
+        try {
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientHandler)
+                    .streamHandler(new ChannelInboundHandler() { })
+                    .remoteAddress(address)
+                    .connect().get();
+            latch.await();
+            QuicStreamChannel stream = quicChannel.createStream(
+                    type, new ChannelInboundHandler() { }).get();
+            assertEquals(0, quicChannel.peerAllowedStreams(type));
+
+            // Second stream creation should fail as the limit is reached.
+            Throwable cause = quicChannel.createStream(
+                    type, new ChannelInboundHandler() { }).await().cause();
+            assertInstanceOf(QuicException.class, cause);
+
+            // Repeated failed creations while the limit is exhausted must not consume
+            // stream ids either: if they did, the creation below after the restore would
+            // fail with STREAM_LIMIT_ERROR again because the stream id position moved
+            // past the limit.
+            for (int i = 0; i < 5; i++) {
+                Throwable repeatedCause = quicChannel.createStream(
+                        type, new ChannelInboundHandler() { }).await().cause();
+                assertInstanceOf(QuicException.class, repeatedCause);
+            }
+            stream.close().sync();
+            latch2.await();
+            assertEquals(1, quicChannel.peerAllowedStreams(type));
+
+            // Once the limit is restored, creating a stream must succeed again: a failed
+            // createStream(...) must not have permanently consumed a stream id. Otherwise
+            // this and every later creation on the connection would keep failing with
+            // STREAM_LIMIT_ERROR while peerAllowedStreams(...) reports capacity.
+            QuicStreamChannel stream2 = quicChannel.createStream(
+                    type, new ChannelInboundHandler() { }).get();
+            stream2.close().sync();
+            quicChannel.close().sync();
+
+            serverHandler.assertState();
+            clientHandler.assertState();
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
     public void testStreamLimitEnforcedWhenCreatingViaServerBidirectional(Executor executor) throws Throwable {
         testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.BIDIRECTIONAL);
     }
