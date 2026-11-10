@@ -357,7 +357,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @return {@code true} if the write operation did add something to the inbound buffer
      */
     public boolean writeInbound(Object... msgs) {
-        ensureOpen();
+        ensureOpen(msgs);
         if (msgs.length == 0) {
             return isNotEmpty(inboundMessages);
         }
@@ -398,6 +398,9 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             if (checkOpen(true)) {
                 pipeline().fireChannelRead(msg);
+            } else {
+                // The message never reached the pipeline, so nobody else will release it.
+                ReferenceCountUtil.safeRelease(msg);
             }
         } finally {
             executingStackCnt--;
@@ -438,7 +441,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @return bufferReadable   returns {@code true} if the write operation did add something to the outbound buffer
      */
     public boolean writeOutbound(Object... msgs) {
-        ensureOpen();
+        ensureOpen(msgs);
         if (msgs.length == 0) {
             return isNotEmpty(outboundMessages);
         }
@@ -499,6 +502,8 @@ public class EmbeddedChannel extends AbstractChannel {
             if (checkOpen(true)) {
                 return write(msg, promise);
             }
+            // The message never reached the pipeline, so nobody else will release it.
+            ReferenceCountUtil.safeRelease(msg);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -970,6 +975,19 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         return loop;
+    }
+
+    /**
+     * Ensure the {@link Channel} is open and if not release the given messages, which never reached the pipeline,
+     * and throw an exception.
+     */
+    private void ensureOpen(Object[] msgs) {
+        if (!checkOpen(true)) {
+            for (Object msg : msgs) {
+                ReferenceCountUtil.safeRelease(msg);
+            }
+            checkException();
+        }
     }
 
     /**
