@@ -162,7 +162,7 @@ public class SocketTestPermutation {
             });
         }
 
-        // Populare the combinations.
+        // Popular the combinations.
         return combo(bfs, bfs);
     }
 
