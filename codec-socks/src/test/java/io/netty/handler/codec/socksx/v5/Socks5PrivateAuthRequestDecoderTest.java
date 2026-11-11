@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Socks5PrivateAuthRequestDecoderTest {
 
     @Test
-    public void testAuthRequestDecoder() {
+    public void testAuthRequestDecoder() throws Exception {
         byte[] token = { 1, 2, 3, 4 };
         EmbeddedChannel embedder = new EmbeddedChannel(new Socks5PrivateAuthRequestDecoder());
         embedder.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0x01, 0x04, 1, 2, 3, 4, 'G', 'E', 'T' }));
@@ -48,7 +48,7 @@ public class Socks5PrivateAuthRequestDecoderTest {
     }
 
     @Test
-    public void testDiscardsDataAfterFailure() {
+    public void testDiscardsDataAfterFailure() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new Socks5PrivateAuthRequestDecoder());
         embedder.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0x02, 0x03, 'a', 'b', 'c' }));
 
