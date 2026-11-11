@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
- * Default {@link AttributeMap} implementation which not exhibit any blocking behaviour on attribute lookup while using a
- * copy-on-write approach on the modify path.<br> Attributes lookup and remove exhibit {@code O(logn)} time worst-case
- * complexity, hence {@code attribute::set(null)} is to be preferred to {@code remove}.
+ * Default {@link AttributeMap} implementation which not exhibit any blocking behaviour on attribute lookup while
+ * using a copy-on-write approach on the modify path.<br> Attributes lookup and remove exhibit {@code O(logn)} time
+ * worst-case complexity, hence {@code attribute::set(null)} is to be preferred to {@code remove}.
  */
 public class DefaultAttributeMap implements AttributeMap {
 
