@@ -309,7 +309,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             int registered;
             // As SelectionKeys are removed in a lazy fashion in the JDK implementation we may need to query a few
-            // times before we see the right number of registered chanels.
+            // times before we see the right number of registered channels.
             while ((registered = registeredChannels(loop)) == 2) {
                 Thread.sleep(50);
             }
