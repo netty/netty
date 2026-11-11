@@ -23,6 +23,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.AsyncMapping;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,10 +38,11 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -82,11 +86,11 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    public void testHandshakeFailure(boolean exceptionDuringEvent) {
-        AtomicInteger failureCount = new AtomicInteger();
-        AtomicInteger failureCountOnExceptionReturn = new AtomicInteger();
-        AtomicInteger downstreamExceptionCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+    public void testHandshakeFailure(final boolean exceptionDuringEvent) {
+        final AtomicInteger failureCount = new AtomicInteger();
+        final AtomicInteger failureCountOnExceptionReturn = new AtomicInteger();
+        final AtomicInteger downstreamExceptionCount = new AtomicInteger();
+        final AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -106,8 +110,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
 
-        SSLHandshakeException exception = new SSLHandshakeException("error");
-        SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
+        final SSLHandshakeException exception = new SSLHandshakeException("error");
+        final SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -140,10 +144,10 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @ParameterizedTest
     @MethodSource("handshakeFailureCauses")
-    public void testHandshakeFailureEvent(Throwable cause) {
-        AtomicReference<SslHandshakeCompletionEvent> eventRef =
+    public void testHandshakeFailureEvent(final Throwable cause) {
+        final AtomicReference<SslHandshakeCompletionEvent> eventRef =
                 new AtomicReference<SslHandshakeCompletionEvent>();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -164,7 +168,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
                 }
             }
         });
-        SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(cause);
+        final SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(cause);
 
         channel.pipeline().fireUserEventTriggered(completionEvent);
 
@@ -174,16 +178,16 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
-    private static Stream<Arguments> handshakeFailureCauses() {
-        return Stream.of(
+    private static List<Arguments> handshakeFailureCauses() {
+        return Arrays.asList(
                 Arguments.of(new SslHandshakeTimeoutException("timed out")),
                 Arguments.of(new ClosedChannelException()));
     }
 
     @Test
     public void testHandshakeFailureExceptionWithoutEvent() {
-        AtomicInteger failureCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        final AtomicInteger failureCount = new AtomicInteger();
+        final AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -197,7 +201,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        SSLHandshakeException exception = new SSLHandshakeException("error");
+        final SSLHandshakeException exception = new SSLHandshakeException("error");
 
         channel.pipeline().fireExceptionCaught(new DecoderException(exception));
 
@@ -209,12 +213,12 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testSniLookupFailure() {
-        SSLHandshakeException exception = new SSLHandshakeException("SNI lookup failed");
-        AtomicInteger failureCount = new AtomicInteger();
-        AtomicInteger handshakeEventCount = new AtomicInteger();
-        AtomicInteger downstreamExceptionCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
-        AtomicReference<SniCompletionEvent> sniEvent = new AtomicReference<SniCompletionEvent>();
+        final SSLHandshakeException exception = new SSLHandshakeException("SNI lookup failed");
+        final AtomicInteger failureCount = new AtomicInteger();
+        final AtomicInteger handshakeEventCount = new AtomicInteger();
+        final AtomicInteger downstreamExceptionCount = new AtomicInteger();
+        final AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        final AtomicReference<SniCompletionEvent> sniEvent = new AtomicReference<SniCompletionEvent>();
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -227,7 +231,12 @@ public class ApplicationProtocolNegotiationHandlerTest {
                 failureCause.set(cause);
             }
         };
-        SniHandler sniHandler = new SniHandler((hostname, promise) -> promise.setFailure(exception));
+        final SniHandler sniHandler = new SniHandler(new AsyncMapping<String, SslContext>() {
+            @Override
+            public Future<SslContext> map(String input, Promise<SslContext> promise) {
+                return promise.setFailure(exception);
+            }
+        });
         EmbeddedChannel channel = new EmbeddedChannel(sniHandler, alpnHandler, new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
