@@ -43,7 +43,7 @@ public interface QuicConnectionIdGenerator {
     ByteBuffer newId(ByteBuffer input, int length);
 
     /**
-     * Creates a new connection id with the given length. The given source connection id and destionation connection id
+     * Creates a new connection id with the given length. The given source connection id and destination connection id
      * may be used to sign or seed the id, or may be ignored (depending on the implementation).
      *
      * @param scid      the source connection id which may be used to generate the id.
