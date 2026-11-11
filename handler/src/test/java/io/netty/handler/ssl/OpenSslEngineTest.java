@@ -1210,8 +1210,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         try {
             handshake(param.type(), param.delegate(), client, server);
 
-            int chunk = 400;
-            byte[] data = new byte[2 * chunk + 200];
+            byte[] data = new byte[MAX_PLAINTEXT_LENGTH];
+            int chunk = (data.length - 200) / 2;
             ThreadLocalRandom.current().nextBytes(data);
             ByteBuffer enc = wrapFullRecord(param, client, data);
             int recordLength = enc.remaining();
