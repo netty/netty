@@ -73,30 +73,33 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     public void testFlushDoesNotScheduleTaskAfterDrainingOutboundBuffer(int bufferCount, int writeSpinCount)
             throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        NioSocketChannel channel = new NioSocketChannel();
+        Channel channel = null;
         try (ServerSocket server = new ServerSocket()) {
             server.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0));
-            channel.config().setWriteSpinCount(writeSpinCount);
-            new Bootstrap().group(group)
-                    .channelFactory(() -> channel)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .connect(server.getLocalSocketAddress()).sync();
+            channel = new Bootstrap().group(group)
+                    .channelFactory(eventLoop -> {
+                        NioSocketChannel ch = new NioSocketChannel(eventLoop);
+                        ch.config().setWriteSpinCount(writeSpinCount);
+                        return ch;
+                    })
+                    .handler(new ChannelInboundHandler() { })
+                    .connect(server.getLocalSocketAddress()).get();
             try (Socket peer = server.accept()) {
-                SingleThreadEventLoop loop = (SingleThreadEventLoop) channel.eventLoop();
+                final Channel ch = channel;
+                final SingleThreadEventLoop loop = (SingleThreadEventLoop) ch.executor();
                 loop.submit(() -> {
-                    List<ChannelFuture> writes = new ArrayList<ChannelFuture>(bufferCount);
+                    List<Future<Void>> writes = new ArrayList<>(bufferCount);
                     for (int i = 0; i < bufferCount; i++) {
-                        writes.add(channel.write(Unpooled.directBuffer(1).writeByte(i)));
+                        writes.add(ch.write(Unpooled.directBuffer(1).writeByte(i)));
                     }
 
                     // Observe the queue in the same task as the flush, before any newly queued task can run.
                     int pendingTasks = loop.pendingTasks();
-                    channel.flush();
+                    ch.flush();
 
-                    for (ChannelFuture write : writes) {
+                    for (Future<Void> write : writes) {
                         assertThat(write.isSuccess()).as("write completed during flush").isTrue();
                     }
-                    assertThat(channel.unsafe().outboundBuffer().isEmpty()).isTrue();
                     assertThat(loop.pendingTasks()).as("flush must not enqueue a task after draining the buffer")
                             .isEqualTo(pendingTasks);
                 }).sync();
@@ -106,10 +109,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 }
             }
         } finally {
-            if (channel.isRegistered()) {
+            if (channel != null) {
                 channel.close().syncUninterruptibly();
-            } else {
-                channel.unsafe().closeForcibly();
             }
             group.shutdownGracefully().syncUninterruptibly();
         }
