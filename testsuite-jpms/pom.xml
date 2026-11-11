@@ -377,6 +377,23 @@
                 <skipMain>${skipJpmsTestsuite}</skipMain>
                 <skip>${skipJpmsTestsuite}</skip>
               </configuration>
+              <!--
+                The other Netty modules only get their module-info.class (in META-INF/versions/11) when packaged
+                as multi-release jars. Within a reactor build that stops before 'package', this module would see
+                their target/classes directories instead, which are not JPMS modules, and fail to compile.
+                So compile in 'prepare-package', when the reactor resolves the other modules to their jars,
+                and run the tests in 'package'. Builds that stop before 'package' skip this module entirely.
+              -->
+              <executions>
+                <execution>
+                  <id>default-compile</id>
+                  <phase>prepare-package</phase>
+                </execution>
+                <execution>
+                  <id>default-testCompile</id>
+                  <phase>prepare-package</phase>
+                </execution>
+              </executions>
             </plugin>
             <plugin>
               <artifactId>maven-surefire-plugin</artifactId>
@@ -388,6 +405,7 @@
               <executions>
                 <execution>
                   <id>default-test</id>
+                  <phase>package</phase>
                   <configuration>
                     <includes>
                       <include>io/netty/testsuite_jpms/test/**/*.java</include>
@@ -396,6 +414,7 @@
                 </execution>
                 <execution>
                   <id>slf4j-test</id>
+                  <phase>package</phase>
                   <goals>
                     <goal>test</goal>
                   </goals>
@@ -407,6 +426,7 @@
                 </execution>
                 <execution>
                   <id>log4j-test</id>
+                  <phase>package</phase>
                   <goals>
                     <goal>test</goal>
                   </goals>
@@ -419,6 +439,7 @@
                 </execution>
                 <execution>
                   <id>commons-logging-test</id>
+                  <phase>package</phase>
                   <goals>
                     <goal>test</goal>
                   </goals>
