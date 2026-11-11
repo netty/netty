@@ -240,6 +240,38 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     @ParameterizedTest
     @ValueSource(strings = { "Upgrade-Insecure-Request://" })
     public void upgradeWithRequestTargetThatIsInvalidForHttp2(String requestTarget) throws Exception {
+        assertUpgradeStreamReset("GET " + requestTarget + " HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "Cookie: a=b;  c=d", "TE: a,\"b" })
+    public void upgradeWithHeaderThatIsInvalidForHttp2(String header) throws Exception {
+        assertUpgradeStreamReset("GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                header + "\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "Cookie: a=b;  c=d", "TE: a,\"b" })
+    public void upgradeWithTrailerThatIsInvalidForHttp2(String trailer) throws Exception {
+        assertUpgradeStreamReset("POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n" +
+                "0\r\n" +
+                trailer + "\r\n\r\n");
+    }
+
+    private void assertUpgradeStreamReset(String upgradeString) throws Exception {
         final List<Throwable> childExceptions = new ArrayList<Throwable>();
         final Http2FrameCodec http2Codec = new Http2FrameCodecBuilder(true).build();
         final ChannelInitializer<Channel> streamInitializer = new ChannelInitializer<Channel>() {
@@ -265,11 +297,6 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         channel = new EmbeddedChannel(new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2Codec));
 
-        String upgradeString = "GET " + requestTarget + " HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Connection: Upgrade, HTTP2-Settings\r\n" +
-                "Upgrade: h2c\r\n" +
-                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
         assertFalse(channel.writeInbound(Unpooled.copiedBuffer(upgradeString, CharsetUtil.ISO_8859_1)));
         channel.checkException();
 
