@@ -113,8 +113,13 @@ public class ResourceLeakDetectorTest {
     @Test
     public void testLeakListenerIsNotDeduplicated() {
         RecordingLeakDetector detector = new RecordingLeakDetector(true);
-        List<String> reportedRecords = new ArrayList<String>();
-        detector.setLeakListener((resourceType, records) -> reportedRecords.add(records));
+        final List<String> reportedRecords = new ArrayList<String>();
+        detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+            @Override
+            public void onLeak(String resourceType, String records) {
+                reportedRecords.add(records);
+            }
+        });
 
         enqueueTwoLeaks(detector);
 
@@ -126,8 +131,13 @@ public class ResourceLeakDetectorTest {
     @Test
     public void testLeakListenerIsCalledWhenLoggingIsDisabled() {
         RecordingLeakDetector detector = new RecordingLeakDetector(false);
-        List<String> reportedRecords = new ArrayList<String>();
-        detector.setLeakListener((resourceType, records) -> reportedRecords.add(records));
+        final List<String> reportedRecords = new ArrayList<String>();
+        detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+            @Override
+            public void onLeak(String resourceType, String records) {
+                reportedRecords.add(records);
+            }
+        });
 
         enqueueTwoLeaks(detector);
 
