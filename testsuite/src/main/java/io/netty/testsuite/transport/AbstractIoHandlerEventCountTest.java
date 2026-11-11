@@ -13,8 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.testsuite.transport;
 
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.ManualIoEventLoop;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -26,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link IoHandler#run(IoHandlerContext)} returns only the count of real I/O events,
- * excluding internal events such as wakeups and timer expirations.
+ * Verifies that {@link io.netty.channel.IoHandler#run(io.netty.channel.IoHandlerContext)}
+ * returns only the count of real I/O events, excluding internal events such as wakeups and timer expirations.
  * <p>
  * Subclasses provide the {@link IoHandlerFactory} for each transport. The contract tested here
  * must hold regardless of the transport implementation.

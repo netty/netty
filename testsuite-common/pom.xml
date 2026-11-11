@@ -52,6 +52,20 @@
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!--
+      Used by io.netty.nativeimage.ChannelHandlerMetadataUtil.
+      Not optional, so modules running NativeImageHandlerMetadataTest get them transitively.
+    -->
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-testkit</artifactId>

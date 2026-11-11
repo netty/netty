@@ -53,9 +53,21 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 RUN yum -y install devtoolset-11-gcc devtoolset-11-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-11/enable' >> ~/.bashrc
 
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. EPEL is enabled here rather
+# than next to the dependency list above so that it cannot change what those packages resolve to.
+# The version call is not decoration: it fails the image build if EPEL ever stops resolving,
+# instead of leaving that to be discovered halfway through a maven run.
+RUN yum -y install epel-release && \
+  yum -y install patchelf && \
+  patchelf --version
+
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
 RUN wget -q https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
-RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
+RUN wget -q https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
+
+# Add pre-build clang so we can compile quiche.
+RUN wget -q https://github.com/netty/netty/releases/download/netty-clang-bin/centos-7-clang-18.1.8-bin.tar.xz && tar xf centos-7-clang-18.1.8-bin.tar.xz && rm -f centos-7-clang-18.1.8-bin.tar.xz && mv clang-18.1.8 /opt/ && echo 'PATH=/opt/cclang-18.1.8/bin:$PATH' >> ~/.bashrc && echo 'export LIBCLANG_PATH=/opt/clang-18.1.8/lib' >>  ~/.bashrc && echo 'export BINDGEN_EXTRA_CLANG_ARGS="-I /opt/clang-18.1.8/lib/clang/18/include/"' >>  ~/.bashrc
 
 # Build OpenSSL 3.x from source using devtoolset-11
 RUN set -x && \
@@ -73,7 +85,13 @@ RUN set -x && \
 RUN echo 'export LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib' >> ~/.bashrc
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://beta.sdkman.io?ci=true" | bash
+ARG sdkman_install_sha256=7c2e84cbfdeefd2047ea6d3203cd1b889c67f6530b72f246a38379892be2e817
+ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
+# The installer script is not versioned by SDKMAN!, so the pinned SHA-256 needs to be updated when it changes.
+RUN curl -fsSL -o /tmp/sdkman-install.sh "https://beta.sdkman.io?ci=true" && \
+    echo "$SDKMAN_INSTALL_SHA256  /tmp/sdkman-install.sh" | sha256sum -c - && \
+    bash /tmp/sdkman-install.sh && \
+    rm -f /tmp/sdkman-install.sh
 
 ARG java_version="11.0.26-zulu"
 ENV JAVA_VERSION=$java_version
@@ -87,8 +105,17 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 
+ARG rustup_version=1.29.1
+ARG rustup_sha256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+ENV RUSTUP_VERSION=$rustup_version
+ENV RUSTUP_SHA256=$rustup_sha256
+
 # install rust and setup PATH
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl -fsSL -o /tmp/rustup-init https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/x86_64-unknown-linux-gnu/rustup-init && \
+    echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - && \
+    chmod +x /tmp/rustup-init && \
+    /tmp/rustup-init -y && \
+    rm -f /tmp/rustup-init
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 # Prepare our own build
