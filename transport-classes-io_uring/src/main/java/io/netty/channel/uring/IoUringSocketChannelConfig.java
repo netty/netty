@@ -524,7 +524,7 @@ final class IoUringSocketChannelConfig extends IoUringChannelConfig {
         this.allowHalfClosure = allowHalfClosure;
     }
 
-    private int getWriteZeroCopyThreshold() {
+    int getWriteZeroCopyThreshold() {
         return writeZeroCopyThreshold;
     }
 
