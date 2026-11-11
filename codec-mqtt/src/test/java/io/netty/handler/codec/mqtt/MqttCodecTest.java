@@ -33,8 +33,10 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
@@ -72,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
@@ -338,6 +341,54 @@ public class MqttCodecTest {
         }
     }
 
+    public static boolean threadMxBeanAvailable() {
+        try {
+            Class.forName("com.sun.management.ThreadMXBean");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testSubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        // Remaining length of 268,435,453 + 2 bytes packet id, but no payload bytes sent.
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0x90);
+    }
+
+    @EnabledIf("threadMxBeanAvailable")
+    @Test
+    public void testUnsubAckWithHugeRemainingLengthDoesNotPreallocate() {
+        testAckWithHugeRemainingLengthDoesNotPreallocate((byte) 0xB0);
+    }
+
+    private static void testAckWithHugeRemainingLengthDoesNotPreallocate(byte firstByte) {
+        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
+        assumeTrue(bean instanceof com.sun.management.ThreadMXBean);
+        com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) bean;
+        assumeTrue(threadBean.isThreadAllocatedMemorySupported() && threadBean.isThreadAllocatedMemoryEnabled());
+
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(268_435_455));
+        try {
+            ByteBuf packet = Unpooled.buffer();
+            packet.writeByte(firstByte);
+            packet.writeByte(0xFD).writeByte(0xFF).writeByte(0xFF).writeByte(0x7F);
+            packet.writeShort(1);
+
+            long threadId = Thread.currentThread().getId();
+            long before = threadBean.getThreadAllocatedBytes(threadId);
+            // The payload has not been received yet, so nothing must be decoded.
+            assertFalse(channel.writeInbound(packet));
+            long allocated = threadBean.getThreadAllocatedBytes(threadId) - before;
+            assertNull(channel.readInbound());
+            // The declared remaining length must not be used to preallocate memory.
+            assertTrue(allocated < 16 * 1024 * 1024, "Allocated too much memory: " + allocated);
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
     @Test
     public void testSubscriptionIdentifierTooLarge() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
@@ -445,6 +496,75 @@ public class MqttCodecTest {
         } finally {
             channel.finishAndReleaseAll();
         }
+    }
+
+    @Test
+    public void testSetMaxBytesInMessageAppliesToSubsequentMessages() throws Exception {
+        final int smallMaxBytesInMessage = 16;
+        final int largeMaxBytesInMessage = 256;
+        final byte[] payload = new byte[64]; // > smallMaxBytesInMessage, < largeMaxBytesInMessage
+
+        final MqttDecoder decoder = new MqttDecoder(smallMaxBytesInMessage);
+        assertEquals(smallMaxBytesInMessage, decoder.maxBytesInMessage());
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        try {
+            decoder.setMaxBytesInMessage(largeMaxBytesInMessage);
+            assertEquals(largeMaxBytesInMessage, decoder.maxBytesInMessage());
+
+            // too large for the limit the decoder was constructed with, but accepted now it has been raised
+            assertTrue(channel.writeInbound(encodePublish(payload)));
+            MqttPublishMessage accepted = channel.readInbound();
+            try {
+                assertTrue(accepted.decoderResult().isSuccess());
+                assertEquals(payload.length, accepted.payload().readableBytes());
+            } finally {
+                ReferenceCountUtil.release(accepted);
+            }
+
+            // Lowering it again rejects the same message. A rejection leaves the decoder in BAD_MESSAGE, where it
+            // discards everything until the connection is closed, so this has to be the last thing asked of it.
+            decoder.setMaxBytesInMessage(smallMaxBytesInMessage);
+            assertTrue(channel.writeInbound(encodePublish(payload)));
+            MqttMessage rejected = channel.readInbound();
+            try {
+                assertTrue(rejected.decoderResult().isFailure());
+                assertInstanceOf(TooLongFrameException.class, rejected.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(rejected);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testSetMaxBytesInMessageRejectsNonPositive() {
+        final MqttDecoder decoder = new MqttDecoder(16);
+        assertThrows(IllegalArgumentException.class, () -> decoder.setMaxBytesInMessage(0));
+        assertThrows(IllegalArgumentException.class, () -> decoder.setMaxBytesInMessage(-1));
+        assertEquals(16, decoder.maxBytesInMessage());
+    }
+
+    /**
+     * Encodes a QoS 0 PUBLISH whose total size is dominated by {@code payload}.
+     */
+    private static ByteBuf encodePublish(byte[] payload) {
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        byteBuf.writeByte(0x30); // PUBLISH, DUP=0, QoS=0, RETAIN=0
+        byte[] topic = "t".getBytes(CharsetUtil.UTF_8);
+        int remainingLength = 2 + topic.length + payload.length;
+        do {
+            int digit = remainingLength % 128;
+            remainingLength /= 128;
+            if (remainingLength > 0) {
+                digit |= 0x80;
+            }
+            byteBuf.writeByte(digit);
+        } while (remainingLength > 0);
+        byteBuf.writeShort(topic.length);
+        byteBuf.writeBytes(topic);
+        byteBuf.writeBytes(payload);
+        return byteBuf;
     }
 
     @Test

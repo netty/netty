@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -212,6 +213,19 @@ public class ReadOnlyHttp2HeadersTest {
         assertTrue(headers.contains(Http2Headers.PseudoHeaderName.PATH.value(), "/foo"));
         assertFalse(headers.contains(Http2Headers.PseudoHeaderName.STATUS.value(), "200"));
         assertFalse(headers.contains("a missing header", "a missing value"));
+    }
+
+    @Test
+    public void testContainsTimeMillis() {
+        long millis = 784111777000L;
+        Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(true, AsciiString.cached("200"),
+                AsciiString.cached("date"), AsciiString.cached("Sun, 06 Nov 1994 08:49:37 GMT"),
+                AsciiString.cached("x-epoch-millis"), AsciiString.cached(Long.toString(millis)));
+
+        assertThat(headers.getTimeMillis("date")).isEqualTo(millis);
+        assertThat(headers.containsTimeMillis("date", millis)).isTrue();
+        assertThat(headers.containsTimeMillis("date", millis + 1000)).isFalse();
+        assertThat(headers.containsTimeMillis("x-epoch-millis", millis)).isFalse();
     }
 
     @Test

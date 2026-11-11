@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SessionIdContextBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
@@ -158,10 +159,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
                          ClientAuth clientAuth, @Nullable TrustManagerFactory trustManagerFactory,
-                         @Nullable KeyManagerFactory keyManagerFactory, String password,
+                         X509Certificate @Nullable [] trustCertCollection,
+                         @Nullable KeyManagerFactory keyManagerFactory,
+                         X509Certificate @Nullable [] keyCertChain, String password,
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
                          String[] applicationProtocols, String endpointIdentificationAlgorithm,
+                         SessionIdContextBuilder sessionIdContext,
                          Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
@@ -283,8 +287,26 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 BoringSSL.SSLContext_setSessionCacheTimeout(
                         nativeSslContext.address(), sessionTimeout);
                 this.sessionTimeout = sessionTimeout;
+
+                // Derive the session_id_context from what distinguishes this context, so sessions can not be
+                // resumed across QuicSslContext instances that differ in their ClientAuth mode or trust / key
+                // configuration, even if session-ticket keys or a session cache are shared between them.
+                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(), sessionIdContext.build())) {
+                    // Without a session_id_context we must not continue as resumption would not be scoped.
+                    String msg = "failed to set session id context";
+                    String lastError = BoringSSL.ERR_last_error();
+                    if (lastError != null) {
+                        msg += ": " + lastError;
+                    }
+                    throw new IllegalStateException(msg);
+                }
             }
-            if (earlyData != null) {
+            if (server && this.clientAuth == ClientAuth.REQUIRE) {
+                // A client certificate is not re-requested when a session is resumed, and the peer certificates are
+                // only available once the handshake completed. Early data would hence be handed to the application
+                // before we are able to verify that the client authenticated itself, so never accept it here.
+                BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), false);
+            } else if (earlyData != null) {
                 BoringSSL.SSLContext_set_early_data_enabled(nativeSslContext.address(), earlyData);
             }
             sessionCtx = new QuicheQuicSslSessionContext(this);

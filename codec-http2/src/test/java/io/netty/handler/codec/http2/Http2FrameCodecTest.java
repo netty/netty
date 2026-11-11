@@ -36,6 +36,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
@@ -161,6 +162,80 @@ public class Http2FrameCodecTest {
             assertNotNull(settingsFrame);
             Http2SettingsAckFrame settingsAckFrame = inboundHandler.readInbound();
             assertNotNull(settingsAckFrame);
+        }
+    }
+
+    @Test
+    public void gracefulShutdownWritesAllDataOfFramesMergedWhileWaitingForTheWindow() throws Exception {
+        // Use the real frame writer so that we can see what is written to the channel.
+        EmbeddedChannel ch = new EmbeddedChannel(Http2FrameCodecBuilder.forServer().build());
+        try {
+            Http2FrameInboundWriter inboundWriter = new Http2FrameInboundWriter(ch);
+            ch.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+            // The client accepts only 8 bytes per stream until it sends a WINDOW_UPDATE.
+            inboundWriter.writeInboundSettings(new Http2Settings().initialWindowSize(8));
+            inboundWriter.writeInboundSettingsAck();
+            inboundWriter.writeInboundHeaders(3, request, 0, true);
+            Http2FrameStream stream = null;
+            for (Object msg; (msg = ch.readInbound()) != null;) {
+                if (msg instanceof Http2HeadersFrame) {
+                    stream = ((Http2HeadersFrame) msg).stream();
+                }
+                ReferenceCountUtil.release(msg);
+            }
+            assertNotNull(stream);
+            // Used to parse what was written, the handlers are removed once the channel is closed.
+            final ChannelHandlerContext readerCtx = ch.pipeline().firstContext();
+
+            // The two DATA frames are merged in the flow controller. Only the first one fits into the window.
+            ch.write(new DefaultHttp2HeadersFrame(response).stream(stream));
+            ChannelFuture first = ch.write(new DefaultHttp2DataFrame(bb("abcdefgh")).stream(stream));
+            ChannelFuture last = ch.writeAndFlush(new DefaultHttp2DataFrame(bb("ijklmnop"), true).stream(stream));
+            assertTrue(first.isSuccess());
+            assertFalse(last.isDone());
+
+            // Graceful shutdown: the connection must stay open until the stream is done. Don't use
+            // EmbeddedChannel.close() as it also cancels the scheduled graceful shutdown timeout and closes.
+            ChannelFuture closeFuture = ch.pipeline().close();
+            assertFalse(closeFuture.isDone());
+            assertTrue(ch.isActive());
+
+            // The client opens the window, so the rest of the data is written and the connection is closed.
+            inboundWriter.writeInboundWindowUpdate(3, 8);
+            assertTrue(last.isSuccess());
+            assertTrue(closeFuture.isDone());
+
+            // Check the END_STREAM DATA frame was flushed to the channel and not dropped by the close.
+            final StringBuilder data = new StringBuilder();
+            final AtomicBoolean endOfStream = new AtomicBoolean();
+            DefaultHttp2FrameReader reader = new DefaultHttp2FrameReader();
+            CompositeByteBuf written = Unpooled.compositeBuffer();
+            try {
+                for (ByteBuf buf; (buf = ch.readOutbound()) != null;) {
+                    written.addComponent(true, buf);
+                }
+                int readable;
+                do {
+                    readable = written.readableBytes();
+                    reader.readFrame(readerCtx, written, new Http2FrameAdapter() {
+                        @Override
+                        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf buf, int padding,
+                                              boolean endStream) {
+                            data.append(buf.toString(CharsetUtil.US_ASCII));
+                            endOfStream.compareAndSet(false, endStream);
+                            return buf.readableBytes() + padding;
+                        }
+                    });
+                    // Stop if the rest is a truncated frame, the assertions below then fail instead of looping forever.
+                } while (written.isReadable() && written.readableBytes() < readable);
+            } finally {
+                written.release();
+                reader.close();
+            }
+            assertEquals("abcdefghijklmnop", data.toString());
+            assertTrue(endOfStream.get());
+        } finally {
+            ch.finishAndReleaseAll();
         }
     }
 

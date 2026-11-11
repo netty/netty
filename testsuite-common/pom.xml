@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.20.Final-SNAPSHOT</version>
+    <version>4.2.21.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-common</artifactId>
@@ -50,6 +50,20 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!--
+      Used by io.netty.nativeimage.ChannelHandlerMetadataUtil.
+      Not optional, so modules running NativeImageHandlerMetadataTest get them transitively.
+    -->
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

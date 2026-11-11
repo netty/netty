@@ -25,6 +25,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -229,6 +230,14 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
+
+        if (isShuttingDown()) {
+            // confirmShutdown() can return true without prepareToDestroy() having run after the last registration,
+            // for example when shutdownGracefully(0, ...) is called while tasks are running. Close everything that is
+            // still registered now. The resulting close callbacks are run by the remaining confirmShutdown() calls of
+            // SingleThreadEventExecutor. Registrations that run after this point are rejected in registerForIo0.
+            ioHandler.prepareToDestroy();
+        }
     }
 
     protected final IoHandler ioHandler() {
@@ -298,6 +307,14 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
+        if (isShuttingDown()) {
+            // Once shutdown has started a new registration might never be closed: the IO loop may already have
+            // exited (or never run again, e.g. if it was suspending when shutdown started) and the remaining tasks
+            // only run as part of confirmShutdown(). Checking the state instead of a flag set by the IO loop covers
+            // every path, as the state is updated before any task can observe the shutdown.
+            promise.setFailure(new RejectedExecutionException("IoEventLoop is shutting down"));
+            return;
+        }
         final IoRegistration registration;
         try {
             registration = ioHandler.register(handle);

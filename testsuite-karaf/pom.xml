@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.20.Final-SNAPSHOT</version>
+    <version>4.2.21.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-karaf</artifactId>
@@ -252,10 +252,22 @@
           </features>
           <javase>1.8</javase>
         </configuration>
+        <!--
+          Feature verification needs the other Netty modules as packaged OSGi bundles. Within a reactor build
+          that stops before 'package', it would see their target/classes directories instead and fail.
+          So verify in 'package', and builds that stop before 'package' skip the verification.
+        -->
         <executions>
           <execution>
+            <id>default-verify</id>
+            <phase>package</phase>
+            <goals>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+          <execution>
             <id>verify-java9</id>
-            <phase>compile</phase>
+            <phase>package</phase>
             <goals>
               <goal>verify</goal>
             </goals>
@@ -268,7 +280,7 @@
           </execution>
           <execution>
             <id>verify-java11</id>
-            <phase>compile</phase>
+            <phase>package</phase>
             <goals>
               <goal>verify</goal>
             </goals>

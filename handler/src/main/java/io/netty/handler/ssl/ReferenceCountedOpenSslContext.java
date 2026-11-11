@@ -46,6 +46,7 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -970,6 +971,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     }
                 }
                 wrapped = wrapped.getCause();
+            }
+            if (cause instanceof CertificateException) {
+                // The certificate was rejected (for example by the TrustManager), use X509_V_ERR_CERT_UNTRUSTED so a
+                // bad_certificate alert is sent. X509_V_ERR_UNSPECIFIED would result in an internal_error alert which
+                // should only be used for errors that are not related to the remote peer.
+                return CertificateVerifier.X509_V_ERR_CERT_UNTRUSTED;
             }
             return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
         }

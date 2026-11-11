@@ -672,6 +672,10 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     struct sockaddr_storage addr;
     socklen_t address_len = sizeof(addr);
 
+    // The kernel only fills in the address family (and not the rest of the address) for AF_UNIX peers, so make sure
+    // we never read uninitialized memory when we encode the address below.
+    memset(&addr, 0, sizeof(addr));
+
     for (;;) {
 #ifdef SOCK_NONBLOCK
         if (accept4) {
@@ -703,9 +707,11 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     }
     // accept4 was not present so need two more sys-calls ...
     if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1 || fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
+        // Remember the errno before we close the fd, as close(...) may overwrite it.
+        err = errno;
         // close the fd before report the error so we don't leak it.
         close(socketFd);
-        return -errno;
+        return -err;
     }
     return socketFd;
 }
@@ -1046,7 +1052,8 @@ static jint netty_unix_socket_sendFd(JNIEnv* env, jclass clazz, jint socketFd, j
     struct msghdr descriptorMessage = { 0 };
     struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
-    char iovecData[1];
+    // This byte is sent to the remote peer together with the fd, so make sure it is initialized.
+    char iovecData[1] = { 0 };
 
     descriptorMessage.msg_control = control;
     descriptorMessage.msg_controllen = sizeof(control);
