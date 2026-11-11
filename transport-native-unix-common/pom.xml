@@ -39,6 +39,7 @@
     <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
+    <nativeJarEarlyWorkdir>${project.build.directory}/native-jar-early-work</nativeJarEarlyWorkdir>
     <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
@@ -121,7 +122,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -145,8 +179,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -194,7 +229,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -218,8 +286,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -264,7 +333,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -288,8 +390,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -336,7 +439,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -360,8 +496,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -406,7 +543,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -430,8 +600,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -476,7 +647,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -500,8 +704,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -550,7 +755,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -574,8 +812,9 @@
                       <zipfileset dir="${nativeIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>
@@ -624,7 +863,40 @@
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
-              <!-- Build the additional JAR that contains the native library. -->
+              <!--
+                Build and attach a preliminary JAR that only contains the native static library and headers.
+                Attaching it before the 'compile' phase lets the native transports unpack it from the reactor
+                even when the build does not reach the 'package' phase (e.g. 'mvn compile').
+                The 'native-jar' execution below replaces this file with the complete JAR during 'package'.
+              -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <delete dir="${nativeJarEarlyWorkdir}" />
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarEarlyWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <delete file="${nativeJarFile}" />
+                    <jar destfile="${nativeJarFile}" basedir="${nativeJarEarlyWorkdir}" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- Build the complete additional JAR that contains the classes and the native library. -->
               <execution>
                 <id>native-jar</id>
                 <phase>package</phase>
@@ -648,8 +920,9 @@
                       <zipfileset dir="${jniUtilIncludeDir}" />
                       <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
                     </copy>
+                    <!-- Replace the preliminary JAR, which was already attached by native-jar-early. -->
+                    <delete file="${nativeJarFile}" />
                     <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
                   </target>
                 </configuration>
               </execution>

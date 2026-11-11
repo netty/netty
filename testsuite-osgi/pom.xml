@@ -236,11 +236,18 @@
 
   <build>
     <plugins>
+      <!--
+        alta writes the file locations of the bundles under test, which only exist as jars once the other modules
+        have been packaged. Within a reactor build that stops before 'package', it would get their
+        target/classes directories instead and fail. So generate the links in 'prepare-package' and run the
+        tests in 'package'. Builds that stop before 'package' skip both.
+      -->
       <plugin>
         <groupId>com.github.veithen.alta</groupId>
         <artifactId>alta-maven-plugin</artifactId>
         <executions>
           <execution>
+            <phase>prepare-package</phase>
             <goals>
               <goal>generate-test-resources</goal>
             </goals>
@@ -263,6 +270,12 @@
             <additionalClasspathElement>${project.build.directory}/generated-test-resources/alta</additionalClasspathElement>
           </additionalClasspathElements>
         </configuration>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <phase>package</phase>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
