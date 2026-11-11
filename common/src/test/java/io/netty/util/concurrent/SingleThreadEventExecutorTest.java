@@ -555,7 +555,7 @@ public class SingleThreadEventExecutorTest {
         // Submit task via lazyExecute
         LatchTask latch1 = new LatchTask();
         executor.lazyExecute(latch1);
-        // Sumbit lazy task via regular execute
+        // Submit lazy task via regular execute
         LatchTask latch2 = new LazyLatchTask();
         executor.execute(latch2);
 

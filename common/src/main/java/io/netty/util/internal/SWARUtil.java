@@ -42,7 +42,7 @@ public final class SWARUtil {
     }
 
     /**
-     * Returns the index of the first occurrence of byte that specificied in the pattern.
+     * Returns the index of the first occurrence of byte that specified in the pattern.
      * If no pattern is found, returns 8.
      *
      * @param word     the return value of {@link #applyPattern(long, long)}
