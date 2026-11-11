@@ -125,6 +125,38 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void toStringRejectsRangeOutsideSlice() {
+        ByteBuf owner = Unpooled.wrappedBuffer(new byte[] {'S', 'A', 'F', 'E', '!'});
+        final ByteBuf view = owner.slice(1, 3);
+        try {
+            assertEquals("AFE", view.toString(CharsetUtil.UTF_8));
+            assertEquals("A", view.toString(0, 1, CharsetUtil.UTF_8));
+            assertEquals("", view.toString(3, 0, CharsetUtil.UTF_8));
+            // The bytes before and after the slice are in the same backing array, so they must not be decoded.
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(-1, 1, CharsetUtil.UTF_8);
+                }
+            });
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(2, 2, CharsetUtil.UTF_8);
+                }
+            });
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(-1, 0, CharsetUtil.US_ASCII);
+                }
+            });
+        } finally {
+            owner.release();
+        }
+    }
+
+    @Test
     public void decodeHexDumpWithOddLength() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
