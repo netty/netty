@@ -29,7 +29,6 @@ import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -178,10 +177,10 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
-    private static List<Arguments> handshakeFailureCauses() {
-        return Arrays.asList(
-                Arguments.of(new SslHandshakeTimeoutException("timed out")),
-                Arguments.of(new ClosedChannelException()));
+    private static List<Throwable> handshakeFailureCauses() {
+        return Arrays.<Throwable>asList(
+                new SslHandshakeTimeoutException("timed out"),
+                new ClosedChannelException());
     }
 
     @Test
