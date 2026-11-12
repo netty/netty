@@ -865,7 +865,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testTransferEncodingNotAllowedDoesNotFillInStackTrace() {
+    public void testTransferEncodingNotAllowedDoesNotFillInStackTrace() throws Exception {
         String requestStr = "POST / HTTP/1.0\r\n" +
                 "Host: example.com\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
