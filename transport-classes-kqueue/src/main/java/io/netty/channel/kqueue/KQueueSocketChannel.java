@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.Executor;
@@ -340,7 +341,13 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
         if (msg instanceof ByteBuf) {
             return writeBytes(in, (ByteBuf) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel channel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened by sendFile.
+            if (channel == null || UnixChannelUtil.isFileChannelImpl(channel)) {
+                return writeDefaultFileRegion(in, region);
+            }
+            return writeFileRegion(in, region);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
         } else if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
