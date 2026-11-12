@@ -523,7 +523,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
 
     @Override
     public boolean containsFloat(CharSequence name, float value) {
-        return false;
+        return contains(name, String.valueOf(value));
     }
 
     @Override
