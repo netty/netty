@@ -213,32 +213,48 @@ public class ByteBufStreamTest {
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 1 })
-    void testZeroLengthBulkReadsAtEndOfStream(int length) throws Exception {
+    public void testZeroLengthBulkReadsAtEndOfStream(int length) throws Exception {
         ByteBuf buf = Unpooled.buffer(1).writeByte(42);
-        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
+        ByteBufInputStream in = new ByteBufInputStream(buf, length, true);
+        try {
             assertEquals(0, in.read(EMPTY_BYTES));
             assertEquals(length == 0 ? -1 : 42, in.read());
             assertEquals(-1, in.read());
             assertEquals(0, in.read(EMPTY_BYTES));
             assertEquals(0, in.read(new byte[1], 1, 0));
             assertEquals(length, in.readBytes());
+        } finally {
+            in.close();
         }
     }
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 1 })
-    void testBulkReadValidatesArgumentsBeforeCheckingAvailableBytes(int length) throws Exception {
+    public void testBulkReadValidatesArgumentsBeforeCheckingAvailableBytes(int length) throws Exception {
         ByteBuf buf = Unpooled.buffer(1).writeByte(42);
-        byte[] bytes = new byte[1];
-        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
-            assertThrows(NullPointerException.class, () -> in.read(null, 0, 0));
-            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, -1, 0));
-            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, -1));
-            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 2, 0));
-            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, 2));
-            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, Integer.MAX_VALUE, 1));
+        final byte[] bytes = new byte[1];
+        final ByteBufInputStream in = new ByteBufInputStream(buf, length, true);
+        try {
+            assertBulkReadThrows(NullPointerException.class, in, null, 0, 0);
+            assertBulkReadThrows(IndexOutOfBoundsException.class, in, bytes, -1, 0);
+            assertBulkReadThrows(IndexOutOfBoundsException.class, in, bytes, 0, -1);
+            assertBulkReadThrows(IndexOutOfBoundsException.class, in, bytes, 2, 0);
+            assertBulkReadThrows(IndexOutOfBoundsException.class, in, bytes, 0, 2);
+            assertBulkReadThrows(IndexOutOfBoundsException.class, in, bytes, Integer.MAX_VALUE, 1);
             assertEquals(0, in.readBytes());
+        } finally {
+            in.close();
         }
+    }
+
+    private static void assertBulkReadThrows(Class<? extends Throwable> expected, final ByteBufInputStream in,
+                                             final byte[] bytes, final int off, final int len) {
+        assertThrows(expected, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                in.read(bytes, off, len);
+            }
+        });
     }
 
     @Test
