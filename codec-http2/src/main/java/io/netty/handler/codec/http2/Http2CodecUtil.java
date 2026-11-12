@@ -119,7 +119,7 @@ public final class Http2CodecUtil {
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
     static final int DEFAULT_MAX_SMALL_CONTINUATION_FRAME = 16;
-    final static PropertyKey CONNECT_TUNNEL_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
+    static final PropertyKey CONNECT_TUNNEL_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
 
     /**
      * While the RFC only specified a minimum we should still pick a default which is good enough that most people
