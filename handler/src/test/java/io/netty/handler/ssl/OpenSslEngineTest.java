@@ -2775,6 +2775,47 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @Test
+    public void testIsSelectedClientCredentialAfterTls13Handshake() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL_REFCNT));
+
+        OpenSslCredential clientCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+        try {
+            clientSslCtx = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL_REFCNT)
+                    .addCredentials(clientCredential)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
+            serverSslCtx = SslContextBuilder
+                    .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL_REFCNT)
+                    .clientAuth(ClientAuth.REQUIRE)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
+
+            ReferenceCountedOpenSslEngine clientEngine =
+                    (ReferenceCountedOpenSslEngine) clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            SSLEngine serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                handshake(BufferType.Direct, false, clientEngine, serverEngine);
+
+                assertThat(serverEngine.getSession().getPeerCertificates()[0])
+                        .isEqualTo(ecdsaCert.getCertificate());
+                assertThat(clientEngine.isSelectedCredential(clientCredential)).isTrue();
+            } finally {
+                cleanupClientSslEngine(clientEngine);
+                cleanupServerSslEngine(serverEngine);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(clientCredential);
+        }
+    }
+
     @CsvSource({
             "TLSv1.2, false",
             "TLSv1.2, true",
