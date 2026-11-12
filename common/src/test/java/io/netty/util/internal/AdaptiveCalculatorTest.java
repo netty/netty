@@ -23,9 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdaptiveCalculatorTest {
 
     @ParameterizedTest
-    @CsvSource({ "81, 95", "81, 81", "513, 1023", "2049, 4095", "80, 80" })
-    void growthStaysWithinBounds(int minimum, int maximum) {
-        AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, maximum, maximum);
+    @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+    void growthStaysWithinBounds(int minimum, int initial, int maximum) {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, initial, maximum);
         assertThat(calculator.nextSize()).isBetween(minimum, maximum);
         for (int i = 0; i < 10; i++) {
             calculator.record(calculator.nextSize());
@@ -34,9 +35,10 @@ class AdaptiveCalculatorTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "81, 95", "81, 81", "513, 1023", "2049, 4095", "80, 80" })
-    void shrinkingStaysWithinBounds(int minimum, int maximum) {
-        AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, maximum, maximum);
+    @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+    void shrinkingStaysWithinBounds(int minimum, int initial, int maximum) {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, initial, maximum);
         assertThat(calculator.nextSize()).isBetween(minimum, maximum);
         for (int i = 0; i < 10; i++) {
             calculator.record(0);
