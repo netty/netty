@@ -1,3 +1,17 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at:
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
@@ -95,7 +109,6 @@ public class Http2ConnectTunnelEnforcementTest {
         when(ctx.executor()).thenReturn(executor);
         when(executor.inEventLoop()).thenReturn(true);
 
-
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
@@ -124,7 +137,6 @@ public class Http2ConnectTunnelEnforcementTest {
         encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder.lifecycleManager(lifecycleManager);
 
-
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         decoder.lifecycleManager(lifecycleManager);
         decoder.frameListener(listener);
@@ -132,7 +144,6 @@ public class Http2ConnectTunnelEnforcementTest {
         connection.local().flowController().channelHandlerContext(ctx);
         connection.remote().flowController(remoteFlow);
     }
-
 
     private Http2FrameListener decode() throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
@@ -157,7 +168,6 @@ public class Http2ConnectTunnelEnforcementTest {
         final Http2Stream stream = establishConnectTunnel(dec);
         assertThrows(Http2Exception.class, () ->
                 dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID,
-
                                       new DefaultHttp2Headers().method(
                                                                        HttpMethod.GET.asciiName())
                                                                .scheme("https")
@@ -170,7 +180,6 @@ public class Http2ConnectTunnelEnforcementTest {
     public void dataFromClientOnEstablishedConnectStreamShouldSucceed() throws Exception {
         Http2FrameListener dec = decode();
         final Http2Stream stream = establishConnectTunnel(dec);
-
         // Simulate application consuming all received DATA bytes.
         when(listener.onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(0), eq(false))).thenAnswer(
                 invocation -> ((ByteBuf) invocation.getArgument(2)).readableBytes());
@@ -203,7 +212,6 @@ public class Http2ConnectTunnelEnforcementTest {
     public void priorityFromClientOnEstablishedConnectStreamShouldSucceed() throws Exception {
         Http2FrameListener dec = decode();
         final Http2Stream stream = establishConnectTunnel(dec);
-
         // PRIORITY frames are permitted on established CONNECT tunnels.
         dec.onPriorityRead(ctx, STREAM_ID, 0, (short) 16, false);
         //The CONNECT stream must remain open

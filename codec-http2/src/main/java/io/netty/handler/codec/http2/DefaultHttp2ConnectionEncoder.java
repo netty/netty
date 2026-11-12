@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.Http2ConnectState;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
-import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.ReferenceCountUtil;
 
@@ -266,7 +265,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                     stream.headersSent(isInformational);
                     // SERVER ROLE: Transition PENDING -> ESTABLISHED when sending an outbound 2xx response
                     if (connection().isServer()) {
-                        Http2Stream streamFinal=stream;
+                        Http2Stream streamFinal = stream;
                         CharSequence status = headers.status();
                         if (status != null && HttpStatusClass.valueOf(status) == SUCCESS) {
                             if (stream.getProperty(CONNECT_TUNNEL_KEY) == Http2ConnectState.PENDING) {
