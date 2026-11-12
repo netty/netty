@@ -16,6 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 
 /**
  * Thrown by {@link HttpObjectDecoder} when an HTTP message uses a protocol version older than {@code HTTP/1.1}
@@ -30,6 +33,8 @@ public final class TransferEncodingNotAllowedException extends DecoderException 
         super(message);
     }
 
+    @SuppressJava6Requirement(reason = "uses Java 7+ DecoderException.<init>(String, Throwable, boolean, boolean)" +
+            " but is guarded by version checks")
     private TransferEncodingNotAllowedException(String message, boolean shared) {
         // A shared instance must not populate a (native) backtrace: doing so would pin the Classloader of whatever
         // thread happened to trigger its creation (see https://github.com/netty/netty/issues/17128).
@@ -37,7 +42,11 @@ public final class TransferEncodingNotAllowedException extends DecoderException 
         assert shared;
     }
 
-    static TransferEncodingNotAllowedException newStatic(String message) {
-        return new TransferEncodingNotAllowedException(message, true);
+    static TransferEncodingNotAllowedException newStatic(String message, Class<?> clazz, String method) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            return new TransferEncodingNotAllowedException(message, true);
+        }
+        // Java 6 has no way to disable the stack trace, so only replace the visible one.
+        return ThrowableUtil.unknownStackTrace(new TransferEncodingNotAllowedException(message), clazz, method);
     }
 }

@@ -173,7 +173,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     };
     private static final TransferEncodingNotAllowedException TRANSFER_ENCODING_NOT_ALLOWED =
             TransferEncodingNotAllowedException.newStatic(
-                    "The Transfer-Encoding header is only allowed in HTTP/1.1 or newer");
+                    "The Transfer-Encoding header is only allowed in HTTP/1.1 or newer",
+                    HttpObjectDecoder.class, "readHeaders(ByteBuf)");
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
