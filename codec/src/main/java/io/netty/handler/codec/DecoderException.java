@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.util.internal.SuppressJava6Requirement;
+
 /**
  * An {@link CodecException} which is thrown by a decoder.
  */
@@ -47,5 +49,18 @@ public class DecoderException extends CodecException {
      */
     public DecoderException(Throwable cause) {
         super(cause);
+    }
+
+    /**
+     * Creates a new instance with the given suppression and stack trace settings, see
+     * {@link RuntimeException#RuntimeException(String, Throwable, boolean, boolean)}.
+     * <p>
+     * This constructor requires Java 7+ and must only be invoked after checking
+     * {@code PlatformDependent.javaVersion() >= 7}.
+     */
+    @SuppressJava6Requirement(reason = "uses Java 7+ RuntimeException.<init>(String, Throwable, boolean, boolean)" +
+            " but callers are guarded by version checks")
+    protected DecoderException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }
