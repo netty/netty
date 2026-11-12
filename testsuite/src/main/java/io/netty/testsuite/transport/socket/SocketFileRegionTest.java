@@ -32,7 +32,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -177,10 +176,8 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     public void testZipFileRegion(TestInfo testInfo, @TempDir final File archive) throws Throwable {
-        assumeTrue(PlatformDependent.javaVersion() >= 7);
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
-            @SuppressJava6Requirement(reason = "Guarded by version check")
             public void run(ServerBootstrap sb, Bootstrap cb) throws Throwable {
                 final byte[] data = new byte[256 * 1024 + 73];
                 new Random(0).nextBytes(data);
