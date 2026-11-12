@@ -29,4 +29,15 @@ public final class TransferEncodingNotAllowedException extends DecoderException 
     public TransferEncodingNotAllowedException(String message) {
         super(message);
     }
+
+    private TransferEncodingNotAllowedException(String message, boolean shared) {
+        // A shared instance must not populate a (native) backtrace: doing so would pin the Classloader of whatever
+        // thread happened to trigger its creation (see https://github.com/netty/netty/issues/17128).
+        super(message, null, false, false);
+        assert shared;
+    }
+
+    static TransferEncodingNotAllowedException newStatic(String message) {
+        return new TransferEncodingNotAllowedException(message, true);
+    }
 }
