@@ -69,6 +69,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private boolean finReceived;
     private boolean finSent;
     private boolean inputReset;
+    private boolean outputStopped;
 
     private volatile boolean registered;
     private volatile boolean writable = true;
@@ -286,6 +287,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return finReceived || inputReset;
     }
 
+    private void outputStopped() {
+        if (!outputStopped) {
+            outputStopped = true;
+            outputShutdown = true;
+            pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(parent().streamStoppedErrorCode(streamId())));
+        }
+    }
+
     private void closeIfDone() {
         if (finSent && (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
             unsafe().close(unsafe().voidPromise());
@@ -422,6 +431,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (capacity < 0) {
             // If the value is negative its a quiche error.
             if (capacity != Quiche.QUICHE_ERR_DONE) {
+                if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    outputStopped();
+                }
                 if (!queue.isEmpty()) {
                     if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                         queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
@@ -717,6 +729,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                             break;
                         } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                            outputStopped();
                             // Once its signaled that the stream is stopped we can just fail everything.
                             // That said we should not close the channel yet as there might be some data that is
                             // not read yet by the user.
@@ -833,6 +846,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     queue.add(msg, promise);
                     mayNeedWritabilityUpdate = true;
                 } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    outputStopped();
                     throw new ChannelOutputShutdownException("STOP_SENDING frame received");
                 } else {
                     throw Quiche.convertToException(res);
