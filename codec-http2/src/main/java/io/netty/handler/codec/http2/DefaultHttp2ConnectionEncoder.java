@@ -20,14 +20,21 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.handler.codec.http2.Http2CodecUtil.Http2ConnectState;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
+import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
+import static io.netty.handler.codec.http.HttpStatusClass.SUCCESS;
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECT_TUNNEL_KEY;
+import static io.netty.handler.codec.http2.Http2CodecUtil.Http2ConnectState.ESTABLISHED;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -228,7 +235,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                                                         stream.state());
                 }
             }
-
+            if (stream.getProperty(CONNECT_TUNNEL_KEY) == ESTABLISHED) {
+                throw streamError(streamId, PROTOCOL_ERROR, "HEADERS frame sent on established CONNECT stream");
+            }
+            // CLIENT ROLE: Set state to PENDING when sending an outbound CONNECT request
+            if (!connection().isServer() && HttpMethod.CONNECT.asciiName().contentEquals(headers.method())
+                && !headers.contains(PseudoHeaderName.PROTOCOL.value())) {
+                stream.setProperty(CONNECT_TUNNEL_KEY, Http2ConnectState.PENDING);
+            }
             // Trailing headers must go through flow control if there are other frames queued in flow control
             // for this stream.
             Http2RemoteFlowController flowController = flowController();
@@ -250,7 +264,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                     // This just sets internal stream state which is used elsewhere in the codec and doesn't
                     // necessarily mean the write will complete successfully.
                     stream.headersSent(isInformational);
-
+                    // SERVER ROLE: Transition PENDING -> ESTABLISHED when sending an outbound 2xx response
+                    if (connection().isServer()) {
+                        Http2Stream streamFinal=stream;
+                        CharSequence status = headers.status();
+                        if (status != null && HttpStatusClass.valueOf(status) == SUCCESS) {
+                            if (stream.getProperty(CONNECT_TUNNEL_KEY) == Http2ConnectState.PENDING) {
+                                streamFinal.setProperty(CONNECT_TUNNEL_KEY, ESTABLISHED);
+                            }
+                        }
+                    }
                     if (!future.isSuccess()) {
                         // Either the future is not done or failed in the meantime.
                         notifyLifecycleManagerOnError(future, ctx);

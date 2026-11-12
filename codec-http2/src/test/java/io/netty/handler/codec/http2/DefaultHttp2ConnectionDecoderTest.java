@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -219,6 +220,12 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
+        when(connection.newKey()).thenAnswer(new Answer<Http2Connection.PropertyKey>() {
+            @Override
+            public Http2Connection.PropertyKey answer(InvocationOnMock invocation) {
+                return new Http2Connection.PropertyKey() { };
+            }
+        });
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         setupCodec(ctx, encoder, decoder, listener);
