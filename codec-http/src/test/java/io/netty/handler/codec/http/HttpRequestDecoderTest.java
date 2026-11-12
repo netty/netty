@@ -36,6 +36,7 @@ import java.util.Map;
 import static io.netty.handler.codec.http.HttpHeaderNames.HOST;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -860,6 +861,26 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
         assertThat(request.decoderResult().cause()).isInstanceOf(TransferEncodingNotAllowedException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTransferEncodingNotAllowedDoesNotFillInStackTrace() {
+        String requestStr = "POST / HTTP/1.0\r\n" +
+                "Host: example.com\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        Throwable cause = request.decoderResult().cause();
+        assertInstanceOf(TransferEncodingNotAllowedException.class, cause);
+
+        // The exception is shared, so it must not populate a (native) backtrace: doing so would pin the Classloader
+        // of whatever thread happened to trigger its creation (see https://github.com/netty/netty/issues/17128).
+        StackTraceElement[] before = cause.getStackTrace();
+        cause.fillInStackTrace();
+        assertArrayEquals(before, cause.getStackTrace());
         assertFalse(channel.finish());
     }
 

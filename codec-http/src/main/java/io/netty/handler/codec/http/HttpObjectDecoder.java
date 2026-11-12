@@ -27,7 +27,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -173,11 +172,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
     };
     private static final TransferEncodingNotAllowedException TRANSFER_ENCODING_NOT_ALLOWED =
-            ThrowableUtil.unknownStackTrace(
-                    new TransferEncodingNotAllowedException(
-                            "The Transfer-Encoding header is only allowed in HTTP/1.1 or newer"),
-                    HttpObjectDecoder.class,
-                    "readHeaders(ByteBuf)");
+            TransferEncodingNotAllowedException.newStatic(
+                    "The Transfer-Encoding header is only allowed in HTTP/1.1 or newer");
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
