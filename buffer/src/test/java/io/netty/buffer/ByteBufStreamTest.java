@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -206,6 +208,36 @@ public class ByteBufStreamTest {
         } finally {
             buf.release();
             in.close();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1 })
+    void testZeroLengthBulkReadsAtEndOfStream(int length) throws Exception {
+        ByteBuf buf = Unpooled.buffer(1).writeByte(42);
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
+            assertEquals(0, in.read(EMPTY_BYTES));
+            assertEquals(length == 0 ? -1 : 42, in.read());
+            assertEquals(-1, in.read());
+            assertEquals(0, in.read(EMPTY_BYTES));
+            assertEquals(0, in.read(new byte[1], 1, 0));
+            assertEquals(length, in.readBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1 })
+    void testBulkReadValidatesArgumentsBeforeCheckingAvailableBytes(int length) throws Exception {
+        ByteBuf buf = Unpooled.buffer(1).writeByte(42);
+        byte[] bytes = new byte[1];
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
+            assertThrows(NullPointerException.class, () -> in.read(null, 0, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, -1, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, -1));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 2, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, 2));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, Integer.MAX_VALUE, 1));
+            assertEquals(0, in.readBytes());
         }
     }
 
