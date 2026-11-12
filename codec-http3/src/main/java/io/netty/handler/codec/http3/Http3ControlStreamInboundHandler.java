@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.channel.StacklessClosedChannelException;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -38,9 +39,15 @@ import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_MISSING_SETTINGS;
 import static io.netty.handler.codec.http3.Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR;
 import static io.netty.handler.codec.http3.QpackUtil.toIntOrThrow;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValidationHandler<Http3ControlStreamFrame> {
+    // Stackless, as a populated backtrace would pin the Classloader of whatever thread happened to trigger the
+    // class initialization (see https://github.com/netty/netty/issues/17128).
+    static final ClosedChannelException ENCODER_STREAM_INACTIVE =
+            StacklessClosedChannelException.newInstance(QPackEncoderStreamInitializer.class, "streamClosed()");
+    static final ClosedChannelException DECODER_STREAM_INACTIVE =
+            StacklessClosedChannelException.newInstance(QPackDecoderStreamInitializer.class, "streamClosed()");
+
     final boolean server;
     private final ChannelHandler controlFrameHandler;
     private final QpackEncoder qpackEncoder;
@@ -278,8 +285,6 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     }
 
     private static final class QPackEncoderStreamInitializer extends AbstractQPackStreamInitializer {
-        private static final ClosedChannelException ENCODER_STREAM_INACTIVE =
-                unknownStackTrace(new ClosedChannelException(), ClosedChannelException.class, "streamClosed()");
         private final QpackEncoder encoder;
         private final long maxTableCapacity;
         private final long blockedStreams;
@@ -312,8 +317,6 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     }
 
     private static final class QPackDecoderStreamInitializer extends AbstractQPackStreamInitializer {
-        private static final ClosedChannelException DECODER_STREAM_INACTIVE =
-                unknownStackTrace(new ClosedChannelException(), ClosedChannelException.class, "streamClosed()");
         private QPackDecoderStreamInitializer(QpackAttributes attributes) {
             super(Http3CodecUtils.HTTP3_QPACK_DECODER_STREAM_TYPE, attributes);
         }
