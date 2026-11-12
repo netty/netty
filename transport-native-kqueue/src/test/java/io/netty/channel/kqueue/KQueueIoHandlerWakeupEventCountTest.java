@@ -15,8 +15,8 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.AbstractIoHandlerEventCountTest;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.testsuite.transport.AbstractIoHandlerEventCountTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;

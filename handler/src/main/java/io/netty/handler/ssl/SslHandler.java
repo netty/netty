@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
@@ -31,6 +32,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.StacklessClosedChannelException;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -57,6 +59,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -189,6 +192,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
     private static final int STATE_UNWRAP_REENTRY = 1 << 9;
+    /**
+     * Set when we stopped wrapping application data because too much of the encrypted data we wrote before was not
+     * written by the transport yet. Wrapping is resumed once enough of it was written and no delegated task is
+     * running, see {@link #resumeWrap(ChannelFuture)}.
+     */
+    private static final int STATE_WRAP_SUSPENDED = 1 << 10;
+    /**
+     * Set when wrapping was suspended, and cleared once all the queued data was wrapped. While it is set, the queued
+     * data is wrapped before the outbound side of the {@link SSLEngine} is closed, as it would be failed otherwise.
+     * It stays set once wrapping resumed, as {@link #wrap(ChannelHandlerContext, boolean)} only wraps one record at a
+     * time while the {@link SSLEngine} is handshaking.
+     */
+    private static final int STATE_WRAP_PENDING = 1 << 11;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -466,6 +482,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
 
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
+    /**
+     * The writes of encrypted application data that may not be complete yet, oldest first, and the number of bytes
+     * they contain. Like the writability of the {@link Channel}, we stop wrapping once more than
+     * {@link ChannelConfig#getWriteBufferHighWaterMark()} bytes are pending, and continue once it is not more than
+     * {@link ChannelConfig#getWriteBufferLowWaterMark()} anymore. We can not use {@link Channel#isWritable()} for
+     * this, as the bytes queued in {@link #pendingUnencryptedWrites} count towards it as well.
+     */
+    private ArrayDeque<EncryptedWritePromise> pendingEncryptedWrites;
+    private long pendingEncryptedBytes;
+    /**
+     * The write we wait for while wrapping is suspended.
+     */
+    private ChannelFuture resumeWrapFuture;
+    private final ChannelFutureListener resumeWrapListener = this::resumeWrap;
+    /**
+     * Set if closing the outbound side has to wait for a delegated task, as the data for which wrapping was suspended
+     * needs to be wrapped first. Notified once the {@code close_notify} is written.
+     */
+    private ChannelPromise deferredCloseNotifyPromise;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -721,9 +756,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void closeOutbound0(ChannelPromise promise) {
         setState(STATE_OUTBOUND_CLOSED);
-        engine.closeOutbound();
         try {
-            flush(ctx, promise);
+            closeOutboundAndFlush(ctx, promise, false);
         } catch (Exception e) {
             if (!promise.tryFailure(e)) {
                 logger.warn("{} flush() raised a masked exception.", ctx.channel(), e);
@@ -751,6 +785,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                   new ChannelException("Pending write on removal of SslHandler"));
             }
             pendingUnencryptedWrites = null;
+            final ChannelPromise closeNotifyPromise = deferredCloseNotifyPromise;
+            if (closeNotifyPromise != null) {
+                deferredCloseNotifyPromise = null;
+                closeNotifyPromise.tryFailure(
+                        new ChannelException("SslHandler removed before close_notify was written"));
+            }
 
             SSLException cause = null;
 
@@ -884,7 +924,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             outer: while (!ctx.isRemoved() && !pendingUnencryptedWrites.isEmpty()) {
-                ChannelPromise promise = ctx.newPromise();
+                if (suspendWrapIfNeeded(ctx)) {
+                    // We will resume once the encrypted data we wrote before was written by the transport.
+                    break;
+                }
+                EncryptedWritePromise promise = new EncryptedWritePromise(ctx);
                 ByteBuf buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
                         pendingUnencryptedWrites.removeFirst(promise);
@@ -943,11 +987,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (out.isReadable()) {
                     final ByteBuf b = out;
                     out = null;
-                    if (promise != null) {
-                        ctx.write(b, promise);
-                    } else {
-                        ctx.write(b);
+                    if (promise == null) {
+                        promise = new EncryptedWritePromise(ctx);
                     }
+                    // Update the state before we write, as the write may trigger re-entry.
+                    addPendingEncryptedWrite(promise, b.readableBytes());
+                    ctx.write(b, promise);
                 } else if (promise != null) {
                     ctx.write(Unpooled.EMPTY_BUFFER, promise);
                 }
@@ -1009,6 +1054,191 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
             if (inUnwrap) {
                 setState(STATE_NEEDS_FLUSH);
+            }
+            if (pendingUnencryptedWrites == null || pendingUnencryptedWrites.isEmpty()) {
+                clearState(STATE_WRAP_PENDING);
+            }
+        }
+    }
+
+    /**
+     * Returns {@code true} if we should stop wrapping application data for now, because more than
+     * {@link ChannelConfig#getWriteBufferHighWaterMark()} bytes of the encrypted data we wrote before was not written
+     * by the transport yet. This bounds the memory used for encrypted data that is waiting to be written.
+     */
+    private boolean suspendWrapIfNeeded(ChannelHandlerContext ctx) {
+        if (isStateSet(STATE_WRAP_SUSPENDED)) {
+            return true;
+        }
+        removeCompletedEncryptedWrites();
+        // Once the outbound side is closed we need to wrap everything, as the SSLEngine would not wrap application
+        // data anymore after closeOutbound() was called. Before the first message was sent with startTls, flush(...)
+        // would write what we did not wrap unencrypted, so wrap everything in this case as well.
+        if (pendingEncryptedBytes <= ctx.channel().config().getWriteBufferHighWaterMark() ||
+                isStateSet(STATE_OUTBOUND_CLOSED) || startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
+            return false;
+        }
+        setState(STATE_WRAP_SUSPENDED | STATE_WRAP_PENDING);
+        waitForPendingEncryptedWrite();
+        return true;
+    }
+
+    private void addPendingEncryptedWrite(EncryptedWritePromise promise, int bytes) {
+        pendingEncryptedBytes += bytes;
+        ArrayDeque<EncryptedWritePromise> writes = pendingEncryptedWrites;
+        if (writes == null) {
+            pendingEncryptedWrites = writes = new ArrayDeque<EncryptedWritePromise>();
+        } else {
+            EncryptedWritePromise last = writes.peekLast();
+            if (last != null && !last.isDone() && last.bytes + bytes <= MAX_PLAINTEXT_LENGTH) {
+                // Writes complete in order, so for small writes it is enough to wait for the last one. This keeps the
+                // number of writes we track small.
+                writes.pollLast();
+                bytes += last.bytes;
+            }
+        }
+        promise.bytes = bytes;
+        writes.add(promise);
+    }
+
+    private void removeCompletedEncryptedWrites() {
+        final ArrayDeque<EncryptedWritePromise> writes = pendingEncryptedWrites;
+        if (writes != null) {
+            EncryptedWritePromise write;
+            while ((write = writes.peekFirst()) != null && write.isDone()) {
+                writes.pollFirst();
+                pendingEncryptedBytes -= write.bytes;
+            }
+        }
+    }
+
+    /**
+     * Waits for the oldest of the writes of encrypted data that is not complete yet.
+     */
+    private void waitForPendingEncryptedWrite() {
+        final ChannelFuture future = pendingEncryptedWrites.peekFirst();
+        resumeWrapFuture = future;
+        future.addListener(resumeWrapListener);
+    }
+
+    private void resumeWrap(ChannelFuture future) {
+        // Only resume if we are still waiting for this write. We may have resumed already, for example because the
+        // outbound side was closed in the meantime.
+        if (!isStateSet(STATE_WRAP_SUSPENDED) || future != resumeWrapFuture ||
+                // Like flush(...) we must not wrap while a delegated task is running. We resume once it completed,
+                // see delegatedTaskCompleted().
+                isStateSet(STATE_PROCESS_TASK)) {
+            return;
+        }
+        final ChannelHandlerContext ctx = this.ctx;
+        // Let's check if the handler was removed in the meantime and so pendingUnencryptedWrites is null.
+        if (pendingUnencryptedWrites != null && future.isSuccess()) {
+            removeCompletedEncryptedWrites();
+            if (pendingEncryptedBytes > ctx.channel().config().getWriteBufferLowWaterMark()) {
+                // Like the writability of the Channel, continue only once we got to the low water mark.
+                waitForPendingEncryptedWrite();
+                return;
+            }
+        }
+        clearState(STATE_WRAP_SUSPENDED);
+        resumeWrapFuture = null;
+        if (pendingUnencryptedWrites == null || pendingUnencryptedWrites.isEmpty()) {
+            return;
+        }
+        if (!future.isSuccess()) {
+            // The transport failed to write the encrypted data, so there is no point in encrypting what is left.
+            releaseAndFailAll(ctx, future.cause());
+            return;
+        }
+        try {
+            flush(ctx);
+        } catch (Throwable cause) {
+            // Do the same as the ChannelPipeline would do if flush(...) throws.
+            try {
+                exceptionCaught(ctx, cause);
+            } catch (Throwable error) {
+                ctx.fireExceptionCaught(error);
+            }
+        }
+    }
+
+    /**
+     * Closes the outbound side of the {@link SSLEngine} and flushes, which writes the {@code close_notify} and
+     * notifies {@code promise} once it is written. If wrapping was suspended, the data that is still queued is wrapped
+     * first, as the {@link SSLEngine} would not wrap it anymore once its outbound side is closed.
+     *
+     * @param deferred {@code true} if this is called once the delegated task we had to wait for completed.
+     */
+    private void closeOutboundAndFlush(ChannelHandlerContext ctx, ChannelPromise promise, boolean deferred)
+            throws Exception {
+        assert isStateSet(STATE_OUTBOUND_CLOSED);
+        final boolean wrapPending = deferred || isStateSet(STATE_WRAP_SUSPENDED) || isStateSet(STATE_WRAP_PENDING) ||
+                deferredCloseNotifyPromise != null;
+        if (wrapPending && pendingUnencryptedWrites != null && ctx.channel().isActive()) {
+            if (!isStateSet(STATE_PROCESS_TASK)) {
+                clearState(STATE_WRAP_SUSPENDED);
+                try {
+                    int readableBytes;
+                    do {
+                        readableBytes = pendingUnencryptedWrites.readableBytes();
+                        // As STATE_OUTBOUND_CLOSED is set this will not suspend again. It returns after each record
+                        // while the engine is handshaking though, so call it as long as it makes progress.
+                        wrap(ctx, false);
+                    } while (pendingUnencryptedWrites != null && !pendingUnencryptedWrites.isEmpty() &&
+                            !isStateSet(STATE_PROCESS_TASK) &&
+                            pendingUnencryptedWrites.readableBytes() < readableBytes);
+                } catch (Throwable cause) {
+                    setHandshakeFailure(ctx, cause);
+                }
+            }
+            if (isStateSet(STATE_PROCESS_TASK)) {
+                // We must not wrap while a delegated task is running, so continue once it completed.
+                // See delegatedTaskCompleted().
+                if (deferredCloseNotifyPromise == null) {
+                    deferredCloseNotifyPromise = promise;
+                } else {
+                    PromiseNotifier.cascade(false, deferredCloseNotifyPromise, promise);
+                }
+                return;
+            }
+        }
+        clearState(STATE_WRAP_SUSPENDED);
+        engine.closeOutbound();
+        flush(ctx, promise);
+    }
+
+    /**
+     * Called on the {@link EventExecutor} once a delegated task completed, to do what had to wait for it.
+     */
+    private void delegatedTaskCompleted() {
+        if (isStateSet(STATE_PROCESS_TASK)) {
+            // Another task was started in the meantime, we will be called again once it completed.
+            return;
+        }
+        final ChannelPromise promise = deferredCloseNotifyPromise;
+        if (promise != null) {
+            deferredCloseNotifyPromise = null;
+            try {
+                closeOutboundAndFlush(ctx, promise, true);
+            } catch (Throwable cause) {
+                promise.tryFailure(cause);
+            }
+        } else if (isStateSet(STATE_WRAP_SUSPENDED) && resumeWrapFuture.isDone()) {
+            // The write we waited for completed while the task was running, so we could not resume back then.
+            resumeWrap(resumeWrapFuture);
+        }
+    }
+
+    /**
+     * Called once a delegated task that was run directly completed. As we are wrapping or unwrapping then, what had
+     * to wait for the task is done later on the {@link EventExecutor}.
+     */
+    private void directDelegatedTaskCompleted() {
+        if (deferredCloseNotifyPromise != null || isStateSet(STATE_WRAP_SUSPENDED) && resumeWrapFuture.isDone()) {
+            try {
+                ctx.executor().execute(this::delegatedTaskCompleted);
+            } catch (RejectedExecutionException ignore) {
+                // The executor is shutting down, which closes the channel and so fails what is pending.
             }
         }
     }
@@ -1450,6 +1680,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             // Let's check if the handler was removed in the meantime and so pendingUnencryptedWrites is null.
             if (pendingUnencryptedWrites != null) {
+                // Don't wait for previous writes to complete, as the alert should be sent now. The outbound side is
+                // closed below anyway, and setting STATE_OUTBOUND_CLOSED makes sure that wrapping is not suspended.
+                clearState(STATE_WRAP_SUSPENDED);
+                setState(STATE_OUTBOUND_CLOSED);
                 // We need to flush one time as there may be an alert that we should send to the remote peer because
                 // of the SSLException reported here.
                 wrapAndFlush(ctx);
@@ -1723,6 +1957,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             // The task has completed, lets clear the state. If it is not completed we will clear the
                             // state once it is.
                             clearState(STATE_PROCESS_TASK);
+                            directDelegatedTaskCompleted();
                         }
                     }
                 } else {
@@ -1730,6 +1965,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         task.run();
                     } finally {
                         clearState(STATE_PROCESS_TASK);
+                        directDelegatedTaskCompleted();
                     }
                 }
             }
@@ -1928,6 +2164,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             } catch (Throwable cause) {
                 safeExceptionCaught(cause);
+            } finally {
+                delegatedTaskCompleted();
             }
         }
 
@@ -1972,11 +2210,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (executor.inEventLoop()) {
                 clearState(STATE_PROCESS_TASK);
                 safeExceptionCaught(cause);
+                delegatedTaskCompleted();
             } else {
                 try {
                     executor.execute(() -> {
                         clearState(STATE_PROCESS_TASK);
                         safeExceptionCaught(cause);
+                        delegatedTaskCompleted();
                     });
                 } catch (RejectedExecutionException ignore) {
                     clearState(STATE_PROCESS_TASK);
@@ -2095,6 +2335,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }
+        final ChannelPromise closeNotifyPromise = deferredCloseNotifyPromise;
+        if (closeNotifyPromise != null) {
+            deferredCloseNotifyPromise = null;
+            closeNotifyPromise.tryFailure(cause);
+        }
     }
 
     private void notifyClosePromise(Throwable cause) {
@@ -2112,9 +2357,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void closeOutboundAndChannel(
             final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect) throws Exception {
         setState(STATE_OUTBOUND_CLOSED);
-        engine.closeOutbound();
 
         if (!ctx.channel().isActive()) {
+            engine.closeOutbound();
             if (disconnect) {
                 ctx.disconnect(promise);
             } else {
@@ -2125,7 +2370,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         ChannelPromise closeNotifyPromise = ctx.newPromise();
         try {
-            flush(ctx, closeNotifyPromise);
+            closeOutboundAndFlush(ctx, closeNotifyPromise, false);
         } finally {
             if (!isStateSet(STATE_CLOSE_NOTIFY)) {
                 setState(STATE_CLOSE_NOTIFY);
@@ -2438,6 +2683,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void clearState(int bit) {
         state &= ~bit;
+    }
+
+    /**
+     * The promise of a write of encrypted application data, which knows how many bytes it contains.
+     */
+    private static final class EncryptedWritePromise extends DefaultChannelPromise {
+        int bytes;
+
+        EncryptedWritePromise(ChannelHandlerContext ctx) {
+            super(ctx.channel(), ctx.executor());
+        }
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
