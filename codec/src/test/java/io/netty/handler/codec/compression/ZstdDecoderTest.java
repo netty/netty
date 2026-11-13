@@ -23,6 +23,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Random;
 
@@ -176,6 +178,41 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
                     }
                 }
                 assertEquals(payload.length, acc.readableBytes());
+                byte[] actual = new byte[acc.readableBytes()];
+                acc.readBytes(actual);
+                assertArrayEquals(payload, actual);
+            } finally {
+                acc.release();
+            }
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    public void testDecompressWhenUnlimitedWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes) {
+        byte[] payload = new byte[1024 * 1024];
+        new Random(12345L).nextBytes(payload);
+        byte[] compressed = Zstd.compress(payload);
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new ZstdDecoder(0, ZstdDecoder.DEFAULT_MAX_WINDOW_LOG, defaultMaxForwardBytes));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
+
+            ByteBuf acc = Unpooled.buffer();
+            try {
+                ByteBuf b;
+                while ((b = ch.readInbound()) != null) {
+                    try {
+                        assertTrue(b.isReadable());
+                        assertTrue(b.readableBytes() <= ZstdDecoder.DEFAULT_OUTPUT_BUFFER_SIZE);
+                        acc.writeBytes(b);
+                    } finally {
+                        b.release();
+                    }
+                }
                 byte[] actual = new byte[acc.readableBytes()];
                 acc.readBytes(actual);
                 assertArrayEquals(payload, actual);
