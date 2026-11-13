@@ -240,13 +240,15 @@ final class QuicheQuicSslContext extends QuicSslContext {
         } else {
             privateKeyMethod = null;
         }
+        boolean captureSni = mapping != null || (server && keyManagerFactory instanceof BoringSSLKeylessManagerFactory
+                && ((BoringSSLKeylessManagerFactory) keyManagerFactory).dynamicKeyManager);
         sessionCache = server ? null : new QuicClientSessionCache();
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
         nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
                 new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password, serverKeyTypes, clientKeyTypes),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
-                mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
+                captureSni ? new BoringSSLTlsextServernameCallback(engineMap, mapping) : null,
                 keylog == null ? null : new BoringSSLKeylogCallback(engineMap, keylog),
                 server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), privateKeyMethod,
                 sessionTicketCallback, verifyMode,

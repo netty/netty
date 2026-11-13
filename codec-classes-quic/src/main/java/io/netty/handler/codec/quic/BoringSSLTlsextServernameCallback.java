@@ -16,6 +16,7 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.util.Mapping;
+import org.jetbrains.annotations.Nullable;
 
 final class BoringSSLTlsextServernameCallback {
 
@@ -23,7 +24,7 @@ final class BoringSSLTlsextServernameCallback {
     private final Mapping<? super String, ? extends QuicSslContext> mapping;
 
     BoringSSLTlsextServernameCallback(QuicheQuicSslEngineMap engineMap,
-                                      Mapping<? super String, ? extends QuicSslContext> mapping) {
+                                      @Nullable Mapping<? super String, ? extends QuicSslContext> mapping) {
         this.engineMap = engineMap;
         this.mapping = mapping;
     }
@@ -34,6 +35,11 @@ final class BoringSSLTlsextServernameCallback {
         if (engine == null) {
             // May be null if it was destroyed in the meantime.
             return -1;
+        }
+
+        if (mapping == null) {
+            engine.selectSniHostname(serverName);
+            return engine.ctx.nativeSslContext.address();
         }
 
         QuicSslContext context = mapping.map(serverName);
