@@ -22,18 +22,21 @@ import java.net.SocketAddress;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-abstract class DnsResponseDecoder<A extends SocketAddress> {
+/**
+ * Decodes DNS responses to extract DNS records and relevant information.
+ */
+public abstract class DnsResponseDecoder<A extends SocketAddress> {
 
     private final DnsRecordDecoder recordDecoder;
 
     /**
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
-    DnsResponseDecoder(DnsRecordDecoder recordDecoder) {
+    protected DnsResponseDecoder(DnsRecordDecoder recordDecoder) {
         this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
     }
 
-    final DnsResponse decode(A sender, A recipient, ByteBuf buffer) throws Exception {
+    public final DnsResponse decode(A sender, A recipient, ByteBuf buffer) throws Exception {
         final int id = buffer.readUnsignedShort();
 
         final int flags = buffer.readUnsignedShort();
