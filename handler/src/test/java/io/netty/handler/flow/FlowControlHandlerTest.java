@@ -58,6 +58,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -1076,6 +1077,58 @@ public class FlowControlHandlerTest {
         assertEquals(2, reads.get());
         assertEquals(0, upstream.reads.get());
         assertEquals(1, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testReentrantRemoveWhenAutoReadIsOff() throws Exception {
+        final List<String> events = new ArrayList<>();
+        final List<String> expected = new ArrayList<>();
+        final FlowControlHandler flowControlHandler = new FlowControlHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void read(ChannelHandlerContext ctx) {
+                        events.add("#r");
+                    }
+                },
+                flowControlHandler,
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        events.add((String) msg);
+                        if ("rm".equals(msg)) {
+                            ctx.read();
+                            ctx.pipeline().remove(FlowControlHandler.class);
+                        }
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        events.add("#rc");
+                    }
+                });
+
+        channel.config().setAutoRead(false);
+        channel.register();
+        channel.writeInbound("1", "rm", "3", "4");
+
+        channel.read();
+
+        assertEquals(add(expected, "1", "#rc"), events);
+        assertNotNull(channel.pipeline().get(FlowControlHandler.class));
+        assertFalse(flowControlHandler.isQueueEmpty());
+
+        channel.read();
+
+        assertEquals(add(expected, "rm", "3", "4", "#rc"), events);
+        assertNull(channel.pipeline().get(FlowControlHandler.class));
+        assertTrue(flowControlHandler.isQueueEmpty());
+
+        channel.writeInbound("5", "6");
+
+        assertEquals(add(expected, "5", "6", "#rc"), events);
 
         assertFalse(channel.finishAndReleaseAll());
     }

@@ -161,7 +161,6 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         super.handlerRemoved(ctx);
         unsatisfiedReads = isQueueEmpty() ? 0 : queue.size();
         dequeue(ctx);
-        destroy();
     }
 
     @Override
