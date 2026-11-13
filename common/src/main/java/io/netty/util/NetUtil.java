@@ -228,7 +228,7 @@ public final class NetUtil {
     }
     /**
      * This will execute <a href ="https://www.freebsd.org/cgi/man.cgi?sysctl(8)">sysctl</a> with the {@code sysctlKey}
-     * which is expected to return the numeric value for for {@code sysctlKey}.
+     * which is expected to return the numeric value for {@code sysctlKey}.
      * @param sysctlKey The key which the return value corresponds to.
      * @return The <a href ="https://www.freebsd.org/cgi/man.cgi?sysctl(8)">sysctl</a> value for {@code sysctlKey}.
      */

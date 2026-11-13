@@ -380,7 +380,7 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
         if ((flags & flagMask) != 0) {
             for (;;) {
                 if (!in.isReadable()) {
-                    // We didnt find the end yet, need to retry again once more data is readable
+                    // We didn't find the end yet, need to retry again once more data is readable
                     return false;
                 }
                 int b = in.readUnsignedByte();

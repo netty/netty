@@ -2408,7 +2408,7 @@ public class DnsNameResolverTest {
                     message.getAuthorityRecords().add(newNsRecord(name, dnsName));
                     message.getAdditionalRecords().add(newARecord(dnsName, i == 0 ? dnsAddress : "1.2.3." + idx));
 
-                    // Add an unresolved NS record (with no additionals as well)
+                    // Add an unresolved NS record (with no additional as well)
                     message.getAuthorityRecords().add(newNsRecord(name, "unresolved." + dnsName));
                 }
             }

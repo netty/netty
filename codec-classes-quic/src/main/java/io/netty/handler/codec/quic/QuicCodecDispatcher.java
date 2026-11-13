@@ -145,7 +145,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
             if (ctxDispatcher != null) {
                 boolean fired = ctxDispatcher.fireChannelReadCompleteIfNeeded();
                 if (fired && !dispatchForOwnContextAlready) {
-                    // Check if we dispatched to ctx so if we didnt at the end we can do it manually.
+                    // Check if we dispatched to ctx so if we didn't at the end we can do it manually.
                     dispatchForOwnContextAlready = ctx.equals(ctxDispatcher.ctx);
                 }
             }

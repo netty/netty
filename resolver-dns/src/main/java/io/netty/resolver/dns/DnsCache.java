@@ -44,7 +44,7 @@ public interface DnsCache {
     /**
      * Return the cached entries for the given hostname.
      * @param hostname the hostname
-     * @param additionals the additional records
+     * @param additional the additional records
      * @return the cached entries
      */
     List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals);
@@ -52,7 +52,7 @@ public interface DnsCache {
     /**
      * Create a new {@link DnsCacheEntry} and cache a resolved address for a given hostname.
      * @param hostname the hostname
-     * @param additionals the additional records
+     * @param additional the additional records
      * @param address the resolved address
      * @param originalTtl the TTL as returned by the DNS server
      * @param loop the {@link EventLoop} used to register the TTL timeout
@@ -66,7 +66,7 @@ public interface DnsCache {
      * Be aware this <strong>won't</strong> be called with timeout / cancel / transport exceptions.
       *
      * @param hostname the hostname
-     * @param additionals the additional records
+     * @param additional the additional records
      * @param cause the resolution failure
      * @param loop the {@link EventLoop} used to register the TTL timeout
      * @return The {@link DnsCacheEntry} corresponding to this cache entry, or {@code null} if this cache doesn't

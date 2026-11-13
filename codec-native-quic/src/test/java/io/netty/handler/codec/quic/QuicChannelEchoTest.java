@@ -77,7 +77,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         if (directBuffer) {
             return new UnpooledByteBufAllocator(true);
         } else {
-            // Force usage of heap buffers and also ensure memoryAddress() is not not supported.
+            // Force usage of heap buffers and also ensure memoryAddress() is not supported.
             return new AbstractByteBufAllocator(false) {
 
                 @Override

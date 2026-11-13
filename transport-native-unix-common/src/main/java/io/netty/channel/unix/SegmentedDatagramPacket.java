@@ -32,7 +32,7 @@ public class SegmentedDatagramPacket extends DatagramPacket {
     /**
      * Create a new instance.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
+     * @param data          the {@link ByteBuf} which must be contiguous.
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */
@@ -44,7 +44,7 @@ public class SegmentedDatagramPacket extends DatagramPacket {
     /**
      * Create a new instance.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
+     * @param data          the {@link ByteBuf} which must be contiguous.
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */

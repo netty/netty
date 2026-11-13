@@ -1613,7 +1613,7 @@ public abstract class SSLEngineTest {
                                 clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
 
                         // The renegotiate is not expected to succeed, so we should stop trying in a timely manner so
-                        // the unit test can terminate relativley quicly.
+                        // the unit test can terminate relativley quickly.
                         sslHandler.setHandshakeTimeout(1, TimeUnit.SECONDS);
                         p.addLast(sslHandler);
                         p.addLast(new ChannelInboundHandlerAdapter() {

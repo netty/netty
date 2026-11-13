@@ -405,7 +405,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     /**
-     * Invoked when an incoming request exceeds the maximum content length.  The default behvaior is to trigger an
+     * Invoked when an incoming request exceeds the maximum content length.  The default behavior is to trigger an
      * {@code exceptionCaught()} event with a {@link TooLongFrameException}.
      *
      * @param ctx the {@link ChannelHandlerContext}

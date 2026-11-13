@@ -191,7 +191,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             // that we couldn't find a session that is re-usable.
             if (!session.isValid() ||
                     // This needs to happen in the synchronized block so we ensure we never destroy it before we
-                    // incremented the reference count. If we cant increment the reference count there is something
+                    // incremented the reference count. If we can't increment the reference count there is something
                     // wrong. In this case just remove the session from the cache and signal back that we couldn't
                     // find a session for re-use.
                     !session.upRef()) {

@@ -372,7 +372,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         if (connection == -1) {
             engineMap.remove(ssl);
             // We retained before but as we don't create a QuicheQuicConnection and transfer ownership we need to
-            // explict call release again here.
+            // explicit call release again here.
             nativeSslContext.release();
             return null;
         }

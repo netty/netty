@@ -200,7 +200,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     private void initializeIfNecessary(ChannelHandlerContext ctx) throws Exception {
-        // If State is not 'INIT' then it means we're already initialized so then no need to initiaize again.
+        // If State is not 'INIT' then it means we're already initialized so then no need to initialize again.
         if (state.get() != State.INIT) {
             return;
         }

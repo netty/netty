@@ -41,7 +41,7 @@ public interface ResourceLeakTracker<T>  {
 
     /**
      * Get a {@link Throwable} representing the stack trace of the original {@link #close(Object)} call.
-     * If this tracker hasn't been cloesd, or close tracking isn't supported or enabled,
+     * If this tracker hasn't been closed, or close tracking isn't supported or enabled,
      * then this method returns {@code null}.
      *
      * @return A throwable with the stack trace of the successful close call, or {@code null}.
