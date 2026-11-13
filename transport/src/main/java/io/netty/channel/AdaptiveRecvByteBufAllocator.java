@@ -131,14 +131,14 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
-                    nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
+                    nextReceiveBufferSize = min(max(SIZE_TABLE[index], minCapacity), maxCapacity);
                     decreaseNow = false;
                 } else {
                     decreaseNow = true;
                 }
             } else if (actualReadBytes >= nextReceiveBufferSize) {
                 index = min(index + INDEX_INCREMENT, maxIndex);
-                nextReceiveBufferSize = min(SIZE_TABLE[index], maxCapacity);
+                nextReceiveBufferSize = max(min(SIZE_TABLE[index], maxCapacity), minCapacity);
                 decreaseNow = false;
             }
         }
