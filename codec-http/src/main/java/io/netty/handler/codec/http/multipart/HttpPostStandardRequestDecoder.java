@@ -478,10 +478,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         ampersandpos = read == '&' ? currentpos - 1 : currentpos;
                         String key = decodeAttribute(
                                 undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
-                        // Some weird request bodies start with an '&' character, eg: &name=J&age=17.
-                        // In that case, key would be "", will get exception:
-                        // java.lang.IllegalArgumentException: Param 'name' must not be empty;
-                        // Just check and skip empty key.
+                        // Empty segments between '&' characters do not represent a form field.
                         if (!key.isEmpty()) {
                             currentAttribute = factory.createAttribute(request, key);
                             currentAttribute.setValue(""); // empty

@@ -560,7 +560,7 @@ public class HttpPostRequestDecoderTest {
     @Test
     public void testFormEncodeIncorrect() throws Exception {
         LastHttpContent content = new DefaultLastHttpContent(
-                Unpooled.copiedBuffer("project=netty&=netty&project=netty", CharsetUtil.US_ASCII));
+                Unpooled.copiedBuffer("project=netty&%20=netty&project=netty", CharsetUtil.US_ASCII));
         DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req);
         try {
@@ -809,7 +809,7 @@ public class HttpPostRequestDecoderTest {
     @Test
     public void testNotLeak() {
         final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/",
-                Unpooled.copiedBuffer("a=1&=2&b=3", CharsetUtil.US_ASCII));
+                Unpooled.copiedBuffer("a=1&%20=2&b=3", CharsetUtil.US_ASCII));
         try {
             assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, new Executable() {
                 @Override
@@ -843,7 +843,8 @@ public class HttpPostRequestDecoderTest {
     }
 
     private static void testNotLeakWhenWrapIllegalArgumentException(ByteBuf buf) {
-        buf.writeCharSequence("a=b&foo=%22bar%22&==", CharsetUtil.US_ASCII);
+        // Keep exercising name validation with a name that becomes empty after cleaning.
+        buf.writeCharSequence("a=b&foo=%22bar%22&%20==", CharsetUtil.US_ASCII);
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", buf);
         try {
             new HttpPostStandardRequestDecoder(request).destroy();
