@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -121,24 +121,42 @@ public class HttpResponseStatusTest {
                 // HTAB is allowed by the RFC 9110 reason-phrase grammar.
                 continue;
             }
-            String phrase = "OK" + c + "Injected";
-            assertThatThrownBy(() -> new HttpResponseStatus(200, phrase))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("invalid character");
+            assertConstructorRejects("OK" + c + "Injected");
         }
-        assertThatThrownBy(() -> new HttpResponseStatus(200, "OK\u007FInjected"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("invalid character");
+        assertConstructorRejects("OK\u007FInjected");
+    }
+
+    private static void assertConstructorRejects(final String phrase) {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HttpResponseStatus(200, phrase);
+            }
+        });
+        assertThat(e).hasMessageContaining("invalid character");
     }
 
     @Test
     public void parseLineMustRejectControlCharactersAndDelInReasonPhrase() {
-        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u0000Injected"));
-        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u000BInjected"));
-        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\fInjected"));
-        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u007FInjected"));
-        assertThrows(IllegalArgumentException.class, () -> parseLine(new AsciiString("200 OK\u0000Injected")));
-        assertThrows(IllegalArgumentException.class, () -> parseLine(new AsciiString("200 OK\u007FInjected")));
+        assertParseLineRejects("200 OK\u0000Injected");
+        assertParseLineRejects("200 OK\u000BInjected");
+        assertParseLineRejects("200 OK\fInjected");
+        assertParseLineRejects("200 OK\u007FInjected");
+    }
+
+    private static void assertParseLineRejects(final String line) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine(line);
+            }
+        });
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                parseLine(new AsciiString(line));
+            }
+        });
     }
 
     @Test
