@@ -41,6 +41,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     }
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+    // Output buffer size while maxForwardBytes is zero or negative: such a threshold forwards every buffer that has
+    // content, but cannot size one.
+    static final int DEFAULT_OUTPUT_BUFFER_SIZE = 64 * 1024;
     /**
      * Default maximum size of a single output buffer, in bytes (4 MiB).
      */
@@ -53,6 +56,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     private static final int MIN_WINDOW_LOG = 10;
     private static final int MAX_WINDOW_LOG = 31;
     private final int maxForwardBytes;
+    private final int outputBufferSize;
     private final int maxWindowLog;
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
@@ -103,8 +107,14 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
      *                              decoder may allocate per stream.
      */
     public ZstdDecoder(int maximumAllocationSize, int maxWindowLog) {
+        this(maximumAllocationSize, maxWindowLog, DEFAULT_MAX_FORWARD_BYTES);
+    }
+
+    // Package-private for testing, as the default is read from a system property once per JVM.
+    ZstdDecoder(int maximumAllocationSize, int maxWindowLog, int defaultMaxForwardBytes) {
         ObjectUtil.checkPositiveOrZero(maximumAllocationSize, "maximumAllocationSize");
-        this.maxForwardBytes = maximumAllocationSize > 0 ? maximumAllocationSize : DEFAULT_MAX_FORWARD_BYTES;
+        this.maxForwardBytes = maximumAllocationSize > 0 ? maximumAllocationSize : defaultMaxForwardBytes;
+        this.outputBufferSize = maxForwardBytes > 0 ? maxForwardBytes : DEFAULT_OUTPUT_BUFFER_SIZE;
         this.maxWindowLog = ObjectUtil.checkInRange(maxWindowLog, MIN_WINDOW_LOG, MAX_WINDOW_LOG, "maxWindowLog");
     }
 
@@ -142,12 +152,13 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                     if (outBuffer == null) {
                         // The frame content size is read from the (untrusted) frame header, so never use it
                         // to size the buffer beyond what we forward in one go.
-                        outBuffer = ctx.alloc().heapBuffer((int) Math.min(maxForwardBytes, uncompressedLength));
+                        outBuffer = ctx.alloc().heapBuffer((int) Math.min(outputBufferSize, uncompressedLength));
                     }
                     do {
                         w = outBuffer.writeBytes(zstdIs, outBuffer.writableBytes());
                     } while (w > 0 && outBuffer.isWritable());
-                    if (!outBuffer.isWritable() || outBuffer.readableBytes() >= maxForwardBytes) {
+                    if (outBuffer.isReadable() &&
+                            (!outBuffer.isWritable() || outBuffer.readableBytes() >= maxForwardBytes)) {
                         needsRead = false;
                         ctx.fireChannelRead(outBuffer);
                         outBuffer = null;
