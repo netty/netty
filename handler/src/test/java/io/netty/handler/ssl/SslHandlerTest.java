@@ -1090,6 +1090,69 @@ public class SslHandlerTest {
         }
     }
 
+    /**
+     * An {@link SSLEngine} that runs the first delegated task itself and returns {@code null} for it, which simulates
+     * the task being consumed by someone else before the {@link SslHandler} gets to run it.
+     */
+    private static final class TaskConsumingSslEngine extends JdkSslEngine {
+        private boolean consumed;
+
+        TaskConsumingSslEngine(SSLEngine engine) {
+            super(engine);
+        }
+
+        @Override
+        public Runnable getDelegatedTask() {
+            Runnable task = super.getDelegatedTask();
+            if (!consumed && task != null) {
+                consumed = true;
+                task.run();
+                return null;
+            }
+            return task;
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testHandshakeResumesWhenDelegatedTaskWasConsumedElsewhere() throws Exception {
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(SslProvider.JDK).build();
+        SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).sslProvider(SslProvider.JDK).build();
+
+        EmbeddedChannel server = new EmbeddedChannel();
+        EmbeddedChannel client = new EmbeddedChannel();
+        try {
+            // Use a direct executor so the delegated tasks are run on the calling thread and the test is deterministic.
+            SslHandler serverHandler = new SslHandler(
+                    new TaskConsumingSslEngine(sslServerCtx.newEngine(server.alloc())), DIRECT_EXECUTOR);
+            SslHandler clientHandler = sslClientCtx.newHandler(client.alloc());
+            server.pipeline().addLast(serverHandler);
+            client.pipeline().addLast(clientHandler);
+
+            for (int i = 0; i < 50 && !(serverHandler.handshakeFuture().isDone()
+                    && clientHandler.handshakeFuture().isDone()); i++) {
+                server.runPendingTasks();
+                client.runPendingTasks();
+                ByteBuf buf;
+                while ((buf = client.readOutbound()) != null) {
+                    server.writeInbound(buf);
+                }
+                while ((buf = server.readOutbound()) != null) {
+                    client.writeInbound(buf);
+                }
+            }
+
+            assertTrue(serverHandler.handshakeFuture().isSuccess());
+            assertTrue(clientHandler.handshakeFuture().isSuccess());
+        } finally {
+            client.finishAndReleaseAll();
+            server.finishAndReleaseAll();
+        }
+    }
+
     private static void testHandshakeWithExecutor(Executor executor, SslProvider provider, boolean mtls)
             throws Throwable {
         final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
