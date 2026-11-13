@@ -57,9 +57,10 @@ public class ByteBufStreamTest {
                 0x7ff8000000000001L, 0xfff8000000000001L
         };
         ByteArrayOutputStream expectedBytes = new ByteArrayOutputStream();
+        DataOutputStream expected = new DataOutputStream(expectedBytes);
         ByteBuf buf = Unpooled.buffer();
-        try (DataOutputStream expected = new DataOutputStream(expectedBytes);
-             ByteBufOutputStream out = new ByteBufOutputStream(buf, true)) {
+        ByteBufOutputStream out = new ByteBufOutputStream(buf, true);
+        try {
             for (int bits : floatBits) {
                 float value = Float.intBitsToFloat(bits);
                 expected.writeFloat(value);
@@ -74,6 +75,9 @@ public class ByteBufStreamTest {
             byte[] actual = new byte[buf.readableBytes()];
             buf.getBytes(buf.readerIndex(), actual);
             assertThat(actual).containsExactly(expectedBytes.toByteArray());
+        } finally {
+            expected.close();
+            out.close();
         }
     }
 
