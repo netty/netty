@@ -116,6 +116,7 @@ public class AdaptiveRecvByteBufAllocatorTest {
                 (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
         handle.reset(config);
         allocReadExpected(handle, alloc, 81);
+        assertEquals(81, handle.guess());
     }
 
     @Test

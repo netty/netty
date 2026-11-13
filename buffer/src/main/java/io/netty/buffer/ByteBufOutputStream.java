@@ -124,12 +124,12 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeDouble(double v) throws IOException {
-        buffer.writeDouble(v);
+        buffer.writeLong(Double.doubleToLongBits(v));
     }
 
     @Override
     public void writeFloat(float v) throws IOException {
-        buffer.writeFloat(v);
+        buffer.writeInt(Float.floatToIntBits(v));
     }
 
     @Override
