@@ -85,6 +85,16 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public long gracefulShutdownDrainMillis() {
+        return super.gracefulShutdownDrainMillis();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder gracefulShutdownDrainMillis(long gracefulShutdownDrainMillis) {
+        return super.gracefulShutdownDrainMillis(gracefulShutdownDrainMillis);
+    }
+
+    @Override
     public boolean isServer() {
         return super.isServer();
     }
@@ -261,6 +271,7 @@ public class Http2FrameCodecBuilder extends
         Http2FrameCodec codec = new Http2FrameCodec(encoder, decoder, initialSettings,
                 decoupleCloseAndGoAway(), flushPreface());
         codec.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis());
+        codec.gracefulShutdownDrainMillis(gracefulShutdownDrainMillis());
         return codec;
     }
 }
