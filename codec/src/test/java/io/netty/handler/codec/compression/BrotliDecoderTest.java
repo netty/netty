@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -194,6 +195,40 @@ public class BrotliDecoderTest {
 
         channel.writeInbound(Unpooled.wrappedBuffer(compressed, 0, compressed.length - 1));
         assertTrue(readZeros(channel) < 1048576);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    public void testDecompressionWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes) throws Exception {
+        byte[] compressed = Encoder.compress(new byte[1048576], new Encoder.Parameters().setWindow(10));
+
+        EmbeddedChannel ch = new EmbeddedChannel(new BrotliDecoder(8 * 1024, 0, defaultMaxForwardBytes));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
+            int parts = 0;
+            long n = 0;
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                try {
+                    assertTrue(msg.isReadable());
+                    assertTrue(msg.readableBytes() <= BrotliDecoder.DEFAULT_OUTPUT_BUFFER_SIZE);
+                    for (int i = msg.readerIndex(); i < msg.writerIndex(); i++) {
+                        assertEquals(0, msg.getByte(i));
+                    }
+                    n += msg.readableBytes();
+                    parts++;
+                } finally {
+                    msg.release();
+                }
+            }
+            assertEquals(1048576, n);
+            // The 1 KiB window keeps every pull small, so forwarding each pull gives far more parts than buffers of
+            // DEFAULT_OUTPUT_BUFFER_SIZE would.
+            assertTrue(parts > 1048576 / BrotliDecoder.DEFAULT_OUTPUT_BUFFER_SIZE, "parts: " + parts);
+            assertFalse(ch.finish());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
     }
 
     private static long readZeros(EmbeddedChannel channel) {
