@@ -266,7 +266,8 @@ public final class DateFormatter {
     private boolean tryParseMonth(CharSequence txt, int tokenStart, int tokenEnd) {
         int len = tokenEnd - tokenStart;
 
-        if (len != 3) {
+        // RFC 6265, section 5.1.1: month = ( "jan" / ... / "dec" ) *OCTET, so "November" is a month too
+        if (len < 3) {
             return false;
         }
 
