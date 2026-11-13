@@ -21,10 +21,13 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +119,49 @@ public class AdaptiveRecvByteBufAllocatorTest {
                 (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
         handle.reset(config);
         allocReadExpected(handle, alloc, 81);
+        assertEquals(81, handle.guess());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+    public void growthStaysWithinBounds(int minimum, int initial, int maximum) {
+        RecvByteBufAllocator.ExtendedHandle h = newHandle(minimum, initial, maximum);
+        assertBetween(h.guess(), minimum, maximum);
+        for (int i = 0; i < 10; i++) {
+            h.reset(config);
+            h.lastBytesRead(h.guess());
+            h.incMessagesRead(1);
+            h.readComplete();
+            assertBetween(h.guess(), minimum, maximum);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+    public void shrinkingStaysWithinBounds(int minimum, int initial, int maximum) {
+        RecvByteBufAllocator.ExtendedHandle h = newHandle(minimum, initial, maximum);
+        assertBetween(h.guess(), minimum, maximum);
+        for (int i = 0; i < 10; i++) {
+            h.reset(config);
+            h.lastBytesRead(0);
+            h.incMessagesRead(1);
+            h.readComplete();
+            assertBetween(h.guess(), minimum, maximum);
+        }
+    }
+
+    private RecvByteBufAllocator.ExtendedHandle newHandle(int minimum, int initial, int maximum) {
+        RecvByteBufAllocator.ExtendedHandle h = (RecvByteBufAllocator.ExtendedHandle)
+                new AdaptiveRecvByteBufAllocator(minimum, initial, maximum).newHandle();
+        h.reset(config);
+        return h;
+    }
+
+    private static void assertBetween(int actual, int minimum, int maximum) {
+        assertTrue(actual >= minimum && actual <= maximum,
+                actual + " is not within [" + minimum + ", " + maximum + "]");
     }
 
     @Test
