@@ -2489,6 +2489,46 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
+    /**
+     * Returns whether the given credential was selected for this SSL connection. The credential must be added to this
+     * engine or its context. The result remains available after the handshake completes until this engine is shut down.
+     *
+     * @throws SSLException if an error occurs querying the selected credential.
+     */
+    public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
+        checkNotNull(credential, "credential");
+
+        if (destroyed || !containsCredential(credential)) {
+            return false;
+        }
+
+        try {
+            long selectedCredentialAddress = SSL.getSelectedCredential(ssl);
+            return selectedCredentialAddress != 0 &&
+                    ((OpenSslCredentialPointer) credential).credentialAddress() == selectedCredentialAddress;
+        } catch (Exception e) {
+            throw new SSLException("Failed to get selected credential", e);
+        }
+    }
+
+    private boolean containsCredential(OpenSslCredential credential) {
+        if (engineCredentials != null) {
+            for (OpenSslCredential configuredCredential : engineCredentials) {
+                if (configuredCredential == credential) {
+                    return true;
+                }
+            }
+        }
+
+        for (OpenSslCredential configuredCredential : parentContext.credentials) {
+            if (configuredCredential == credential) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static long bufferAddress(ByteBuffer b) {
         assert b.isDirect();
         if (PlatformDependent.hasUnsafe()) {
