@@ -1799,7 +1799,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(Arrays.asList(enabledProtocols));
+                    Set<String> protocols = new HashSet<String>();
+                    Collections.addAll(protocols, enabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
