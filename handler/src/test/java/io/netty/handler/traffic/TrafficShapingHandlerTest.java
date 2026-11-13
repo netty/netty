@@ -19,7 +19,6 @@ package io.netty.handler.traffic;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.LongSupplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -129,16 +128,14 @@ public class TrafficShapingHandlerTest {
         GlobalTrafficShapingHandler handler1 =
                 new GlobalTrafficShapingHandler(executor, 100, 0, 1000, 500);
         try {
-            testChannelsWithCollidingHashCodesDoNotShareState0(handler1, handler1::queuesSize, () -> {
-            });
+            testChannelsWithCollidingHashCodesDoNotShareState0(handler1);
         } finally {
             handler1.release();
         }
         GlobalChannelTrafficShapingHandler handler2 =
                 new GlobalChannelTrafficShapingHandler(executor, 100, 0, 100, 0, 1000, 500);
         try {
-            testChannelsWithCollidingHashCodesDoNotShareState0(handler2, handler2::queuesSize,
-                    () -> assertEquals(2, handler2.channelTrafficCounters().size()));
+            testChannelsWithCollidingHashCodesDoNotShareState0(handler2);
         } finally {
             handler2.release();
         }
@@ -146,17 +143,22 @@ public class TrafficShapingHandlerTest {
     }
 
     private static void testChannelsWithCollidingHashCodesDoNotShareState0(
-            AbstractTrafficShapingHandler handler, LongSupplier queuesSize, Runnable perChannelCheck) {
+            AbstractTrafficShapingHandler handler) {
         EmbeddedChannel a = new EmbeddedChannel(new CollidingChannelId("A"), handler);
         EmbeddedChannel b = new EmbeddedChannel(new CollidingChannelId("B"), handler);
         try {
-            perChannelCheck.run();
+            if (handler instanceof GlobalChannelTrafficShapingHandler) {
+                assertEquals(2, ((GlobalChannelTrafficShapingHandler) handler).channelTrafficCounters().size());
+            }
             ChannelFuture writeOnB = b.writeAndFlush(Unpooled.wrappedBuffer(new byte[1000]));
             assertFalse(writeOnB.isDone());
             a.close().syncUninterruptibly();
             assertTrue(b.isActive());
             assertNull(writeOnB.cause());
-            assertEquals(1000, queuesSize.getAsLong());
+            long queuesSize = handler instanceof GlobalTrafficShapingHandler ?
+                    ((GlobalTrafficShapingHandler) handler).queuesSize() :
+                    ((GlobalChannelTrafficShapingHandler) handler).queuesSize();
+            assertEquals(1000, queuesSize);
         } finally {
             a.finishAndReleaseAll();
             b.finishAndReleaseAll();
