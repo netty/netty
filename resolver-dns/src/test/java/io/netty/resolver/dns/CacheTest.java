@@ -84,7 +84,12 @@ class CacheTest {
             @Override
             public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
                 ScheduledFuture<?> future = super.schedule(command, delay, unit);
-                submit(() -> { }).syncUninterruptibly();
+                submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        // NOOP
+                    }
+                }).syncUninterruptibly();
                 shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
                 return future;
             }
