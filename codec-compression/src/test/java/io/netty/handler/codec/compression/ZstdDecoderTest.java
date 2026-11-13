@@ -181,7 +181,8 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
-    public void testDecompressWhenUnlimitedWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes) {
+    public void testDecompressWhenUnlimitedWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes)
+            throws Exception {
         byte[] payload = new byte[1024 * 1024];
         new Random(12345L).nextBytes(payload);
         byte[] compressed = Zstd.compress(payload);
