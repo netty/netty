@@ -96,7 +96,8 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private Object variableHeader;
     private int bytesRemainingInVariablePart;
 
-    private final int maxBytesInMessage;
+    private volatile int maxBytesInMessage;
+    private int currentMaxBytesInMessage;
     private final int maxClientIdLength;
     private final boolean strictUtf8Validation;
     // Lazily-initialised UTF-8 decoder reused across calls in the same channel/decoder
@@ -136,11 +137,30 @@ public final class MqttDecoder extends ByteToMessageDecoder {
         this.strictUtf8Validation = strictUtf8Validation;
     }
 
+    /**
+     * Returns the maximum number of bytes a decoded message may consume.
+     */
+    public int maxBytesInMessage() {
+        return maxBytesInMessage;
+    }
+
+    /**
+     * Sets the maximum number of bytes a decoded message may consume. The new limit applies to the next message to
+     * start decoding. A message whose fixed header has already been read continues to be decoded against the limit
+     * which was in force when it started.
+     *
+     * @param maxBytesInMessage the maximum number of bytes a decoded message may consume.
+     */
+    public void setMaxBytesInMessage(int maxBytesInMessage) {
+        this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch (state) {
             case READ_FIXED_HEADER: try {
-                maxAllowedRemainingBytes = maxBytesInMessage;
+                currentMaxBytesInMessage = maxBytesInMessage;
+                maxAllowedRemainingBytes = currentMaxBytesInMessage;
                 int startOfFixed = buffer.readerIndex();
                 mqttFixedHeader = decodeFixedHeader(ctx, buffer, maxAllowedRemainingBytes);
                 if (mqttFixedHeader == null) {
@@ -207,7 +227,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
 
     private void checkMaxMessageLengthRemaining(int maxAllowedRemainingBytes) {
         if (maxAllowedRemainingBytes < 0) {
-            throw new TooLongFrameException("message length exceeds " + maxBytesInMessage + " bytes");
+            throw new TooLongFrameException("message length exceeds " + currentMaxBytesInMessage + " bytes");
         }
     }
 
