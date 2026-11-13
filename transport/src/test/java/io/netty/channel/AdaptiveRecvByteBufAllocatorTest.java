@@ -21,6 +21,8 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -117,6 +119,19 @@ public class AdaptiveRecvByteBufAllocatorTest {
         handle.reset(config);
         allocReadExpected(handle, alloc, 81);
         assertEquals(81, handle.guess());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 15, 16 })
+    public void fixedCapacityAtLowerSizeTableBoundary(int capacity) {
+        AdaptiveRecvByteBufAllocator allocator = new AdaptiveRecvByteBufAllocator(capacity, capacity, capacity);
+        RecvByteBufAllocator.ExtendedHandle handle = (RecvByteBufAllocator.ExtendedHandle) allocator.newHandle();
+        handle.reset(config);
+        for (int i = 0; i < 3; i++) {
+            allocReadExpected(handle, alloc, capacity);
+        }
+        handle.readComplete();
+        assertEquals(capacity, handle.guess());
     }
 
     @Test
