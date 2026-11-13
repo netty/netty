@@ -2650,6 +2650,25 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
+        int _indexOf(int fromIndex, int toIndex, byte value) {
+            // resolve the root memory once: no per-word calls into the root buffer
+            final int bytes = toIndex - fromIndex;
+            final int found;
+            if (PlatformDependent.hasUnsafe() && hasMemoryAddress) {
+                found = ByteBufUtil.firstIndexOf(memoryAddress + fromIndex, bytes, value);
+            } else if (hasArray) {
+                AbstractByteBuf root = rootParent();
+                // the array field, not array(): that checks the root's reference count on every search
+                found = root instanceof UnpooledHeapByteBuf ?
+                        ByteBufUtil.firstIndexOf(((UnpooledHeapByteBuf) root).array, idx(fromIndex), bytes, value) :
+                        ByteBufUtil.firstIndexOf(root.array(), root.arrayOffset() + idx(fromIndex), bytes, value);
+            } else {
+                found = ByteBufUtil.firstIndexOf(rootParent()._internalNioBuffer(), idx(fromIndex), bytes, value);
+            }
+            return found < 0 ? -1 : fromIndex + found;
+        }
+
+        @Override
         public ByteBuf setZero(int index, int length) {
             checkIndex(index, length);
             rootParent().setZero(idx(index), length);
