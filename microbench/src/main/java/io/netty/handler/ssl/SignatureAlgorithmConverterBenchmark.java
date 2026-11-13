@@ -98,6 +98,16 @@ public class SignatureAlgorithmConverterBenchmark extends AbstractMicrobenchmark
     }
 
     /**
+     * The same as {@link #convert(Blackhole)}, but with the regular expression that was used for every name before.
+     */
+    @Benchmark
+    public void convertWithPattern(Blackhole blackhole) {
+        for (String name : names) {
+            blackhole.consume(SignatureAlgorithmConverter.toJavaNameWithPattern(name));
+        }
+    }
+
+    /**
      * Converts {@link String}s that were just created, which is what the native code hands over for every handshake.
      */
     @Benchmark
@@ -108,7 +118,19 @@ public class SignatureAlgorithmConverterBenchmark extends AbstractMicrobenchmark
     }
 
     /**
-     * The share of {@link #createAndConvert(Blackhole)} that is spent on creating the {@link String}s.
+     * The same as {@link #createAndConvert(Blackhole)}, but with the regular expression that was used for every name
+     * before.
+     */
+    @Benchmark
+    public void createAndConvertWithPattern(Blackhole blackhole) {
+        for (byte[] encodedName : encodedNames) {
+            blackhole.consume(SignatureAlgorithmConverter.toJavaNameWithPattern(
+                    new String(encodedName, CharsetUtil.US_ASCII)));
+        }
+    }
+
+    /**
+     * The share of the two benchmarks above that is spent on creating the {@link String}s.
      */
     @Benchmark
     public void createOnly(Blackhole blackhole) {

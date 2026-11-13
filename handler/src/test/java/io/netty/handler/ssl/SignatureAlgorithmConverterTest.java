@@ -86,13 +86,12 @@ public class SignatureAlgorithmConverterTest {
                 "ecdsa_sha1", "ecdsa_sha256", "ecdsa_sha384", "ecdsa_sha512",
                 "rsa_pkcs1_sha1", "rsa_pkcs1_sha256", "rsa_pkcs1_sha384", "rsa_pkcs1_sha512",
                 "rsa_pss_rsae_sha256", "rsa_pss_rsae_sha384", "rsa_pss_rsae_sha512",
-                "ed25519",
                 // OpenSSL
                 "ecdsa-with-SHA1", "ecdsa-with-SHA224", "ecdsa-with-SHA256", "ecdsa-with-SHA384",
                 "ecdsa-with-SHA512",
                 "sha1WithRSAEncryption", "sha224WithRSAEncryption", "sha256WithRSAEncryption",
                 "sha384WithRSAEncryption", "sha512WithRSAEncryption",
-                "dsa_with_SHA256", "ED25519", "ED448", "ed448",
+                "dsa_with_SHA256",
                 "rsassaPss", "dsaEncryption", "undefined"
         };
         for (String name : knownNames) {

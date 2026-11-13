@@ -94,6 +94,7 @@ final class SignatureAlgorithmConverter {
                 return "SHA1withRSA";
             case "dsa_with_SHA256":
                 return "SHA256withDSA";
+            // EdDSA names carry no hash, so the pattern can't match them.
             case "ed25519":
             case "ED25519":
                 return "Ed25519";
@@ -112,13 +113,6 @@ final class SignatureAlgorithmConverter {
     }
 
     static String toJavaNameWithPattern(String opensslName) {
-        // EdDSA names carry no hash, so the pattern can't match them
-        if ("ed25519".equalsIgnoreCase(opensslName)) {
-            return "Ed25519";
-        }
-        if ("ed448".equalsIgnoreCase(opensslName)) {
-            return "Ed448";
-        }
         Matcher matcher = PATTERN.matcher(opensslName);
         if (matcher.matches()) {
             String group1 = matcher.group(1);
