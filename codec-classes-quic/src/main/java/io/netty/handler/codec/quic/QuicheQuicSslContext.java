@@ -242,7 +242,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
         sessionCache = server ? null : new QuicClientSessionCache();
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
-        nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
+        long sslCtx = BoringSSL.SSLContext_new(server, applicationProtocols,
                 new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password, serverKeyTypes, clientKeyTypes),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
@@ -250,7 +250,18 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 keylog == null ? null : new BoringSSLKeylogCallback(engineMap, keylog),
                 server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), privateKeyMethod,
                 sessionTicketCallback, verifyMode,
-                BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
+                BoringSSL.subjectNames(trustManager.getAcceptedIssuers()));
+        if (sslCtx == -1) {
+            // Creating the native SSL_CTX failed, so there is nothing we could use.
+            String msg = "failed to create SSL_CTX";
+            String lastError = BoringSSL.ERR_last_error();
+            if (lastError != null) {
+                // We have some more details about why the operations failed, include these into the message.
+                msg += ": " + lastError;
+            }
+            throw new IllegalStateException(msg);
+        }
+        nativeSslContext = new NativeSslContext(sslCtx);
         boolean success = false;
         try {
             if (groups.length > 0 && BoringSSL.SSLContext_set1_groups_list(nativeSslContext.ctx, groups) == 0) {
@@ -367,6 +378,11 @@ final class QuicheQuicSslContext extends QuicSslContext {
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator, QuicheQuicSslEngine engine) {
         nativeSslContext.retain();
         long ssl = BoringSSL.SSL_new(nativeSslContext.address(), isServer(), engine.tlsHostName);
+        if (ssl == -1) {
+            // SSL_new(...) failed, so there is nothing to create the connection with. Release what we retained.
+            nativeSslContext.release();
+            return null;
+        }
         engineMap.put(ssl, engine);
         long connection = connectionCreator.apply(ssl);
         if (connection == -1) {
