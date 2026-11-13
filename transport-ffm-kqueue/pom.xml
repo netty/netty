@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2026 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
+  </parent>
+  <artifactId>netty5-transport-ffm-kqueue</artifactId>
+
+  <name>Netty/Transport/FFM/KQueue</name>
+  <packaging>jar</packaging>
+
+  <properties>
+    <javaModuleName>io.netty.transport.ffm.kqueue</javaModuleName>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.release>25</maven.compiler.release>
+    <checkstyle.excludes>**/channel/kqueue/ffm/generated/**/*</checkstyle.excludes>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.netty</groupId>
+        <artifactId>netty5-jextract-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <configuration>
+          <targetPackage>io.netty.channel.kqueue.ffm.generated</targetPackage>
+          <jextractVersion>25</jextractVersion>
+          <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+          <bindings>
+            <binding>
+              <header>sys/socket.h</header>
+              <className>BsdSocket</className>
+              <functions>
+                <function>socket</function>
+                <function>bind</function>
+                <function>listen</function>
+                <function>accept</function>
+                <function>connect</function>
+                <function>connectx</function>
+                <function>shutdown</function>
+                <function>getsockname</function>
+                <function>getpeername</function>
+                <function>getsockopt</function>
+                <function>setsockopt</function>
+                <function>sendto</function>
+                <function>recvfrom</function>
+                <function>sendfile</function>
+              </functions>
+              <structs>
+                <struct>sockaddr</struct>
+                <struct>sockaddr_storage</struct>
+                <struct>sa_endpoints</struct>
+              </structs>
+              <constants>
+                <constant>AF_INET</constant>
+                <constant>AF_INET6</constant>
+                <constant>AF_UNIX</constant>
+                <constant>SOCK_STREAM</constant>
+                <constant>SOCK_DGRAM</constant>
+                <constant>SOL_SOCKET</constant>
+                <constant>SO_ERROR</constant>
+                <constant>SO_KEEPALIVE</constant>
+                <constant>SO_RCVBUF</constant>
+                <constant>SO_SNDBUF</constant>
+                <constant>SO_REUSEADDR</constant>
+                <constant>SO_REUSEPORT</constant>
+                <constant>SHUT_RD</constant>
+                <constant>SHUT_WR</constant>
+                <constant>SHUT_RDWR</constant>
+              </constants>
+            </binding>
+            <binding>
+              <header>sys/event.h</header>
+              <className>Event</className>
+              <functions>
+                <function>kqueue</function>
+                <function>kevent</function>
+              </functions>
+              <structs>
+                <struct>kevent</struct>
+              </structs>
+              <constants>
+                <constant>EV_ADD</constant>
+                <constant>EV_ENABLE</constant>
+                <constant>EV_DISABLE</constant>
+                <constant>EV_DELETE</constant>
+                <constant>EV_CLEAR</constant>
+                <constant>EV_ONESHOT</constant>
+                <constant>EV_EOF</constant>
+                <constant>EV_ERROR</constant>
+                <constant>EVFILT_READ</constant>
+                <constant>EVFILT_WRITE</constant>
+                <constant>EVFILT_TIMER</constant>
+                <constant>EVFILT_USER</constant>
+                <constant>NOTE_TRIGGER</constant>
+              </constants>
+            </binding>
+            <binding>
+              <header>netinet/in.h</header>
+              <className>In</className>
+              <structs>
+                <struct>in_addr</struct>
+                <struct>in6_addr</struct>
+                <struct>sockaddr_in</struct>
+                <struct>sockaddr_in6</struct>
+              </structs>
+              <constants>
+                <constant>IPPROTO_TCP</constant>
+              </constants>
+            </binding>
+            <binding>
+              <header>sys/un.h</header>
+              <className>Un</className>
+              <structs>
+                <struct>sockaddr_un</struct>
+              </structs>
+            </binding>
+            <binding>
+              <header>sys/uio.h</header>
+              <className>Uio</className>
+              <functions>
+                <function>readv</function>
+                <function>writev</function>
+              </functions>
+              <structs>
+                <struct>iovec</struct>
+              </structs>
+            </binding>
+            <binding>
+              <header>fcntl.h</header>
+              <className>Fcntl</className>
+              <functions>
+                <function>fcntl</function>
+              </functions>
+              <constants>
+                <constant>F_GETFL</constant>
+                <constant>F_SETFL</constant>
+                <constant>O_NONBLOCK</constant>
+              </constants>
+            </binding>
+            <binding>
+              <header>netinet/tcp.h</header>
+              <className>Tcp</className>
+              <constants>
+                <constant>TCP_NODELAY</constant>
+              </constants>
+            </binding>
+            <binding>
+              <header>unistd.h</header>
+              <className>Posix</className>
+              <functions>
+                <function>close</function>
+                <function>pipe</function>
+                <function>read</function>
+                <function>write</function>
+              </functions>
+            </binding>
+            <binding>
+              <header>sys/errno.h</header>
+              <className>Errno</className>
+              <functions>
+                <function>__error</function>
+              </functions>
+              <constants>
+                <constant>EAGAIN</constant>
+                <constant>EWOULDBLOCK</constant>
+                <constant>EINPROGRESS</constant>
+                <constant>EINTR</constant>
+              </constants>
+            </binding>
+          </bindings>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+            <configuration>
+              <!--
+                Keep the generated bindings fully encapsulated: they are an internal implementation
+                detail consumed only by this module's own (future) hand-written wrappers, never by
+                other modules. exportExcludes is a regex matched against each package name.
+              -->
+              <exportExcludes>io\.netty\.channel\.kqueue\.ffm\.generated(\..*)?</exportExcludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
