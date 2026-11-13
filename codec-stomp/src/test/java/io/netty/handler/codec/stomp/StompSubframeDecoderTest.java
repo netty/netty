@@ -24,10 +24,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static io.netty.util.CharsetUtil.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -291,6 +293,34 @@ public class StompSubframeDecoderTest {
 
         Object obj = channel.readInbound();
         assertNull(obj);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "CONNECT, false", "CONNECT, true", "CONNECTED, false", "CONNECTED, true" })
+    void testColonInConnectionHeaderValue(StompCommand command, boolean validateHeaders) {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(validateHeaders));
+        try {
+            String frame = command + "\n"
+                    + "url:http://example.com:8080/path\n"
+                    + "literal:left\\c:right\n"
+                    + "next:value\n\n\0";
+            channel.writeInbound(Unpooled.copiedBuffer(frame, UTF_8));
+
+            StompHeadersSubframe headers = channel.readInbound();
+            assertThat(headers).isNotNull();
+            assertThat(headers.decoderResult().isSuccess()).isTrue();
+            assertThat(headers.command()).isEqualTo(command);
+            assertThat(headers.headers().getAsString("url")).isEqualTo("http://example.com:8080/path");
+            assertThat(headers.headers().getAsString("literal")).isEqualTo("left\\c:right");
+            assertThat(headers.headers().getAsString("next")).isEqualTo("value");
+
+            StompContentSubframe content = channel.readInbound();
+            assertThat(content).isSameAs(LastStompContentSubframe.EMPTY_LAST_CONTENT);
+            content.release();
+            assertThat((Object) channel.readInbound()).isNull();
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     @Test
