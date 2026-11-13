@@ -81,6 +81,13 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
         frameCodec.forEachActiveStream(streamVisitor);
     }
 
+    /**
+     * Returns {@code true} if the {@link Http2FrameCodec} in the pipeline is the server side of the connection.
+     */
+    final boolean isServerCodec() {
+        return frameCodec.connection().isServer();
+    }
+
     private static Http2FrameCodec requireHttp2FrameCodec(ChannelHandlerContext ctx) {
         ChannelHandlerContext frameCodecCtx = ctx.pipeline().context(Http2FrameCodec.class);
         if (frameCodecCtx == null) {
