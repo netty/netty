@@ -874,7 +874,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             try {
                 name = HttpHeaderValues.FILENAME.toString();
                 String[] split = cleanString(value).split("'", 3);
-                value = QueryStringDecoder.decodeComponent(split[2], Charset.forName(split[0]));
+                // RFC 8187, section 3.2.1: only percent-encoding applies, '+' is a literal attr-char
+                value = QueryStringDecoder.decodeComponent(split[2].replace("+", "%2B"), Charset.forName(split[0]));
             } catch (ArrayIndexOutOfBoundsException | UnsupportedCharsetException e) {
                  throw new ErrorDataDecoderException(e);
             }
