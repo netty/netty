@@ -41,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -276,7 +275,12 @@ public abstract class SocketTest<T extends Socket> {
             // "<socket>/" does not refer to the socket file (lstat fails with ENOTDIR), so it must not be removed.
             Socket second = Socket.newSocketDomain();
             try {
-                assertThrows(IOException.class, () -> second.bind(new DomainSocketAddress(address.path() + '/')));
+                try {
+                    second.bind(new DomainSocketAddress(address.path() + '/'));
+                    fail("bind should have failed");
+                } catch (IOException expected) {
+                    // expected
+                }
             } finally {
                 second.close();
             }
@@ -295,7 +299,12 @@ public abstract class SocketTest<T extends Socket> {
 
             Socket domainSocket = Socket.newSocketDomain();
             try {
-                assertThrows(IOException.class, () -> domainSocket.bind(address));
+                try {
+                    domainSocket.bind(address);
+                    fail("bind should have failed");
+                } catch (IOException expected) {
+                    // expected
+                }
             } finally {
                 domainSocket.close();
             }
