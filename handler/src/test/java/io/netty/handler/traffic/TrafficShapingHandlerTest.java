@@ -17,6 +17,7 @@
 package io.netty.handler.traffic;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.function.LongSupplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -25,6 +26,7 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -37,7 +39,9 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
@@ -123,6 +127,83 @@ public class TrafficShapingHandlerTest {
         assertTrue(promise.isDone());
         assertInstanceOf(ClosedChannelException.class, promise.cause());
         assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testChannelsWithCollidingHashCodesDoNotShareState() throws Exception {
+        EventExecutor executor = SES.next();
+        GlobalTrafficShapingHandler handler1 =
+                new GlobalTrafficShapingHandler(executor, 100, 0, 1000, 500);
+        try {
+            testChannelsWithCollidingHashCodesDoNotShareState0(handler1, handler1::queuesSize, () -> {
+            });
+        } finally {
+            handler1.release();
+        }
+        GlobalChannelTrafficShapingHandler handler2 =
+                new GlobalChannelTrafficShapingHandler(executor, 100, 0, 100, 0, 1000, 500);
+        try {
+            testChannelsWithCollidingHashCodesDoNotShareState0(handler2, handler2::queuesSize,
+                    () -> assertEquals(2, handler2.channelTrafficCounters().size()));
+        } finally {
+            handler2.release();
+        }
+    }
+
+    private static void testChannelsWithCollidingHashCodesDoNotShareState0(
+            AbstractTrafficShapingHandler handler, LongSupplier queuesSize, Runnable perChannelCheck)
+            throws Exception {
+        EmbeddedChannel a = new EmbeddedChannel(new CollidingChannelId("A"), handler);
+        EmbeddedChannel b = new EmbeddedChannel(new CollidingChannelId("B"), handler);
+        try {
+            perChannelCheck.run();
+            Future<Void> writeOnB = b.writeAndFlush(Unpooled.wrappedBuffer(new byte[1000]));
+            assertFalse(writeOnB.isDone());
+            a.close().syncUninterruptibly();
+            assertTrue(b.isActive());
+            assertNull(writeOnB.cause());
+            assertEquals(1000, queuesSize.getAsLong());
+        } finally {
+            a.finishAndReleaseAll();
+            b.finishAndReleaseAll();
+        }
+    }
+
+    /**
+     * A {@link ChannelId} with a constant {@code hashCode}, like two distinct
+     * {@code DefaultChannelId}s whose 32-bit hashes collide.
+     */
+    private static final class CollidingChannelId implements ChannelId {
+        private final String name;
+
+        CollidingChannelId(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String asShortText() {
+            return name;
+        }
+
+        @Override
+        public String asLongText() {
+            return name;
+        }
+
+        @Override
+        public int compareTo(ChannelId o) {
+            return name.compareTo(o.asLongText());
+        }
+
+        @Override
+        public int hashCode() {
+            return 42;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof CollidingChannelId && ((CollidingChannelId) o).name.equals(name);
+        }
     }
 
     private void testHandlerRemove0(final AbstractTrafficShapingHandler trafficHandler)
