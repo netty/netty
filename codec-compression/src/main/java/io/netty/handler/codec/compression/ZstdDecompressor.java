@@ -41,11 +41,17 @@ public final class ZstdDecompressor implements Decompressor {
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
 
     private final ByteBufAllocator allocator;
+    private final int outputBufferSize;
 
     private final MutableByteBufInputStream mutableInput = new MutableByteBufInputStream();
     private final ZstdInputStreamNoFinalizer output;
 
     ZstdDecompressor(Builder builder, ByteBufAllocator allocator) {
+        this(builder, allocator, DEFAULT_MAX_FORWARD_BYTES);
+    }
+
+    // Package-private for testing, as the default is read from a system property once per JVM.
+    ZstdDecompressor(Builder builder, ByteBufAllocator allocator, int defaultMaxForwardBytes) {
         // Don't use static here as we want to still allow to load the classes.
         try {
             Zstd.ensureAvailability();
@@ -53,6 +59,9 @@ public final class ZstdDecompressor implements Decompressor {
             throw new ExceptionInInitializerError(throwable);
         }
         this.allocator = allocator;
+        // A threshold of zero or less cannot size a buffer.
+        this.outputBufferSize = defaultMaxForwardBytes > 0 ?
+                defaultMaxForwardBytes : ZstdDecoder.DEFAULT_OUTPUT_BUFFER_SIZE;
         ZstdInputStreamNoFinalizer output = null;
         try {
             output = new ZstdInputStreamNoFinalizer(mutableInput);
@@ -112,9 +121,9 @@ public final class ZstdDecompressor implements Decompressor {
 
     @Override
     public ByteBuf takeOutput() throws DecompressionException {
-        ByteBuf buf = allocator.buffer(DEFAULT_MAX_FORWARD_BYTES, DEFAULT_MAX_FORWARD_BYTES);
+        ByteBuf buf = allocator.buffer(outputBufferSize, outputBufferSize);
         try {
-            buf.writeBytes(output, DEFAULT_MAX_FORWARD_BYTES);
+            buf.writeBytes(output, outputBufferSize);
         } catch (IOException e) {
             buf.release();
             throw new DecompressionException(e);

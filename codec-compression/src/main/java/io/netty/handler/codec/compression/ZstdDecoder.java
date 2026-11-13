@@ -42,7 +42,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
     // Output buffer size while maxForwardBytes is zero or negative: such a threshold forwards every buffer that has
-    // content, but cannot size one.
+    // content, but cannot size one. ZstdDecompressor uses it too.
     static final int DEFAULT_OUTPUT_BUFFER_SIZE = 64 * 1024;
     /**
      * Default maximum size of a single output buffer, in bytes (4 MiB).
