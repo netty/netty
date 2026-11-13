@@ -25,6 +25,7 @@ RUN yum install -y \
  apr-devel \
  autoconf \
  automake \
+ binutils \
  bzip2 \
  git \
  glibc-devel \
@@ -102,3 +103,8 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 RUN rm -rf $SOURCE_DIR
 RUN yum clean all && \
     rm -rf /var/cache/yum
+
+# Fail the build if the native libraries require a newer glibc than we support, see
+# .github/scripts/check_native_glibc_versions.sh and the check-native-glibc-versions profile in pom.xml.
+# Uses readelf from the binutils package installed above, which can also read aarch64 libraries.
+ENV NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true
