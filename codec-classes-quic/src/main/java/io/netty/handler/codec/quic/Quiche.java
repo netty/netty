@@ -420,7 +420,8 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_stream_send</a>.
      */
-    static native int quiche_conn_stream_send(long connAddr, long streamId, long bufAddr, int bufLen, boolean fin);
+    static native int quiche_conn_stream_send(long connAddr, long streamId, long bufAddr, int bufLen, boolean fin,
+                                              long outErrorCodeAddr);
 
     /**
      * See
