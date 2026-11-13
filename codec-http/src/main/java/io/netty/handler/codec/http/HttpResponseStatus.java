@@ -553,11 +553,13 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         for (int i = 0; i < reasonPhrase.length(); i ++) {
             char c = reasonPhrase.charAt(i);
             // Check prohibited characters.
-            switch (c) {
-                case '\n': case '\r':
-                    throw new IllegalArgumentException(
-                            "reasonPhrase contains one of the following prohibited characters: " +
-                                    "\\r\\n: " + reasonPhrase);
+            // RFC 9110 defines the reason-phrase as *( HTAB / SP / VCHAR / obs-text ).
+            // All other control characters and DEL are rejected as lenient parsers may
+            // treat them as line separators (response splitting / desync) and C-string
+            // based parsers will truncate at NUL.
+            if ((c <= 0x1F && c != '\t') || c == 0x7F) {
+                throw new IllegalArgumentException(
+                        "reasonPhrase contains invalid character: " + reasonPhrase);
             }
         }
 

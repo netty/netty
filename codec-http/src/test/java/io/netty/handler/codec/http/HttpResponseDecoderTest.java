@@ -1491,6 +1491,31 @@ public class HttpResponseDecoderTest {
                 version + " 200 OK\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII));
     }
 
+    @ParameterizedTest
+    @ValueSource(chars = { '\u0000', '\u000B', '\f', '\u001B', '\u007F' })
+    public void testInvalidReasonPhraseControlChars(char controlChar) throws Exception {
+        ByteBuf responseBuffer = Unpooled.buffer();
+        responseBuffer.writeCharSequence("HTTP/1.1 200 OK", CharsetUtil.US_ASCII);
+        responseBuffer.writeByte(controlChar);
+        responseBuffer.writeCharSequence("Injected\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII);
+        testInvalidHeaders0(responseBuffer);
+    }
+
+    @Test
+    public void testReasonPhraseWithHtabMustBeAccepted() throws Exception {
+        // HTAB is allowed by the RFC 9110 reason-phrase grammar.
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\tTabbed\r\nHost: whatever\r\nContent-Length: 0\r\n\r\n",
+                CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals("OK\tTabbed", response.status().reasonPhrase());
+        ReferenceCountUtil.release(response);
+        assertTrue(channel.finish());
+        ReferenceCountUtil.release(channel.readInbound());
+    }
+
     private static void testInvalidHeaders0(ByteBuf responseBuffer) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         assertTrue(channel.writeInbound(responseBuffer));
