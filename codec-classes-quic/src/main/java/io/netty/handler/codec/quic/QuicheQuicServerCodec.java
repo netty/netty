@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
@@ -272,11 +273,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             return null;
         }
 
-        channel.attachQuicheConnection(connection);
+        // The channel must be registered on the same EventLoop as its parent, see QuicheQuicChannel.isCompatible(...).
+        EventLoop eventLoop = ctx.channel().eventLoop();
+        channel.attachQuicheConnection(connection, eventLoop);
 
         addChannel(channel);
 
-        ctx.channel().eventLoop().register(channel);
+        eventLoop.register(channel);
         return channel;
     }
 
