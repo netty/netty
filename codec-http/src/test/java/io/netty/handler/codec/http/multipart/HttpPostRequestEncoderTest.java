@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.chunkSize;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -323,6 +324,43 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+    }
+
+    @Test
+    public void testMultipartBoundaryIsNotPredictable() throws Exception {
+        // ThreadLocalRandom.nextLong() is an invertible mix of a per-thread seed that advances by a fixed step,
+        // so two boundaries generated on a thread revealed the next one.
+        long seed1 = unmix64(Long.parseUnsignedLong(newMultipartBoundary(), 16));
+        long seed2 = unmix64(Long.parseUnsignedLong(newMultipartBoundary(), 16));
+        String predicted = Long.toHexString(mix64(seed2 + (seed2 - seed1)));
+        assertThat(newMultipartBoundary()).isNotEqualTo(predicted);
+    }
+
+    private static String newMultipartBoundary() throws Exception {
+        return new HttpPostRequestEncoder(new DefaultHttpRequest(HTTP_1_1, POST, "/"), true).multipartDataBoundary;
+    }
+
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 33)) * 0xff51afd7ed558ccdL;
+        z = (z ^ (z >>> 33)) * 0xc4ceb9fe1a85ec53L;
+        return z ^ (z >>> 33);
+    }
+
+    private static long unmix64(long z) {
+        z ^= z >>> 33;
+        z *= inverse(0xc4ceb9fe1a85ec53L);
+        z ^= z >>> 33;
+        z *= inverse(0xff51afd7ed558ccdL);
+        return z ^ (z >>> 33);
+    }
+
+    // Multiplicative inverse of an odd number modulo 2^64 (Newton's method).
+    private static long inverse(long a) {
+        long x = a;
+        for (int i = 0; i < 5; i++) {
+            x *= 2 - a * x;
+        }
+        return x;
     }
 
     @Test
