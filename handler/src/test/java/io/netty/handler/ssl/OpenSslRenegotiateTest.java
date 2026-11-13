@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -87,7 +87,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
                             SslHandler handler = context.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     ReferenceCountUtil.release(msg);
@@ -113,8 +113,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
                             });
                         }
                     });
-            Channel channel = sb.bind(new LocalAddress(getClass().getName() + ".client")).syncUninterruptibly()
-                    .channel();
+            Channel channel = sb.bind(new LocalAddress(getClass().getName() + ".client")).get();
 
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -130,7 +129,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
                             SslHandler handler = clientContext.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private boolean renegotiate;
 
                                 @Override
@@ -153,11 +152,11 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
                         }
                     });
 
-            Channel clientChannel = bootstrap.connect(channel.localAddress()).syncUninterruptibly().channel();
+            Channel clientChannel = bootstrap.connect(channel.localAddress()).get();
             assertTrue(renegotiationDone.await(20, TimeUnit.SECONDS));
             assertTrue(serverClosed.await(20, TimeUnit.SECONDS));
-            clientChannel.close().syncUninterruptibly();
-            channel.close().syncUninterruptibly();
+            clientChannel.close().sync();
+            channel.close().sync();
 
             // The server must refuse the second handshake and drop the connection.
             assertNotNull(renegotiationError.get());
