@@ -1960,12 +1960,41 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             });
         }
 
+        /**
+         * Called when {@link SSLEngine#getDelegatedTask()} returned {@code null}. If the {@link SSLEngine} no longer
+         * needs a task to make progress and nobody resumed us yet, resume now on the {@link EventExecutor}.
+         */
+        private void resumeIfNoTaskIsPending() {
+            EventExecutor executor = ctx.executor();
+            if (executor.isShuttingDown()) {
+                // The executor is already shutting down, just return.
+                return;
+            }
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isStateSet(STATE_PROCESS_TASK)) {
+                        // Somebody else already resumed.
+                        return;
+                    }
+                    if (engine.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+                        // A task is still being executed by someone else, which will resume once it is done.
+                        return;
+                    }
+                    resumeOnEventExecutor();
+                }
+            });
+        }
+
         @Override
         public void run() {
             try {
                 Runnable task = engine.getDelegatedTask();
                 if (task == null) {
-                    // The task was processed in the meantime. Let's just return.
+                    // The task was processed in the meantime, which means nobody will call runComplete() for us.
+                    // Make sure we resume if nobody else will, as otherwise STATE_PROCESS_TASK would stay set
+                    // forever and the handshake would stall.
+                    resumeIfNoTaskIsPending();
                     return;
                 }
                 if (task instanceof AsyncRunnable) {
