@@ -94,12 +94,17 @@ final class SignatureAlgorithmConverter {
                 return "SHA1withRSA";
             case "dsa_with_SHA256":
                 return "SHA256withDSA";
-            // EdDSA names carry no hash, so the pattern can't match them.
+            // EdDSA names carry no hash, so the pattern can't match them. All spellings are listed as these names
+            // are matched without regard to case.
             case "ed25519":
             case "ED25519":
+            case "Ed25519":
+            case "eD25519":
                 return "Ed25519";
             case "ed448":
             case "ED448":
+            case "Ed448":
+            case "eD448":
                 return "Ed448";
             // OpenSSL reports these for RSA-PSS, DSA and algorithms it has no name for. There is no Java name
             // for them.

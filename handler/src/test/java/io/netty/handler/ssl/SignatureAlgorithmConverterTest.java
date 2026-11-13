@@ -73,6 +73,16 @@ public class SignatureAlgorithmConverterTest {
     }
 
     @Test
+    public void testEdDsaIgnoresCase() {
+        for (String name : new String[] { "ed25519", "ED25519", "Ed25519", "eD25519" }) {
+            assertEquals("Ed25519", SignatureAlgorithmConverter.toJavaName(name), name);
+        }
+        for (String name : new String[] { "ed448", "ED448", "Ed448", "eD448" }) {
+            assertEquals("Ed448", SignatureAlgorithmConverter.toJavaName(name), name);
+        }
+    }
+
+    @Test
     public void testNamesWithoutJavaName() {
         assertNull(SignatureAlgorithmConverter.toJavaName("rsassaPss"));
         assertNull(SignatureAlgorithmConverter.toJavaName("dsaEncryption"));
