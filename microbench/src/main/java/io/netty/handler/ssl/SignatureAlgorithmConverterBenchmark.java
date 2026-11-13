@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -76,66 +75,23 @@ public class SignatureAlgorithmConverterBenchmark extends AbstractMicrobenchmark
     public String library;
 
     private String[] names;
-    private byte[][] encodedNames;
 
     @Setup
     public void setup() {
         names = "BORINGSSL".equals(library) ? boringSslNames : openSslNames;
-        encodedNames = new byte[names.length][];
-        for (int i = 0; i < names.length; i++) {
-            encodedNames[i] = names[i].getBytes(CharsetUtil.US_ASCII);
-        }
     }
 
-    /**
-     * Converts {@link String}s that have their hash code cached already.
-     */
     @Benchmark
-    public void convert(Blackhole blackhole) {
+    public void switchLookup(Blackhole blackhole) {
         for (String name : names) {
             blackhole.consume(SignatureAlgorithmConverter.toJavaName(name));
         }
     }
 
-    /**
-     * The same as {@link #convert(Blackhole)}, but with the regular expression that was used for every name before.
-     */
     @Benchmark
-    public void convertWithPattern(Blackhole blackhole) {
+    public void regularExpression(Blackhole blackhole) {
         for (String name : names) {
             blackhole.consume(SignatureAlgorithmConverter.toJavaNameWithPattern(name));
-        }
-    }
-
-    /**
-     * Converts {@link String}s that were just created, which is what the native code hands over for every handshake.
-     */
-    @Benchmark
-    public void createAndConvert(Blackhole blackhole) {
-        for (byte[] encodedName : encodedNames) {
-            blackhole.consume(SignatureAlgorithmConverter.toJavaName(new String(encodedName, CharsetUtil.US_ASCII)));
-        }
-    }
-
-    /**
-     * The same as {@link #createAndConvert(Blackhole)}, but with the regular expression that was used for every name
-     * before.
-     */
-    @Benchmark
-    public void createAndConvertWithPattern(Blackhole blackhole) {
-        for (byte[] encodedName : encodedNames) {
-            blackhole.consume(SignatureAlgorithmConverter.toJavaNameWithPattern(
-                    new String(encodedName, CharsetUtil.US_ASCII)));
-        }
-    }
-
-    /**
-     * The share of the two benchmarks above that is spent on creating the {@link String}s.
-     */
-    @Benchmark
-    public void createOnly(Blackhole blackhole) {
-        for (byte[] encodedName : encodedNames) {
-            blackhole.consume(new String(encodedName, CharsetUtil.US_ASCII));
         }
     }
 }
