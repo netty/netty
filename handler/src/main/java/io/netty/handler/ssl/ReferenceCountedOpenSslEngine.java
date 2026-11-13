@@ -1504,8 +1504,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
         // Avoid NPE: SSL.getHandshakeCount(ssl) must not be called if destroyed.
+        // Implementations without renegotiation support (BoringSSL, AWS-LC) never accept one as a server: the
+        // post-handshake record fails the read with SSL_R_NO_RENEGOTIATION inside the library, so there is
+        // nothing left to detect here.
         // TLS 1.3 forbids renegotiation by spec.
         if (destroyed || handshakeState != HandshakeState.FINISHED
+                || !clientMode && !OpenSsl.isRenegotiationSupported()
                 || SslProtocols.TLS_v1_3.equals(session.getProtocol())) {
             return;
         }
