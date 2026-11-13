@@ -205,7 +205,12 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (!handshakeFailed) {
             handshakeFailed = true;
-            handshakeFailure(ctx, cause);
+
+            try {
+                handshakeFailure(ctx, cause);
+            } catch (Throwable innerCause) {
+                exceptionCaught(ctx, innerCause);
+            }
         }
     }
 

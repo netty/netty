@@ -141,6 +141,59 @@ public class ApplicationProtocolNegotiationHandlerTest {
         return Stream.of(new SslHandshakeTimeoutException("timed out"), new ClosedChannelException());
     }
 
+    @Test
+    public void testHandshakeFailureCallbackThrows() {
+        AtomicInteger eventCount = new AtomicInteger();
+        AtomicInteger failureCount = new AtomicInteger();
+        AtomicInteger exceptionCount = new AtomicInteger();
+        AtomicReference<Throwable> propagatedCause = new AtomicReference<Throwable>();
+        Exception callbackFailure = new Exception("handshake failure callback failed");
+        SslHandshakeTimeoutException cause = new SslHandshakeTimeoutException("timed out");
+        SslHandshakeCompletionEvent event = new SslHandshakeCompletionEvent(cause);
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+
+            @Override
+            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable failure) throws Exception {
+                assertSame(cause, failure);
+                failureCount.incrementAndGet();
+                throw callbackFailure;
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable failure) {
+                ctx.fireExceptionCaught(failure);
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                assertSame(event, evt);
+                eventCount.incrementAndGet();
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable failure) {
+                exceptionCount.incrementAndGet();
+                propagatedCause.set(failure);
+            }
+        });
+
+        try {
+            channel.pipeline().fireUserEventTriggered(event);
+
+            assertEquals(1, eventCount.get());
+            assertEquals(1, failureCount.get());
+            assertEquals(1, exceptionCount.get());
+            assertSame(callbackFailure, propagatedCause.get());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     public void testHandshakeTimeoutEventAndException(boolean exceptionDuringEvent) {
