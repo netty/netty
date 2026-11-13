@@ -723,6 +723,59 @@
         <argLine.java9.extras />
       </properties>
     </profile>
+    <profile>
+      <!-- Verify that the Linux native libraries do not require a newer glibc than we support
+           (x86_64: 2.14, aarch64: 2.17), see .github/scripts/check_native_glibc_versions.sh.
+
+           Only activated by the release / CI docker images (docker/Dockerfile.centos7 and
+           docker/Dockerfile.cross_compile_aarch64), as builds on a workstation are usually done against a newer glibc
+           and so are expected to require newer symbol versions.
+
+           PHASE: process-test-classes, as the native libraries are only copied into the output directory at
+           process-test-resources. This is before the tests run, and also runs when the tests are skipped. -->
+      <id>check-native-glibc-versions</id>
+      <activation>
+        <property>
+          <name>env.NETTY_CHECK_NATIVE_GLIBC_VERSIONS</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check-native-glibc-versions</id>
+                <phase>process-test-classes</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <taskdef resource="net/sf/antcontrib/antlib.xml" />
+                    <if>
+                      <and>
+                        <available file="${project.build.outputDirectory}/META-INF/native" type="dir" />
+                        <not>
+                          <istrue value="${skipNativeGlibcVersionsCheck}" />
+                        </not>
+                      </and>
+                      <then>
+                        <exec executable="bash" failonerror="true">
+                          <arg value="${project.basedir}/../.github/scripts/check_native_glibc_versions.sh" />
+                          <arg value="${project.build.outputDirectory}/META-INF/native" />
+                        </exec>
+                      </then>
+                    </if>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <properties>
@@ -732,6 +785,8 @@
     <javadoc.release>9</javadoc.release>
     <javadoc.source>9</javadoc.source>
     <netty.dev.tools.directory>${project.basedir}/../dev-tools/src/main/resources/</netty.dev.tools.directory>
+    <!-- Set to true in modules whose native libraries are exempt from the check-native-glibc-versions profile. -->
+    <skipNativeGlibcVersionsCheck>false</skipNativeGlibcVersionsCheck>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
