@@ -27,6 +27,7 @@ import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import javax.net.ssl.SSLException;
 
 /**
@@ -139,19 +140,24 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    try {
-                        super.userEventTriggered(ctx, evt);
-                    } finally {
-                        this.notifyHandshakeFailure(ctx, handshakeEvent.cause());
-                    }
+                    // timeouts and early closes may not produce a decoder exception
+                    // preserve the existing exception and close handling for other TLS failures
+                    Throwable cause = handshakeEvent.cause();
+                    if (cause instanceof SslHandshakeTimeoutException || cause instanceof ClosedChannelException) {
+                        try {
+                            super.userEventTriggered(ctx, evt);
+                        } finally {
+                            notifyHandshakeFailure(ctx, cause);
+                        }
 
-                    return;
+                        return;
+                    }
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                // consume later SSL decoder exceptions to avoid downstream warnings
-                // see https://github.com/netty/netty/issues/10342; timeouts and early closes may only emit this event
+                // keep the handler after failure to consume later SSL decoder exceptions
+                // see https://github.com/netty/netty/issues/10342
                 if (handshakeEvent.isSuccess()) {
                     removeSelfIfPresent(ctx);
                 }
@@ -197,9 +203,14 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     }
 
     private void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (!this.handshakeFailed) {
-            this.handshakeFailed = true;
-            this.handshakeFailure(ctx, cause);
+        if (!handshakeFailed) {
+            handshakeFailed = true;
+
+            try {
+                handshakeFailure(ctx, cause);
+            } catch (Throwable innerCause) {
+                exceptionCaught(ctx, innerCause);
+            }
         }
     }
 
@@ -208,13 +219,12 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         Throwable wrapped;
         if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
             try {
-                this.notifyHandshakeFailure(ctx, wrapped);
+                notifyHandshakeFailure(ctx, wrapped);
                 return;
             } finally {
                 removeSelfIfPresent(ctx);
             }
         }
-
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
         ctx.fireExceptionCaught(cause);
         ctx.close();
