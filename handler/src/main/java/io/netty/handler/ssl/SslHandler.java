@@ -1961,8 +1961,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
 
         /**
-         * Called when {@link SSLEngine#getDelegatedTask()} returned {@code null}. If the {@link SSLEngine} no longer
-         * needs a task to make progress and nobody resumed us yet, resume now on the {@link EventExecutor}.
+         * Called when {@link SSLEngine#getDelegatedTask()} returned {@code null}. We only ever run one task at a
+         * time (guarded by {@code STATE_PROCESS_TASK}), so nobody else will resume for us. If we were not resumed
+         * yet, resume now on the {@link EventExecutor}.
          */
         private void resumeIfNoTaskIsPending() {
             EventExecutor executor = ctx.executor();
@@ -1975,10 +1976,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 public void run() {
                     if (!isStateSet(STATE_PROCESS_TASK)) {
                         // Somebody else already resumed.
-                        return;
-                    }
-                    if (engine.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
-                        // A task is still being executed by someone else, which will resume once it is done.
                         return;
                     }
                     resumeOnEventExecutor();
