@@ -15,12 +15,14 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.SingleThreadIoEventLoop;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Arrays.asList;
@@ -33,8 +35,8 @@ class CacheTest {
     @ValueSource(strings = { "address", "negative" })
     void testEvictWhenExpirationEventLoopTerminates(String value) {
         Cache<String> cache = newCache();
-        DefaultEventLoop originalLoop = new DefaultEventLoop();
-        DefaultEventLoop replacementLoop = new DefaultEventLoop();
+        SingleThreadIoEventLoop originalLoop = newLoop();
+        SingleThreadIoEventLoop replacementLoop = newLoop();
         try {
             cache.cache("netty.io", value, 86400, originalLoop);
             assertThat(cache.get("netty.io")).isEqualTo(singletonList(value));
@@ -57,8 +59,8 @@ class CacheTest {
     @Test
     void testReplacingExpirationKeepsEntriesUntilNewEventLoopTerminates() {
         Cache<String> cache = newCache();
-        DefaultEventLoop originalLoop = new DefaultEventLoop();
-        DefaultEventLoop replacementLoop = new DefaultEventLoop();
+        SingleThreadIoEventLoop originalLoop = newLoop();
+        SingleThreadIoEventLoop replacementLoop = newLoop();
         try {
             cache.cache("netty.io", "first", 86400, originalLoop);
             cache.cache("netty.io", "second", 3600, replacementLoop);
@@ -80,7 +82,8 @@ class CacheTest {
     @Test
     void testExpirationCancelledBeforeScheduleReturns() {
         Cache<String> cache = newCache();
-        DefaultEventLoop loop = new DefaultEventLoop() {
+        SingleThreadIoEventLoop loop = new SingleThreadIoEventLoop(
+                null, Executors.defaultThreadFactory(), LocalIoHandler.newFactory()) {
             @Override
             public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
                 ScheduledFuture<?> future = super.schedule(command, delay, unit);
@@ -97,6 +100,10 @@ class CacheTest {
             loop.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
             cache.clear();
         }
+    }
+
+    private static SingleThreadIoEventLoop newLoop() {
+        return new SingleThreadIoEventLoop(null, Executors.defaultThreadFactory(), LocalIoHandler.newFactory());
     }
 
     private static Cache<String> newCache() {

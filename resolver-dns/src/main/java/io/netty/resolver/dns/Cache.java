@@ -267,7 +267,7 @@ abstract class Cache<E> {
         }
 
         @Override
-        public void operationComplete(Future<Object> future) {
+        public void operationComplete(Future<?> future) {
             removeIfCancelled((ScheduledFuture<?>) future);
         }
 
