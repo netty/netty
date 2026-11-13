@@ -13,68 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.channel.epoll;
 
-import java.net.SocketAddress;
-
 /**
- * A address for a
- * <a href="https://man7.org/linux/man-pages/man7/vsock.7.html">VM sockets (Linux VSOCK address family)</a>.
+ * Address for <a href="https://man7.org/linux/man-pages/man7/vsock.7.html">VM sockets (Linux VSOCK address family)</a>.
+ *
+ * @deprecated Use {@link io.netty.channel.unix.VSockAddress}.
  */
-
-public final class VSockAddress extends SocketAddress {
-    private static final long serialVersionUID = 8600894096347158429L;
-
-    public static final int VMADDR_CID_ANY = -1;
-    public static final int VMADDR_CID_HYPERVISOR = 0;
-    public static final int VMADDR_CID_LOCAL = 1;
-    public static final int VMADDR_CID_HOST = 2;
-
-    public static final int VMADDR_PORT_ANY = -1;
-
-    private final int cid;
-    private final int port;
-
+@Deprecated
+public final class VSockAddress extends io.netty.channel.unix.VSockAddress {
     public VSockAddress(int cid, int port) {
-        this.cid = cid;
-        this.port = port;
-    }
-
-    public int getCid() {
-        return cid;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    @Override
-    public String toString() {
-        return "VSockAddress{" +
-                "cid=" + cid +
-                ", port=" + port +
-                '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof VSockAddress)) {
-            return false;
-        }
-
-        VSockAddress that = (VSockAddress) o;
-
-        return cid == that.cid && port == that.port;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = cid;
-        result = 31 * result + port;
-        return result;
+        super(cid, port);
     }
 }
