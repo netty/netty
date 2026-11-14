@@ -467,6 +467,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-selector</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-rxtx</artifactId>
       <scope>compile</scope>
       <exclusions>
