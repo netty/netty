@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -24,7 +25,10 @@ class AdaptiveCalculatorTest {
 
     @ParameterizedTest
     @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
-            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095",
+            "1, 1, 1", "1, 1, 15", "1, 1, 64", "15, 15, 15", "16, 16, 16",
+            "1073741824, 1073741824, 1073741824", "1073741825, 1073741825, 2147483647",
+            "2147483647, 2147483647, 2147483647" })
     void growthStaysWithinBounds(int minimum, int initial, int maximum) {
         AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, initial, maximum);
         assertThat(calculator.nextSize()).isBetween(minimum, maximum);
@@ -36,7 +40,10 @@ class AdaptiveCalculatorTest {
 
     @ParameterizedTest
     @CsvSource({ "81, 95, 95", "81, 81, 81", "513, 1023, 1023", "2049, 4095, 4095", "80, 80, 80",
-            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095" })
+            "81, 85, 95", "81, 90, 95", "513, 700, 1023", "2049, 3000, 4095",
+            "1, 1, 1", "1, 1, 15", "1, 1, 64", "15, 15, 15", "16, 16, 16",
+            "1073741824, 1073741824, 1073741824", "1073741825, 1073741825, 2147483647",
+            "2147483647, 2147483647, 2147483647" })
     void shrinkingStaysWithinBounds(int minimum, int initial, int maximum) {
         AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, initial, maximum);
         assertThat(calculator.nextSize()).isBetween(minimum, maximum);
@@ -44,5 +51,12 @@ class AdaptiveCalculatorTest {
             calculator.record(0);
             assertThat(calculator.nextSize()).isBetween(minimum, maximum);
         }
+    }
+
+    @Test
+    void largeReadWithMaximumBelowSizeTable() {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(1, 15, 15);
+        calculator.record(Integer.MAX_VALUE);
+        assertThat(calculator.nextSize()).isEqualTo(15);
     }
 }
