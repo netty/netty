@@ -76,6 +76,22 @@ public interface IoHandler {
     void wakeup();
 
     /**
+     * Returns {@code true} if this {@link IoHandler} still has work to do for {@link IoRegistration}s that were
+     * cancelled, for example because it must wait for the completion of IO that was submitted before the
+     * {@link IoRegistration} was cancelled. The {@link ThreadAwareExecutor} will not suspend while this method
+     * returns {@code true}, but keeps calling {@link #run(IoHandlerContext)} until the work is done.
+     * <p>
+     * The default implementation returns {@code false}, which is correct for an {@link IoHandler} that is done with
+     * an {@link IoRegistration} once it was cancelled and {@link #run(IoHandlerContext)} was called once more.
+     *
+     * @return {@code true} if there is still work to do for cancelled {@link IoRegistration}s, {@code false}
+     *         otherwise.
+     */
+    default boolean hasPendingCancellations() {
+        return false;
+    }
+
+    /**
      * Returns {@code true} if the given type is compatible with this {@link IoHandler} and so can be registered,
      * {@code false} otherwise.
      *
