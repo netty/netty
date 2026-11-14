@@ -48,7 +48,6 @@ import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.chunkSize;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -327,43 +326,6 @@ public class HttpPostRequestEncoderTest {
     }
 
     @Test
-    public void testMultipartBoundaryIsNotPredictable() throws Exception {
-        // ThreadLocalRandom.nextLong() is an invertible mix of a per-thread seed that advances by a fixed step,
-        // so two boundaries generated on a thread revealed the next one.
-        long seed1 = unmix64(Long.parseUnsignedLong(newMultipartBoundary(), 16));
-        long seed2 = unmix64(Long.parseUnsignedLong(newMultipartBoundary(), 16));
-        String predicted = Long.toHexString(mix64(seed2 + (seed2 - seed1)));
-        assertThat(newMultipartBoundary()).isNotEqualTo(predicted);
-    }
-
-    private static String newMultipartBoundary() throws Exception {
-        return new HttpPostRequestEncoder(new DefaultHttpRequest(HTTP_1_1, POST, "/"), true).multipartDataBoundary;
-    }
-
-    private static long mix64(long z) {
-        z = (z ^ (z >>> 33)) * 0xff51afd7ed558ccdL;
-        z = (z ^ (z >>> 33)) * 0xc4ceb9fe1a85ec53L;
-        return z ^ (z >>> 33);
-    }
-
-    private static long unmix64(long z) {
-        z ^= z >>> 33;
-        z *= inverse(0xc4ceb9fe1a85ec53L);
-        z ^= z >>> 33;
-        z *= inverse(0xff51afd7ed558ccdL);
-        return z ^ (z >>> 33);
-    }
-
-    // Multiplicative inverse of an odd number modulo 2^64 (Newton's method).
-    private static long inverse(long a) {
-        long x = a;
-        for (int i = 0; i < 5; i++) {
-            x *= 2 - a * x;
-        }
-        return x;
-    }
-
-    @Test
     public void testHttpPostRequestEncoderSlicedBuffer() throws Exception {
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.POST, "http://localhost");
@@ -427,19 +389,19 @@ public class HttpPostRequestEncoderTest {
         MemoryFileUpload first = new MemoryFileUpload("resources", "", "application/json", null,
                 CharsetUtil.UTF_8, -1);
         first.setMaxSize(-1);
-        first.setContent(new ByteArrayInputStream(new byte[7955]));
+        first.setContent(new ByteArrayInputStream(new byte[7923]));
         encoder.addBodyHttpData(first);
 
         MemoryFileUpload second = new MemoryFileUpload("resources2", "", "application/json", null,
                 CharsetUtil.UTF_8, -1);
         second.setMaxSize(-1);
-        second.setContent(new ByteArrayInputStream(new byte[7928]));
+        second.setContent(new ByteArrayInputStream(new byte[7912]));
         encoder.addBodyHttpData(second);
 
         assertNotNull(encoder.finalizeRequest());
 
-        checkNextChunkSize(encoder, 8080);
-        checkNextChunkSize(encoder, 8080);
+        checkNextChunkSize(encoder, 8096);
+        checkNextChunkSize(encoder, 8096);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
         assertInstanceOf(LastHttpContent.class, httpContent, "Expected LastHttpContent is not received");
@@ -453,7 +415,7 @@ public class HttpPostRequestEncoderTest {
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.POST, "http://localhost");
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
-        int length = 7943;
+        int length = 7911;
         char[] array = new char[length];
         Arrays.fill(array, 'a');
         String longText = new String(array);
@@ -461,7 +423,7 @@ public class HttpPostRequestEncoderTest {
 
         assertNotNull(encoder.finalizeRequest());
 
-        checkNextChunkSize(encoder, 8080);
+        checkNextChunkSize(encoder, 8096);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
         assertInstanceOf(LastHttpContent.class, httpContent, "Expected LastHttpContent is not received");
@@ -470,20 +432,10 @@ public class HttpPostRequestEncoderTest {
         assertTrue(encoder.isEndOfInput(), "Expected end of input is not receive");
     }
 
-    private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int sizeWithoutDelimiter) throws Exception {
-        // 16 bytes as HttpPostRequestEncoder uses Long.toHexString(...) to generate a hex-string which will be between
-        // 2 and 16 bytes.
-        // See https://github.com/netty/netty/blob/4.1/codec-http/src/main/java/io/netty/handler/
-        // codec/http/multipart/HttpPostRequestEncoder.java#L291
-        int expectedSizeMin = sizeWithoutDelimiter + 2;
-        int expectedSizeMax = sizeWithoutDelimiter + 16;
-
+    private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int expectedSize) throws Exception {
+        // The multipart boundary is always 32 hex characters, so the chunk size is fixed.
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-
-        int readable = httpContent.content().readableBytes();
-        boolean expectedSize = readable >= expectedSizeMin && readable <= expectedSizeMax;
-        assertTrue(expectedSize, "Chunk size is not in expected range (" + expectedSizeMin + " - "
-                + expectedSizeMax + "), was: " + readable);
+        assertEquals(expectedSize, httpContent.content().readableBytes());
         httpContent.release();
     }
 
