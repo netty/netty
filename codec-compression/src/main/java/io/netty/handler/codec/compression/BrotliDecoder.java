@@ -34,6 +34,9 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
     private static final int DEFAULT_INPUT_BUFFER_SIZE = 8 * 1024;
+    // Output buffer size while the forwarding threshold is zero or negative: such a threshold forwards every buffer
+    // that has content, but cannot size one.
+    static final int DEFAULT_OUTPUT_BUFFER_SIZE = 64 * 1024;
 
     private enum State {
         DONE, NEEDS_MORE_INPUT, ERROR
@@ -49,6 +52,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
 
     private final int inputBufferSize;
     private final int outputBufferSize;
+    private final int maxForwardBytes;
     private DecoderJNI.Wrapper decoder;
     private boolean destroyed;
     private boolean needsRead;
@@ -67,7 +71,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * @param inputBufferSize desired size of the input buffer in bytes
      */
     public BrotliDecoder(int inputBufferSize) {
-        this(inputBufferSize == 0 ? DEFAULT_INPUT_BUFFER_SIZE : inputBufferSize, DEFAULT_MAX_FORWARD_BYTES);
+        this(inputBufferSize == 0 ? DEFAULT_INPUT_BUFFER_SIZE : inputBufferSize, 0, DEFAULT_MAX_FORWARD_BYTES);
     }
 
     /**
@@ -77,8 +81,16 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      *                         (produce multiple output buffers if exceeded)
      */
     public BrotliDecoder(int inputBufferSize, int outputBufferSize) {
+        this(ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize"),
+                ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize"), DEFAULT_MAX_FORWARD_BYTES);
+    }
+
+    // An outputBufferSize of 0 takes defaultMaxForwardBytes instead. Package-private for testing, as that default is
+    // read from a system property once per JVM.
+    BrotliDecoder(int inputBufferSize, int outputBufferSize, int defaultMaxForwardBytes) {
         this.inputBufferSize = ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
-        this.outputBufferSize = ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize");
+        this.maxForwardBytes = outputBufferSize > 0 ? outputBufferSize : defaultMaxForwardBytes;
+        this.outputBufferSize = maxForwardBytes > 0 ? maxForwardBytes : DEFAULT_OUTPUT_BUFFER_SIZE;
     }
 
     /**
@@ -107,7 +119,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
         }
         accumBuffer.writeBytes(nativeBuffer);
         needsRead = false;
-        if (accumBuffer.readableBytes() >= outputBufferSize) {
+        if (accumBuffer.isReadable() && accumBuffer.readableBytes() >= maxForwardBytes) {
             ctx.fireChannelRead(accumBuffer);
             accumBuffer = null;
         }

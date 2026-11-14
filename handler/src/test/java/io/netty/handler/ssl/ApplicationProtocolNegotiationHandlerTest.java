@@ -16,23 +16,26 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,7 +47,7 @@ import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -80,60 +83,20 @@ public class ApplicationProtocolNegotiationHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    public void testHandshakeFailure(boolean exceptionDuringEvent) {
-        AtomicInteger failureCount = new AtomicInteger();
-        AtomicInteger failureCountOnExceptionReturn = new AtomicInteger();
-        AtomicInteger downstreamExceptionCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+    @Test
+    public void testHandshakeFailure() {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
                 fail();
             }
-
-            @Override
-            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
-                failureCount.incrementAndGet();
-                failureCause.set(cause);
-            }
-
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                super.exceptionCaught(ctx, cause);
-                failureCountOnExceptionReturn.set(failureCount.get());
-            }
         };
 
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         SSLHandshakeException exception = new SSLHandshakeException("error");
         SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
-        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
-            @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                if (exceptionDuringEvent && evt instanceof SslHandshakeCompletionEvent) {
-                    ctx.pipeline().fireExceptionCaught(new DecoderException(exception));
-                }
-
-                ctx.fireUserEventTriggered(evt);
-            }
-        }, new ChannelInboundHandlerAdapter() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                downstreamExceptionCount.incrementAndGet();
-            }
-        });
-
         channel.pipeline().fireUserEventTriggered(completionEvent);
-
-        if (!exceptionDuringEvent) {
-            channel.pipeline().fireExceptionCaught(new DecoderException(exception));
-        }
-
-        assertEquals(1, failureCount.get());
-        assertEquals(1, failureCountOnExceptionReturn.get());
-        assertEquals(0, downstreamExceptionCount.get());
-        assertSame(exception, failureCause.get());
+        channel.pipeline().fireExceptionCaught(new DecoderException(exception));
         assertNull(channel.pipeline().context(alpnHandler));
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -141,9 +104,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
     @ParameterizedTest
     @MethodSource("handshakeFailureCauses")
     public void testHandshakeFailureEvent(Throwable cause) {
-        AtomicReference<SslHandshakeCompletionEvent> eventRef =
-                new AtomicReference<SslHandshakeCompletionEvent>();
         AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        AtomicReference<Object> forwardedEvent = new AtomicReference<Object>();
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -159,31 +121,35 @@ public class ApplicationProtocolNegotiationHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof SslHandshakeCompletionEvent) {
-                    eventRef.set((SslHandshakeCompletionEvent) evt);
-                }
+                forwardedEvent.set(evt);
             }
         });
-        SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(cause);
 
-        channel.pipeline().fireUserEventTriggered(completionEvent);
+        SslHandshakeCompletionEvent event = new SslHandshakeCompletionEvent(cause);
+        try {
+            channel.pipeline().fireUserEventTriggered(event);
 
-        assertSame(cause, failureCause.get());
-        assertSame(completionEvent, eventRef.get());
-        assertFalse(channel.isOpen());
-        assertFalse(channel.finishAndReleaseAll());
+            assertSame(cause, failureCause.get());
+            assertSame(event, forwardedEvent.get());
+            assertFalse(channel.isOpen());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
-    private static Stream<Arguments> handshakeFailureCauses() {
-        return Stream.of(
-                Arguments.of(new SslHandshakeTimeoutException("timed out")),
-                Arguments.of(new ClosedChannelException()));
+    private static Stream<Throwable> handshakeFailureCauses() {
+        return Stream.of(new SslHandshakeTimeoutException("timed out"), new ClosedChannelException());
     }
 
     @Test
-    public void testHandshakeFailureExceptionWithoutEvent() {
+    public void testHandshakeFailureCallbackThrows() {
+        AtomicInteger eventCount = new AtomicInteger();
         AtomicInteger failureCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        AtomicInteger exceptionCount = new AtomicInteger();
+        AtomicReference<Throwable> propagatedCause = new AtomicReference<Throwable>();
+        Exception callbackFailure = new Exception("handshake failure callback failed");
+        SslHandshakeTimeoutException cause = new SslHandshakeTimeoutException("timed out");
+        SslHandshakeCompletionEvent event = new SslHandshakeCompletionEvent(cause);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -191,73 +157,137 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
 
             @Override
-            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
+            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable failure) throws Exception {
+                assertSame(cause, failure);
                 failureCount.incrementAndGet();
-                failureCause.set(cause);
-            }
-        };
-        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        SSLHandshakeException exception = new SSLHandshakeException("error");
-
-        channel.pipeline().fireExceptionCaught(new DecoderException(exception));
-
-        assertEquals(1, failureCount.get());
-        assertSame(exception, failureCause.get());
-        assertNull(channel.pipeline().context(alpnHandler));
-        assertFalse(channel.finishAndReleaseAll());
-    }
-
-    @Test
-    public void testSniLookupFailure() {
-        SSLHandshakeException exception = new SSLHandshakeException("SNI lookup failed");
-        AtomicInteger failureCount = new AtomicInteger();
-        AtomicInteger handshakeEventCount = new AtomicInteger();
-        AtomicInteger downstreamExceptionCount = new AtomicInteger();
-        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
-        AtomicReference<SniCompletionEvent> sniEvent = new AtomicReference<SniCompletionEvent>();
-        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
-            @Override
-            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
-                fail();
+                throw callbackFailure;
             }
 
             @Override
-            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
-                failureCount.incrementAndGet();
-                failureCause.set(cause);
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable failure) {
+                ctx.fireExceptionCaught(failure);
             }
         };
-        SniHandler sniHandler = new SniHandler((hostname, promise) -> promise.setFailure(exception));
-        EmbeddedChannel channel = new EmbeddedChannel(sniHandler, alpnHandler, new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof SniCompletionEvent) {
-                    sniEvent.set((SniCompletionEvent) evt);
-                } else if (evt instanceof SslHandshakeCompletionEvent) {
-                    handshakeEventCount.incrementAndGet();
-                }
-
-                ctx.fireUserEventTriggered(evt);
+                assertSame(event, evt);
+                eventCount.incrementAndGet();
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                downstreamExceptionCount.incrementAndGet();
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable failure) {
+                exceptionCount.incrementAndGet();
+                propagatedCause.set(failure);
             }
         });
 
         try {
-            channel.writeInbound(Unpooled.buffer(5).writeByte(SslUtils.SSL_CONTENT_TYPE_APPLICATION_DATA)
-                    .writeShort(0x0303).writeShort(0));
+            channel.pipeline().fireUserEventTriggered(event);
 
-            assertNotNull(sniEvent.get());
-            assertSame(exception, sniEvent.get().cause());
-            assertSame(exception, failureCause.get());
+            assertEquals(1, eventCount.get());
             assertEquals(1, failureCount.get());
-            assertEquals(0, handshakeEventCount.get());
-            assertEquals(0, downstreamExceptionCount.get());
+            assertEquals(1, exceptionCount.get());
+            assertSame(callbackFailure, propagatedCause.get());
         } finally {
-            channel.pipeline().remove(sniHandler);
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testHandshakeTimeoutEventAndException(boolean exceptionDuringEvent) {
+        AtomicInteger failureCount = new AtomicInteger();
+        SslHandshakeTimeoutException cause = new SslHandshakeTimeoutException("timed out");
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+
+            @Override
+            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable failure) {
+                assertSame(cause, failure);
+                failureCount.incrementAndGet();
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(alpnHandler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (exceptionDuringEvent && evt instanceof SslHandshakeCompletionEvent) {
+                    ctx.pipeline().fireExceptionCaught(new DecoderException(cause));
+                }
+
+                ctx.fireUserEventTriggered(evt);
+            }
+        });
+
+        try {
+            channel.pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            assertEquals(1, failureCount.get());
+
+            if (!exceptionDuringEvent) {
+                channel.pipeline().fireExceptionCaught(new DecoderException(cause));
+            }
+
+            assertEquals(1, failureCount.get());
+            assertNull(channel.pipeline().context(alpnHandler));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testHandshakeTransportFailureUsesChannelInactive() throws NoSuchAlgorithmException {
+        AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        AtomicReference<Throwable> eventCause = new AtomicReference<Throwable>();
+        IOException writeFailure = new IOException("write failed");
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(true);
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail();
+            }
+
+            @Override
+            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
+                failureCause.compareAndSet(null, cause);
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                failureCause.compareAndSet(null, new ClosedChannelException());
+                super.channelInactive(ctx);
+            }
+        };
+        ChannelHandler writeFailureHandler = new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ReferenceCountUtil.release(msg);
+                promise.setFailure(writeFailure);
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(writeFailureHandler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof SslHandshakeCompletionEvent) {
+                    eventCause.set(((SslHandshakeCompletionEvent) evt).cause());
+                }
+
+                ctx.fireUserEventTriggered(evt);
+            }
+        }, alpnHandler);
+
+        try {
+            channel.pipeline().addAfter(channel.pipeline().context(writeFailureHandler).name(),
+                    "ssl", new SslHandler(engine));
+
+            assertInstanceOf(SSLException.class, eventCause.get());
+            assertSame(writeFailure, eventCause.get().getCause());
+            assertInstanceOf(ClosedChannelException.class, failureCause.get());
+            assertFalse(channel.isOpen());
+        } finally {
             channel.finishAndReleaseAll();
         }
     }

@@ -58,8 +58,6 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.indexOf;
 import static io.netty.util.AsciiString.trim;
-import static io.netty.util.ByteProcessor.FIND_COMMA;
-import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
@@ -529,23 +527,17 @@ public final class HttpConversionUtil {
 
         while (valuesIter.hasNext()) {
             AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
-            try {
-                int index = lowerCased.forEachByte(FIND_COMMA);
-                if (index != -1) {
-                    int start = 0;
-                    do {
-                        result.add(lowerCased.subSequence(start, index, false).trim(), EMPTY_STRING);
-                        start = index + 1;
-                    } while (start < lowerCased.length() &&
-                             (index = lowerCased.forEachByte(start, lowerCased.length() - start, FIND_COMMA)) != -1);
-                    result.add(lowerCased.subSequence(start, lowerCased.length(), false).trim(), EMPTY_STRING);
-                } else {
-                    result.add(lowerCased.trim(), EMPTY_STRING);
-                }
-            } catch (Exception e) {
-                // This is not expect to happen because FIND_COMMA never throws but must be caught
-                // because of the ByteProcessor interface.
-                throw new IllegalStateException(e);
+            int index = lowerCased.indexOf(',', 0);
+            if (index != -1) {
+                int start = 0;
+                do {
+                    result.add(lowerCased.subSequence(start, index, false).trim(), EMPTY_STRING);
+                    start = index + 1;
+                } while (start < lowerCased.length() &&
+                         (index = lowerCased.indexOf(',', start)) != -1);
+                result.add(lowerCased.subSequence(start, lowerCased.length(), false).trim(), EMPTY_STRING);
+            } else {
+                result.add(lowerCased.trim(), EMPTY_STRING);
             }
         }
         return result;
@@ -620,30 +612,24 @@ public final class HttpConversionUtil {
     }
 
     private static void splitValidCookieHeader(Http2Headers out, CharSequence valueCs) {
-        try {
-            AsciiString value = AsciiString.of(valueCs);
-            // split up cookies to allow for better compression
-            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-            int index = value.forEachByte(FIND_SEMI_COLON);
-            if (index != -1) {
-                int start = 0;
-                do {
-                    out.add(COOKIE, value.subSequence(start, index, false));
-                    assert index + 1 < value.length();
-                    assert value.charAt(index + 1) == ' ';
-                    // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
-                    start = index + 2;
-                } while (start < value.length() &&
-                        (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
-                assert start < value.length();
-                out.add(COOKIE, value.subSequence(start, value.length(), false));
-            } else {
-                out.add(COOKIE, value);
-            }
-        } catch (Exception e) {
-            // This is not expect to happen because FIND_SEMI_COLON never throws but must be caught
-            // because of the ByteProcessor interface.
-            throw new IllegalStateException(e);
+        AsciiString value = AsciiString.of(valueCs);
+        // split up cookies to allow for better compression
+        // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+        int index = value.indexOf(';', 0);
+        if (index != -1) {
+            int start = 0;
+            do {
+                out.add(COOKIE, value.subSequence(start, index, false));
+                assert index + 1 < value.length();
+                assert value.charAt(index + 1) == ' ';
+                // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                start = index + 2;
+            } while (start < value.length() &&
+                    (index = value.indexOf(';', start)) != -1);
+            assert start < value.length();
+            out.add(COOKIE, value.subSequence(start, value.length(), false));
+        } else {
+            out.add(COOKIE, value);
         }
     }
 

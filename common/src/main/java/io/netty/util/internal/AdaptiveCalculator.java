@@ -118,14 +118,14 @@ public final class AdaptiveCalculator {
         if (size <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
             if (decreaseNow) {
                 index = max(index - INDEX_DECREMENT, minIndex);
-                nextSize = max(SIZE_TABLE[index], minCapacity);
+                nextSize = min(max(SIZE_TABLE[index], minCapacity), maxCapacity);
                 decreaseNow = false;
             } else {
                 decreaseNow = true;
             }
         } else if (size >= nextSize) {
             index = min(index + INDEX_INCREMENT, maxIndex);
-            nextSize = min(SIZE_TABLE[index], maxCapacity);
+            nextSize = max(min(SIZE_TABLE[index], maxCapacity), minCapacity);
             decreaseNow = false;
         }
     }

@@ -216,6 +216,18 @@ public class ReadOnlyHttp2HeadersTest {
     }
 
     @Test
+    public void testContainsFloat() {
+        Http2Headers headers = ReadOnlyHttp2Headers.trailers(true,
+                AsciiString.cached("float"), AsciiString.cached("1.5"),
+                AsciiString.cached("float"), AsciiString.cached("0.1"));
+
+        assertThat(headers.containsFloat("float", 1.5f)).isTrue();
+        assertThat(headers.containsFloat("float", 0.1f)).isTrue();
+        assertThat(headers.containsFloat("float", 2.0f)).isFalse();
+        assertThat(headers.containsFloat("missing", 1.5f)).isFalse();
+    }
+
+    @Test
     public void testContainsTimeMillis() {
         long millis = 784111777000L;
         Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(true, AsciiString.cached("200"),
