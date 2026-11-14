@@ -21,6 +21,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 import static io.netty.handler.codec.http.HttpUtil.*;
 
 /**
@@ -49,7 +52,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
 
     private boolean persistentConnection = true;
     // Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
-    private int pendingResponses;
+    private final Queue<HttpMethod> pendingRequests = new ArrayDeque<HttpMethod>();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -57,7 +60,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
         if (msg instanceof HttpRequest) {
             final HttpRequest request = (HttpRequest) msg;
             if (persistentConnection) {
-                pendingResponses += 1;
+                pendingRequests.add(request.method());
                 persistentConnection = isKeepAlive(request);
             }
         }
@@ -69,11 +72,11 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
         // modify message on way out to add headers if needed
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
-            trackResponse(response);
+            final HttpMethod requestMethod = trackResponse(response);
             // Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
-            if (!isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
+            if (!isKeepAlive(response) || !isSelfDefinedMessageLength(response, requestMethod)) {
                 // No longer keep alive as the client can't tell when the message is done unless we close connection
-                pendingResponses = 0;
+                pendingRequests.clear();
                 persistentConnection = false;
             }
             // Server might think it can keep connection alive, but we should fix response header if we know better
@@ -87,14 +90,12 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
         super.write(ctx, msg, promise);
     }
 
-    private void trackResponse(HttpResponse response) {
-        if (!isInformational(response)) {
-            pendingResponses -= 1;
-        }
+    private HttpMethod trackResponse(HttpResponse response) {
+        return isInformational(response) ? null : pendingRequests.poll();
     }
 
     private boolean shouldKeepAlive() {
-        return pendingResponses != 0 || persistentConnection;
+        return !pendingRequests.isEmpty() || persistentConnection;
     }
 
     /**
@@ -108,11 +109,13 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
      * </ul>
      *
      * @param response The HttpResponse to check
+     * @param requestMethod The method of the corresponding request, or {@code null} if none was tracked
      *
      * @return true if the response has a self defined message length.
      */
-    private static boolean isSelfDefinedMessageLength(HttpResponse response) {
-        return isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(response) ||
+    private static boolean isSelfDefinedMessageLength(HttpResponse response, HttpMethod requestMethod) {
+        return HttpMethod.HEAD.equals(requestMethod) ||
+               isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(response) ||
                isInformational(response) || response.status().code() == HttpResponseStatus.NO_CONTENT.code();
     }
 
