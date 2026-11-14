@@ -22,11 +22,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AbstractSniHandlerTest {
 
     @Test
-    public void testExtractSniHostnameParsesWellFormedClientHello() {
+    public void testExtractSniHostnameParsesWellFormedClientHello() throws Exception {
         ByteBuf buffer = validClientHelloBody("netty.io");
         try {
             assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
@@ -40,7 +41,7 @@ public class AbstractSniHandlerTest {
     // subsequent getUnsignedShort(...) call for cipher_suites throw an IndexOutOfBoundsException
     // instead of extractSniHostname() gracefully returning null.
     @Test
-    public void testExtractSniHostnameDoesNotThrowOnOversizedSessionIdLength() {
+    public void testExtractSniHostnameDoesNotThrowOnOversizedSessionIdLength() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             buffer.writeZero(34); // client_version (2) + random (32)
@@ -56,7 +57,7 @@ public class AbstractSniHandlerTest {
     // Same issue as above but for the cipher_suites length field feeding the unguarded read of
     // compression_methods length.
     @Test
-    public void testExtractSniHostnameDoesNotThrowOnOversizedCipherSuitesLength() {
+    public void testExtractSniHostnameDoesNotThrowOnOversizedCipherSuitesLength() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             buffer.writeZero(34); // client_version (2) + random (32)
@@ -72,7 +73,7 @@ public class AbstractSniHandlerTest {
     // Same issue as above but for the compression_methods length field feeding the unguarded read
     // of the extensions length.
     @Test
-    public void testExtractSniHostnameDoesNotThrowOnOversizedCompressionMethodLength() {
+    public void testExtractSniHostnameDoesNotThrowOnOversizedCompressionMethodLength() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             buffer.writeZero(34); // client_version (2) + random (32)
@@ -87,7 +88,7 @@ public class AbstractSniHandlerTest {
     }
 
     @Test
-    public void testExtractSniHostnameWithFollowingExtension() {
+    public void testExtractSniHostnameWithFollowingExtension() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
@@ -111,7 +112,7 @@ public class AbstractSniHandlerTest {
     // The host_name entry must not extend past the server_name extension. Previously the name was only
     // bounded by the end of all extensions, so its bytes could be taken from the following extension.
     @Test
-    public void testExtractSniHostnameDoesNotReadPastServerNameExtension() {
+    public void testExtractSniHostnameDoesNotReadPastServerNameExtension() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             writeClientHelloPrefix(buffer, 4 + 9 + 4 + 5);
@@ -123,14 +124,14 @@ public class AbstractSniHandlerTest {
             buffer.writeBytes("beta".getBytes(CharsetUtil.US_ASCII)); // last 4 bytes of the extension
             buffer.writeBytes(".sni.test".getBytes(CharsetUtil.US_ASCII)); // next extension header + data
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
     }
 
     @Test
-    public void testExtractSniHostnameRejectsServerNameListLengthMismatch() {
+    public void testExtractSniHostnameRejectsServerNameListLengthMismatch() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
@@ -142,14 +143,14 @@ public class AbstractSniHandlerTest {
             buffer.writeShort(host.length);
             buffer.writeBytes(host);
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
     }
 
     @Test
-    public void testExtractSniHostnameRejectsEmptyHostName() {
+    public void testExtractSniHostnameRejectsEmptyHostName() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             writeClientHelloPrefix(buffer, 4 + 5);
@@ -159,14 +160,14 @@ public class AbstractSniHandlerTest {
             buffer.writeByte(0); // host_name
             buffer.writeShort(0); // empty name
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
     }
 
     @Test
-    public void testExtractSniHostnameAfterOtherExtension() {
+    public void testExtractSniHostnameAfterOtherExtension() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
@@ -183,7 +184,7 @@ public class AbstractSniHandlerTest {
     }
 
     @Test
-    public void testExtractSniHostnameRejectsOversizedServerNameListLength() {
+    public void testExtractSniHostnameRejectsOversizedServerNameListLength() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             writeClientHelloPrefix(buffer, 4 + 9 + 4 + 5);
@@ -195,7 +196,7 @@ public class AbstractSniHandlerTest {
             buffer.writeBytes("beta".getBytes(CharsetUtil.US_ASCII));
             buffer.writeBytes(".sni.test".getBytes(CharsetUtil.US_ASCII));
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
@@ -203,7 +204,7 @@ public class AbstractSniHandlerTest {
 
     // The list length is one byte larger than the data that is actually left in the extension.
     @Test
-    public void testExtractSniHostnameRejectsServerNameListLengthOneTooLarge() {
+    public void testExtractSniHostnameRejectsServerNameListLengthOneTooLarge() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
@@ -218,7 +219,7 @@ public class AbstractSniHandlerTest {
             buffer.writeShort(1);
             buffer.writeByte(0);
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
@@ -227,23 +228,23 @@ public class AbstractSniHandlerTest {
     // The server_name_list length is 2 bytes, so an extension shorter than that can not hold it. The following
     // extension must not be interpreted as the list length.
     @Test
-    public void testExtractSniHostnameRejectsTooShortServerNameExtension() {
+    public void testExtractSniHostnameRejectsTooShortServerNameExtension() throws Exception {
         for (int extensionLength = 0; extensionLength < 2; extensionLength++) {
             ByteBuf buffer = Unpooled.buffer();
             try {
-                writeClientHelloPrefix(buffer, 4 + extensionLength + 4 + 8);
+                writeClientHelloPrefix(buffer, 4 + extensionLength + 4 + 7);
                 buffer.writeShort(0); // extension type: server_name
                 buffer.writeShort(extensionLength);
                 buffer.writeZero(extensionLength);
                 // Following extension that looks like a server_name_list holding a host name.
                 buffer.writeShort(0xff01);
-                buffer.writeShort(8);
+                buffer.writeShort(7);
                 buffer.writeShort(5); // would be a server_name_list length
                 buffer.writeByte(0); // would be host_name
                 buffer.writeShort(2); // would be the name length
                 buffer.writeBytes("ab".getBytes(CharsetUtil.US_ASCII));
 
-                assertNull(AbstractSniHandler.extractSniHostname(buffer), "extensionLength=" + extensionLength);
+                assertMalformedServerName(buffer, "extensionLength=" + extensionLength);
             } finally {
                 buffer.release();
             }
@@ -251,7 +252,7 @@ public class AbstractSniHandlerTest {
     }
 
     @Test
-    public void testExtractSniHostnameRejectsEmptyServerNameList() {
+    public void testExtractSniHostnameRejectsEmptyServerNameList() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             writeClientHelloPrefix(buffer, 4 + 2);
@@ -259,19 +260,61 @@ public class AbstractSniHandlerTest {
             buffer.writeShort(2);
             buffer.writeShort(0); // server_name_list length: empty list
 
-            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
     }
 
     @Test
-    public void testExtractSniHostnameRejectsUnknownNameType() {
+    public void testExtractSniHostnameRejectsUnknownNameType() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
             writeClientHelloPrefix(buffer, 4 + 5 + host.length);
             writeServerNameExtension(buffer, 1, host);
+
+            assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // A server_name extension that is present but malformed must be reported, so the handler can fail closed
+    // instead of selecting the default.
+    private static void assertMalformedServerName(ByteBuf buffer) {
+        assertMalformedServerName(buffer, null);
+    }
+
+    private static void assertMalformedServerName(ByteBuf buffer, String message) {
+        assertThrows(NotSslRecordException.class, () -> AbstractSniHandler.extractSniHostname(buffer), message);
+    }
+
+    // The server_name extension claims more data than the extensions block holds.
+    @Test
+    public void testExtractSniHostnameRejectsServerNameExtensionExceedingExtensions() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 3);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(20); // extension length: more than what is left
+            buffer.writeZero(3);
+
+            assertMalformedServerName(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // No server_name extension at all is not an error, only a ClientHello without SNI.
+    @Test
+    public void testExtractSniHostnameWithoutServerNameExtension() throws Exception {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            writeClientHelloPrefix(buffer, 4 + 1);
+            buffer.writeShort(0xff01); // renegotiation_info
+            buffer.writeShort(1);
+            buffer.writeByte(0);
 
             assertNull(AbstractSniHandler.extractSniHostname(buffer));
         } finally {

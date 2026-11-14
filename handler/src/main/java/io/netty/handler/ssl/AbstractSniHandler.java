@@ -35,8 +35,19 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
-    // Package-private for testing purposes.
-    static String extractSniHostname(ByteBuf in) {
+    /**
+     * Extracts the host name from the {@code server_name} extension of the given {@code ClientHello}.
+     * <p>
+     * Package-private for testing purposes.
+     *
+     * @return the lower-cased host name, or {@code null} if the {@code ClientHello} carries no usable
+     *         {@code server_name} extension (e.g. because the extension is absent or the {@code ClientHello}
+     *         itself can not be parsed).
+     * @throws NotSslRecordException if a {@code server_name} extension is present but malformed. Callers must
+     *         fail closed in this case rather than fall back to a default as the {@code SSLEngine} may
+     *         interpret the same bytes differently.
+     */
+    static String extractSniHostname(ByteBuf in) throws NotSslRecordException {
         // See https://tools.ietf.org/html/rfc5246#section-7.4.1.2
         //
         // Decode the ssl client hello packet.
@@ -88,6 +99,9 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                 offset += 2;
 
                                 if (extensionsLimit - offset < extensionLength) {
+                                    if (extensionType == 0) {
+                                        throw malformedServerName("extension length exceeds the extensions");
+                                    }
                                     break;
                                 }
 
@@ -99,12 +113,15 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                     // than the end of all extensions.
                                     final int extensionLimit = offset + extensionLength;
                                     if (extensionLength < 2) {
-                                        break;
+                                        throw malformedServerName("extension too short for the server_name_list");
                                     }
                                     final int serverNameListLength = in.getUnsignedShort(offset);
                                     offset += 2;
+                                    // ServerName server_name_list<1..2^16-1>, which has to fill the extension data.
+                                    // A ServerName is at least 3 bytes: name_type (1) + HostName length (2).
                                     if (serverNameListLength != extensionLength - 2 || serverNameListLength < 3) {
-                                        break;
+                                        throw malformedServerName("invalid server_name_list length " +
+                                                serverNameListLength + " for extension length " + extensionLength);
                                     }
 
                                     final int serverNameType = in.getUnsignedByte(offset);
@@ -115,8 +132,12 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                         offset += 2;
 
                                         // HostName is opaque<1..2^16-1>.
-                                        if (serverNameLength == 0 || extensionLimit - offset < serverNameLength) {
-                                            break;
+                                        if (serverNameLength == 0) {
+                                            throw malformedServerName("empty host_name");
+                                        }
+                                        if (extensionLimit - offset < serverNameLength) {
+                                            throw malformedServerName("host_name length " + serverNameLength +
+                                                    " exceeds the extension");
                                         }
 
                                         final String hostname = in.toString(
@@ -136,6 +157,10 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
             }
         }
         return null;
+    }
+
+    private static NotSslRecordException malformedServerName(String reason) {
+        return new NotSslRecordException("malformed server_name extension: " + reason);
     }
 
     static final long DEFAULT_HANDSHAKE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
