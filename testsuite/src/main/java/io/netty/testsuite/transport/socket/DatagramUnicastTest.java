@@ -370,7 +370,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
-                    sendToAddress((InetSocketAddress) localAddr) : localAddr;
+                    convertAnyAddress((InetSocketAddress) localAddr) : localAddr;
 
             ByteBuf first = Unpooled.copiedBuffer(sent[0], CharsetUtil.US_ASCII);
             ChannelFuture firstFuture = write(cc, first, addr, WrapType.NONE);
