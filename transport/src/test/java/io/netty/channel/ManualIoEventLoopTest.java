@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.concurrent.EventExecutor;
@@ -27,13 +29,20 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -42,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ManualIoEventLoopTest {
@@ -357,6 +367,104 @@ public class ManualIoEventLoopTest {
         assertEquals(1, counter.get());
 
         eventLoop.shutdownGracefully();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testExecuteAfterTerminationIsRejected(boolean fromOwningThread) throws Exception {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), executor ->
+                new TestIoHandler(new Semaphore(0)));
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        while (!eventLoop.isTerminated()) {
+            eventLoop.runNow();
+        }
+
+        TestRunnable runnable = new TestRunnable();
+        if (fromOwningThread) {
+            assertThatThrownBy(() -> eventLoop.execute(runnable)).isInstanceOf(RejectedExecutionException.class);
+        } else {
+            CompletableFuture<Throwable> thrown = CompletableFuture.supplyAsync(() -> {
+                try {
+                    eventLoop.execute(runnable);
+                    return null;
+                } catch (Throwable cause) {
+                    return cause;
+                }
+            });
+            assertThat(thrown.get(5, TimeUnit.SECONDS)).isInstanceOf(RejectedExecutionException.class);
+        }
+        assertThat(eventLoop.runNow()).isZero();
+        assertThat(runnable.isDone()).isFalse();
+    }
+
+    @Test
+    public void testRegisterFromOtherThreadAfterTerminationFails() throws Exception {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), LocalIoHandler.newFactory());
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        while (!eventLoop.isTerminated()) {
+            eventLoop.runNow();
+        }
+
+        Bootstrap bootstrap = new Bootstrap().group(eventLoop).channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+        ChannelFuture registerFuture = CompletableFuture.supplyAsync(bootstrap::register).get(5, TimeUnit.SECONDS);
+        assertThat(registerFuture.isDone()).isTrue();
+        assertThat(registerFuture.cause()).isInstanceOf(RejectedExecutionException.class);
+        assertThat(registerFuture.channel().isOpen()).isFalse();
+    }
+
+    /**
+     * Every task for which {@link ManualIoEventLoop#execute(Runnable)} returned normally must be run, even when the
+     * event loop terminates while other threads are still submitting. Before the fix tasks that were added right
+     * before the event loop terminated were silently dropped.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    public void testNoAcceptedTaskIsLostWhenTerminatingConcurrently(boolean graceful) throws Exception {
+        final int submitters = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors()));
+        final ExecutorService executor = Executors.newFixedThreadPool(submitters);
+        try {
+            for (int i = 0; i < 300; i++) {
+                final ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), factory ->
+                        new TestIoHandler(new Semaphore(0)));
+                final AtomicInteger accepted = new AtomicInteger();
+                final AtomicInteger executed = new AtomicInteger();
+                final CountDownLatch start = new CountDownLatch(1);
+                final List<Future<?>> futures = new ArrayList<>();
+                for (int j = 0; j < submitters; j++) {
+                    futures.add(executor.submit(() -> {
+                        start.await();
+                        try {
+                            for (;;) {
+                                eventLoop.execute(executed::incrementAndGet);
+                                accepted.incrementAndGet();
+                            }
+                        } catch (RejectedExecutionException expected) {
+                            // The event loop was shut down.
+                        }
+                        return null;
+                    }));
+                }
+                start.countDown();
+                // Let some tasks flow before we start the shutdown.
+                eventLoop.runNow();
+                if (graceful) {
+                    eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+                } else {
+                    eventLoop.shutdown();
+                }
+                while (!eventLoop.isTerminated()) {
+                    eventLoop.runNow();
+                }
+                for (Future<?> future : futures) {
+                    future.get();
+                }
+                assertEquals(accepted.get(), executed.get(), "iteration " + i);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private static final class TestRunnable implements Runnable {
