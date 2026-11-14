@@ -219,6 +219,12 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
+        when(connection.newKey()).thenAnswer(new Answer<Http2Connection.PropertyKey>() {
+            @Override
+            public Http2Connection.PropertyKey answer(InvocationOnMock invocation) {
+                return new Http2Connection.PropertyKey() { };
+            }
+        });
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         setupCodec(ctx, encoder, decoder, listener);
