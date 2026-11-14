@@ -170,6 +170,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    // What a new engine reports as its enabled protocols. Computed once as it is the same for every engine.
+    final String[] enabledProtocols;
     final String endpointIdentificationAlgorithm;
     final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
@@ -307,6 +309,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.serverNames = serverNames;
         this.enableOcsp = enableOcsp;

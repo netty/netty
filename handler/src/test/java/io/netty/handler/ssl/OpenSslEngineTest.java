@@ -33,6 +33,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.test.LeakPresenceExtension;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -246,6 +247,48 @@ public class OpenSslEngineTest extends SSLEngineTest {
             }
         }
         return true;
+    }
+
+    @Test
+    public void testEnabledProtocolsAreNotSharedBetweenEngines() throws Exception {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        SslContext context = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
+                .sslProvider(sslServerProvider())
+                .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)
+                .build();
+        SSLEngine first = null;
+        SSLEngine second = null;
+        try {
+            first = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            second = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            String[] contextProtocols = {
+                    SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2
+            };
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            Arrays.fill(first.getEnabledProtocols(), "modified");
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            first.setEnabledProtocols(new String[] { SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_2 });
+            assertArrayEquals(new String[] { SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_2 },
+                    first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            SSLEngine third = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                assertArrayEquals(contextProtocols, third.getEnabledProtocols());
+            } finally {
+                ReferenceCountUtil.release(third);
+            }
+        } finally {
+            ReferenceCountUtil.release(first);
+            ReferenceCountUtil.release(second);
+            ReferenceCountUtil.release(context);
+        }
     }
 
     @MethodSource("newTestParams")

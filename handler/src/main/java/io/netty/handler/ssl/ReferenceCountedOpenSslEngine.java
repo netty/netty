@@ -191,7 +191,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     };
 
-    private final Set<String> enabledProtocols = new LinkedHashSet<String>();
+    // Never modified once assigned, so an engine can share the array of its context until the user changes it.
+    private volatile String[] enabledProtocols;
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
@@ -351,7 +352,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     assert context.protocols != null;
                     hasTLSv13Cipher = context.hasTLSv13Cipher;
 
-                    setEnabledProtocols(context.protocols);
+                    enabledProtocols = context.enabledProtocols;
+                    setEnabledProtocols0(context.protocols, !hasTLSv13Cipher);
 
                     // Use SNI if peerHost was specified and a valid hostname
                     // See https://github.com/netty/netty/issues/4746
@@ -1797,7 +1799,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(enabledProtocols);
+                    Set<String> protocols = new HashSet<String>();
+                    Collections.addAll(protocols, enabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
@@ -1832,7 +1835,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledProtocols() {
-        return enabledProtocols.toArray(EMPTY_STRINGS);
+        return enabledProtocols.clone();
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1854,14 +1857,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final void setEnabledProtocols(String[] protocols) {
         checkNotNullWithIAE(protocols, "protocols");
         synchronized (this) {
-            enabledProtocols.clear();
-            // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
-            enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
-
-            Collections.addAll(enabledProtocols, protocols);
+            enabledProtocols = toEnabledProtocols(protocols);
 
             setEnabledProtocols0(protocols, !hasTLSv13Cipher);
         }
+    }
+
+    static String[] toEnabledProtocols(String[] protocols) {
+        Set<String> enabledProtocols = new LinkedHashSet<String>();
+        // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
+        enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
+
+        Collections.addAll(enabledProtocols, protocols);
+        return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
     private void setEnabledProtocols0(String[] protocols, boolean explicitDisableTLSv13) {
