@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_MAX_LENGTH;
@@ -48,8 +49,12 @@ public class SpdyFrameEncoderTest {
         // A 2^24 byte body would be written with the length 0.
         final ByteBuf data = alloc.buffer(SPDY_MAX_LENGTH + 1).writerIndex(SPDY_MAX_LENGTH + 1);
         try {
-            assertThrows(IllegalArgumentException.class,
-                    () -> encoder.encodeDataFrame(alloc, 1, false, data));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    encoder.encodeDataFrame(alloc, 1, false, data);
+                }
+            });
         } finally {
             data.release();
         }
@@ -60,12 +65,24 @@ public class SpdyFrameEncoderTest {
         // SYN_REPLY and HEADERS add 4 bytes for the stream id, SYN_STREAM 10.
         final ByteBuf headerBlock = alloc.buffer(SPDY_MAX_LENGTH - 3).writerIndex(SPDY_MAX_LENGTH - 3);
         try {
-            assertThrows(IllegalArgumentException.class,
-                    () -> encoder.encodeSynReplyFrame(alloc, 1, false, headerBlock));
-            assertThrows(IllegalArgumentException.class,
-                    () -> encoder.encodeHeadersFrame(alloc, 1, false, headerBlock));
-            assertThrows(IllegalArgumentException.class,
-                    () -> encoder.encodeSynStreamFrame(alloc, 1, 0, (byte) 0, false, false, headerBlock));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    encoder.encodeSynReplyFrame(alloc, 1, false, headerBlock);
+                }
+            });
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    encoder.encodeHeadersFrame(alloc, 1, false, headerBlock);
+                }
+            });
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    encoder.encodeSynStreamFrame(alloc, 1, 0, (byte) 0, false, false, headerBlock);
+                }
+            });
         } finally {
             headerBlock.release();
         }
