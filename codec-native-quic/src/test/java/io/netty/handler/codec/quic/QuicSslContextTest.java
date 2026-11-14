@@ -35,6 +35,7 @@ import java.security.cert.X509Certificate;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QuicSslContextTest {
 
@@ -109,6 +110,12 @@ public class QuicSslContextTest {
 
         int newTimeout = timeout / 2;
         sessionContext.setSessionTimeout(newTimeout);
+        assertEquals(newTimeout, sessionContext.getSessionTimeout());
+
+        // SSLSessionContext requires IllegalArgumentException for negative values.
+        assertThrows(IllegalArgumentException.class, () -> sessionContext.setSessionCacheSize(-1));
+        assertThrows(IllegalArgumentException.class, () -> sessionContext.setSessionTimeout(-1));
+        assertEquals(newSize, sessionContext.getSessionCacheSize());
         assertEquals(newTimeout, sessionContext.getSessionTimeout());
 
         SSLEngine engine = context.newEngine(null);
