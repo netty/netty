@@ -862,7 +862,9 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
 
     struct msghdr m = { 0 };
     m.msg_name = (void*) &addr;
-    m.msg_namelen = sizeof(struct sockaddr_un);
+    // Use the same length as the other domain socket operations do. For abstract addresses the length is part of
+    // the name, so we must not include the unused bytes of sun_path.
+    m.msg_namelen = (socklen_t) _UNIX_ADDR_LENGTH(socket_path_len);
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
 
