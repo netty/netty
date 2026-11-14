@@ -61,6 +61,7 @@ import java.util.function.BiConsumer;
 import java.util.function.LongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 final class QuicheQuicSslContext extends QuicSslContext {
 
@@ -503,6 +504,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     void setSessionTimeout(int seconds) throws IllegalArgumentException {
+        checkPositiveOrZero(seconds, "seconds");
         if (sessionCache != null) {
             sessionCache.setSessionTimeout(seconds);
         } else {
@@ -512,6 +514,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     void setSessionCacheSize(int size) throws IllegalArgumentException {
+        checkPositiveOrZero(size, "size");
         if (sessionCache != null) {
             sessionCache.setSessionCacheSize(size);
         } else {
