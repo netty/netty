@@ -126,6 +126,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     static final int MAX_RECORD_SIZE = SSL.SSL_MAX_RECORD_LENGTH;
 
+    /**
+     * Marks that {@code SSL_pending} was not queried yet. {@code SSL_pending} itself never returns a negative value.
+     */
+    private static final int SSL_PENDING_UNKNOWN = -1;
+
     private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
@@ -1250,7 +1255,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            int sslPending = sslPending0();
+            // SSL_pending is only needed when there is nothing to feed into the BIO or a destination buffer was
+            // filled, so it is fetched on demand to keep the JNI call out of the common path.
+            int sslPending = SSL_PENDING_UNKNOWN;
             int packetLength;
             // The JDK implies that only a single SSL packet should be processed per unwrap call [1]. If we are in
             // JDK compatibility mode then we should honor this, but if not we just wrap as much as possible. If there
@@ -1297,7 +1304,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // packet.
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
-            } else if (len == 0 && sslPending <= 0) {
+            } else if (len == 0 && (sslPending = sslPending0()) <= 0) {
                 return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             } else if (capacity == 0) {
                 return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
@@ -1322,6 +1329,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     final ByteBuf bioWriteCopyBuf;
                     int pendingEncryptedBytes;
                     if (remaining == 0) {
+                        if (sslPending == SSL_PENDING_UNKNOWN) {
+                            sslPending = sslPending0();
+                        }
                         if (sslPending <= 0) {
                             // We must skip empty buffers as BIO_write will return 0 if asked to write something
                             // with length 0.
