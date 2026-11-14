@@ -20,11 +20,14 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -38,6 +41,45 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Tests channel buffer streams
  */
 public class ByteBufStreamTest {
+
+    @Test
+    void writeFloatingPointValuesMustMatchDataOutputStream() throws Exception {
+        int[] floatBits = {
+                0x00000000, 0x80000000,
+                0x3f800000, 0xbf800000,
+                0x7f800000, 0xff800000,
+                0x7fc00001, 0xffc00001
+        };
+        long[] doubleBits = {
+                0x0000000000000000L, 0x8000000000000000L,
+                0x3ff0000000000000L, 0xbff0000000000000L,
+                0x7ff0000000000000L, 0xfff0000000000000L,
+                0x7ff8000000000001L, 0xfff8000000000001L
+        };
+        ByteArrayOutputStream expectedBytes = new ByteArrayOutputStream();
+        DataOutputStream expected = new DataOutputStream(expectedBytes);
+        ByteBuf buf = Unpooled.buffer();
+        ByteBufOutputStream out = new ByteBufOutputStream(buf, true);
+        try {
+            for (int bits : floatBits) {
+                float value = Float.intBitsToFloat(bits);
+                expected.writeFloat(value);
+                out.writeFloat(value);
+            }
+            for (long bits : doubleBits) {
+                double value = Double.longBitsToDouble(bits);
+                expected.writeDouble(value);
+                out.writeDouble(value);
+            }
+
+            byte[] actual = new byte[buf.readableBytes()];
+            buf.getBytes(buf.readerIndex(), actual);
+            assertThat(actual).containsExactly(expectedBytes.toByteArray());
+        } finally {
+            expected.close();
+            out.close();
+        }
+    }
 
     @Test
     public void testAll() throws Exception {

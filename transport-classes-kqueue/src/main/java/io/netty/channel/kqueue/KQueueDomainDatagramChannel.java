@@ -285,8 +285,11 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                             if (localAddress == null) {
                                 localAddress = (DomainSocketAddress) localAddress();
                             }
-                            allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+                            final int receivedAmount = remoteAddress.receivedAmount();
+                            // Avoid signalling end-of-data for zero-sized datagrams, otherwise continueReading(...)
+                            // may stop the loop and leave the remaining datagrams unread.
+                            allocHandle.lastBytesRead(Math.max(1, receivedAmount));
+                            byteBuf.writerIndex(byteBuf.writerIndex() + receivedAmount);
 
                             packet = new DomainDatagramPacket(byteBuf, localAddress, remoteAddress);
                         }
