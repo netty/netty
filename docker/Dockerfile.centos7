@@ -16,6 +16,7 @@ RUN yum install -y \
  apr-devel \
  autoconf \
  automake \
+ binutils \
  bzip2 \
  git \
  glibc-devel \
@@ -102,6 +103,10 @@ RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
 ENV JAVA_HOME=/root/.sdkman/candidates/java/current
 ENV LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib
+
+# Fail the build if the native libraries require a newer glibc than we support, see
+# .github/scripts/check_native_glibc_versions.sh and the check-native-glibc-versions profile in pom.xml.
+ENV NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true
 
 # Cleanup
 RUN rm -rf $SOURCE_DIR

@@ -27,6 +27,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#if defined(__linux__) && ((defined(__x86_64__) && defined(__LP64__)) || defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64))
+// On these architectures the struct stat of the C library has the same layout as the one the kernel fills in.
+#include <sys/syscall.h>
+#define NETTY_UNIX_LSTAT_SYSCALL 1
+#endif
+
 #include "netty_unix_errors.h"
 #include "netty_unix_jni.h"
 #include "netty_unix_socket.h"
@@ -61,6 +67,20 @@ extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int fl
 // macro to calculate the length of a sockaddr_un struct for a given path length.
 // see sys/un.h#SUN_LEN, this is modified to allow nul bytes
 #define _UNIX_ADDR_LENGTH(path_len) ((uintptr_t) offsetof(struct sockaddr_un, sun_path) + (uintptr_t) path_len)
+
+// lstat(...) that does not depend on the glibc version we compile against.
+//
+// Compiled against glibc >= 2.33 headers, lstat(...) is linked against lstat@GLIBC_2.33, which would raise the
+// minimum glibc version that is required to load the native library. Before 2.33 it is linked against __lxstat(...),
+// which musl does not provide. Using the syscall directly avoids both. newfstatat is used as aarch64 and riscv64
+// don't have the lstat syscall.
+static int netty_unix_socket_lstat(const char* path, struct stat* st) {
+#ifdef NETTY_UNIX_LSTAT_SYSCALL
+    return (int) syscall(SYS_newfstatat, AT_FDCWD, path, st, AT_SYMLINK_NOFOLLOW);
+#else
+    return lstat(path, st);
+#endif
+}
 
 int netty_unix_socket_nonBlockingSocket(int domain, int type, int protocol) {
 #ifdef SOCK_NONBLOCK
@@ -909,7 +929,7 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     // Only remove a stale socket left behind by a previous run. Never remove any other kind of file (regular file,
     // directory, symlink, ...); if something else exists at the path bind(...) will fail with EADDRINUSE.
     struct stat st;
-    if (lstat(path, &st) == 0) {
+    if (netty_unix_socket_lstat(path, &st) == 0) {
         if (S_ISSOCK(st.st_mode) && unlink(path) == -1 && errno != ENOENT) {
             return -errno;
         }

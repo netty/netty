@@ -80,7 +80,7 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
         } finally {
             DomainSocketAddress local = this.local;
             if (local != null) {
-                // Delete the socket file if possible (only if it is not a regular file, directory or symlink).
+                // Delete the socket file if possible (only if it is a socket, never any other kind of file).
                 boolean success = UnixChannelUtil.deleteDomainSocketFile(local.path());
                 if (!success && logger.isDebugEnabled()) {
                     logger.debug("Failed to delete a domain socket file: {}", local.path());
