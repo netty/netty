@@ -221,8 +221,9 @@
       <properties>
         <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
-        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
-        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system. Don't use
+             os.detected.name, so this also works when cross compiling on a non-mac system. -->
+        <jni.classifier>osx-aarch_64</jni.classifier>
       </properties>
       <build>
         <plugins>
@@ -325,8 +326,8 @@
       <properties>
         <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
-        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
-        <jni.classifier>${os.detected.name}-x86_64</jni.classifier>
+        <!-- Don't use os.detected.name, so this also works when cross compiling on a non-mac system. -->
+        <jni.classifier>osx-x86_64</jni.classifier>
       </properties>
       <build>
         <plugins>
@@ -411,10 +412,10 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-target arm64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9" />
+                      <env key="CFLAGS" value="-target x86_64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
+                      <env key="LDFLAGS" value="-arch x86_64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,11.0,11.0" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
-                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.9" />
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="11.0" />
                     </exec>
                   </target>
                 </configuration>

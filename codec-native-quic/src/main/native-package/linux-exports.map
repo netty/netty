@@ -1,0 +1,55 @@
+/*
+ * Copyright 2026 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*
+ * Linker version script for the Linux native library, see src/main/native-package/m4/custom.m4.template.
+ *
+ * Only export what we really need, and in particular nothing from the statically linked quiche (and the Rust
+ * standard library it brings), BoringSSL or C++ runtime. This replaces -Wl,--exclude-libs,ALL, which not all
+ * linkers support (zig's does not, see docker/cross-compile/zig-toolchain.sh).
+ */
+{
+  global:
+    JNI_OnLoad*;
+    JNI_OnUnload*;
+
+    /* The fallbacks for glibc-internal symbols in src/main/c/musl_compat.c must stay exported, see the comment
+       about visibility("default") there. Keep this list in sync with the NETTY_MUSL_COMPAT definitions. */
+    __fxstat64;
+    __fxstatat64;
+    __getauxval;
+    __lxstat64;
+    __res_init;
+    __xstat64;
+    fopen64;
+    fstat64;
+    fstatat64;
+    ftruncate64;
+    gnu_get_libc_version;
+    lseek64;
+    lstat64;
+    mmap64;
+    open64;
+    openat64;
+    pread64;
+    pwrite64;
+    readdir64;
+    sendfile64;
+    stat64;
+
+  local:
+    *;
+};

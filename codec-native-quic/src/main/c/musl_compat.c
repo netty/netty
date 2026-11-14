@@ -110,6 +110,7 @@
 #  include <sys/auxv.h>
 #endif
 
+/* Everything defined with this must also be listed in src/main/native-package/linux-exports.map. */
 #define NETTY_MUSL_COMPAT __attribute__((weak, visibility("default")))
 
 /*

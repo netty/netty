@@ -1,0 +1,67 @@
+version: "3"
+
+# Builds the native libraries for one target platform with docker/Dockerfile.cross_compile, see
+# docker/cross-compile/build.sh for the supported targets. The target is selected with the NETTY_CROSS_TARGET
+# environment variable, and NETTY_CROSS_MODULES optionally selects the modules, for example:
+#
+#   NETTY_CROSS_TARGET=osx-aarch_64 docker compose -f docker/docker-compose.cross.yaml run cross-compile-build
+
+services:
+
+  cross-compile-runtime-setup:
+    image: netty:cross_compile
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.cross_compile
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross,mode=max,ignore-error=true
+
+  cross-compile-common: &cross-compile-common
+    depends_on: [ cross-compile-runtime-setup ]
+    image: netty:cross_compile
+    environment:
+      - GPG_KEYNAME
+      - GPG_PASSPHRASE
+      - GPG_PRIVATE_KEY
+      - MAVEN_OPTS
+      - NETTY_CROSS_TARGET
+      - NETTY_CROSS_MODULES
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ..:/code
+    working_dir: /code
+
+  cross-compile-build:
+    <<: *cross-compile-common
+    command: /bin/bash -cl "docker/cross-compile/build.sh \"$${NETTY_CROSS_TARGET}\" -am clean package"
+
+  cross-compile-install:
+    <<: *cross-compile-common
+    command: /bin/bash -cl "docker/cross-compile/build.sh \"$${NETTY_CROSS_TARGET}\" -am clean install"
+
+  cross-compile-stage-snapshot:
+    <<: *cross-compile-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "docker/cross-compile/build.sh \"$${NETTY_CROSS_TARGET}\" -am clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging"
+
+  cross-compile-stage-release:
+    <<: *cross-compile-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.m2:/root/.m2
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && docker/cross-compile/build.sh \"$${NETTY_CROSS_TARGET}\" -am clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
+
+  cross-compile-shell:
+    <<: *cross-compile-common
+    entrypoint: /bin/bash

@@ -18,7 +18,7 @@
 # Fails if any of the given native libraries, or any *.so file below the given directories, requires a glibc symbol
 # version that is newer than the oldest glibc we support for the architecture of the library:
 #
-#   x86_64:  GLIBC_2.14
+#   x86_64:  GLIBC_2.17
 #   aarch64: GLIBC_2.17
 #
 # Libraries for other architectures are not checked.
@@ -53,7 +53,7 @@ fi
 # or nothing if libraries for this machine are not checked.
 max_glibc_version() {
     case "$1" in
-        "Advanced Micro Devices X86-64") echo "2.14" ;;
+        "Advanced Micro Devices X86-64") echo "2.17" ;;
         "AArch64") echo "2.17" ;;
         *) echo "" ;;
     esac

@@ -246,22 +246,6 @@
         <javaModuleNameClassifier>${os.detected.name}.aarch_64</javaModuleNameClassifier>
       </properties>
       <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <artifactId>maven-enforcer-plugin</artifactId>
-              <version>${enforcer.plugin.version}</version>
-              <dependencies>
-                <!-- Provides the 'requireFilesContent' enforcer rule. -->
-                <dependency>
-                  <groupId>com.ceilfors.maven.plugin</groupId>
-                  <artifactId>enforcer-rules</artifactId>
-                  <version>1.2.0</version>
-                </dependency>
-              </dependencies>
-            </plugin>
-          </plugins>
-        </pluginManagement>
         <plugins>
           <plugin>
             <artifactId>maven-enforcer-plugin</artifactId>
@@ -280,15 +264,10 @@
                       <property>os.detected.classifier</property>
                       <regex>^linux-x86_64.*</regex>
                     </requireProperty>
-                    <requireFilesContent>
-                      <message>
-                        Cross compile and Release process must be performed on RHEL 7.9 or its derivatives.
-                      </message>
-                      <files>
-                        <file>/etc/redhat-release</file>
-                      </files>
-                      <content>release 7.9</content>
-                    </requireFilesContent>
+                    <!-- There is no requirement on the distribution of the host: docker/Dockerfile.cross_compile links
+                         against the glibc version that the zig target names (see
+                         docker/cross-compile/zig-toolchain.sh), and the check-native-glibc-versions profile of the
+                         parent pom verifies the result. -->
                   </rules>
                 </configuration>
               </execution>
@@ -419,22 +398,6 @@
         <javaModuleNameClassifier>${os.detected.name}.riscv64</javaModuleNameClassifier>
       </properties>
       <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <artifactId>maven-enforcer-plugin</artifactId>
-              <version>${enforcer.plugin.version}</version>
-              <dependencies>
-                <!-- Provides the 'requireFilesContent' enforcer rule. -->
-                <dependency>
-                  <groupId>com.ceilfors.maven.plugin</groupId>
-                  <artifactId>enforcer-rules</artifactId>
-                  <version>1.2.0</version>
-                </dependency>
-              </dependencies>
-            </plugin>
-          </plugins>
-        </pluginManagement>
         <plugins>
           <plugin>
             <artifactId>maven-enforcer-plugin</artifactId>
@@ -453,21 +416,9 @@
                       <property>os.detected.classifier</property>
                       <regex>^linux-x86_64.*</regex>
                     </requireProperty>
-                    <!--
-                      The toolchains for RISC-V are much more recent than for x86_64, and are
-                      unavailable on CentOS. We are then falling back to a Debian-based distribution
-                      that has access to recent enough toolchains; Ubuntu 20.04 is available on
-                      RISC-V and still has GLIBC 2.31
-                    -->
-                    <requireFilesContent>
-                      <message>
-                        Cross compile and Release process must be performed on Debian Bullseye or derivative
-                      </message>
-                      <files>
-                        <file>/etc/debian_version</file>
-                      </files>
-                      <content>bullseye/sid</content>
-                    </requireFilesContent>
+                    <!-- There is no requirement on the distribution of the host: docker/Dockerfile.cross_compile links
+                         against the glibc version that the zig target names (see
+                         docker/cross-compile/zig-toolchain.sh). -->
                   </rules>
                 </configuration>
               </execution>

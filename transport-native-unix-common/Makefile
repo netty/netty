@@ -25,7 +25,13 @@
 SRC_DIR = src/main/c
 UTIL_SRC_DIR = target/netty-jni-util
 JNI_INCLUDE_DIR = $(JAVA_HOME)/include
-JNI_INCLUDES = -I$(JNI_INCLUDE_DIR) -I$(JNI_INCLUDE_DIR)/$(JNI_PLATFORM)
+JNI_MD_INCLUDE_DIR = $(JNI_INCLUDE_DIR)/$(JNI_PLATFORM)
+ifeq ($(wildcard $(JNI_MD_INCLUDE_DIR)/jni_md.h),)
+# When cross compiling the JDK only ships the jni_md.h of the platform it runs on. Its definitions are the same for
+# all the platforms we cross compile to, so use whatever platform directory the JDK has.
+JNI_MD_INCLUDE_DIR = $(patsubst %/,%,$(dir $(firstword $(wildcard $(JNI_INCLUDE_DIR)/*/jni_md.h))))
+endif
+JNI_INCLUDES = -I$(JNI_INCLUDE_DIR) -I$(JNI_MD_INCLUDE_DIR)
 LIB = $(LIB_DIR)/$(LIB_NAME).a
 
 CFLAGS += $(JNI_INCLUDES) -I$(UTIL_SRC_DIR)
