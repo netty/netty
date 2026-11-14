@@ -136,7 +136,9 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            // maxBytesToWrite becomes negative once the first buffer was bigger than it, so we need to compare it
+            // as signed value. Otherwise it would be converted to a huge unsigned value and the limit is ignored.
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -159,7 +161,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -182,7 +184,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -205,7 +207,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
