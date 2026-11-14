@@ -351,6 +351,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Write messages to the inbound of this {@link Channel}.
+     * <p>
+     * If this {@link Channel} is already closed, the messages are released and a
+     * {@link ClosedChannelException} is thrown.
      *
      * @param msgs the messages to be written
      *
@@ -380,6 +383,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the returned future is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneOutbound(Object)
      */
@@ -390,6 +396,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the promise is failed with a
+     * {@link ClosedChannelException} (thrown instead if the promise is a void promise).
      *
      * @see #writeOneOutbound(Object, ChannelPromise)
      */
@@ -436,6 +445,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Write messages to the outbound of this {@link Channel}.
+     * <p>
+     * If this {@link Channel} is already closed, the messages are released and a
+     * {@link ClosedChannelException} is thrown.
      *
      * @param msgs              the messages to be written
      * @return bufferReadable   returns {@code true} if the write operation did add something to the outbound buffer
@@ -483,6 +495,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the returned future is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneInbound(Object)
      */
@@ -493,6 +508,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the promise is failed with a
+     * {@link ClosedChannelException} (thrown instead if the promise is a void promise).
      *
      * @see #writeOneInbound(Object, ChannelPromise)
      */
