@@ -15,12 +15,16 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Errors;
+
+import java.io.UncheckedIOException;
 
 final class RingBuffer {
     private final SubmissionQueue ioUringSubmissionQueue;
     private final CompletionQueue ioUringCompletionQueue;
     private final int features;
     private boolean closed;
+    private boolean enabled;
 
     RingBuffer(SubmissionQueue ioUringSubmissionQueue,
                CompletionQueue ioUringCompletionQueue, int features) {
@@ -34,8 +38,17 @@ final class RingBuffer {
      * {@link SubmissionQueue#submitAndWait()}.
      */
     void enable() {
-        // We create our ring in disabled mode and so need to enable it first.
-        Native.ioUringRegisterEnableRings(fd());
+        // We create our ring in disabled mode and so need to enable it first. This method might be called more than
+        // once (e.g. when an EventLoop is resumed), but the ring can only be enabled once as enabling an already
+        // enabled ring fails.
+        if (!enabled) {
+            int res = Native.ioUringRegisterEnableRings(fd());
+            if (res < 0) {
+                // The ring stays disabled in this case and so every io_uring_enter(...) call would fail later on.
+                throw new UncheckedIOException(Errors.newIOException("io_uring_register", res));
+            }
+            enabled = true;
+        }
         // Now also register the ring filedescriptor itself. This needs to happen in the same thread
         // that will also call the io_uring_enter(...)
         ioUringSubmissionQueue.tryRegisterRingFd();

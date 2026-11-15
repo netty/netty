@@ -77,6 +77,9 @@
     <macosxDeploymentTarget />
     <bundleNativeCode />
     <crossCompile />
+    <!-- The native library links quiche, BoringSSL and the Rust standard library, whose glibc symbol versions we don't
+         control, so it is exempt from the check-native-glibc-versions profile in the parent pom. -->
+    <skipNativeGlibcVersionsCheck>true</skipNativeGlibcVersionsCheck>
   </properties>
 
   <profiles>
