@@ -294,11 +294,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                         } else {
                             String[] algs = SSL.getSigAlgs(ssl);
-                            if (algs == null) {
-                                peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
-                            } else {
-                                peerSupportedSignatureAlgorithms = SignatureAlgorithmConverter.toJavaNames(algs);
-                            }
+                            peerSupportedSignatureAlgorithms = algs == null ?
+                                    EMPTY_STRINGS : SignatureAlgorithmConverter.toJavaNames(algs);
                         }
                     }
                     return peerSupportedSignatureAlgorithms.clone();
