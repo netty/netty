@@ -480,7 +480,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the maximum number of SETTINGS frames that are allowed per window before
      * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
      *
-     * {@code 0} for any of the parameters means no protection should be applied.
+     * If either parameter is {@code 0}, no protection is applied.
      */
     protected B decoderEnforceMaxSettingsFramesPerWindow(
         int maxSettingsFramesPerWindow, int secondsPerWindow) {
@@ -721,6 +721,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         } else {
             maxDecodedSettingsFrames = maxDecodedSettingsFramesPerWindow;
         }
+        // A zero limit or window disables SETTINGS frame protection.
         if (maxDecodedSettingsFrames > 0 && maxDecodedSettingsFramesSecondsPerWindow > 0) {
             decoder = new Http2MaxSettingsFrameDecoder(
                 decoder, maxDecodedSettingsFrames, maxDecodedSettingsFramesSecondsPerWindow);
