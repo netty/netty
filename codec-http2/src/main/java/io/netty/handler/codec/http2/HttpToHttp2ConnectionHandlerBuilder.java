@@ -104,6 +104,13 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     }
 
     @Override
+    public HttpToHttp2ConnectionHandlerBuilder decoderEnforceMaxSettingsFramesPerWindow(
+            int maxSettingsFramesPerWindow, int secondsPerWindow) {
+        return super.decoderEnforceMaxSettingsFramesPerWindow(
+                    maxSettingsFramesPerWindow, secondsPerWindow);
+    }
+
+    @Override
     public HttpToHttp2ConnectionHandlerBuilder encoderEnforceMaxRstFramesPerWindow(int maxRstFramesPerWindow,
             int secondsPerWindow) {
         return super.encoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);

@@ -111,6 +111,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private int maxConsecutiveEmptyFrames = 2;
     private Integer maxDecodedRstFramesPerWindow;
     private int maxDecodedRstFramesSecondsPerWindow = 30;
+    private Integer maxDecodedSettingsFramesPerWindow;
+    private int maxDecodedSettingsFramesSecondsPerWindow = 30;
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
     private int maxSmallContinuationFrames = Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME;
@@ -474,6 +476,21 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Sets the maximum number of SETTINGS frames that are allowed per window before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
+     *
+     * {@code 0} for any of the parameters means no protection should be applied.
+     */
+    protected B decoderEnforceMaxSettingsFramesPerWindow(
+        int maxSettingsFramesPerWindow, int secondsPerWindow) {
+        enforceNonCodecConstraints("decoderEnforceMaxSettingsFramesPerWindow");
+        this.maxDecodedSettingsFramesPerWindow = checkPositiveOrZero(
+            maxSettingsFramesPerWindow, "maxSettingsFramesPerWindow");
+        this.maxDecodedSettingsFramesSecondsPerWindow = checkPositiveOrZero(secondsPerWindow, "secondsPerWindow");
+        return self();
+    }
+
+    /**
      * Sets the maximum number RST frames that are allowed per window before
      * the connection is closed. This allows to protect against the remote peer that will trigger us to generate a flood
      * of RST frames and so use up a lot of CPU.
@@ -691,6 +708,14 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
         if (maxDecodedRstFrames > 0 && maxDecodedRstFramesSecondsPerWindow > 0) {
             decoder = new Http2MaxRstFrameDecoder(decoder, maxDecodedRstFrames, maxDecodedRstFramesSecondsPerWindow);
+        }
+        if (maxDecodedSettingsFramesPerWindow != null
+            && maxDecodedSettingsFramesPerWindow > 0
+            && maxDecodedSettingsFramesSecondsPerWindow > 0) {
+            decoder = new Http2MaxSettingsFrameDecoder(
+                decoder,
+                maxDecodedSettingsFramesPerWindow,
+                maxDecodedSettingsFramesSecondsPerWindow);
         }
         final T handler;
         try {
