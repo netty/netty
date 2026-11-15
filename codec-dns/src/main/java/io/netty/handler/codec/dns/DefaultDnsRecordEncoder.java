@@ -54,6 +54,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodeOptCookieRecord((DnsOptCookieRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
             encodeOptPseudoRecord((DnsOptPseudoRecord) record, out);
+        } else if (record instanceof DnsSvcbRecord) {
+            encodeSvcbRecord((DnsSvcbRecord) record, out);
         } else if (record instanceof DnsRawRecord) {
             encodeRawRecord((DnsRawRecord) record, out);
         } else {
@@ -148,6 +150,27 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     // Package-Private for testing
     static int calculateEcsAddressLength(int sourcePrefixLength, int lowOrderBitsToPreserve) {
         return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0 ? 1 : 0);
+    }
+
+    private void encodeSvcbRecord(DnsSvcbRecord record, ByteBuf out) throws Exception {
+        DefaultDnsSvcbRecord svcbRecord = record instanceof DefaultDnsSvcbRecord ? (DefaultDnsSvcbRecord) record :
+                new DefaultDnsSvcbRecord(record.name(), record.dnsClass(), record.timeToLive(), record.priority(),
+                        record.targetName(), record.params());
+        svcbRecord.validateStructure();
+        svcbRecord.validateSelfConsistency();
+
+        encodeRecord0(record, out);
+
+        int rdLengthIndex = out.writerIndex();
+        out.writeShort(0);
+        DnsSvcbUtil.encodeRdata(record.priority(), record.targetName(),
+                DefaultDnsSvcbRecord.sortedByKey(record.params()), out);
+
+        int rdLength = out.writerIndex() - rdLengthIndex - 2;
+        if (rdLength > 65535) {
+            throw new IllegalArgumentException("SVCB RDATA too long: " + rdLength);
+        }
+        out.setShort(rdLengthIndex, rdLength);
     }
 
     private void encodeRawRecord(DnsRawRecord record, ByteBuf out) throws Exception {
