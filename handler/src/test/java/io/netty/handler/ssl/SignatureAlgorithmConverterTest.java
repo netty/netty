@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -119,5 +120,28 @@ public class SignatureAlgorithmConverterTest {
     @Test
     public void testInvalid() {
         assertNull(SignatureAlgorithmConverter.toJavaName("ThisIsSomethingInvalid"));
+    }
+
+    @Test
+    public void testToJavaNamesKeepsOrderAndSkipsDuplicatesAndUnknownNames() {
+        String[] opensslNames = {
+                "ecdsa_sha256", "rsa_pss_rsae_sha256", "rsa_pkcs1_sha256", "undefined", "ecdsa_sha384",
+                "ThisIsSomethingInvalid", "rsa_pss_rsae_sha256", "ed25519", "ecdsa_sha256"
+        };
+        assertArrayEquals(new String[] { "SHA256withECDSA", "SHA256withRSA", "SHA384withECDSA", "Ed25519" },
+                SignatureAlgorithmConverter.toJavaNames(opensslNames));
+    }
+
+    @Test
+    public void testToJavaNamesWithoutDuplicates() {
+        assertArrayEquals(new String[] { "SHA512withRSA", "SHA256withDSA", "SHA256withECDSA" },
+                SignatureAlgorithmConverter.toJavaNames(
+                        new String[] { "sha512WithRSAEncryption", "dsa_with_SHA256", "ecdsa-with-SHA256" }));
+    }
+
+    @Test
+    public void testToJavaNamesWithNothingToConvert() {
+        assertEquals(0, SignatureAlgorithmConverter.toJavaNames(new String[0]).length);
+        assertEquals(0, SignatureAlgorithmConverter.toJavaNames(new String[] { "undefined", "rsassaPss" }).length);
     }
 }
