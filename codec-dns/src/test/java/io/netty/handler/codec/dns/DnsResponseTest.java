@@ -130,6 +130,25 @@ public class DnsResponseTest {
     }
 
     @Test
+    public void readResponseWithMalformedSvcbRecordReleasesTheResponse() {
+        EmbeddedChannel embedder = new EmbeddedChannel(
+                new DatagramDnsResponseDecoder(new DefaultDnsRecordDecoder(new SvcbDecoderConfig())));
+        ByteBuf packet = newHeader(embedder, 0x8180, 1, 2);
+        // An A record, decoded as a DnsRawRecord holding a slice of the packet.
+        packet.writeBytes(new byte[] { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 });
+        packet.writeShort(1).writeShort(1).writeInt(60).writeShort(4).writeBytes(new byte[] { (byte) 192, 0, 2, 1 });
+        // An HTTPS record whose RDATA is too short.
+        packet.writeShort(0xc00c).writeShort(65).writeShort(1).writeInt(60).writeShort(2).writeShort(1);
+        try {
+            assertThrows(CorruptedFrameException.class,
+                    () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
+            assertEquals(0, packet.refCnt());
+        } finally {
+            assertFalse(embedder.finish());
+        }
+    }
+
+    @Test
     public void rejectTooManyRecordsInResponse() {
         // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
         for (int section = 0; section < 4; section++) {

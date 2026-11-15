@@ -19,9 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -206,6 +210,141 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(expected, decoder.decodeName0(buffer));
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeSvcbRecordRawByDefault() throws Exception {
+        assertSvcbDecodedAsRaw(DnsRecordDecoder.DEFAULT, svcbRecordBytes(new SvcParam.Port(8443)));
+    }
+
+    @Test
+    public void testDecodeSvcbRecordRawWhenDisabled() throws Exception {
+        assertSvcbDecodedAsRaw(new DefaultDnsRecordDecoder(null), svcbRecordBytes(new SvcParam.Port(8443)));
+    }
+
+    @Test
+    public void testDecodeMalformedSvcbRecordRawWhenDisabled() throws Exception {
+        assertSvcbDecodedAsRaw(DnsRecordDecoder.DEFAULT, malformedSvcbRecordBytes());
+        assertSvcbDecodedAsRaw(new DefaultDnsRecordDecoder(null), malformedSvcbRecordBytes());
+    }
+
+    @Test
+    public void testDecodeSvcbRecordWhenEnabled() throws Exception {
+        DnsRecordDecoder decoder = new DefaultDnsRecordDecoder(new SvcbDecoderConfig());
+        ByteBuf in = Unpooled.buffer();
+        in.writeBytes(svcbRecordBytes(new SvcParam.Port(8443)));
+        in.writeBytes(svcbRecordBytes(new SvcParam.Port(443)));
+        try {
+            DnsRecord first = decoder.decodeRecord(in);
+            DnsRecord second = decoder.decodeRecord(in);
+
+            assertThat(first).isInstanceOf(DefaultDnsSvcbRecord.class);
+            DnsSvcbRecord record = (DnsSvcbRecord) first;
+            assertThat(record.name()).isEqualTo("example.com.");
+            assertThat(record.type()).isEqualTo(DnsRecordType.SVCB);
+            assertThat(record.dnsClass()).isEqualTo(DnsRecord.CLASS_IN);
+            assertThat(record.timeToLive()).isEqualTo(300);
+            assertThat(record.priority()).isEqualTo(1);
+            assertThat(record.targetName()).isEqualTo("svc.example.com.");
+            assertThat(((SvcParam.Port) record.params().get(0)).port()).isEqualTo(8443);
+
+            assertThat(second).isInstanceOf(DefaultDnsSvcbRecord.class);
+            assertThat(((SvcParam.Port) ((DnsSvcbRecord) second).params().get(0)).port()).isEqualTo(443);
+            assertThat(in.isReadable()).isFalse();
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void testDecodeMalformedSvcbRecordWhenEnabled() {
+        DnsRecordDecoder decoder = new DefaultDnsRecordDecoder(new SvcbDecoderConfig());
+        ByteBuf in = Unpooled.wrappedBuffer(malformedSvcbRecordBytes());
+        try {
+            assertThatThrownBy(() -> decoder.decodeRecord(in)).isInstanceOf(CorruptedFrameException.class);
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void testDecodeHttpsRecordRawByDefaultOrWhenDisabled() throws Exception {
+        assertSvcbDecodedAsRaw(DnsRecordDecoder.DEFAULT, httpsRecordBytes(), DnsRecordType.HTTPS);
+        assertSvcbDecodedAsRaw(new DefaultDnsRecordDecoder(null), httpsRecordBytes(), DnsRecordType.HTTPS);
+    }
+
+    @Test
+    public void testDecodeHttpsRecordWhenEnabled() throws Exception {
+        ByteBuf in = Unpooled.wrappedBuffer(httpsRecordBytes());
+        try {
+            DnsRecord record = new DefaultDnsRecordDecoder(new SvcbDecoderConfig()).decodeRecord(in);
+
+            assertThat(record).isInstanceOf(DefaultDnsSvcbRecord.class);
+            assertThat(record.type()).isEqualTo(DnsRecordType.HTTPS);
+            assertThat(((SvcParam.Port) ((DnsSvcbRecord) record).params().get(0)).port()).isEqualTo(8443);
+        } finally {
+            in.release();
+        }
+    }
+
+    private static byte[] httpsRecordBytes() throws Exception {
+        ByteBuf out = Unpooled.buffer();
+        try {
+            DnsRecordEncoder.DEFAULT.encodeRecord(new DefaultDnsSvcbRecord("example.com.", DnsRecordType.HTTPS, 300,
+                    1, "svc.example.com.", Collections.<SvcParam>singletonList(new SvcParam.Port(8443))), out);
+            return ByteBufUtil.getBytes(out);
+        } finally {
+            out.release();
+        }
+    }
+
+    private static void assertSvcbDecodedAsRaw(DnsRecordDecoder decoder, byte[] recordBytes) throws Exception {
+        assertSvcbDecodedAsRaw(decoder, recordBytes, DnsRecordType.SVCB);
+    }
+
+    private static void assertSvcbDecodedAsRaw(DnsRecordDecoder decoder, byte[] recordBytes,
+                                               DnsRecordType type) throws Exception {
+        ByteBuf in = Unpooled.wrappedBuffer(recordBytes);
+        DnsRecord record = null;
+        try {
+            record = decoder.decodeRecord(in);
+            assertThat(record).isInstanceOf(DefaultDnsRawRecord.class);
+            assertThat(record.type()).isEqualTo(type);
+            // owner name "example.com." (13) + type (2) + class (2) + ttl (4) + rdlength (2)
+            assertThat(ByteBufUtil.getBytes(((DnsRawRecord) record).content()))
+                    .containsExactly(Arrays.copyOfRange(recordBytes, 23, recordBytes.length));
+            assertThat(in.isReadable()).isFalse();
+        } finally {
+            ReferenceCountUtil.release(record);
+            in.release();
+        }
+    }
+
+    private static byte[] svcbRecordBytes(SvcParam param) throws Exception {
+        ByteBuf out = Unpooled.buffer();
+        try {
+            DnsRecordEncoder.DEFAULT.encodeRecord(new DefaultDnsSvcbRecord("example.com.", 300, 1,
+                    "svc.example.com.", Collections.singletonList(param)), out);
+            return ByteBufUtil.getBytes(out);
+        } finally {
+            out.release();
+        }
+    }
+
+    private static byte[] malformedSvcbRecordBytes() {
+        ByteBuf out = Unpooled.buffer();
+        try {
+            out.writeBytes(new byte[] { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 });
+            out.writeShort(DnsRecordType.SVCB.intValue());
+            out.writeShort(DnsRecord.CLASS_IN);
+            out.writeInt(300);
+            out.writeShort(7);
+            // SvcPriority 1, root TargetName, then a port SvcParam with a 1-byte value
+            out.writeBytes(new byte[] { 0, 1, 0, 0, 3, 0, 1 });
+            return ByteBufUtil.getBytes(out);
+        } finally {
+            out.release();
         }
     }
 

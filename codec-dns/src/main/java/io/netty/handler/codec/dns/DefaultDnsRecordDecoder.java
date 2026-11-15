@@ -17,6 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -27,10 +28,34 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     static final String ROOT = ".";
 
+    private final boolean decodeSvcbRecords;
+    private final int maxSvcbParams;
+    private final int maxSvcbAlpnIds;
+    private final int maxSvcbHintAddresses;
+
+    /**
+     * Creates a new instance. SVCB and HTTPS records are decoded as {@link DnsRawRecord}s.
+     */
+    protected DefaultDnsRecordDecoder() {
+        this(null);
+    }
+
     /**
      * Creates a new instance.
+     *
+     * @param svcbDecoderConfig the configuration to decode SVCB and HTTPS records
+     *                          (<a href="https://www.rfc-editor.org/rfc/rfc9460.html">RFC 9460</a>) as
+     *                          {@link DnsSvcbRecord}s, or {@code null} to decode them as {@link DnsRawRecord}s. Its
+     *                          values are copied. A malformed SVCB or HTTPS record, or one exceeding a limit of the
+     *                          configuration, makes decoding fail with a {@link CorruptedFrameException}.
      */
-    protected DefaultDnsRecordDecoder() { }
+    @UnstableApi
+    public DefaultDnsRecordDecoder(SvcbDecoderConfig svcbDecoderConfig) {
+        decodeSvcbRecords = svcbDecoderConfig != null;
+        maxSvcbParams = decodeSvcbRecords ? svcbDecoderConfig.maxParams() : 0;
+        maxSvcbAlpnIds = decodeSvcbRecords ? svcbDecoderConfig.maxAlpnIds() : 0;
+        maxSvcbHintAddresses = decodeSvcbRecords ? svcbDecoderConfig.maxHintAddresses() : 0;
+    }
 
     @Override
     public final DnsQuestion decodeQuestion(ByteBuf in) throws Exception {
@@ -87,6 +112,10 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        if (decodeSvcbRecords && (type == DnsRecordType.SVCB || type == DnsRecordType.HTTPS)) {
+            return DnsSvcbUtil.decodeRecord(name, type, dnsClass, timeToLive, in, offset, length, maxSvcbParams,
+                    maxSvcbAlpnIds, maxSvcbHintAddresses);
+        }
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.
