@@ -92,4 +92,37 @@ public class Http2MaxSettingsFrameListenerTest {
         verify(frameListener, times(1)).onSettingsAckRead(ctx);
         verify(frameListener, times(1)).onSettingsRead(eq(ctx), eq(new Http2Settings()));
     }
+
+    @Test
+    public void testAllSettingsFramesWithinLimitAreForwarded() throws Exception {
+        listener = new Http2MaxSettingsFrameListener(frameListener, 3, 10, ticker);
+
+        listener.onSettingsRead(ctx, new Http2Settings());
+        listener.onSettingsRead(ctx, new Http2Settings());
+        listener.onSettingsRead(ctx, new Http2Settings());
+
+        verify(frameListener, times(3)).onSettingsRead(eq(ctx), eq(new Http2Settings()));
+    }
+
+    @Test
+    public void testSettingsFramesAreCountedAcrossMultipleBursts() throws Exception {
+        listener = new Http2MaxSettingsFrameListener(frameListener, 5, 10, ticker);
+
+        listener.onSettingsRead(ctx, new Http2Settings());
+        listener.onSettingsRead(ctx, new Http2Settings());
+
+        ticker.advance(1, TimeUnit.SECONDS);
+
+        listener.onSettingsRead(ctx, new Http2Settings());
+        listener.onSettingsRead(ctx, new Http2Settings());
+        listener.onSettingsRead(ctx, new Http2Settings());
+
+        Http2Exception ex = assertThrows(
+            Http2Exception.class,
+            () -> listener.onSettingsRead(ctx, new Http2Settings()));
+
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM, ex.error());
+
+        verify(frameListener, times(5)).onSettingsRead(eq(ctx), eq(new Http2Settings()));
+    }
 }

@@ -31,6 +31,10 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
         this.delegate = checkNotNull(delegate, "delegate");
     }
 
+    Http2ConnectionDecoder delegate() {
+        return delegate;
+    }
+
     @Override
     public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
         delegate.lifecycleManager(lifecycleManager);

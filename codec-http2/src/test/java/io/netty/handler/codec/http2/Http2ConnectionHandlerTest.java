@@ -994,10 +994,20 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void settingsFrameProtectionIsDisabledByDefault() {
+    public void settingsFrameProtectionIsEnabledByDefaultForServer() {
         Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
             .frameListener(new Http2FrameAdapter())
             .server(true)
+            .build();
+
+        assertTrue(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
+    }
+
+    @Test
+    public void settingsFrameProtectionIsDisabledByDefaultForClient() {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+            .frameListener(new Http2FrameAdapter())
+            .server(false)
             .build();
 
         assertFalse(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
@@ -1028,6 +1038,7 @@ public class Http2ConnectionHandlerTest {
         Http2MaxSettingsFrameDecoder settingsDecoder =
             (Http2MaxSettingsFrameDecoder) handler.decoder();
 
+        assertTrue(settingsDecoder.delegate() instanceof Http2MaxRstFrameDecoder);
         assertTrue(settingsDecoder.frameListener0() instanceof Http2MaxSettingsFrameListener);
     }
 
