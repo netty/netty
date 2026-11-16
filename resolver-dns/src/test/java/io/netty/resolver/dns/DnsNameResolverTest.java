@@ -3580,6 +3580,57 @@ public class DnsNameResolverTest {
         }
     }
 
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testAddressRecordLengthMustMatchType() throws Exception {
+        final byte[] ipv4 = { 10, 0, 0, 1 };
+        final byte[] ipv6 = NetUtil.createByteArrayFromIpAddressString("::1");
+        final Channel server = new Bootstrap()
+                .group(group)
+                .channel(NioDatagramChannel.class)
+                .handler(new ChannelInitializer<DatagramChannel>() {
+                    @Override
+                    protected void initChannel(DatagramChannel ch) {
+                        ch.pipeline().addLast(new DatagramDnsQueryDecoder(), new DatagramDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DatagramDnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsQuery query) {
+                                        // A with a valid IPv4 address and an IPv6 one, AAAA with an IPv4 address.
+                                        if (query.recordAt(DnsSection.QUESTION).type() == A) {
+                                            DatagramDnsResponse response = answer(query, ipv4);
+                                            response.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                                                    query.recordAt(DnsSection.QUESTION).name(), A, 60,
+                                                    Unpooled.wrappedBuffer(ipv6)));
+                                            ctx.writeAndFlush(response);
+                                        } else {
+                                            ctx.writeAndFlush(answer(query, ipv4));
+                                        }
+                                    }
+                                });
+                    }
+                })
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(DnsNameResolverChannelStrategy.ChannelPerResolver)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
+                            (InetSocketAddress) server.localAddress()))
+                    .build();
+
+            List<InetAddress> addresses = resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+
+            assertEquals(1, addresses.size());
+            assertArrayEquals(ipv4, addresses.get(0).getAddress());
+        } finally {
+            if (resolver != null) {
+                resolver.close();
+            }
+            server.close().sync();
+        }
+    }
+
     private static DatagramDnsResponse answer(DatagramDnsQuery query, byte[] address) {
         DnsQuestion question = query.recordAt(DnsSection.QUESTION);
         DatagramDnsResponse response = new DatagramDnsResponse(query.recipient(), query.sender(), query.id());
