@@ -31,5 +31,5 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 RUN echo 'export JAVA_HOME="$HOME/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.100.0
 RUN . "$HOME/.cargo/env"

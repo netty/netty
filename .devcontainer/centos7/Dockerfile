@@ -109,12 +109,14 @@ ARG rustup_version=1.29.1
 ARG rustup_sha256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
 ENV RUSTUP_VERSION=$rustup_version
 ENV RUSTUP_SHA256=$rustup_sha256
+ARG rust_version=1.100.0
+ENV RUST_VERSION=$rust_version
 
 # install rust and setup PATH
 RUN curl -fsSL -o /tmp/rustup-init https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/x86_64-unknown-linux-gnu/rustup-init && \
     echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - && \
     chmod +x /tmp/rustup-init && \
-    /tmp/rustup-init -y && \
+    /tmp/rustup-init -y --default-toolchain $RUST_VERSION && \
     rm -f /tmp/rustup-init
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
