@@ -1643,6 +1643,16 @@ public class DnsNameResolver extends InetNameResolver {
         return (Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>>) promise;
     }
 
+    /**
+     * Returns the channel to use for the queries of one resolution, as selected by the
+     * {@link DnsNameResolverChannelStrategy}. For testing purposes only; it might go away.
+     *
+     * @param resolutionFuture completed when the resolution completes, which closes a per-resolution channel
+     */
+    final <T> ChannelFuture nextResolveChannel(Future<T> resolutionFuture) {
+        return resolveChannelProvider.nextResolveChannel(resolutionFuture);
+    }
+
     final DnsServerAddressStream newNameServerAddressStream(String hostname) {
         return dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
     }
