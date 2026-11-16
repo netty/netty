@@ -15,6 +15,10 @@
 # under the License.
 # ----------------------------------------------------------------------------
 
+# Checks that native code can be loaded and called: invokes the given static method (which may also be non-public, and
+# return something to print), with all jars in the given directory (and below) on the classpath. Works with the
+# bash of git for Windows too.
+
 set -e
 
 if [ "$#" -ne 3 ]; then
@@ -23,14 +27,18 @@ if [ "$#" -ne 3 ]; then
 fi
 
 TEMP_FILE=$(mktemp)
-
 cat <<EOT > "$TEMP_FILE"
 public class Load {
     public static void main(String... args) {
         try {
             System.out.println("Invoking " + args[0] + "." + args[1] + "();");
             Class<?> clazz = Class.forName(args[0]);
-            clazz.getDeclaredMethod(args[1]).invoke(null);
+            java.lang.reflect.Method method = clazz.getDeclaredMethod(args[1]);
+            method.setAccessible(true);
+            Object result = method.invoke(null);
+            if (result != null) {
+                System.out.println("Returned: " + result);
+            }
         } catch (Throwable cause) {
             System.out.println("Native loading failed");
             cause.printStackTrace();
@@ -40,11 +48,16 @@ public class Load {
     }
 }
 EOT
-
 JAVA_FILE="$TEMP_FILE".java
 mv "$TEMP_FILE" "$JAVA_FILE"
-CLASSPATH=$(find "$1" -name '*.jar' | grep -v tests.jar | grep -v sources.jar | tr '\n' ':')
-java -cp "$CLASSPATH" "$JAVA_FILE" "$2" "$3"
-EXIT_CODE=$?
-rm "$JAVA_FILE"
+if command -v cygpath > /dev/null 2>&1; then
+    # Windows: java wants Windows paths, separated by ;
+    CLASSPATH=$(find "$1" -name '*.jar' | grep -v tests.jar | grep -v sources.jar | while read -r jar; do cygpath -w "$jar"; done | tr '\n' ';')
+    JAVA_FILE=$(cygpath -w "$JAVA_FILE")
+else
+    CLASSPATH=$(find "$1" -name '*.jar' | grep -v tests.jar | grep -v sources.jar | tr '\n' ':')
+fi
+EXIT_CODE=0
+java -cp "$CLASSPATH" "$JAVA_FILE" "$2" "$3" || EXIT_CODE=$?
+rm -f "$JAVA_FILE"
 exit "$EXIT_CODE"

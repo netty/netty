@@ -74,6 +74,11 @@ services:
       - ..:/code
     command: /bin/bash -cl "./mvnw -B -ntp -Pcross-compile-all,native-dependencies clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
+  # The native modules (and what they depend on) for all targets, installed into ~/.m2, see ci-verify-load.yml
+  cross-compile-all-install-native:
+    <<: *cross-compile-common
+    command: /bin/bash -cl "./mvnw -B -ntp -Pcross-compile-all -pl transport-native-epoll,transport-native-io_uring,transport-native-kqueue,resolver-dns-native-macos,codec-native-quic -am clean install -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
   cross-compile-all-stage-release:
     <<: *cross-compile-common
     volumes:
