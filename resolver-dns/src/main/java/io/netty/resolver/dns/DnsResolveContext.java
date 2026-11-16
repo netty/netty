@@ -475,7 +475,7 @@ abstract class DnsResolveContext<T> {
         f.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future -> {
             queriesInProgress.remove(future);
 
-            if (promise.isDone() || future.isCancelled()) {
+            if (future.isCancelled() || promise.isDone() && !completeEarly) {
                 queryLifecycleObserver.queryCancelled(allowedQueries);
 
                 // Check if we need to release the envelope itself. If the query was cancelled the getNow() will
