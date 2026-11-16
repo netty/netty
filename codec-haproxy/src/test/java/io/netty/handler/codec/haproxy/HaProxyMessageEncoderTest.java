@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.haproxy.HAProxyTLV.Type;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
@@ -295,6 +296,66 @@ public class HaProxyMessageEncoderTest {
         assertEquals(arbitrary, tlv.readSlice(bufLength));
 
         byteBuf.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testTLVEncodeMaxLength() {
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
+
+        // 12 bytes of addresses and ports + 3 bytes of TLV type and length + content = 65535
+        HAProxyTLV tlv = new HAProxyTLV(Type.OTHER, (byte) 0xE0, Unpooled.wrappedBuffer(new byte[65520]));
+        HAProxyMessage message = new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
+                "192.168.0.1", "192.168.0.11", 56324, 443, Collections.singletonList(tlv));
+        assertTrue(ch.writeOutbound(message));
+
+        ByteBuf byteBuf = ch.readOutbound();
+        assertEquals(65535, byteBuf.getUnsignedShort(14));
+        assertEquals(V2_HEADER_BYTES_LENGTH + 65535, byteBuf.readableBytes());
+        assertEquals(65520, byteBuf.getUnsignedShort(V2_HEADER_BYTES_LENGTH + IPv4_ADDRESS_BYTES_LENGTH + 1));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testTLVEncodeTooLong() {
+        final EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
+
+        // A TLV length of 65536 would be written as 0 and its content parsed as further TLVs by the receiver.
+        HAProxyTLV tlv = new HAProxyTLV(Type.OTHER, (byte) 0xE0, Unpooled.wrappedBuffer(new byte[65536]));
+        final HAProxyMessage message = new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
+                "192.168.0.1", "192.168.0.11", 56324, 443, Collections.singletonList(tlv));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeOutbound(message);
+            }
+        });
+        assertEquals(0, message.refCnt());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testTLVsEncodeTooLong() {
+        final EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
+
+        // Each TLV fits in 16 bits but the address and TLV section does not.
+        List<HAProxyTLV> tlvs = new ArrayList<HAProxyTLV>();
+        tlvs.add(new HAProxyTLV(Type.OTHER, (byte) 0xE0, Unpooled.wrappedBuffer(new byte[40000])));
+        tlvs.add(new HAProxyTLV(Type.OTHER, (byte) 0xE1, Unpooled.wrappedBuffer(new byte[40000])));
+        final HAProxyMessage message = new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                "/var/run/src.sock", "/var/run/dst.sock", 0, 0, tlvs);
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeOutbound(message);
+            }
+        });
+        assertEquals(0, message.refCnt());
         assertFalse(ch.finish());
     }
 
