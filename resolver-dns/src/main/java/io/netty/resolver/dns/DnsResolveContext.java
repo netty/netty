@@ -255,9 +255,9 @@ abstract class DnsResolveContext<T> {
                             }
                         }
                     } else {
-                        if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
-                                    searchDomains));
+                        final UnknownHostException failure = searchDomainFailure(cause, searchDomains);
+                        if (failure != null) {
+                            promise.tryFailure(failure);
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
                             newPromise.addListener(this);
@@ -273,6 +273,18 @@ abstract class DnsResolveContext<T> {
             });
             doSearchDomainQuery(initialHostname, searchDomainPromise);
         }
+    }
+
+    /**
+     * Returns the exception to fail the resolution with when a search domain attempt failed with {@code cause}, or
+     * {@code null} to continue with the next search domain. By default, only transport and timeout errors stop
+     * the search.
+     */
+    UnknownHostException searchDomainFailure(Throwable cause, String[] searchDomains) {
+        if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
+            return new SearchDomainUnknownHostException(cause, hostname, expectedTypes, searchDomains);
+        }
+        return null;
     }
 
     private boolean hasNDots() {
