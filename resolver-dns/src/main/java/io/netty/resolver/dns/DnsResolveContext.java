@@ -240,6 +240,19 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
+     * SVCB specific: called once all the records of a NOERROR {@code response} to {@code question} have been converted
+     * and cached, since the validity of an SVCB RRset depends on all its records
+     * (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-2.2">RFC 9460, Section 2.2</a>), and the absence
+     * of records is cached with the SOA of the response
+     * (<a href="https://www.rfc-editor.org/rfc/rfc2308.html#section-5">RFC 2308, Section 5</a>). Returns {@code true}
+     * to complete the resolution early, like {@link #isCompleteEarly} does for a record, which also applies to a
+     * response without records; {@code false} by default.
+     */
+    boolean afterResponseRecords(DnsQuestion question, DnsResponse response) {
+        return false;
+    }
+
+    /**
      * Called once no more queries are in progress, before the resolution completes. Returns {@code true} if the
      * subclass completes {@code promise} itself, now or later: {@code results} are then released and the resolution
      * ends there, so a subclass completing later must copy or retain what it needs. Returns {@code false} by default.
@@ -966,6 +979,9 @@ abstract class DnsResolveContext<T> {
                 ReferenceCountUtil.release(converted);
             }
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
+        }
+        if (afterResponseRecords(question, response)) {
+            this.completeEarly = true;
         }
 
         if (found && !cnameNeedsFollow) {
