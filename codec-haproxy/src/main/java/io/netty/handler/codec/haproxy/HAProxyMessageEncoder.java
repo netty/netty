@@ -17,6 +17,7 @@ package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -37,6 +38,9 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     // Length for source/destination addresses for the UNIX family must be 108 bytes each.
     static final int UNIX_ADDRESS_BYTES_LENGTH = 108;
     static final int TOTAL_UNIX_ADDRESS_BYTES_LENGTH = UNIX_ADDRESS_BYTES_LENGTH * 2;
+
+    // The v2 header carries the length of the address and TLV section in 16 bits.
+    private static final int V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH = 65535;
 
     public static final HAProxyMessageEncoder INSTANCE = new HAProxyMessageEncoder();
 
@@ -93,7 +97,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 byte[] srcAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
                 byte[] dstAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
                 // srcAddrLen + dstAddrLen + 4 (srcPort + dstPort) + numTlvBytes
-                out.writeShort(srcAddrBytes.length + dstAddrBytes.length + 4 + msg.tlvNumBytes());
+                out.writeShort(checkV2Length(srcAddrBytes.length + dstAddrBytes.length + 4 + msg.tlvNumBytes()));
                 out.writeBytes(srcAddrBytes);
                 out.writeBytes(dstAddrBytes);
                 out.writeShort(msg.sourcePort());
@@ -101,7 +105,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 encodeTlvs(msg.tlvs(), out);
                 break;
             case AF_UNIX:
-                out.writeShort(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes());
+                out.writeShort(checkV2Length(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes()));
                 int srcAddrBytesWritten = out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
                 out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - srcAddrBytesWritten);
                 int dstAddrBytesWritten = out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
@@ -114,6 +118,18 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
             default:
                 throw new HAProxyProtocolException("unexpected addrFamily");
         }
+    }
+
+    /**
+     * Every TLV is part of the address and TLV section, so bounding the section length also bounds the
+     * 16-bit length of each (nested) TLV.
+     */
+    private static int checkV2Length(int length) {
+        if (length > V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH) {
+            throw new EncoderException("address and TLV section too long: " + length +
+                    " (expected: <= " + V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH + ')');
+        }
+        return length;
     }
 
     private static void encodeTlv(HAProxyTLV haProxyTLV, ByteBuf out) {
