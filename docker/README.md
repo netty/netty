@@ -42,6 +42,21 @@ modules and environment of a target. The minimum versions are:
 | macOS x86_64, aarch64 | macOS 11.0 |
 | Windows x86_64 | Windows 10 (UCRT) |
 
+To build the native libraries for all targets at once, in one maven build, use the `cross-compile-all` profile of
+the native modules:
+
+```
+docker compose -f docker/docker-compose.cross.yaml run --rm cross-compile-shell -c \
+  "./mvnw -B -ntp -Pcross-compile-all clean package -DskipTests"
+```
+
+It builds (and attaches) the jars of all classifiers: `linux-x86_64`, `linux-aarch_64` and `linux-riscv64` for
+epoll and io_uring, `osx-x86_64` and `osx-aarch_64` for kqueue and the macOS DNS resolver, these five for
+unix-common, and all but riscv64 plus `windows-x86_64` for quic. The steps for a target are the same as for the
+build of only one target, and happen in `target/cross/<classifier>` of a module, see `cross-compile/cross-compile-all.xml`
+and the `cross-compile-all` profiles. `cross-compile/env.sh <target> <command>` runs a command in the environment of
+a target, which is what both use.
+
 Running `cross-compile/build.sh` outside of the image also works, given zig, Rust (with the standard libraries of the
 targets), cmake, ninja, nasm, autotools, libclang (for bindgen), patchelf and python3 on the `PATH`.
 

@@ -954,6 +954,112 @@
         </plugins>
       </build>
     </profile>
+    <!-- Builds the static library for all the targets we release native libraries for, in one build, with the cross
+         compile toolchain of docker/Dockerfile.cross_compile (see docker/README.md):
+
+           ./mvnw -Pcross-compile-all clean package
+
+         Declared last, so it can replace the executions of the profile of the host. -->
+    <profile>
+      <id>cross-compile-all</id>
+      <properties>
+        <crossCompileScripts>${project.basedir}/../docker/cross-compile</crossCompileScripts>
+        <crossDir>${project.build.directory}/cross</crossDir>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- The executions of the profile of the host -->
+              <execution>
+                <id>native-jar-early</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>native-jar</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>build-native-lib</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>build-native-libs-cross</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <macrodef name="build-native-lib">
+                      <attribute name="target" />
+                      <attribute name="triple" />
+                      <attribute name="platform" />
+                      <sequential>
+                        <exec executable="${crossCompileScripts}/env.sh" failonerror="true" dir="${project.basedir}">
+                          <arg value="@{target}" />
+                          <arg value="${exe.make}" />
+                          <env key="CC" value="@{triple}-gcc" />
+                          <env key="AR" value="@{triple}-ar" />
+                          <env key="LIB_DIR" value="${crossDir}/@{target}/lib" />
+                          <env key="OBJ_DIR" value="${crossDir}/@{target}/obj" />
+                          <env key="JNI_PLATFORM" value="@{platform}" />
+                          <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
+                          <env key="LIB_NAME" value="${nativeLibName}" />
+                        </exec>
+                      </sequential>
+                    </macrodef>
+                    <build-native-lib target="linux-x86_64" triple="x86_64-linux-gnu" platform="linux" />
+                    <build-native-lib target="linux-aarch_64" triple="aarch64-linux-gnu" platform="linux" />
+                    <build-native-lib target="linux-riscv64" triple="riscv64-linux-gnu" platform="linux" />
+                    <build-native-lib target="osx-x86_64" triple="x86_64-apple-darwin" platform="darwin" />
+                    <build-native-lib target="osx-aarch_64" triple="aarch64-apple-darwin" platform="darwin" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- The same as native-jar, for every target -->
+              <execution>
+                <id>native-jars-cross</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <macrodef name="native-jar">
+                      <attribute name="target" />
+                      <sequential>
+                        <delete dir="${crossDir}/@{target}/jar" />
+                        <copy todir="${crossDir}/@{target}/jar">
+                          <zipfileset src="${defaultJarFile}" />
+                        </copy>
+                        <copy todir="${crossDir}/@{target}/jar/META-INF/native/lib" file="${crossDir}/@{target}/lib/${nativeLibName}.a" />
+                        <copy todir="${crossDir}/@{target}/jar" includeEmptyDirs="false">
+                          <zipfileset dir="${nativeIncludeDir}" />
+                          <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                        </copy>
+                        <copy todir="${crossDir}/@{target}/jar" includeEmptyDirs="false">
+                          <zipfileset dir="${jniUtilIncludeDir}" />
+                          <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                        </copy>
+                        <jar destfile="${project.build.directory}/${project.build.finalName}-@{target}.jar" manifest="${crossDir}/@{target}/jar/META-INF/MANIFEST.MF" basedir="${crossDir}/@{target}/jar" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                        <attachartifact file="${project.build.directory}/${project.build.finalName}-@{target}.jar" classifier="@{target}" type="jar" />
+                      </sequential>
+                    </macrodef>
+                    <native-jar target="linux-x86_64" />
+                    <native-jar target="linux-aarch_64" />
+                    <native-jar target="linux-riscv64" />
+                    <native-jar target="osx-x86_64" />
+                    <native-jar target="osx-aarch_64" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <dependencies>
