@@ -62,6 +62,26 @@ services:
       - ..:/code
     command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && docker/cross-compile/build.sh \"$${NETTY_CROSS_TARGET}\" -am clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
 
+  # The whole project, with the native libraries of all targets (the cross-compile-all profiles of the native modules),
+  # and netty-all / netty-codec-http3 depending on all of them (native-dependencies profile).
+  cross-compile-all-stage-snapshot:
+    <<: *cross-compile-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "./mvnw -B -ntp -Pcross-compile-all,native-dependencies clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
+  cross-compile-all-stage-release:
+    <<: *cross-compile-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.m2:/root/.m2
+      - ..:/code
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp -Pcross-compile-all,native-dependencies clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
+
   cross-compile-shell:
     <<: *cross-compile-common
     entrypoint: /bin/bash

@@ -37,35 +37,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # All native libraries are cross compiled in one docker image, see docker/Dockerfile.cross_compile and
-  # docker/cross-compile/build.sh. linux-x86_64 builds the whole project, so it also provides all the other artifacts.
+  # The whole project, with the native libraries of all targets, is built in one maven build in the cross compile
+  # docker image, see docker/Dockerfile.cross_compile and the cross-compile-all profiles of the native modules.
   stage-snapshot:
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - setup: linux-x86_64-java11
-            target: linux-x86_64
-            modules: all
-          - setup: linux-aarch64
-            target: linux-aarch_64
-          - setup: linux-riscv64
-            target: linux-riscv64
-          - setup: macos-x86_64-java11
-            target: osx-x86_64
-          - setup: macos-aarch64-java11
-            target: osx-aarch_64
-          - setup: windows-x86_64
-            target: windows-x86_64
-
-    name: stage-snapshot-${{ matrix.setup }}
+    name: stage-snapshot
     env:
       # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
       # entries in the docker-compose*.yaml files are actually honored.
       COMPOSE_BAKE: "true"
-      NETTY_CROSS_TARGET: ${{ matrix.target }}
-      NETTY_CROSS_MODULES: ${{ matrix.modules }}
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -107,13 +87,13 @@ jobs:
         run: docker compose -f docker/docker-compose.cross.yaml build
 
       - name: Stage snapshots to local staging directory
-        run: docker compose -f docker/docker-compose.cross.yaml run cross-compile-stage-snapshot
+        run: docker compose -f docker/docker-compose.cross.yaml run cross-compile-all-stage-snapshot
 
       # Pinned to v6.0.0
       - name: Upload local staging directory
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: ${{ matrix.setup }}-local-staging
+          name: local-staging
           path: ~/local-staging
           if-no-files-found: error
           include-hidden-files: true
@@ -155,65 +135,12 @@ jobs:
               "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
-      # Hardcode the staging artifacts that need to be downloaded.
-      # These must match the matrix setups. There is currently no way to pull this out of the config.
       # Pinned to v7.0.0
-      - name: Download windows_x86_64 staging directory
+      - name: Download local staging directory
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
-          name: windows-x86_64-local-staging
-          path: ~/windows-x86_64-local-staging
-
-      # Pinned to v7.0.0
-      - name: Download macos-aarch64-java11 staging directory
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: macos-aarch64-java11-local-staging
-          path: ~/macos-aarch64-java11-local-staging
-
-      # Pinned to v7.0.0
-      - name: Download macos-x86_64-java11 staging directory
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: macos-x86_64-java11-local-staging
-          path: ~/macos-x86_64-java11-local-staging
-
-      # Pinned to v7.0.0
-      - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: linux-aarch64-local-staging
-          path: ~/linux-aarch64-local-staging
-
-      # Pinned to v7.0.0
-      - name: Download linux-riscv64 staging directory
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: linux-riscv64-local-staging
-          path: ~/linux-riscv64-local-staging
-
-      # Pinned to v7.0.0
-      - name: Download linux-x86_64-java11 staging directory
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: linux-x86_64-java11-local-staging
-          path: ~/linux-x86_64-java11-local-staging
-
-      - name: Copy previous build artifacts to local maven repository
-        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
-
-      - name: Generate netty-codec-http3 and deploy to local staging.
-        run: |
-          mkdir -p ~/codec-http3-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/codec-http3-local-staging -DskipTests=true
-
-      - name: Generate netty-all and deploy to local staging.
-        run: |
-          mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
-
-      - name: Merge staging repositories
-        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
+          name: local-staging
+          path: ~/local-staging
 
       - name: Deploy local staged artifacts
         run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots
