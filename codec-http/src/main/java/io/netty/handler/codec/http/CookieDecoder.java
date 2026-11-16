@@ -154,7 +154,7 @@ public final class CookieDecoder {
                 } else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
                     path = value;
                 } else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
-                    Date date = DateFormatter.parseHttpDate(value);
+                    Date date = DateFormatter.parseCookieDate(value, 0, value.length());
                     if (date != null) {
                         long maxAgeMillis = date.getTime() - System.currentTimeMillis();
                         maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
