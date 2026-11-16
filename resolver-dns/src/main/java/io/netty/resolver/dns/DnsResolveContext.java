@@ -229,6 +229,15 @@ abstract class DnsResolveContext<T> {
     abstract void cache(String hostname, DnsRecord[] additionals,
                         UnknownHostException cause);
 
+    /**
+     * SVCB specific: returns the name to query next with the same type after {@code converted}, or {@code null}.
+     * Used to follow AliasMode records (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-6">RFC 9460,
+     * Section 6</a>).
+     */
+    String followUpName(DnsQuestion question, T converted) {
+        return null;
+    }
+
     void resolve(final Promise<List<T>> promise) {
         final String[] searchDomains = parent.searchDomains();
         if (searchDomains.length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
@@ -832,6 +841,7 @@ abstract class DnsResolveContext<T> {
         boolean found = false;
         boolean completeEarly = this.completeEarly;
         boolean cnameNeedsFollow = !cnames.isEmpty();
+        String followUpName = null;
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
             final DnsRecordType type = r.type();
@@ -906,6 +916,10 @@ abstract class DnsResolveContext<T> {
                 continue;
             }
 
+            if (followUpName == null) {
+                followUpName = followUpName(question, converted);
+            }
+
             boolean shouldRelease = false;
             // Check if we did determine we wanted to complete early before. If this is the case we want to not
             // include the result
@@ -955,6 +969,37 @@ abstract class DnsResolveContext<T> {
             queryLifecycleObserver.querySucceed();
             // We also got a CNAME so we need to ensure we also query it.
             onResponseCNAME(question, cnames, newDnsQueryLifecycleObserver(question), promise);
+        }
+
+        if (followUpName != null && !promise.isDone()) {
+            followUp(question, followUpName, promise);
+        }
+    }
+
+    /**
+     * SVCB specific: queries {@code name} with the same type, see {@link #followUpName}.
+     */
+    private void followUp(DnsQuestion question, String name, Promise<List<T>> promise) {
+        final DnsQuestion followUpQuestion;
+        final DnsServerAddressStream stream;
+        try {
+            name = cnameResolveFromCache(cnameCache(), name);
+            stream = getNameServers(name);
+            followUpQuestion = new DefaultDnsQuestion(name, question.type(), dnsClass);
+        } catch (Throwable cause) {
+            releaseFinalResult();
+            promise.tryFailure(cause);
+            return;
+        }
+        query(stream, 0, followUpQuestion, newDnsQueryLifecycleObserver(followUpQuestion), true, promise, null);
+    }
+
+    private void releaseFinalResult() {
+        if (finalResult != null) {
+            for (T item : finalResult) {
+                ReferenceCountUtil.safeRelease(item);
+            }
+            finalResult = Collections.emptyList();
         }
     }
 
