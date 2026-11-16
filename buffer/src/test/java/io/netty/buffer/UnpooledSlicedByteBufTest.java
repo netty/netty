@@ -103,4 +103,59 @@ public class UnpooledSlicedByteBufTest {
             parent.release();
         }
     }
+
+    @Test
+    public void testReadWriteAccessorsThrowIfParentCapacityShrunkDirectBuffer() {
+        ByteBuf parent = Unpooled.directBuffer(CAPACITY);
+        try {
+            ByteBuf slice = parent.slice(0, CAPACITY);
+            parent.capacity(SHRUNK_CAPACITY);
+
+            // The read/write accessors go through the _get/_set methods: keep the readable / writable checks
+            // satisfiable so the access really reaches the wrapped-buffer bounds check under test.
+            slice.readerIndex(SHRUNK_CAPACITY);
+            slice.writerIndex(SHRUNK_CAPACITY + 8);
+            assertThatThrownBy(() -> slice.readByte())
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.readShort())
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.readInt())
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.readLong())
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.writeByte(1))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.writeInt(1))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.writeLong(1))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+
+            // Reads and writes within the part that is still backed by the wrapped buffer must keep working.
+            slice.readerIndex(0);
+            slice.writerIndex(SHRUNK_CAPACITY - 1);
+            assertThat(slice.readByte()).isEqualTo(parent.getByte(0));
+            slice.writeByte(42);
+            assertThat(parent.getByte(SHRUNK_CAPACITY - 1)).isEqualTo((byte) 42);
+        } finally {
+            parent.release();
+        }
+    }
+
+    @Test
+    public void testSliceBoundsStillEnforcedIfParentCapacityGrows() {
+        ByteBuf parent = Unpooled.buffer(CAPACITY);
+        try {
+            ByteBuf slice = parent.slice(0, 16);
+            parent.capacity(CAPACITY * 2);
+
+            // A larger wrapped buffer must not loosen the bounds of the slice itself.
+            assertThat(slice.getByte(15)).isEqualTo(parent.getByte(15));
+            assertThatThrownBy(() -> slice.getByte(16))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> slice.getLong(9))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+        } finally {
+            parent.release();
+        }
+    }
 }
