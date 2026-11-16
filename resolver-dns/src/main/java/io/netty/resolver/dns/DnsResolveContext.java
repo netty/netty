@@ -120,6 +120,7 @@ abstract class DnsResolveContext<T> {
     private int allowedQueries;
     private boolean triedCNAME;
     private boolean completeEarly;
+    private boolean completionHandedOver;
 
     DnsResolveContext(DnsNameResolver parent, Channel channel,
                       Promise<?> originalPromise, String hostname, int dnsClass, DnsRecordType[] expectedTypes,
@@ -236,6 +237,17 @@ abstract class DnsResolveContext<T> {
      */
     String followUpName(DnsQuestion question, T converted) {
         return null;
+    }
+
+    /**
+     * Called once no more queries are in progress, before the resolution completes. Returns {@code true} if the
+     * subclass completes {@code promise} itself, now or later: {@code results} are then released and the resolution
+     * ends there, so a subclass completing later must copy or retain what it needs. Returns {@code false} by default.
+     *
+     * @param results the results collected so far, possibly empty
+     */
+    boolean beforeFinishResolve(Promise<List<T>> promise, List<T> results) {
+        return false;
     }
 
     void resolve(final Promise<List<T>> promise) {
@@ -929,7 +941,7 @@ abstract class DnsResolveContext<T> {
 
             // Check if the promise was done already, and only if not add things to the finalResult. Otherwise lets
             // just release things after we cached it.
-            if (!promise.isDone()) {
+            if (!promise.isDone() && !completionHandedOver) {
                 // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
                 //
                 // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
@@ -1154,6 +1166,17 @@ abstract class DnsResolveContext<T> {
                 i.remove();
 
                 f.cancel(false);
+            }
+        }
+
+        if (completionHandedOver) {
+            return;
+        }
+        if (!promise.isDone()) {
+            if (beforeFinishResolve(promise, finalResult != null ? finalResult : Collections.<T>emptyList())) {
+                completionHandedOver = true;
+                releaseFinalResult();
+                return;
             }
         }
 
