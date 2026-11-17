@@ -91,27 +91,27 @@ public final class AdaptiveCalculator {
 
         int minIndex = getSizeTableIndex(minimum);
         if (SIZE_TABLE[minIndex] < minimum) {
-            this.minIndex = minIndex + 1;
+            this.minIndex = min(minIndex + 1, SIZE_TABLE.length - 1);
         } else {
             this.minIndex = minIndex;
         }
 
         int maxIndex = getSizeTableIndex(maximum);
         if (SIZE_TABLE[maxIndex] > maximum) {
-            this.maxIndex = maxIndex - 1;
+            this.maxIndex = max(maxIndex - 1, 0);
         } else {
             this.maxIndex = maxIndex;
         }
 
         int initialIndex = getSizeTableIndex(initial);
         if (SIZE_TABLE[initialIndex] > initial) {
-            this.index = initialIndex - 1;
+            this.index = max(initialIndex - 1, 0);
         } else {
             this.index = initialIndex;
         }
         this.minCapacity = minimum;
         this.maxCapacity = maximum;
-        nextSize = max(SIZE_TABLE[index], minCapacity);
+        nextSize = min(max(SIZE_TABLE[index], minCapacity), maxCapacity);
     }
 
     public void record(int size) {
