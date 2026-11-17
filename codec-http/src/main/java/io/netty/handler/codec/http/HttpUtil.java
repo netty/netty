@@ -284,9 +284,11 @@ public final class HttpUtil {
 
     /**
      * Sets the {@code "Content-Length"} header.
+     *
+     * @throws IllegalArgumentException if {@code length} is negative
      */
     public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, length);
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, checkPositiveOrZero(length, "length"));
     }
 
     public static boolean isContentLengthSet(HttpMessage m) {
