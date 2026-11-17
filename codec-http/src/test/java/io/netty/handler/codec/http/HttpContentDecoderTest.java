@@ -24,6 +24,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -151,6 +152,40 @@ public class HttpContentDecoderTest {
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTruncatedGzipResponseFails() {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor(0);
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        // The body is delimited by the end of the connection, so only the compressed stream can tell that the
+        // connection was closed too early.
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
+        // drop the CRC32 and ISIZE footer
+        ByteBuf buf = Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII), GZ_HELLO_WORLD);
+        buf.writerIndex(buf.writerIndex() - 8);
+        assertTrue(channel.writeInbound(buf));
+
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+
+        assertThrows(DecompressionException.class, channel::finish);
+        // the truncated body is not completed
+        for (;;) {
+            Object o = channel.readInbound();
+            if (o == null) {
+                break;
+            }
+            assertFalse(o instanceof LastHttpContent);
+            ReferenceCountUtil.release(o);
+        }
     }
 
     @Test
