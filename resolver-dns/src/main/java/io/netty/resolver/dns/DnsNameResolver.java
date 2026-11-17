@@ -50,6 +50,10 @@ import io.netty.resolver.HostsFileEntries;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsResolveResult.Endpoint;
+import io.netty.resolver.dns.DnsResolveResult.HttpsAnswer;
+import io.netty.resolver.dns.DnsResolveResult.IpAddress;
+import io.netty.resolver.dns.DnsResolveResult.ServiceUnavailable;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -62,6 +66,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -75,6 +80,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -305,6 +311,8 @@ public class DnsNameResolver extends InetNameResolver {
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
     private final DnsCache resolveCache;
+    private final DnsHttpsCache httpsCache;
+    private final int maxHttpsRecords;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final DnsCnameCache cnameCache;
     private final DnsServerAddressStream queryDnsServerAddressStream;
@@ -442,7 +450,8 @@ public class DnsNameResolver extends InetNameResolver {
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider),
              searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver,
-             false, false);
+             false, false, new DefaultDnsHttpsCache(),
+                DnsHttpsResolveContext.DEFAULT_MAX_HTTPS_RECORDS);
     }
 
     @SuppressWarnings("deprecation")
@@ -476,7 +485,8 @@ public class DnsNameResolver extends InetNameResolver {
                 resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize,
                 optResourceEnabled, hostsFileEntriesResolver, dnsServerAddressStreamProvider,
                 queryDnsServerAddressStream, searchDomains, ndots, decodeIdn, completeOncePreferredResolved,
-                maxNumConsolidation, datagramChannelStrategy, false, false);
+                maxNumConsolidation, datagramChannelStrategy, false, false, new DefaultDnsHttpsCache(),
+                DnsHttpsResolveContext.DEFAULT_MAX_HTTPS_RECORDS);
     }
 
     @SuppressWarnings("deprecation")
@@ -505,7 +515,8 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn,
             boolean completeOncePreferredResolved,
             int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy,
-            boolean caseRandomizationEnabled, boolean dnsCookiesEnabled) {
+            boolean caseRandomizationEnabled, boolean dnsCookiesEnabled, DnsHttpsCache httpsCache,
+            int maxHttpsRecords) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis >= 0
             ? queryTimeoutMillis
@@ -520,6 +531,8 @@ public class DnsNameResolver extends InetNameResolver {
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.queryDnsServerAddressStream = checkNotNull(queryDnsServerAddressStream, "queryDnsServerAddressStream");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.httpsCache = checkNotNull(httpsCache, "httpsCache");
+        this.maxHttpsRecords = checkPositive(maxHttpsRecords, "maxHttpsRecords");
         this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
@@ -672,6 +685,13 @@ public class DnsNameResolver extends InetNameResolver {
     /**
      * Returns the {@link DnsCnameCache}.
      */
+    /**
+     * Returns the cache of the HTTPS records.
+     */
+    DnsHttpsCache httpsCache() {
+        return httpsCache;
+    }
+
     public DnsCnameCache cnameCache() {
         return cnameCache;
     }
@@ -801,6 +821,7 @@ public class DnsNameResolver extends InetNameResolver {
     public void close() {
         resolveChannelProvider.close();
         resolveCache.clear();
+        httpsCache.clear();
         cnameCache.clear();
         authoritativeDnsServerCache.clear();
     }
@@ -1058,6 +1079,166 @@ public class DnsNameResolver extends InetNameResolver {
             f.addListener((ChannelFutureListener) f1 -> resolveAllNow(f1, hostname, question, additionals, promise));
         }
         return promise;
+    }
+
+    /**
+     * Resolves the addresses to connect to for the specified {@link DnsHttpsQuery}, using its HTTPS records
+     * (<a href="https://www.rfc-editor.org/rfc/rfc9460.html">RFC 9460</a>) along with the A/AAAA records of its host.
+     *
+     * @param query the query
+     *
+     * @return the list of {@link DnsHttpsAddress}es, see {@link #resolveAll(DnsHttpsQuery, Iterable, Promise)}
+     */
+    @UnstableApi
+    public final Future<List<DnsHttpsAddress>> resolveAll(DnsHttpsQuery query) {
+        return resolveAll(query, EMPTY_ADDITIONALS, executor().<List<DnsHttpsAddress>>newPromise());
+    }
+
+    /**
+     * Resolves the addresses to connect to for the specified {@link DnsHttpsQuery}, using its HTTPS records
+     * (<a href="https://www.rfc-editor.org/rfc/rfc9460.html">RFC 9460</a>) along with the A/AAAA records of its host.
+     *
+     * @param query the query
+     * @param additionals additional records ({@code OPT})
+     *
+     * @return the list of {@link DnsHttpsAddress}es, see {@link #resolveAll(DnsHttpsQuery, Iterable, Promise)}
+     */
+    @UnstableApi
+    public final Future<List<DnsHttpsAddress>> resolveAll(DnsHttpsQuery query, Iterable<DnsRecord> additionals) {
+        return resolveAll(query, additionals, executor().<List<DnsHttpsAddress>>newPromise());
+    }
+
+    /**
+     * Resolves the addresses to connect to for the specified {@link DnsHttpsQuery}, using its HTTPS records
+     * (<a href="https://www.rfc-editor.org/rfc/rfc9460.html">RFC 9460</a>) along with the A/AAAA records of its host.
+     * <p>
+     * An {@code http} query is resolved as {@code https}, its port 80 becoming 443 (RFC 9460, Section 9.5). The
+     * addresses resolved through HTTPS records come first, sorted by priority, with their port and protocols; using
+     * them means upgrading an {@code http} query to {@code https}. They are followed by the addresses of the host,
+     * with the port of the query, to connect to as without HTTPS records. A host resolved without DNS (an empty host,
+     * an IP literal or a hosts file entry) only gives the latter.
+     * <p>
+     * The addresses and ports come from DNS data, as trustworthy as A/AAAA records: an HTTPS record may give any port,
+     * including {@code 0}, and any address, including a private one. They are returned as is; applying a policy to
+     * them, such as rejecting unsafe ports or private addresses, is up to the caller.
+     *
+     * @param query the query
+     * @param additionals additional records ({@code OPT})
+     * @param promise the {@link Promise} which will be fulfilled when the resolution is finished
+     *
+     * @return the list of {@link DnsHttpsAddress}es
+     */
+    @UnstableApi
+    public final Future<List<DnsHttpsAddress>> resolveAll(DnsHttpsQuery query, Iterable<DnsRecord> additionals,
+                                                          Promise<List<DnsHttpsAddress>> promise) {
+        return resolveAll(query, toArray(additionals, true), promise);
+    }
+
+    private Future<List<DnsHttpsAddress>> resolveAll(final DnsHttpsQuery query, final DnsRecord[] additionals,
+                                                     final Promise<List<DnsHttpsAddress>> promise) {
+        checkNotNull(query, "query");
+        checkNotNull(promise, "promise");
+        final int httpsPort = "http".equals(query.scheme()) && query.port() == 80 ? 443 : query.port();
+        final List<InetAddress> addresses = resolveAllWithoutDns(query.host());
+        if (addresses != null) {
+            return promise.setSuccess(hostAddresses(addresses, query.port(), null));
+        }
+        final String hostname = hostname(query.host());
+        final Promise<List<DnsResolveResult>> resultPromise = executor().newPromise();
+        resultPromise.addListener((FutureListener<List<DnsResolveResult>>) future -> {
+            if (!future.isSuccess()) {
+                promise.tryFailure(future.cause());
+                return;
+            }
+            final List<DnsHttpsAddress> result;
+            try {
+                result = httpsAddresses(future.getNow(), httpsPort, query.port());
+            } catch (IllegalStateException e) {
+                promise.tryFailure(e);
+                return;
+            }
+            if (result.isEmpty()) {
+                promise.tryFailure(new UnknownHostException("Failed to resolve '" + hostname + "' [HTTPS]"));
+            } else {
+                promise.trySuccess(result);
+            }
+        });
+        new DnsHttpsResolution(this, resolveCache, httpsCache, DnsHttpsResolveContext.DEFAULT_SUPPORTED_KEYS,
+                DnsHttpsResolveContext.DEFAULT_MAX_ALIASES, maxHttpsRecords, resolvedAddressTypes,
+                completeOncePreferredResolved)
+                .resolve(hostname, httpsPort, additionals, true, resultPromise);
+        return promise;
+    }
+
+    /**
+     * Returns the {@link DnsHttpsAddress}es of the results of an HTTPS resolution: those of its endpoints, with their
+     * addresses or else their address hints (RFC 9460, Section 7.3), on their port or else the {@code httpsPort},
+     * then those of the addresses of the host on the {@code port} of the query. Their TTL is how long the caches
+     * keep the results they come from, from now, the HTTPS answer included for the addresses of the host.
+     *
+     * @throws IllegalStateException if a result is not an endpoint, an address or a service declared unavailable
+     */
+    private List<DnsHttpsAddress> httpsAddresses(List<DnsResolveResult> results, int httpsPort, int port) {
+        final long now = executor().ticker().nanoTime();
+        final List<DnsHttpsAddress> addresses = new ArrayList<DnsHttpsAddress>();
+        final List<InetAddress> hostAddresses = new ArrayList<InetAddress>();
+        long hostExpiration = Long.MAX_VALUE;
+        for (DnsResolveResult result : results) {
+            if (result instanceof Endpoint) {
+                final Endpoint endpoint = (Endpoint) result;
+                final List<InetAddress> endpointAddresses = endpoint.resolvedAddresses().isEmpty() ?
+                        hints(endpoint) : endpoint.resolvedAddresses();
+                for (InetAddress address : endpointAddresses) {
+                    addresses.add(new DnsHttpsAddress(address, endpoint.port() == -1 ? httpsPort : endpoint.port(),
+                            endpoint.protocols(), endpoint.ech(), endpoint.priority(),
+                            ttl(endpoint.deadlineNanos(), now)));
+                }
+            } else if (result instanceof IpAddress) {
+                final IpAddress address = (IpAddress) result;
+                hostAddresses.add(address.address());
+                hostExpiration = DnsHttpsResolution.minDeadline(hostExpiration, address.deadlineNanos());
+            } else if (result instanceof HttpsAnswer) {
+                // The HTTPS answer may change what the host addresses are used for.
+                hostExpiration = DnsHttpsResolution.minDeadline(hostExpiration,
+                        ((HttpsAnswer) result).deadlineNanos());
+            } else if (!(result instanceof ServiceUnavailable)) {
+                throw new IllegalStateException("Unexpected HTTPS resolution result: " + result);
+            }
+        }
+        addresses.addAll(hostAddresses(hostAddresses, port, ttl(hostExpiration, now)));
+        return addresses;
+    }
+
+    /**
+     * Returns the time left until the deadline {@code deadlineNanos} from {@code now}, or {@code null} if unknown or
+     * without expiration.
+     */
+    private static Duration ttl(long deadlineNanos, long now) {
+        return deadlineNanos == -1 || deadlineNanos == Long.MAX_VALUE ? null :
+                Duration.ofNanos(Math.max(0, deadlineNanos - now));
+    }
+
+    /**
+     * Returns the address hints of {@code endpoint} of the resolved address types, in their order of preference.
+     */
+    private List<InetAddress> hints(Endpoint endpoint) {
+        final List<InetAddress> hints = new ArrayList<InetAddress>();
+        if (resolvedAddressTypes != ResolvedAddressTypes.IPV6_ONLY) {
+            hints.addAll(endpoint.ipv4Hints());
+        }
+        if (resolvedAddressTypes != ResolvedAddressTypes.IPV4_ONLY) {
+            hints.addAll(endpoint.ipv6Hints());
+        }
+        Collections.sort(hints, PreferredAddressTypeComparator.comparator(preferredAddressType()));
+        return hints;
+    }
+
+    private static List<DnsHttpsAddress> hostAddresses(List<InetAddress> addresses, int port, Duration ttl) {
+        final List<DnsHttpsAddress> hostAddresses = new ArrayList<DnsHttpsAddress>(addresses.size());
+        for (InetAddress address : addresses) {
+            hostAddresses.add(DnsHttpsAddress.of(address, port, ttl));
+        }
+        return hostAddresses;
     }
 
     private void resolveAllNow(ChannelFuture f, String hostname, final DnsQuestion question,

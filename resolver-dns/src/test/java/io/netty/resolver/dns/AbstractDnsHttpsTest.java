@@ -19,6 +19,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.codec.dns.ProtocolId;
 import io.netty.resolver.ResolvedAddressTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -148,5 +149,70 @@ abstract class AbstractDnsHttpsTest {
             bytes[i] = (byte) values[i];
         }
         return bytes;
+    }
+
+    static DnsHttpsQuery query(String host) {
+        return new DnsHttpsQuery("https", host, 443);
+    }
+
+    List<DnsHttpsAddress> resolve(DnsHttpsQuery query) throws Exception {
+        return resolve(resolver, query);
+    }
+
+    static List<DnsHttpsAddress> resolve(DnsNameResolver resolver, DnsHttpsQuery query) throws Exception {
+        return resolver.resolveAll(query).get(10, TimeUnit.SECONDS);
+    }
+
+    static Throwable failure(DnsNameResolver resolver, DnsHttpsQuery query) throws Exception {
+        return resolver.resolveAll(query).await().cause();
+    }
+
+    /**
+     * Returns an address resolved through an HTTPS record of SvcPriority {@code priority}, without ECH.
+     */
+    static DnsHttpsAddress endpoint(int priority, String address, int port, String... protocols)
+            throws UnknownHostException {
+        return endpoint(priority, address, port, null, protocols);
+    }
+
+    /**
+     * Returns an address resolved through an HTTPS record of SvcPriority {@code priority}, with the ECH configuration
+     * {@code ech}.
+     */
+    static DnsHttpsAddress endpoint(int priority, String address, int port, byte[] ech, String... protocols)
+            throws UnknownHostException {
+        List<ProtocolId> ids = new ArrayList<ProtocolId>(protocols.length);
+        for (String protocol : protocols) {
+            ids.add(ProtocolId.valueOf(protocol));
+        }
+        return new DnsHttpsAddress(InetAddress.getByName(address), port, ids, ech, priority, null);
+    }
+
+    /**
+     * Returns an address of the host, on port 443.
+     */
+    static DnsHttpsAddress host(String address) throws UnknownHostException {
+        return host(address, 443);
+    }
+
+    static DnsHttpsAddress host(String address, int port) throws UnknownHostException {
+        return DnsHttpsAddress.of(InetAddress.getByName(address), port);
+    }
+
+    static List<InetAddress> ips(List<DnsHttpsAddress> addresses) {
+        List<InetAddress> result = new ArrayList<InetAddress>(addresses.size());
+        for (DnsHttpsAddress address : addresses) {
+            result.add(address.address());
+        }
+        return result;
+    }
+
+    /**
+     * Asserts the TTL of {@code address}, whose records were cached during a resolution that started at
+     * {@code beforeNanos} and whose result was computed before {@code afterNanos}, both from {@link System#nanoTime()}.
+     */
+    static void assertTtl(DnsHttpsAddress address, long ttlSeconds, long beforeNanos, long afterNanos) {
+        assertThat(address.ttl()).isBetween(
+                Duration.ofSeconds(ttlSeconds).minusNanos(afterNanos - beforeNanos), Duration.ofSeconds(ttlSeconds));
     }
 }
