@@ -263,6 +263,55 @@ abstract class DnsResolveContext<T> {
         return false;
     }
 
+    /**
+     * Returns the name to query the records of {@code type} for {@code name} with, {@code name} by default. A subclass
+     * may query a type under another name, for instance the port prefixed name of the HTTPS records of a service on a
+     * non-default port (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-9.1">RFC 9460, Section 9.1</a>).
+     */
+    String formatQuestionName(String name, DnsRecordType type) {
+        return name;
+    }
+
+    /**
+     * Returns the name to query per expected type for {@code name}, or {@code null} if it is {@code name} for all.
+     */
+    private String[] questionNames(String name) {
+        String[] questionNames = null;
+        for (int i = 0; i < expectedTypes.length; i++) {
+            final String questionName = formatQuestionName(name, expectedTypes[i]);
+            if (!questionName.equals(name) && questionNames == null) {
+                questionNames = new String[expectedTypes.length];
+                Arrays.fill(questionNames, 0, i, name);
+            }
+            if (questionNames != null) {
+                questionNames[i] = questionName;
+            }
+        }
+        return questionNames;
+    }
+
+    /**
+     * Queries each expected type under its own name, each resolved from the CNAME cache.
+     */
+    private void internalResolve(String[] questionNames, Promise<List<T>> promise) {
+        try {
+            for (int i = 0; i < expectedTypes.length; i++) {
+                final String name;
+                try {
+                    name = cnameResolveFromCache(cnameCache(), questionNames[i]);
+                } catch (Throwable cause) {
+                    promise.tryFailure(cause);
+                    return;
+                }
+                if (!query(name, expectedTypes[i], getNameServers(name).duplicate(), false, promise)) {
+                    return;
+                }
+            }
+        } finally {
+            channel.flush();
+        }
+    }
+
     void resolve(final Promise<List<T>> promise) {
         final String[] searchDomains = parent.searchDomains();
         if (searchDomains.length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
@@ -409,6 +458,11 @@ abstract class DnsResolveContext<T> {
         }
     }
     private void internalResolve(String name, Promise<List<T>> promise) {
+        final String[] questionNames = questionNames(name);
+        if (questionNames != null) {
+            internalResolve(questionNames, promise);
+            return;
+        }
         try {
             // Resolve from cnameCache() until there is no more cname entry cached.
             name = cnameResolveFromCache(cnameCache(), name);
