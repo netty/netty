@@ -37,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpPostMultiPartRequestDecoderTest {
 
@@ -46,10 +46,8 @@ public class HttpPostMultiPartRequestDecoderTest {
     public void testDecodeFullHttpRequestWithNoContentTypeHeader() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, () ->
+                    new HttpPostMultipartRequestDecoder(req));
         } finally {
             assertTrue(req.release());
         }
@@ -62,10 +60,8 @@ public class HttpPostMultiPartRequestDecoderTest {
                 "multipart/form-data; boundary=--89421926422648 [; charset=UTF-8]");
 
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, () ->
+                    new HttpPostMultipartRequestDecoder(req));
         } finally {
             assertTrue(req.release());
         }
@@ -86,10 +82,8 @@ public class HttpPostMultiPartRequestDecoderTest {
         req.headers().set("content-length", content.length());
 
         try {
-            new HttpPostMultipartRequestDecoder(req);
-            fail("Was expecting an ErrorDataDecoderException");
-        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
-            // expected
+            assertThrows(HttpPostRequestDecoder.ErrorDataDecoderException.class, () ->
+                    new HttpPostMultipartRequestDecoder(req));
         } finally {
             assertTrue(req.release());
         }

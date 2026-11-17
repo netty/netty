@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -33,6 +34,7 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -42,8 +44,12 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -63,6 +69,12 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     private MsgHdrMemory writeMsgHdrMemory;
     private MsgHdrMemory readMsgHdrMemory;
+    private FileDescriptor pendingSendFd;
+    /**
+     * Holds buffers that we can't release yet as the kernel still holds a reference to these.
+     */
+    private PendingZeroCopyWrites pendingZeroCopyWrites;
+    private ZeroCopyBatch zeroCopyBatch;
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     byte writeOpCode;
@@ -186,7 +198,12 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
-            return new IoUringFileRegion((DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel fileChannel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened. Keep opening it deferred until the write.
+            if (fileChannel == null || UnixChannelUtil.isFileChannelImpl(fileChannel)) {
+                return new IoUringFileRegion(region);
+            }
         }
         if (msg instanceof FileRegion) {
             // Generic FileRegion -- pass through to the write path for chunked conversion.
@@ -199,96 +216,114 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         return super.filterOutboundMessage(msg);
     }
 
+    /**
+     * Collects and retains the messages backing a submitted iov prefix. Keep the non-empty NIO segment
+     * counting aligned with {@link IovArray#add(ByteBuf, int, int)}. The readable ranges must still match
+     * those used at submission; the shared iov memory itself may already have been reused.
+     */
+    static final class IovBufferCollector implements ChannelOutboundBuffer.MessageProcessor {
+        private List<ReferenceCounted> buffers;
+        private int remaining;
+
+        List<ReferenceCounted> collect(ChannelOutboundBuffer buffer, int count) {
+            if (count == 0) {
+                return Collections.emptyList();
+            }
+            ByteBuf first = (ByteBuf) buffer.current();
+            // A single message or iov only needs one retained owner, even for a partial composite write.
+            if (buffer.size() == 1 || count == 1 && first.isReadable()) {
+                return Collections.<ReferenceCounted>singletonList(first.retain());
+            }
+            buffers = new ArrayList<>(Math.min(count, buffer.size()));
+            remaining = count;
+            try {
+                buffer.forEachFlushedMessage(this);
+                return buffers;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        @Override
+        public boolean processMessage(Object msg) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (buf.isReadable()) {
+                buffers.add(buf.retain());
+                remaining = remainingIovs(buf, remaining);
+            }
+            return remaining != 0;
+        }
+
+        static int remainingIovs(ByteBuf buf, int remaining) {
+            if (buf.nioBufferCount() == 1) {
+                return remaining - 1;
+            }
+            for (ByteBuffer nioBuffer : buf.nioBuffers(buf.readerIndex(), buf.readableBytes())) {
+                if (nioBuffer.remaining() != 0 && --remaining == 0) {
+                    break;
+                }
+            }
+            return remaining;
+        }
+    }
+
     @Override
     protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
         assert writeId == 0;
 
-        IoUringSocketChannelConfig config = (IoUringSocketChannelConfig) config();
-        ByteBuf current = (ByteBuf) in.current();
-        if (isSendmsgZcSupported() && current != null && config.shouldWriteZeroCopy(current.readableBytes())) {
-            IoUringIoHandler handler = registration().attachment();
-
-            IovArray iovArray = handler.iovArray();
-            int offset = iovArray.count();
-            IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
-            try {
-                // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
-                // buffers.
-                iovArray.maxCount(Native.MAX_SKB_FRAGS);
-                try {
-                    in.forEachFlushedMessage((ChannelOutboundBuffer.MessageProcessor) msg -> {
-                        if (msg instanceof ByteBuf) {
-                            ByteBuf buf = (ByteBuf) msg;
-                            int length = buf.readableBytes();
-                            if (config.shouldWriteZeroCopy(length)) {
-                                return collector.processMessage(msg);
-                            }
-                        }
-                        return false;
-                    });
-                } catch (Exception e) {
-                    // This should never happen, anyway fallback to single write.
-                    return scheduleWriteSingle(in.current());
-                }
-                long iovArrayAddress = iovArray.memoryAddress(offset);
-                int iovArrayLength = iovArray.count() - offset;
-
-                MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
-                MsgHdrMemory hdr = msgHdrArray.nextHdr();
-                assert hdr != null;
-                hdr.set(iovArrayAddress, iovArrayLength);
-                long opsId = writeTracker.nextZeroCopyId();
-                IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
-                byte opCode = ops.opcode();
-                writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
-                writeId = registration().submit(ops);
-                writeOpCode = opCode;
-                if (writeId == 0) {
-                    writeTracker.abandon(opsId, opCode);
-                    return 0;
-                }
-                return 1;
-            } finally {
-                // The slot copied the references it needs, and an exception must not leave the event loop's
-                // shared collector holding this write's buffers.
-                collector.reset();
-            }
-        }
-
-        int fd = fd().intValue();
-        IoRegistration registration = registration();
-        IoUringIoHandler handler = registration.attachment();
+        int threshold = config.getWriteZeroCopyThreshold();
+        boolean useZeroCopy = isSendmsgZcSupported() && threshold != IoUringSocketChannelConfig.DISABLE_WRITE_ZERO_COPY;
+        IoUringIoHandler handler = registration().attachment();
         IovArray iovArray = handler.iovArray();
         int offset = iovArray.count();
-        IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
-
+        if (useZeroCopy && zeroCopyBatch == null) {
+            zeroCopyBatch = new ZeroCopyBatch();
+        }
         try {
+            in.forEachFlushedMessage(useZeroCopy ? zeroCopyBatch.scan(threshold, iovArray) : iovArray);
+        } catch (Exception e) {
+            // This should never happen, anyway fallback to single write.
+            return scheduleWriteSingle(in.current());
+        }
+        // Only use zero copy if collection can reach a large buffer.
+        if (useZeroCopy && zeroCopyBatch.scannedLarge() && zeroCopyBatch.allocateMerged(alloc())) {
             try {
-                in.forEachFlushedMessage(collector);
+                zeroCopyBatch.collect(in, iovArray, offset);
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
+                zeroCopyBatch.release();
                 return scheduleWriteSingle(in.current());
             }
             long iovArrayAddress = iovArray.memoryAddress(offset);
             int iovArrayLength = iovArray.count() - offset;
-            // Should not use sendmsg_zc, just use normal writev.
-            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
 
+            MsgHdrMemory hdr = writeMsgHdr();
+            hdr.set(iovArrayAddress, iovArrayLength);
+            long opsId = nextZeroCopyUserData();
+            IoUringIoOps ops = IoUringIoOps.newSendmsgZc(
+                    fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
             byte opCode = ops.opcode();
-            // record(...) copies the collector's references into the slot, so the collector stays reusable.
-            writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
-            writeId = registration.submit(ops);
+            writeId = submitWrite(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                writeTracker.abandonStream();
+                pendingZeroCopyWrites.recycle(opsId);
+                zeroCopyBatch.release();
                 return 0;
             }
             return 1;
-        } finally {
-            // The slot copied the references it needs, and an exception must not leave the event loop's
-            // shared collector holding this write's buffers.
-            collector.reset();
         }
+        long iovArrayAddress = iovArray.memoryAddress(offset);
+        int iovArrayLength = iovArray.count() - offset;
+        // Should not use sendmsg_zc, just use normal writev.
+        IoUringIoOps ops = IoUringIoOps.newWritev(fd().intValue(), (byte) 0, 0,
+                iovArrayAddress, iovArrayLength, nextOpsId());
+        byte opCode = ops.opcode();
+        writeId = submitWrite(ops);
+        writeOpCode = opCode;
+        if (writeId == 0) {
+            return 0;
+        }
+        return 1;
     }
 
     @Override
@@ -302,31 +337,42 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
-                IoRegistration registration = registration();
-                IoUringIoOps ioUringIoOps = prepSendFdIoOps((FileDescriptor) msg, writeMsgHdrMemory);
-                writeId = registration.submit(ioUringIoOps);
-                writeOpCode = Native.IORING_OP_SENDMSG;
-                if (writeId == 0) {
-                    MsgHdrMemory memory = writeMsgHdrMemory;
-                    writeMsgHdrMemory = null;
-                    memory.release();
+                int fd = Native.duplicateFd(((FileDescriptor) msg).intValue());
+                if (fd < 0) {
+                    handleWriteError(Errors.newIOException("fcntl(F_DUPFD_CLOEXEC)", fd));
                     return 0;
                 }
-                return 1;
+                // Keep a private fd until SENDMSG completes, even if a failed write listener closes the original.
+                pendingSendFd = new FileDescriptor(fd);
+                try {
+                    IoUringIoOps ioUringIoOps = prepSendFdIoOps(pendingSendFd, writeMsgHdrMemory);
+                    writeId = submitWrite(ioUringIoOps);
+                    writeOpCode = Native.IORING_OP_SENDMSG;
+                    if (writeId == 0) {
+                        MsgHdrMemory memory = writeMsgHdrMemory;
+                        writeMsgHdrMemory = null;
+                        memory.release();
+                        return 0;
+                    }
+                    return 1;
+                } finally {
+                    if (writeId == 0) {
+                        closePendingSendFd();
+                    }
+                }
             }
         } else if (IoUring.isSendZcSupported() && msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             int length = buf.readableBytes();
             if (((IoUringSocketChannelConfig) config()).shouldWriteZeroCopy(length)) {
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                long opsId = writeTracker.nextZeroCopyId();
+                long opsId = nextZeroCopyUserData();
                 IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                 byte opCode = ops.opcode();
-                writeTracker.record(opsId, opCode, buf);
-                writeId = registration().submit(ops);
+                writeId = submitWrite(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
-                    writeTracker.abandon(opsId, opCode);
+                    pendingZeroCopyWrites.recycle(opsId);
                     return 0;
                 }
                 return 1;
@@ -357,15 +403,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
         }
         byte opCode = ops.opcode();
-        // A splice picks its own data to tell its two stages apart, so it never enters the channel-level
-        // slot array used for zero-copy writes. It still has to occupy this single slot though: the file and
-        // pipe descriptors it splices between have to outlive the SQE, and writeTracker.retainAll()
-        // only retains what was recorded here.
-        writeTracker.recordStream(opCode, (ReferenceCounted) msg);
-        writeId = registration.submit(ops);
+        writeId = submitWrite(ops);
         writeOpCode = opCode;
         if (writeId == 0) {
-            writeTracker.abandonStream();
             return 0;
         }
         return 1;
@@ -415,19 +455,54 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         long address = IoUring.memoryAddress(buf) + buf.readerIndex();
         int length = buf.readableBytes();
         IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
-        byte opCode = ops.opcode();
-        writeTracker.recordStream(opCode, buf);
-        writeId = registration.submit(ops);
-        writeOpCode = opCode;
-        if (writeId == 0) {
-            writeTracker.abandonStream();
-            // Submission only fails when the registration is no longer valid (channel is
-            // being deregistered). Ending the slot above is the only cleanup needed here:
-            // unregistered() will release fileRegionChunkBuf and the outbound buffer will
-            // release the FileRegion -- mirroring the plain ByteBuf path above.
-            return 0;
+        try {
+            byte opCode = ops.opcode();
+            writeId = submitWrite(ops);
+            writeOpCode = opCode;
+            if (writeId == 0) {
+                return 0;
+            }
+            return 1;
+        } finally {
+            if (writeId == 0) {
+                releaseFileRegionChunkBuf();
+            }
         }
-        return 1;
+    }
+
+    private void closePendingSendFd() {
+        FileDescriptor fd = pendingSendFd;
+        pendingSendFd = null;
+        try {
+            fd.close();
+        } catch (IOException e) {
+            logger.debug("Error while closing a duplicated file descriptor", e);
+        }
+    }
+
+    private long nextZeroCopyUserData() {
+        PendingZeroCopyWrites pendingWrites = pendingZeroCopyWrites;
+        if (pendingWrites == null) {
+            pendingWrites = new PendingZeroCopyWrites();
+            pendingZeroCopyWrites = pendingWrites;
+        }
+        return pendingWrites.nextUserData();
+    }
+
+    @Override
+    List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+        if (currentWrite.opcode() == Native.IORING_OP_WRITEV) {
+            return new IovBufferCollector().collect(buffer, currentWrite.len());
+        }
+        if (currentWrite.opcode() == Native.IORING_OP_SENDMSG_ZC) {
+            return zeroCopyBatch.retain();
+        }
+        Object msg = buffer.current();
+        // A generic FileRegion owns an independent chunk buffer until its SEND completes.
+        if (msg instanceof ByteBuf || msg instanceof IoUringFileRegion) {
+            return Collections.singletonList(((ReferenceCounted) msg).retain());
+        }
+        return Collections.emptyList();
     }
 
     private int calculateRecvFlags(boolean first) {
@@ -550,6 +625,11 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             final ChannelPipeline pipeline = pipeline();
             try {
                 int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
+                if (nativeCallResult == 0) {
+                    // EOF: the peer closed the connection, so there is no control message to inspect.
+                    shutdownInput(true);
+                    return;
+                }
                 int nativeFd = readMsgHdrMemory.getScmRightsFd();
                 allocHandle.lastBytesRead(nativeFd);
                 allocHandle.incMessagesRead(1);
@@ -622,6 +702,13 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                     int read = res;
                     for (;;) {
                         int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                        // Snapshot the number of allocated buffers before calling useBuffer(...) as that call
+                        // might grow the ring (and so change allocatedBuffers) once the last posted buffer is
+                        // consumed. The bundle completion we are walking here was produced by the kernel using
+                        // the ring size as it was *before* any such growth, so the wrap-around for the next bid
+                        // in this bundle must be computed with that same (old) size to stay in sync with the
+                        // kernel.
+                        int allocatedBuffers = bufferRing.allocatedBuffers();
                         byteBuf = bufferRing.useBuffer(bid, read, more);
                         read -= byteBuf.readableBytes();
                         allocHandle.attemptedBytesRead(attemptedBytesRead);
@@ -636,7 +723,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                         allocHandle.incMessagesRead(1);
                         pipeline.fireChannelRead(byteBuf);
                         byteBuf = null;
-                        bid = bufferRing.nextBid(bid);
+                        bid = bufferRing.nextBid(bid, allocatedBuffers);
                         if (!allocHandle.continueReading()) {
                             // We should call fireChannelReadComplete() to mimic a normal read loop.
                             allocHandle.readComplete();
@@ -755,20 +842,15 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
             writeId = 0;
             writeOpCode = 0;
-            // A completion that never went through the slot finds it inactive, which makes this a no-op.
-            writeTracker.completeStream(flags);
+        }
+        if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
+            return handleWriteCompleteZeroCopy(op, res, flags, data);
         }
         ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
-        if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
-            return handleWriteCompleteZeroCopy(op, channelOutboundBuffer, res, flags, data);
-        }
-        if (channelOutboundBuffer == null) {
-            // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
-            releaseFileRegionChunkBuf();
-            return true;
-        }
         if (op == Native.IORING_OP_SENDMSG) {
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            closePendingSendFd();
+            // A failed batch may still return an error after shutdownOutput(). It must not close the input.
+            if (channelOutboundBuffer == null || res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;
             }
             try {
@@ -779,6 +861,11 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             } catch (Throwable throwable) {
                 handleWriteError(throwable);
             }
+            return true;
+        }
+        if (channelOutboundBuffer == null) {
+            // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
+            releaseFileRegionChunkBuf();
             return true;
         }
 
@@ -868,17 +955,38 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                 fd().intValue(), (byte) 0, 0, msgHdrMemory.address(), msgHdrMemory.idx());
     }
 
-    private boolean handleWriteCompleteZeroCopy(byte op, ChannelOutboundBuffer channelOutboundBuffer,
-                                                int res, int flags, long data) {
+    private void takeSendZCBuffers(long data) {
+        PendingZeroCopyWrites.PendingWrite write = pendingZeroCopyWrites.register(data);
+        if (retainedWriteBuffers == null) {
+            if (currentWrite.opcode() == Native.IORING_OP_SENDMSG_ZC) {
+                zeroCopyBatch.transferTo(write);
+            } else {
+                write.add(((ByteBuf) outboundBuffer().current()).retain());
+            }
+        } else {
+            // Shutdown may have cleared the outbound buffer before the primary CQE; use the retained buffers.
+            for (int i = 0; i < retainedWriteBuffers.size(); i++) {
+                write.add(retainedWriteBuffers.get(i));
+            }
+            retainedWriteBuffers = Collections.emptyList();
+        }
+    }
+
+    private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags, long data) {
         if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
+            pendingZeroCopyWrites.release(data);
             return true;
         }
         if ((flags & Native.IORING_CQE_F_MORE) != 0) {
-            // Even errored requests may generate a notification, so the kernel still owns the memory
-            // until the follow-up IORING_CQE_F_NOTIF arrives. Retain before any release below.
-            // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
-            writeTracker.retainReferences(data, op);
+            // Establish notification ownership before removeBytes() can notify a write listener.
+            takeSendZCBuffers(data);
+        } else {
+            pendingZeroCopyWrites.recycle(data);
+            if (op == Native.IORING_OP_SENDMSG_ZC) {
+                zeroCopyBatch.release();
+            }
         }
+        ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
         if (channelOutboundBuffer == null) {
             return true;
         }
@@ -969,9 +1077,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     @Override
     protected void unregistered() {
-        // super.unregistered() releases every in-flight write's references through writeTracker.releaseAll()
-        // before the chunk buffer is dropped below, so a reference a shutdown retained on that buffer is
-        // released first.
         super.unregistered();
         releaseFileRegionChunkBuf();
         if (readMsgHdrMemory != null) {
@@ -1036,5 +1141,201 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     @Override
     protected boolean isAllowHalfClosure() {
         return config.isAllowHalfClosure();
+    }
+
+    /**
+     * The buffers of the {@code SENDMSG_ZC} that is in flight.
+     * <p>
+     * A message that reaches the zero-copy threshold is sent from its own memory. Smaller messages are not worth
+     * pinning their pages, so every run of adjacent small messages is copied into one buffer and only takes one
+     * iovec:
+     * <pre>
+     * messages: small small LARGE small LARGE LARGE small small
+     * iovecs:   [  merged  ] LARGE [mer.] LARGE LARGE [  merged  ]
+     * </pre>
+     */
+    private static final class ZeroCopyBatch implements ChannelOutboundBuffer.MessageProcessor {
+        // The pooled allocator pools up to 4MiB, the adaptive allocator only up to 1MiB.
+        private static final int MERGED_MAX_SIZE = Math.min(4 * 1024 * 1024,
+                Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.zeroCopyMergedMaxSize", 64 * 1024)));
+
+        // The messages that are sent from their own memory, these are not retained yet.
+        private final List<ByteBuf> largeBuffers = new ArrayList<>(4);
+        // Holds the bytes of the small messages, the batch owns the reference it was allocated with.
+        private ByteBuf merged;
+        // Start of the run of small messages in merged that was not added to the iovArray yet.
+        private int runStart;
+        private IovArray iovArray;
+        private int threshold;
+        private long smallBytes;
+        private boolean hasLarge;
+        private boolean scanning;
+
+        /**
+         * Returns a {@link ChannelOutboundBuffer.MessageProcessor} that adds the messages to {@code iovArray} like
+         * the {@code iovArray} itself would do for a writev. This also tells which messages fit and how many bytes
+         * need to be copied, so one allocation is enough.
+         */
+        ChannelOutboundBuffer.MessageProcessor scan(int threshold, IovArray iovArray) {
+            this.iovArray = iovArray;
+            this.threshold = threshold;
+            smallBytes = 0;
+            hasLarge = false;
+            scanning = true;
+            return this;
+        }
+
+        /**
+         * Returns {@code true} if a scanned iovec reaches the threshold and the preceding small iovecs fit in the
+         * merged buffer. The result is only valid once.
+         */
+        boolean scannedLarge() {
+            boolean large = hasLarge;
+            hasLarge = false;
+            scanning = false;
+            return large;
+        }
+
+        /**
+         * Allocates the buffer for the scanned small messages. Returns {@code false} if there is no memory for it,
+         * the iovArray still holds the entries of the scan then, so the messages can be written with a writev. This
+         * must not throw as it also runs while handling a completion, where an {@link Error} ends the event loop.
+         */
+        boolean allocateMerged(ByteBufAllocator allocator) {
+            if (smallBytes != 0) {
+                // What does not fit is written later.
+                int capacity = (int) Math.min(smallBytes, MERGED_MAX_SIZE);
+                try {
+                    merged = allocator.directBuffer(capacity, capacity);
+                } catch (Exception | OutOfMemoryError e) {
+                    return false;
+                }
+                runStart = 0;
+            }
+            return true;
+        }
+
+        /**
+         * Replaces the entries that were added to the iovArray during the scan.
+         */
+        void collect(ChannelOutboundBuffer in, IovArray iovArray, int offset) throws Exception {
+            iovArray.truncate(offset);
+            in.forEachFlushedMessage(this);
+            addMergedSmallBuffers();
+        }
+
+        @Override
+        public boolean processMessage(Object msg) throws Exception {
+            if (scanning) {
+                int count = iovArray.count();
+                boolean added = iovArray.processMessage(msg);
+                // Look at the entries and not at the message, a message may consist of multiple buffers.
+                for (int i = count; i < iovArray.count(); i++) {
+                    long length = iovArray.length(i);
+                    if (length < threshold) {
+                        smallBytes += length;
+                    } else if (smallBytes <= MERGED_MAX_SIZE) {
+                        hasLarge = true;
+                    }
+                }
+                return added;
+            }
+            if (!(msg instanceof ByteBuf)) {
+                return false;
+            }
+            ByteBuf buf = (ByteBuf) msg;
+            int index = buf.readerIndex();
+            int readableBytes = buf.readableBytes();
+            // All buffers of a message that is smaller than the threshold are smaller too, so copy it at once.
+            if (readableBytes < threshold || buf.nioBufferCount() == 1) {
+                return add(buf, index, readableBytes);
+            }
+            for (ByteBuffer nioBuffer : buf.nioBuffers(index, readableBytes)) {
+                int length = nioBuffer.remaining();
+                if (!add(buf, index, length)) {
+                    return false;
+                }
+                index += length;
+            }
+            return true;
+        }
+
+        private boolean add(ByteBuf buf, int index, int length) {
+            if (length < threshold) {
+                if (length == 0) {
+                    return true;
+                }
+                if (merged == null) {
+                    return false;
+                }
+                // Copy what fits, the rest of the buffer is written later.
+                int copied = Math.min(length, merged.writableBytes());
+                merged.writeBytes(buf, index, copied);
+                return copied == length;
+            }
+            if (!addMergedSmallBuffers()) {
+                return false;
+            }
+            int count = iovArray.count();
+            boolean added = iovArray.add(buf, index, length);
+            // IovArray.add(...) may return false although the entry was added, so check the count.
+            if (iovArray.count() != count
+                    && (largeBuffers.isEmpty() || largeBuffers.get(largeBuffers.size() - 1) != buf)) {
+                // A message that consists of CompositeByteBuf has one reference count for
+                // all of them, and its buffers are added one after another. So it is enough to track it once.
+                largeBuffers.add(buf);
+            }
+            return added;
+        }
+
+        private boolean addMergedSmallBuffers() {
+            if (merged == null || merged.writerIndex() == runStart) {
+                return true;
+            }
+            if (!iovArray.add(merged, runStart, merged.writerIndex() - runStart)) {
+                return false;
+            }
+            runStart = merged.writerIndex();
+            return true;
+        }
+
+        void transferTo(PendingZeroCopyWrites.PendingWrite write) {
+            for (int i = 0; i < largeBuffers.size(); i++) {
+                write.add(largeBuffers.get(i).retain());
+            }
+            if (merged != null) {
+                write.add(merged);
+            }
+            largeBuffers.clear();
+            merged = null;
+        }
+
+        /**
+         * Same as {@link #transferTo(PendingZeroCopyWrites.PendingWrite)}, but for the case that the outbound
+         * messages are released before the write completes.
+         */
+        List<ReferenceCounted> retain() {
+            List<ReferenceCounted> buffers = new ArrayList<>(largeBuffers.size() + 1);
+            for (int i = 0; i < largeBuffers.size(); i++) {
+                buffers.add(largeBuffers.get(i).retain());
+            }
+            if (merged != null) {
+                buffers.add(merged);
+            }
+            largeBuffers.clear();
+            merged = null;
+            return buffers;
+        }
+
+        /**
+         * Must be called if the kernel doesn't reference the buffers (anymore).
+         */
+        void release() {
+            if (merged != null) {
+                merged.release();
+                merged = null;
+            }
+            largeBuffers.clear();
+        }
     }
 }

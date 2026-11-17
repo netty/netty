@@ -131,6 +131,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -676,7 +677,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(serverException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, serverException);
     }
 
     @MethodSource("newTestParams")
@@ -692,7 +693,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(clientException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, clientException);
     }
 
     @MethodSource("newTestParams")
@@ -1307,6 +1308,24 @@ public abstract class SSLEngineTest {
         }
     }
 
+    /**
+     * Invalidates the {@link SSLSession} and asserts that it is not valid anymore.
+     * <p>
+     * Conscrypt implements {@code invalidate()} by setting the session timeout to {@code 0}, which makes
+     * {@code isValid()} evaluate {@code System.currentTimeMillis() < getCreationTime()}. The creation time is taken
+     * from the native clock, which can be slightly ahead of {@code System.currentTimeMillis()} (for example because of
+     * the coarse clock used by the JVM on Windows). Right after the handshake the session may therefore still look
+     * valid, so wait for the Java clock to catch up with the creation time before invalidating.
+     */
+    private static void invalidateAndAssertInvalid(SSLSession session) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (System.currentTimeMillis() < session.getCreationTime() && System.nanoTime() - deadline < 0) {
+            Thread.yield();
+        }
+        session.invalidate();
+        assertFalse(session.isValid(), () -> "session should be invalid: " + session);
+    }
+
     private static void verifyApplicationLevelProtocol(Channel channel, String expectedApplicationProtocol) {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
@@ -1398,8 +1417,7 @@ public abstract class SSLEngineTest {
 
             SSLSession session = serverEngine.getSession();
             assertTrue(session.isValid(), () -> "session should be valid: " + session);
-            session.invalidate();
-            assertFalse(session.isValid(), () -> "session should be invalid: " + session);
+            invalidateAndAssertInvalid(session);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
@@ -3252,8 +3270,7 @@ public abstract class SSLEngineTest {
             byte[] id = ids.nextElement();
             SSLSession session = context.getSession(id);
             if (session != null) {
-                session.invalidate();
-                assertFalse(session.isValid());
+                invalidateAndAssertInvalid(session);
                 assertNull(context.getSession(id));
             }
         }
@@ -3807,21 +3824,12 @@ public abstract class SSLEngineTest {
                 assertNull(clientSession.getLocalCertificates());
                 assertNull(clientSession.getLocalPrincipal());
 
-                try {
-                    serverSession.getPeerCertificates();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, () -> serverSession.getPeerCertificates());
 
                 additionalPeerAssertions(serverSession, mutualAuth);
 
-                try {
-                    serverSession.getPeerPrincipal();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                // As we did not use mutual auth this is expected
+                assertThrows(SSLPeerUnverifiedException.class, () -> serverSession.getPeerPrincipal());
             }
 
             Certificate[] clientPeerCertificates = clientSession.getPeerCertificates();
@@ -4752,7 +4760,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             fail();
         } catch (SSLException expected) {
-            // Expected
+            // expected
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);

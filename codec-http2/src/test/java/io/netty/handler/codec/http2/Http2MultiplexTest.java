@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -106,6 +107,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     public void setUp() throws Exception {
         childChannelInitializer = new TestChannelInitializer();
         parentChannel = new ParentChannel();
+        // Use an unpooled allocator as the tests verify the reference count of buffers after these were released.
+        // Pooled buffers are recycled and so may be re-used by tests running in parallel, which makes it racy to
+        // check the reference count of an already released buffer.
+        parentChannel.config().setAllocator(UnpooledByteBufAllocator.DEFAULT);
         frameInboundWriter = new Http2FrameInboundWriter(parentChannel);
         parentChannel.connect(new InetSocketAddress(0));
         frameWriter = Http2TestUtil.mockedFrameWriter();
@@ -162,7 +167,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
-                ctx.writeAndFlush(new DefaultHttp2UnknownFrame((byte) 99, new Http2Flags()));
+                ctx.writeAndFlush(new DefaultHttp2UnknownFrame((short) 99, new Http2Flags()));
                 ctx.fireChannelActive();
             }
         });
@@ -170,7 +175,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         parentChannel.runPendingTasks();
 
-        verify(frameWriter).writeFrame(eq(codec.ctx), eq((byte) 99), eqStreamId(childChannel), any(Http2Flags.class),
+        verify(frameWriter).writeFrame(eq(codec.ctx), eq((short) 99), eqStreamId(childChannel), any(Http2Flags.class),
                 any(ByteBuf.class), any(Promise.class));
     }
 
@@ -204,7 +209,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         LastInboundHandler handler = new LastInboundHandler();
 
         Http2StreamChannel channel = newInboundStream(3, true, handler);
-        frameInboundWriter.writeInboundFrame((byte) 99, channel.stream().id(), new Http2Flags(), Unpooled.EMPTY_BUFFER);
+        frameInboundWriter.writeInboundFrame((short) 99, channel.stream().id(), new Http2Flags(),
+            Unpooled.EMPTY_BUFFER);
 
         // header frame and unknown frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
@@ -749,6 +755,32 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("baz"), 0, true);
+        assertNull(inboundHandler.readInbound());
+
+        parentChannel.close();
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void allQueuedFramesDeliveredToOutboundStreamAfterParentIsClosed() throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newOutboundStream(inboundHandler);
+        assertTrue(childChannel.isActive());
+
+        Http2Headers headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers, true));
+        childChannel.config().setAutoRead(false);
+
+        frameInboundWriter.writeInboundHeaders(childChannel.stream().id(), headers, 0, false);
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("baz"), 0, true);
         assertNull(inboundHandler.readInbound());

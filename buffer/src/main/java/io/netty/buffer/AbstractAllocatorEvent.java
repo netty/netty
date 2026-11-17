@@ -20,11 +20,15 @@ import jdk.jfr.Description;
 import jdk.jfr.Enabled;
 import jdk.jfr.Event;
 import jdk.jfr.Label;
+import jdk.jfr.Registered;
 
 /**
  * An abstract memory allocator event.
+ * <p>
+ * The events are registered by {@link JfrEventRegistration} once a Flight Recorder exists.
  */
 @Enabled(false)
+@Registered(false)
 @Category("Netty")
 @SuppressWarnings("Since15")
 abstract class AbstractAllocatorEvent extends Event {

@@ -117,11 +117,8 @@ public class IoUringShutdownOutputDuringInFlightSpliceTest {
             // outputShutdown flag and fires the shutdown event, it never touches the outbound buffer. Releasing
             // (and closing) the outbound resource is the job of the private shutdownOutput(...), which only runs
             // from the write-error path, not from here. So the region is still held by its original reference,
-            // and on top of that AbstractIoUringChannel#doShutdown retains it once more via
-            // writeTracker.retainAll() before this SQE's CQE lands, because the kernel still owns the submitted
-            // file and pipe descriptors until it posts the splice CQE. refCnt 2 here is that original reference
-            // plus the tracker's retain, not a release having failed to happen.
-            assertEquals(2, refCntAfterShutdown.get(), "shutdown() did not retain the in-flight splice's FileRegion");
+            // which keeps the file and pipe descriptors open until the splice CQE lands; no extra retain is needed.
+            assertEquals(1, refCntAfterShutdown.get(), "shutdown() released the in-flight splice's FileRegion");
             assertTrue(openAfterShutdown.get(), "shutdown() closed an in-flight splice's file descriptor");
 
             assertTrue(awaitRefCntZero(clientChannel, region, 5, TimeUnit.SECONDS),

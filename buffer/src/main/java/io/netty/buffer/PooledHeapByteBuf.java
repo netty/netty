@@ -179,7 +179,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         if (src.hasMemoryAddress() && PlatformDependent.hasUnsafe()) {
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, memory, idx(index), length);
         } else if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
+            System.arraycopy(src.array(), src.arrayOffset() + srcIndex, memory, idx(index), length);
         } else {
             src.getBytes(srcIndex, memory, idx(index), length);
         }

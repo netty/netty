@@ -295,6 +295,10 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         if (lfIndex < 0) {
             return null;
         }
+        if (lfIndex == in.readerIndex()) {
+            // the line starts with LF, so there is no room for the CR before it
+            throw new RedisCodecException("delimiter: LF without preceding CR (expected: \\r\\n)");
+        }
         ByteBuf data = in.readSlice(lfIndex - in.readerIndex() - 1); // `-1` is for CR
         readEndOfLine(in); // validate CR LF
         return data;

@@ -255,7 +255,7 @@ public class StreamBufferingEncoderTest {
         int failCount = 0;
         for (Future<Void> f : futures) {
             if (f.cause() != null) {
-                assertTrue(f.cause() instanceof Http2GoAwayException);
+                assertInstanceOf(Http2GoAwayException.class, f.cause());
                 failCount++;
             }
         }

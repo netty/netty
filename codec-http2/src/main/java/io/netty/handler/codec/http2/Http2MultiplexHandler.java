@@ -31,7 +31,10 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Queue;
+import java.util.Set;
 import javax.net.ssl.SSLException;
 
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
@@ -104,6 +107,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     // Choose 100 which is what is used most of the times as default.
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
+    // Outbound child channels opened via Http2StreamChannelBootstrap that were not closed yet. Until their first
+    // HEADERS frame is written their stream is unknown to the connection, so closing the connection doesn't close them.
+    private final Set<AbstractHttp2StreamChannel> outboundStreamChannels = new HashSet<AbstractHttp2StreamChannel>();
     private boolean parentReadInProgress;
     private int idCount;
 
@@ -153,6 +159,23 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) {
         readCompletePendingQueue.clear();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (!outboundStreamChannels.isEmpty()) {
+            // The streams known to the connection were closed already. Close the outbound child channels whose
+            // stream was never created as well, so they see channelInactive() and their closeFuture() completes.
+            // Iterate over a copy, as closing a child channel removes it from outboundStreamChannels (see
+            // outboundStreamChannelCloseListener).
+            for (AbstractHttp2StreamChannel childChannel :
+                    new ArrayList<AbstractHttp2StreamChannel>(outboundStreamChannels)) {
+                if (childChannel.stream().state() == Http2Stream.State.IDLE) {
+                    childChannel.close();
+                }
+            }
+        }
+        ctx.fireChannelInactive();
     }
 
     @Override
@@ -279,7 +302,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.
     Http2StreamChannel newOutboundStream() {
-        return new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
+        final Http2MultiplexHandlerStreamChannel childChannel =
+                new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
+        outboundStreamChannels.add(childChannel);
+        childChannel.closeFuture().addListener(f ->  outboundStreamChannels.remove(childChannel));
+        return childChannel;
     }
 
     @Override

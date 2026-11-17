@@ -27,12 +27,29 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.BouncyCastleUtil;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.SecureObjectIdentityHash;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -58,21 +75,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SNIServerName;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSessionContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
@@ -113,6 +115,7 @@ public abstract class SslContext {
      * </ul>
      */
     protected static final String defaultEndpointVerificationAlgorithm;
+
     static final String ALIAS = "key";
 
     static final CertificateFactory X509_CERT_FACTORY;
@@ -387,7 +390,8 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(provider, null, null, certChainFile, keyFile, keyPassword, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType(),
+                SessionIdContextBuilder.randomSessionIdContext());
     }
 
     /**
@@ -432,7 +436,8 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(provider, trustCertCollectionFile, trustManagerFactory, keyCertChainFile,
                 keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType(),
+                SessionIdContextBuilder.randomSessionIdContext());
     }
 
     /**
@@ -473,14 +478,15 @@ public abstract class SslContext {
             File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, String keyStore,
+            SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         try {
             return newServerContextInternal(provider, null, toX509Certificates(trustCertCollectionFile),
                                             trustManagerFactory, toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
                                             sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
-                                            false, false, null, keyStore, null, null);
+                                            false, false, null, keyStore, null, null, sessionIdContextBuilder);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -498,7 +504,7 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, SecureRandom secureRandom, String keyStoreType,
             Map.Entry<SslContextOption<?>, Object>[] ctxOptions,
-            List<OpenSslCredential> credentials)
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder)
             throws SSLException {
 
         if (provider == null) {
@@ -526,15 +532,15 @@ public abstract class SslContext {
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
-                    credentials);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController,
+                    sessionIdContextBuilder, ctxOptions, credentials);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
-                    credentials);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController,
+                    sessionIdContextBuilder, ctxOptions, credentials);
         default:
             throw new Error("Unexpected provider: " + provider);
         }
@@ -853,7 +859,8 @@ public abstract class SslContext {
                                             apn, null, sessionCacheSize, sessionTimeout, false,
                                             null, KeyStore.getDefaultType(),
                                             defaultEndpointVerificationAlgorithm,
-                                            Collections.emptyList(), null, null);
+                                            Collections.emptyList(), null, null,
+                                            SessionIdContextBuilder.randomSessionIdContext());
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -872,11 +879,11 @@ public abstract class SslContext {
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>[] options,
-            List<OpenSslCredential> credentials) throws SSLException {
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         return newClientContextInternal(provider, sslContextProvider, trustCert, trustManagerFactory, keyCertChain, key,
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                 false, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm, serverNames, options,
-                credentials);
+                credentials, sessionIdContextBuilder);
     }
 
     static SslContext newClientContextInternal(
@@ -889,7 +896,7 @@ public abstract class SslContext {
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>[] options,
-            List<OpenSslCredential> credentials) throws SSLException {
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -1443,5 +1450,43 @@ public abstract class SslContext {
 
     static char[] keyStorePassword(String keyPassword) {
         return keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
+    }
+
+    /**
+     * Derives the {@code session_id_context} for a server context from the material that determines which clients
+     * it accepts: the {@link ClientAuth} mode, the certificate chain it presents and the certificates it trusts.
+     * <p>
+     * The {@code session_id_context} scopes session resumption: a session (and therefore its client-authentication
+     * state) can only be resumed by a context that uses the same {@code session_id_context}. It must hence differ
+     * between contexts which, when sharing a session cache or session-ticket keys, must not accept each others
+     * sessions (for example because they use a different {@link ClientAuth} mode or trust configuration), but it
+     * should be the same for contexts that are configured identically (for example on different nodes of a cluster
+     * that share session-ticket keys), so resumption keeps working between them.
+     * See <a href="https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_session_id_context.html">
+     * SSL_CTX_set_session_id_context</a> and
+     * <a href="https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc">GHSA-6xv6-9mgg-mfvc</a>.
+     *
+     * @param clientAuth         the {@link ClientAuth} mode of the context.
+     * @param keyCertChain       the certificate chain the context presents, or {@code null} if unknown.
+     * @param trustCertCollection the certificates the context trusts, or {@code null} if it uses the default.
+     * @param opaque             {@code true} if parts of the configuration (like a custom
+     *                           {@link TrustManagerFactory}) can not be digested. As we then can not tell if two
+     *                           contexts behave the same, a random salt is mixed in so the result is unique to the
+     *                           context.
+     * @return                   at most 32 bytes that are suitable to be used as {@code session_id_context}.
+     * @deprecated               Deprecated in favor of the {@link SessionIdContextBuilder}.
+     */
+    @Deprecated
+    @UnstableApi
+    protected static byte[] deriveSessionIdContext(ClientAuth clientAuth, X509Certificate[] keyCertChain,
+                                                   X509Certificate[] trustCertCollection, boolean opaque) {
+        if (opaque) {
+            return SessionIdContextBuilder.randomSessionIdContext().build();
+        }
+        return new SessionIdContextBuilder(new SecureObjectIdentityHash())
+            .setClientAuth(clientAuth)
+            .setKeyCertificateChain(keyCertChain)
+            .setTrustedCertificates(trustCertCollection)
+            .build();
     }
 }

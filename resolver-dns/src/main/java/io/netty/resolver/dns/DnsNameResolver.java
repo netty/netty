@@ -54,7 +54,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -280,6 +279,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean decodeIdn;
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
     private final boolean completeOncePreferredResolved;
+    // null if neither case randomization nor DNS cookies are enabled.
+    private final DnsQueryProtection queryProtection;
     private final DnsResolveChannelProvider resolveChannelProvider;
     private final Bootstrap socketBootstrap;
     private final boolean retryWithTcpOnTimeout;
@@ -392,7 +393,8 @@ public class DnsNameResolver extends InetNameResolver {
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider),
-             searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver);
+             searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver,
+             false, false);
     }
 
     @SuppressWarnings("deprecation")
@@ -421,6 +423,41 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn,
             boolean completeOncePreferredResolved,
             int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        this(eventLoop, channelFactory, socketChannelFactory, retryWithTcpOnTimeout, resolveCache, cnameCache,
+                authoritativeDnsServerCache, localAddress, dnsQueryLifecycleObserverFactory, queryTimeoutMillis,
+                resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize,
+                optResourceEnabled, hostsFileEntriesResolver, dnsServerAddressStreamProvider,
+                queryDnsServerAddressStream, searchDomains, ndots, decodeIdn, completeOncePreferredResolved,
+                maxNumConsolidation, datagramChannelStrategy, false, false);
+    }
+
+    @SuppressWarnings("deprecation")
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            ChannelFactory<? extends SocketChannel> socketChannelFactory,
+            boolean retryWithTcpOnTimeout,
+            final DnsCache resolveCache,
+            final DnsCnameCache cnameCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            SocketAddress localAddress,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            final int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            DnsServerAddressStream queryDnsServerAddressStream,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn,
+            boolean completeOncePreferredResolved,
+            int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy,
+            boolean caseRandomizationEnabled, boolean dnsCookiesEnabled) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis >= 0
             ? queryTimeoutMillis
@@ -447,6 +484,8 @@ public class DnsNameResolver extends InetNameResolver {
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;
         this.retryWithTcpOnTimeout = retryWithTcpOnTimeout;
+        this.queryProtection = caseRandomizationEnabled || dnsCookiesEnabled ?
+                new DnsQueryProtection(caseRandomizationEnabled, dnsCookiesEnabled) : null;
         if (socketChannelFactory == null) {
             socketBootstrap = null;
         } else {
@@ -672,6 +711,21 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public int maxPayloadSize() {
         return maxPayloadSize;
+    }
+
+    /**
+     * Returns {@code true} if the case of the name in the questions of UDP queries is randomized ("0x20").
+     */
+    public boolean isCaseRandomizationEnabled() {
+        return queryProtection != null && queryProtection.isCaseRandomizationEnabled();
+    }
+
+    /**
+     * Returns {@code true} if a client cookie as defined by RFC 7873 is sent with UDP queries and validated in the
+     * responses.
+     */
+    public boolean isDnsCookiesEnabled() {
+        return queryProtection != null && queryProtection.isCookiesEnabled();
     }
 
     /**
@@ -1228,12 +1282,16 @@ public class DnsNameResolver extends InetNameResolver {
                                       int ndots,
                                       SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
         List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
-                && !StringUtil.endsWith(hostname, '.')) {
+        boolean resolvedWithSearchDomains = searchDomains != null && ndots > 0 && !StringUtil.endsWith(hostname, '.');
+        if (!hasEntries(cachedEntries) && resolvedWithSearchDomains) {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
-                cachedEntries = resolveCache.get(initialHostname, additionals);
-                if (hasEntries(cachedEntries)) {
+                final List<? extends DnsCacheEntry> entries = resolveCache.get(initialHostname, additionals);
+                // Only a positive cache entry lets us draw a conclusion about the bare hostname. A negative entry
+                // just means that this specific search domain permutation does not exist, which must neither
+                // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
+                if (hasEntries(entries) && entries.get(0).cause() == null) {
+                    cachedEntries = entries;
                     break;
                 }
             }
@@ -1393,20 +1451,17 @@ public class DnsNameResolver extends InetNameResolver {
                 return executor().newFailedFuture(e);
             }
         } else {
-            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> p = executor().newPromise();
-            f.addListener((FutureListener<Channel>) f1 -> {
+            f.addListener(f1 -> {
                 if (f1.isSuccess()) {
-                    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
-                            f1.getNow(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                    // doQuery(...) completes and returns the caller's own promise, so just run the query
+                    // against it and return that same promise below; no separate promise to bridge is needed.
+                    doQuery(f1.getNow(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                             additionalsArray, true, promise);
-                    PromiseNotifier.cascade(qf, p);
                 } else {
-                    UnknownHostException e = toException(f1, question.name(), question, additionalsArray);
-                    promise.setFailure(e);
-                    p.setFailure(e);
+                    promise.tryFailure(toException(f1, question.name(), question, additionalsArray));
                 }
             });
-            return p;
+            return cast(promise);
         }
     }
 
@@ -1453,7 +1508,11 @@ public class DnsNameResolver extends InetNameResolver {
 
                         // Retain the result as the listener on the promise is responsible to release it.
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed, so nobody will release the result;
+                            // release the reference we just retained to avoid leaking it.
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
                         Throwable cause = f.cause();
                         if (isTimeoutError(cause)) {
@@ -1462,7 +1521,7 @@ public class DnsNameResolver extends InetNameResolver {
                         } else {
                             // Notify the observer and after that the promise
                             queryLifecycleObserver.queryFailed(cause);
-                            promise.setFailure(cause);
+                            promise.tryFailure(cause);
                         }
                     }
                 });
@@ -1490,11 +1549,16 @@ public class DnsNameResolver extends InetNameResolver {
                         AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
                                 (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed; release the reference we retained
+                            // (the one held by newPromise is released by RELEASE_LISTENER below).
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
-                        promise.setFailure(f.cause());
+                        promise.tryFailure(f.cause());
                     }
 
+                    // Always release newPromise's own reference, even if the hand-off above failed.
                     p.addListener(RELEASE_LISTENER);
                 });
 
@@ -1522,7 +1586,7 @@ public class DnsNameResolver extends InetNameResolver {
         DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, nameServerAddr,
                 queryContextManager, queryLifecycleObserver, payloadSize,
                 isRecursionDesired(), queryTimeoutMillis(), question, additionals,
-                promise, socketBootstrap, retryWithTcpOnTimeout);
+                promise, socketBootstrap, retryWithTcpOnTimeout, queryProtection);
         queryContext.writeQuery(flush);
     }
 

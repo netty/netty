@@ -189,7 +189,7 @@ final class HpackTestCase {
         ByteBuf buffer = Unpooled.buffer();
         try {
             if (maxHeaderTableSize != -1) {
-                hpackEncoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
+                hpackEncoder.setMaxHeaderTableSize(maxHeaderTableSize);
             }
 
             hpackEncoder.encodeHeaders(3 /* randomly chosen */, buffer, http2Headers, sensitivityDetector);

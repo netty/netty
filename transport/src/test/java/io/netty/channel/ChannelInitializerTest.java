@@ -22,6 +22,7 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -106,6 +108,45 @@ public class ChannelInitializerTest {
         pipeline.channel().closeFuture().syncUninterruptibly();
 
         assertSame(exception, causeRef.get());
+    }
+
+    @Test
+    @Timeout(value = TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
+    public void testPipelineInitializedBeforeRegisterFutureIsNotified() throws Exception {
+        EventLoop loop = group.next();
+        // Block the EventLoop so we can be sure the listener is added before the registration is done.
+        final CountDownLatch blockLatch = new CountDownLatch(1);
+        loop.execute(() -> {
+            try {
+                blockLatch.await();
+            } catch (InterruptedException ignore) {
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        final Channel channel = new LocalChannel(loop);
+        channel.pipeline().addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.pipeline().addLast(testHandler);
+            }
+        });
+
+        final AtomicBoolean initializedOnNotify = new AtomicBoolean();
+        Future<Void> registerFuture = channel.register();
+        // The listener must only be notified once the ChannelInitializer was executed, as the user may directly
+        // start to fire events / operations through the pipeline.
+        registerFuture.addListener(
+                future -> initializedOnNotify.set(channel.pipeline().get(InspectableHandler.class) != null));
+        blockLatch.countDown();
+        registerFuture.sync();
+        try {
+            // Wait until the listener was executed.
+            loop.submit(() -> { }).sync();
+            assertTrue(initializedOnNotify.get());
+        } finally {
+            channel.close().sync();
+        }
     }
 
     @Test

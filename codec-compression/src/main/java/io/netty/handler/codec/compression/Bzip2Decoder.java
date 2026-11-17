@@ -26,6 +26,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAG
 import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_2;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_DECODE_MAX_CODE_LENGTH;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAXIMUM_TABLES;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MINIMUM_TABLES;
@@ -55,7 +56,8 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
         RECEIVE_SELECTORS,
         RECEIVE_HUFFMAN_LENGTH,
         DECODE_HUFFMAN_DATA,
-        EOF
+        EOF,
+        CORRUPTED
     }
     private State currentState = State.INIT;
 
@@ -95,6 +97,18 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
             return;
         }
 
+        try {
+            decodeStateMachine(ctx, in, out);
+        } catch (Exception e) {
+            // The state is inconsistent after an error, so skip all further input.
+            currentState = State.CORRUPTED;
+            blockDecompressor = null;
+            huffmanStageDecoder = null;
+            throw e;
+        }
+    }
+
+    private void decodeStateMachine(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         final Bzip2BitReader reader = this.reader;
         reader.setByteBuf(in);
 
@@ -223,6 +237,9 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     int index = 0;
                     while (reader.readBoolean()) {
                         index++;
+                        if (index >= huffmanStageDecoder.totalTables) {
+                            throw new DecompressionException("incorrect selector index " + index);
+                        }
                     }
                     selectors[currSelector] = tableMtf.indexToFront(index);
                 }
@@ -269,6 +286,10 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                                 saveStateAndReturn = true;
                                 break loop;
                             }
+                        }
+                        if (currLength < 1 || currLength > HUFFMAN_DECODE_MAX_CODE_LENGTH) {
+                            throw new DecompressionException("Bzip2 block Huffman code length not in range 1.."
+                                    + HUFFMAN_DECODE_MAX_CODE_LENGTH);
                         }
                         codeLength[currGroup][currAlpha] = (byte) currLength;
                     }
@@ -326,6 +347,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 // released as soon as possible.
                 return;
             case EOF:
+            case CORRUPTED:
                 in.skipBytes(in.readableBytes());
                 return;
             default:

@@ -26,14 +26,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultMockTickerTest {
 
     @Test
     void newMockTickerShouldReturnDefaultMockTicker() {
-        assertTrue(Ticker.newMockTicker() instanceof DefaultMockTicker);
+        assertInstanceOf(DefaultMockTicker.class, Ticker.newMockTicker());
     }
 
     @Test

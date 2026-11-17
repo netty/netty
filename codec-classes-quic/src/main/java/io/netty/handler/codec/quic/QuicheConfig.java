@@ -44,6 +44,11 @@ final class QuicheConfig {
                  @Nullable Long activeConnectionIdLimit,
                  byte @Nullable [] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
+        if (config == -1) {
+            // quiche_config_new(...) returns NULL if the version is not supported.
+            throw new IllegalArgumentException("quiche_config_new(...) failed, unsupported QUIC version: 0x" +
+                    Integer.toHexString(version));
+        }
         try {
             if (grease != null) {
                 Quiche.quiche_config_grease(config, grease);

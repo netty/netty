@@ -96,7 +96,8 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private Object variableHeader;
     private int bytesRemainingInVariablePart;
 
-    private final int maxBytesInMessage;
+    private volatile int maxBytesInMessage;
+    private int currentMaxBytesInMessage;
     private final int maxClientIdLength;
     private final boolean strictUtf8Validation;
     // Lazily-initialised UTF-8 decoder reused across calls in the same channel/decoder
@@ -136,11 +137,30 @@ public final class MqttDecoder extends ByteToMessageDecoder {
         this.strictUtf8Validation = strictUtf8Validation;
     }
 
+    /**
+     * Returns the maximum number of bytes a decoded message may consume.
+     */
+    public int maxBytesInMessage() {
+        return maxBytesInMessage;
+    }
+
+    /**
+     * Sets the maximum number of bytes a decoded message may consume. The new limit applies to the next message to
+     * start decoding. A message whose fixed header has already been read continues to be decoded against the limit
+     * which was in force when it started.
+     *
+     * @param maxBytesInMessage the maximum number of bytes a decoded message may consume.
+     */
+    public void setMaxBytesInMessage(int maxBytesInMessage) {
+        this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch (state) {
             case READ_FIXED_HEADER: try {
-                maxAllowedRemainingBytes = maxBytesInMessage;
+                currentMaxBytesInMessage = maxBytesInMessage;
+                maxAllowedRemainingBytes = currentMaxBytesInMessage;
                 int startOfFixed = buffer.readerIndex();
                 mqttFixedHeader = decodeFixedHeader(ctx, buffer, maxAllowedRemainingBytes);
                 if (mqttFixedHeader == null) {
@@ -207,7 +227,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
 
     private void checkMaxMessageLengthRemaining(int maxAllowedRemainingBytes) {
         if (maxAllowedRemainingBytes < 0) {
-            throw new TooLongFrameException("message length exceeds " + maxBytesInMessage + " bytes");
+            throw new TooLongFrameException("message length exceeds " + currentMaxBytesInMessage + " bytes");
         }
     }
 
@@ -711,7 +731,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private MqttSubAckPayload decodeSubackPayload(
             ByteBuf buffer, int maxAllowedRemainingBytes) {
         int bytesRemainingInVariablePart = this.bytesRemainingInVariablePart;
-        final List<Integer> grantedQos = new ArrayList<Integer>(bytesRemainingInVariablePart);
+        final List<Integer> grantedQos = new ArrayList<Integer>();
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             checkMaxMessageLengthRemaining(--maxAllowedRemainingBytes);
@@ -727,7 +747,7 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private MqttUnsubAckPayload decodeUnsubAckPayload(
         ByteBuf buffer, int maxAllowedRemainingBytes) {
         int bytesRemainingInVariablePart = this.bytesRemainingInVariablePart;
-        final List<Short> reasonCodes = new ArrayList<Short>(bytesRemainingInVariablePart);
+        final List<Short> reasonCodes = new ArrayList<Short>();
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             checkMaxMessageLengthRemaining(--maxAllowedRemainingBytes);
@@ -1011,6 +1031,15 @@ public final class MqttDecoder extends ByteToMessageDecoder {
                 default:
                     //shouldn't reach here
                     throw new DecoderException("Unknown property type: " + propertyIdValue);
+            }
+            if (numberOfBytesConsumed - propertiesLengthNumBytes > totalPropertiesLength) {
+                // The typed value of the last decoded property read past the declared Property
+                // Length, e.g. a Content Type string whose length prefix claims more bytes than
+                // are left in the Properties field. MQTT 5.0 section 2.2.2.2 states a Property
+                // whose value is not of the specified data type is a Malformed Packet, so reject
+                // it instead of letting the read spill into the following packet section.
+                throw new DecoderException(
+                    "MQTT5 property overran declared Property Length: propertyId=" + propertyIdValue);
             }
         }
 

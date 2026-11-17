@@ -95,7 +95,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public void writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public void writeFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                            ByteBuf payload, Promise<Void> promise) {
         delegate.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }

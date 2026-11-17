@@ -349,13 +349,16 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Write messages to the inbound of this {@link Channel}.
+     * <p>
+     * If this {@link Channel} is already closed, the messages are released and a
+     * {@link ClosedChannelException} is thrown.
      *
      * @param msgs the messages to be written
      *
      * @return {@code true} if the write operation did add something to the inbound buffer
      */
     public boolean writeInbound(Object... msgs) throws Exception {
-        ensureOpen();
+        ensureOpen(msgs);
         if (msgs.length == 0) {
             return isNotEmpty(inboundMessages);
         }
@@ -378,6 +381,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the returned future is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneOutbound(Object)
      */
@@ -391,6 +397,9 @@ public class EmbeddedChannel extends AbstractChannel {
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to
      * {@link io.netty.channel.ChannelOutboundInvoker#write(Object, CompletionHandler)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the promise is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneOutbound(Object, Promise)
      */
@@ -399,6 +408,9 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             if (checkOpen(true)) {
                 pipeline().fireChannelRead(msg);
+            } else {
+                // The message never reached the pipeline, so nobody else will release it.
+                ReferenceCountUtil.safeRelease(msg);
             }
         } finally {
             executingStackCnt--;
@@ -433,12 +445,15 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Write messages to the outbound of this {@link Channel}.
+     * <p>
+     * If this {@link Channel} is already closed, the messages are released and a
+     * {@link ClosedChannelException} is thrown.
      *
      * @param msgs              the messages to be written
      * @return bufferReadable   returns {@code true} if the write operation did add something to the outbound buffer
      */
     public boolean writeOutbound(Object... msgs) throws Exception {
-        ensureOpen();
+        ensureOpen(msgs);
         if (msgs.length == 0) {
             return isNotEmpty(outboundMessages);
         }
@@ -480,6 +495,9 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to {@link #write(Object)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the returned future is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneInbound(Object)
      */
@@ -493,6 +511,9 @@ public class EmbeddedChannel extends AbstractChannel {
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
      * method is conceptually equivalent to
      * {@link io.netty.channel.ChannelOutboundInvoker#write(Object, CompletionHandler)}.
+     * <p>
+     * If this {@link Channel} is already closed, the message is released and the promise is failed with a
+     * {@link ClosedChannelException}.
      *
      * @see #writeOneInbound(Object, Promise)
      */
@@ -503,6 +524,8 @@ public class EmbeddedChannel extends AbstractChannel {
                 write(msg, promise);
                 return;
             }
+            // The message never reached the pipeline, so nobody else will release it.
+            ReferenceCountUtil.safeRelease(msg);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -971,6 +994,19 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private EmbeddedEventLoop embeddedEventLoop() {
         return (EmbeddedEventLoop) super.executor();
+    }
+
+    /**
+     * Ensure the {@link Channel} is open and if not release the given messages, which never reached the pipeline,
+     * and throw an exception.
+     */
+    private void ensureOpen(Object[] msgs) throws Exception {
+        if (!checkOpen(true)) {
+            for (Object msg : msgs) {
+                ReferenceCountUtil.safeRelease(msg);
+            }
+            checkException();
+        }
     }
 
     /**

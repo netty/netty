@@ -40,17 +40,22 @@ class Hidden {
         @Override
         public void applyTo(BlockHound.Builder builder) {
             builder.allowBlockingCallsInside(
-                    "io.netty.channel.nio.NioEventLoop",
+                    "io.netty.channel.nio.NioIoHandler",
                     "handleLoopException"
             );
 
             builder.allowBlockingCallsInside(
-                    "io.netty.channel.kqueue.KQueueEventLoop",
+                    "io.netty.channel.kqueue.KQueueIoHandler",
                     "handleLoopException"
             );
 
             builder.allowBlockingCallsInside(
-                    "io.netty.channel.epoll.EpollEventLoop",
+                    "io.netty.channel.epoll.EpollIoHandler",
+                    "handleLoopException"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.channel.uring.IoUringIoHandler",
                     "handleLoopException"
             );
 
@@ -102,6 +107,11 @@ class Hidden {
             builder.allowBlockingCallsInside(
                     "io.netty.buffer.AdaptivePoolingAllocator$1",
                     "onRemoval"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.AdaptivePoolingAllocator$Magazine",
+                    "free"
             );
 
             builder.allowBlockingCallsInside(

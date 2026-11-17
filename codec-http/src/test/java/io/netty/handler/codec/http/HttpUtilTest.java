@@ -41,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpUtilTest {
 
@@ -84,9 +83,39 @@ public class HttpUtilTest {
             "HTTP/ 1.1",
             "HTTP/\r0.9",
             "HTTP/\n1.1",
+            "/a\tHTTP/1.0",
+            "/admin\u0000/public",
+            "/a\u000Bb",
+            "/a\fb",
+            "/a\u001Bb",
+            "/a\u007Fb",
     })
     public void requestLineTokenValidationMustRejectInvalidTokens(String token) throws Exception {
         assertFalse(HttpUtil.isEncodingSafeStartLineToken(token));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustRejectAllControlCharactersSpaceAndDel() {
+        for (char c = 0; c <= 0x20; c++) {
+            assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a" + c + "b"), "0x" + Integer.toHexString(c));
+        }
+        assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a\u007Fb"));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustAcceptValidTokens() {
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("/path/to/resource?q=1&r=2"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("http://localhost/\u00e9"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken(""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "\t", "\u0000", "\u000B", "\f", "\u001B", "\u007F" })
+    public void defaultHttpRequestMustRejectControlCharactersInUri(String ctl) {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
     }
 
     @Test
@@ -309,36 +338,21 @@ public class HttpUtilTest {
     public void testGetContentLengthThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message));
     }
 
     @Test
     public void testGetContentLengthIntDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1));
     }
 
     @Test
     public void testGetContentLengthLongDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1L);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1L));
     }
 
     @Test

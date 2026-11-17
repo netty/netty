@@ -17,6 +17,7 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+import com.aayushatharva.brotli4j.encoder.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -24,8 +25,11 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,6 +37,7 @@ import java.util.Random;
 import java.util.SplittableRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BrotliDecoderTest {
@@ -161,5 +166,87 @@ public class BrotliDecoderTest {
             decompressed.addComponent(true, msg);
         }
         return decompressed;
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "524288, 18, 1000000",
+            "524288, 18, 1",
+            "100000, 10, 1000000",
+            "100000, 10, 1",
+            "1048576, 10, 1000000",
+            "1048576, 10, 3",
+    })
+    public void testDecompressionOfHighlyCompressibleData(int length, int window, int chunkSize) throws Exception {
+        // a long run of zeros compresses to a few bytes, and the decoder has to produce many windows of output
+        // after all input was consumed
+        byte[] compressed = Encoder.compress(new byte[length], new Encoder.Parameters().setWindow(window));
+
+        long decompressedLength = 0;
+        for (int i = 0; i < compressed.length; i += chunkSize) {
+            int n = Math.min(chunkSize, compressed.length - i);
+            channel.writeInbound(channel.alloc().buffer(n).writeBytes(compressed, i, n));
+            decompressedLength += readZeros(channel);
+        }
+        assertFalse(channel.finish());
+        assertEquals(length, decompressedLength);
+    }
+
+    @Test
+    public void testDecompressionOfTruncatedHighlyCompressibleData() throws Exception {
+        byte[] compressed = Encoder.compress(new byte[1048576], new Encoder.Parameters().setWindow(10));
+
+        channel.writeInbound(Unpooled.wrappedBuffer(compressed, 0, compressed.length - 1));
+        assertTrue(readZeros(channel) < 1048576);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    public void testDecompressionWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes) throws Exception {
+        byte[] compressed = Encoder.compress(new byte[1048576], new Encoder.Parameters().setWindow(10));
+
+        EmbeddedChannel ch = new EmbeddedChannel(new BrotliDecoder(8 * 1024, 0, defaultMaxForwardBytes));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
+            int parts = 0;
+            long n = 0;
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                try {
+                    assertTrue(msg.isReadable());
+                    assertTrue(msg.readableBytes() <= BrotliDecoder.DEFAULT_OUTPUT_BUFFER_SIZE);
+                    for (int i = msg.readerIndex(); i < msg.writerIndex(); i++) {
+                        assertEquals(0, msg.getByte(i));
+                    }
+                    n += msg.readableBytes();
+                    parts++;
+                } finally {
+                    msg.release();
+                }
+            }
+            assertEquals(1048576, n);
+            // The 1 KiB window keeps every pull small, so forwarding each pull gives far more parts than buffers of
+            // DEFAULT_OUTPUT_BUFFER_SIZE would.
+            assertTrue(parts > 1048576 / BrotliDecoder.DEFAULT_OUTPUT_BUFFER_SIZE, "parts: " + parts);
+            assertFalse(ch.finish());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    private static long readZeros(EmbeddedChannel channel) {
+        long n = 0;
+        ByteBuf msg;
+        while ((msg = channel.readInbound()) != null) {
+            try {
+                for (int i = msg.readerIndex(); i < msg.writerIndex(); i++) {
+                    assertEquals(0, msg.getByte(i));
+                }
+                n += msg.readableBytes();
+            } finally {
+                msg.release();
+            }
+        }
+        return n;
     }
 }

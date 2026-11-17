@@ -16,7 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class SocksAuthRequestTest {
     @Test
@@ -24,12 +24,12 @@ public class SocksAuthRequestTest {
         try {
             new SocksAuthRequest(null, "");
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
         try {
             new SocksAuthRequest("", null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 
@@ -38,12 +38,12 @@ public class SocksAuthRequestTest {
         try {
             new SocksAuthRequest("παράδειγμα.δοκιμή", "password");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
         try {
             new SocksAuthRequest("username", "παράδειγμα.δοκιμή");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -61,7 +61,7 @@ public class SocksAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword",
                     "password");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
         try {
             new SocksAuthRequest("password",
@@ -74,7 +74,7 @@ public class SocksAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 

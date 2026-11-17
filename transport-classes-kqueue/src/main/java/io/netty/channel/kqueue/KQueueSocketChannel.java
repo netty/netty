@@ -45,8 +45,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -281,6 +283,8 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -337,7 +341,13 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
         if (msg instanceof ByteBuf) {
             return writeBytes(in, (ByteBuf) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel channel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened by sendFile.
+            if (channel == null || UnixChannelUtil.isFileChannelImpl(channel)) {
+                return writeDefaultFileRegion(in, region);
+            }
+            return writeFileRegion(in, region);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
         } else if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
@@ -407,6 +417,9 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
         boolean write = false;
         switch (type.direction()) {
             case Outbound:
+                // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the
+                // output.
+                removeFastOpenData();
                 write = true;
                 break;
             case Inbound:
@@ -590,6 +603,13 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     }
 
     @Override
+    protected Executor prepareToClose() {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+        removeFastOpenData();
+        return super.prepareToClose();
+    }
+
+    @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
@@ -610,7 +630,8 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
-                        outbound.removeBytes(Math.abs(bytesSent));
+                        // The written data is removed once the connect is complete.
+                        fastOpenDataSent(outbound, initialData, Math.abs(bytesSent));
                         // The `connectx` method returns a negative number if connection is in-progress.
                         // So we should return `true` to indicate that connection was established, if it's positive.
                         return bytesSent > 0;

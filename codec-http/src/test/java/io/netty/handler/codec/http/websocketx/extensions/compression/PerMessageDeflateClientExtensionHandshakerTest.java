@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,8 +77,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
     }
 
     @Test
@@ -102,8 +103,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // initialize
         parameters = new HashMap<String, String>();
@@ -117,8 +118,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // initialize
         parameters = new HashMap<String, String>();
@@ -147,8 +148,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // Test that handshake succeeds when parameters are valid
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "15");
@@ -175,8 +176,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // Test that handshake succeeds when server responds with `server_no_context_takeover` that we didn't offer
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // initialize
         handshaker = new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, true, 0);
@@ -227,7 +228,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         assertNotNull(firstFrameDecompressed);
         assertNotNull(firstFrameDecompressed.content());
-        assertTrue(firstFrameDecompressed instanceof TextWebSocketFrame);
+        assertInstanceOf(TextWebSocketFrame.class, firstFrameDecompressed);
         assertEquals(firstFrameDecompressed.text(),
                      "{\"info\":\"Welcome to the BitMEX Realtime API.\",\"version\"" +
                      ":\"2018-10-02T22:53:23.000Z\",\"timestamp\":\"2018-10-15T06:43:40.437Z\"," +
@@ -236,7 +237,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         assertNotNull(secondFrameDecompressed);
         assertNotNull(secondFrameDecompressed.content());
-        assertTrue(secondFrameDecompressed instanceof TextWebSocketFrame);
+        assertInstanceOf(TextWebSocketFrame.class, secondFrameDecompressed);
         assertEquals(secondFrameDecompressed.text(),
                      "{\"success\":true,\"subscribe\":\"orderBookL2:XBTUSD\"," +
                      "\"request\":{\"op\":\"subscribe\",\"args\":[\"orderBookL2:XBTUSD\"]}}");
@@ -262,8 +263,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         // Handshake should succeed, using MAX_WINDOW_SIZE (15) as default
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
     }
 
     @Test

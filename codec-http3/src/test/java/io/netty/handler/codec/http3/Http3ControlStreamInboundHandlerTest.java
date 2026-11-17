@@ -20,10 +20,12 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,6 +35,7 @@ import static io.netty.handler.codec.http3.Http3TestUtils.assertException;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertFrameReleased;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -46,6 +49,25 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     public Http3ControlStreamInboundHandlerTest() {
         super(QuicStreamType.UNIDIRECTIONAL, false, false);
+    }
+
+    @Test
+    public void testStreamInactiveFailuresDoNotFillInStackTrace() {
+        // These are static, so they must not populate a (native) backtrace: doing so would pin the Classloader of
+        // whatever thread happened to trigger the class initialization
+        // (see https://github.com/netty/netty/issues/17128).
+        assertNoStackTrace(Http3ControlStreamInboundHandler.ENCODER_STREAM_INACTIVE);
+        assertNoStackTrace(Http3ControlStreamInboundHandler.DECODER_STREAM_INACTIVE);
+    }
+
+    private static void assertNoStackTrace(ClosedChannelException cause) {
+        StackTraceElement[] before = cause.getStackTrace();
+        assertEquals(1, before.length);
+        assertEquals("streamClosed()", before[0].getMethodName());
+
+        // fillInStackTrace() must be a no-op; otherwise it would repopulate the backtrace with native frames.
+        cause.fillInStackTrace();
+        assertArrayEquals(before, cause.getStackTrace());
     }
 
     static Collection<Object[]> testData() {

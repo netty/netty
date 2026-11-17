@@ -120,12 +120,9 @@ public class IoUringShutdownOutputDuringInFlightWriteTest {
             // channel.shutdown(...) is the public path (AbstractChannel#shutdown): it only flips the
             // outputShutdown flag and fires the shutdown event, it never touches the outbound buffer. Releasing
             // the outbound buffer is the job of the private shutdownOutput(...), which only runs from the
-            // write-error path, not from here. So the buffer is still held by its original reference, and on top
-            // of that AbstractIoUringChannel#doShutdown retains it once more via writeTracker.retainAll() before
-            // this SQE's CQE lands, because the kernel still owns the submitted buffer until it posts the write
-            // CQE (or the SEND_ZC notification). refCnt 2 here is that original reference plus the tracker's
-            // retain, not a release having failed to happen.
-            assertEquals(2, refCntAfterShutdown.get(), "shutdown() did not retain the in-flight write buffer");
+            // write-error path, not from here. So the buffer is still held by its original reference, which
+            // keeps it alive until the write CQE (or the SEND_ZC notification) lands; no extra retain is needed.
+            assertEquals(1, refCntAfterShutdown.get(), "shutdown() released the in-flight write buffer");
 
             assertTrue(awaitRefCntZero(clientChannel, buffer, 5, TimeUnit.SECONDS),
                     "write buffer was not released after its terminal completion");

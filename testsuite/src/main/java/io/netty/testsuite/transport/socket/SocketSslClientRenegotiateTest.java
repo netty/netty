@@ -54,9 +54,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
@@ -191,14 +192,12 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             serverChannel.close().awaitUninterruptibly();
             clientChannel.close().awaitUninterruptibly();
             sc.close().awaitUninterruptibly();
-            try {
+            DecoderException e = assertThrows(DecoderException.class, () -> {
                 if (serverException.get() != null) {
                     throw serverException.get();
                 }
-                fail();
-            } catch (DecoderException e) {
-                assertTrue(e.getCause() instanceof SSLHandshakeException);
-            }
+            });
+            assertInstanceOf(SSLHandshakeException.class, e.getCause());
             if (clientException.get() != null) {
                 throw clientException.get();
             }
@@ -259,7 +258,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
                 } else {
                     if (ctx.channel().parent() == null) {
-                        assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);
+                        assertInstanceOf(ClosedChannelException.class, handshakeEvt.cause());
                     }
                 }
             }

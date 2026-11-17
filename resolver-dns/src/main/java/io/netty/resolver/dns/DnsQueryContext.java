@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
+import io.netty.handler.codec.dns.DefaultDnsOptCookieRecord;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -65,8 +66,16 @@ abstract class DnsQueryContext {
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
 
     private final DnsQuestion question;
+    // The question that is actually written to the wire. This differs from question in case when 0x20 case
+    // randomization is used.
+    private final DnsQuestion wireQuestion;
+    // true if the response must echo the name of wireQuestion with exactly the same case.
+    private final boolean exactCaseMatch;
     private final DnsRecord[] additionals;
     private final DnsRecord optResource;
+    private final DnsQueryProtection protection;
+    // null if no cookie is sent with the query.
+    private final byte[] clientCookie;
 
     private final boolean recursionDesired;
 
@@ -87,15 +96,24 @@ abstract class DnsQueryContext {
                     boolean recursionDesired,
                     long queryTimeoutMillis,
                     DnsQuestion question,
+                    DnsQuestion wireQuestion,
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise,
                     Bootstrap socketBootstrap,
-                    boolean retryWithTcpOnTimeout) {
+                    boolean retryWithTcpOnTimeout,
+                    DnsQueryProtection protection) {
         this.channel = checkNotNull(channel, "channel");
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
         this.queryLifecycleObserver = checkNotNull(queryLifecycleObserver, "queryLifecycleObserver");
         this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
+        this.protection = protection;
+        DnsQuestion wireQ = wireQuestion;
+        if (wireQ == null && protection != null && protection.isCaseRandomizationEnabled()) {
+            wireQ = protection.randomizeCase(question);
+        }
+        this.exactCaseMatch = wireQ != null;
+        this.wireQuestion = wireQ != null ? wireQ : question;
         this.additionals = checkNotNull(additionals, "additionals");
         this.promise = checkNotNull(promise, "promise");
         this.recursionDesired = recursionDesired;
@@ -108,10 +126,18 @@ abstract class DnsQueryContext {
                 // as per RFC:
                 //  - https://datatracker.ietf.org/doc/html/rfc6891#section-6.1.1
                 !hasOptRecord(additionals)) {
-            optResource = new AbstractDnsOptPseudoRrRecord(maxPayLoadSize, 0, 0) {
-                // We may want to remove this in the future and let the user just specify the opt record in the query.
-            };
+            if (protection != null && protection.isCookiesEnabled()) {
+                clientCookie = protection.newClientCookie();
+                optResource = new DefaultDnsOptCookieRecord(maxPayLoadSize, clientCookie);
+            } else {
+                clientCookie = null;
+                optResource = new AbstractDnsOptPseudoRrRecord(maxPayLoadSize, 0, 0) {
+                    // We may want to remove this in the future and let the user just specify the opt record in
+                    // the query.
+                };
+            }
         } else {
+            clientCookie = null;
             optResource = null;
         }
     }
@@ -143,6 +169,16 @@ abstract class DnsQueryContext {
      */
     final DnsQuestion question() {
         return question;
+    }
+
+    /**
+     * Returns the {@link DnsQuestion} that is written to the wire. This may differ in case from
+     * {@link #question()}.
+     *
+     * @return the question.
+     */
+    final DnsQuestion wireQuestion() {
+        return wireQuestion;
     }
 
     /**
@@ -204,12 +240,11 @@ abstract class DnsQueryContext {
                 removeFromContextManager(nameServerAddr);
             }
         });
-        final DnsQuestion question = question();
         final DnsQuery query = newQuery(id, nameServerAddr);
 
         query.setRecursionDesired(recursionDesired);
 
-        query.addRecord(DnsSection.QUESTION, question);
+        query.addRecord(DnsSection.QUESTION, wireQuestion);
 
         for (DnsRecord record: additionals) {
             query.addRecord(DnsSection.ADDITIONAL, record);
@@ -221,7 +256,7 @@ abstract class DnsQueryContext {
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WRITE: {}, [{}: {}], {}",
-                    channel, protocol(), id, nameServerAddr, question);
+                    channel, protocol(), id, nameServerAddr, wireQuestion);
         }
 
         Future<Void> f = sendQuery(query, flush);
@@ -284,19 +319,58 @@ abstract class DnsQueryContext {
      * This method takes ownership of passed {@link AddressedEnvelope}.
      */
     void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope, boolean truncated) {
+        finishSuccess(envelope, truncated, true);
+    }
+
+    /**
+     * @param validateCookie    {@code false} if the response was received via a different, already authenticated,
+     *                          transport (like TCP) and so does not carry a cookie that belongs to this query.
+     */
+    private void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope,
+                               boolean truncated, boolean validateCookie) {
         // Check if the response was not truncated or if a fallback to TCP is possible.
         if (!truncated || !retryWithTcp(envelope)) {
             final DnsResponse res = envelope.content();
             if (res.count(DnsSection.QUESTION) != 1) {
                 logger.warn("{} Received a DNS response with invalid number of questions. Expected: 1, found: {}",
                         channel, envelope);
-            } else if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
+            } else if (!matchesQuestion(res.recordAt(DnsSection.QUESTION))) {
                 logger.warn("{} Received a mismatching DNS response. Expected: [{}], found: {}",
-                        channel, question(), envelope);
+                        channel, wireQuestion, envelope);
+            } else if (validateCookie && !validateCookie(res)) {
+                logger.warn("{} Received a DNS response with a missing or invalid cookie: {}",
+                        channel, envelope);
             } else if (trySuccess(envelope)) {
                 return; // Ownership transferred, don't release
             }
             envelope.release();
+        }
+    }
+
+    private boolean matchesQuestion(Object responseQuestion) {
+        // Use AbstractDnsRecord.equals(...) for the type and class. It ignores the case of the name, which is
+        // what we want unless 0x20 case randomization is used. In this case the name must be echoed exactly as it was
+        // written, as otherwise the case would not add any entropy.
+        if (!question.equals(responseQuestion)) {
+            return false;
+        }
+        return !exactCaseMatch || wireQuestion.name().equals(((DnsRecord) responseQuestion).name());
+    }
+
+    private boolean validateCookie(DnsResponse res) {
+        if (clientCookie == null) {
+            return true;
+        }
+        switch (DnsQueryProtection.checkCookie(res, clientCookie)) {
+            case VALID:
+                protection.cookieReceived(nameServerAddr);
+                return true;
+            case ABSENT:
+                // A nameserver that supports cookies must echo the client cookie. Once we have seen this, a
+                // response without one must not be trusted.
+                return !protection.isCookieExpected(nameServerAddr);
+            default:
+                return false;
         }
     }
 
@@ -366,7 +440,8 @@ abstract class DnsQueryContext {
                     tcpCh.executor().newPromise();
             final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
                     (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, queryLifecycleObserver, 0,
-                    recursionDesired, queryTimeoutMillis, question(), additionals, promise);
+                    recursionDesired, queryTimeoutMillis, question(), exactCaseMatch ? wireQuestion : null,
+                    additionals, promise);
             tcpCh.pipeline().addLast(TCP_ENCODER);
             tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
             tcpCh.pipeline().addLast(new ChannelInboundHandler() {
@@ -415,7 +490,8 @@ abstract class DnsQueryContext {
             promise.addListener(
                     (FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future1 -> {
                         if (future1.isSuccess()) {
-                            finishSuccess(future1.getNow(), false);
+                            // The cookie only protects the UDP response, the TCP connection is authenticated by itself.
+                            finishSuccess(future1.getNow(), false, false);
                             // Release the original result.
                             ReferenceCountUtil.release(originalResult);
                         } else {

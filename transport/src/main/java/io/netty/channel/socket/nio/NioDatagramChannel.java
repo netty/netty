@@ -310,10 +310,6 @@ public final class NioDatagramChannel
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         final ByteBuffer nioData = data.nioBufferCount() == 1 ? data.internalNioBuffer(data.readerIndex(), dataLen)
                                                               : data.nioBuffer(data.readerIndex(), dataLen);
         final int writtenBytes;
@@ -322,7 +318,8 @@ public final class NioDatagramChannel
         } else {
             writtenBytes = javaChannel().write(nioData);
         }
-        return writtenBytes > 0;
+        // A zero-length datagram is valid; send() and write() return 0 for it.
+        return writtenBytes > 0 || dataLen == 0;
     }
 
     private static void checkUnresolved(SocketAddress address) {
@@ -374,15 +371,26 @@ public final class NioDatagramChannel
 
     @Override
     public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+        final NetworkInterface iface;
         try {
-            NetworkInterface iface = config.getNetworkInterface();
-            if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
-            }
-            joinGroup(multicastAddress, iface, null, promise);
+            iface = defaultMulticastInterface();
         } catch (SocketException e) {
             promise.setFailure(e);
+            return;
         }
+        joinGroup(multicastAddress, iface, null, promise);
+    }
+
+    /**
+     * Returns the interface to use when none was given: the one set via
+     * {@link io.netty.channel.ChannelOption#IP_MULTICAST_IF} or, if unset, the interface of the local address.
+     */
+    private NetworkInterface defaultMulticastInterface() throws SocketException {
+        NetworkInterface iface = config.getNetworkInterface();
+        if (iface == null) {
+            iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+        }
+        return iface;
     }
 
     @Override
@@ -431,9 +439,7 @@ public final class NioDatagramChannel
     @Override
     public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(
-                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
+            leaveGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
@@ -499,7 +505,7 @@ public final class NioDatagramChannel
                     if (networkInterface.equals(key.networkInterface())) {
                         try {
                             key.block(sourceToBlock);
-                        } catch (IOException e) {
+                        } catch (Throwable e) {
                             promise.setFailure(e);
                             return;
                         }
@@ -517,13 +523,14 @@ public final class NioDatagramChannel
     @Override
     public void block(
             InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
+        final NetworkInterface iface;
         try {
-            block(multicastAddress,
-                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
-                    sourceToBlock, promise);
+            iface = defaultMulticastInterface();
         } catch (SocketException e) {
             promise.setFailure(e);
+            return;
         }
+        block(multicastAddress, iface, sourceToBlock, promise);
     }
 
     @Override
@@ -718,7 +725,7 @@ public final class NioDatagramChannel
 
         boolean isLoopbackModeDisabled() {
             try {
-                return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+                return !jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
@@ -726,7 +733,7 @@ public final class NioDatagramChannel
 
         private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
             try {
-                jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
+                jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, !loopbackModeDisabled);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }

@@ -128,8 +128,9 @@ public final class Http2TestUtil {
         HpackEncoder hpackEncoder = new HpackEncoder(false, 16, 0);
         ByteBuf buf = Unpooled.buffer();
         try {
-            hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
+            hpackEncoder.setMaxHeaderTableSize(maxHeaderTableSize);
             hpackEncoder.setMaxHeaderListSize(maxHeaderListSize);
+            hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
         } finally  {
             buf.release();
         }
@@ -273,7 +274,7 @@ public final class Http2TestUtil {
         }
 
         @Override
-        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+        public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) throws Http2Exception {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             messageLatch.countDown();

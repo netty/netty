@@ -156,6 +156,27 @@ public class HttpVersionParsingTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
+            "H/9999999999.1",
+            "H/1.9999999999",
+            "H/2147483648.0",
+            "H/0.2147483648",
+            "H/4294967296.1",
+            "H/21474836470.1",
+    })
+    void testVersionNumberOverflowIsRejected(final String text) {
+        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text));
+    }
+
+    @Test
+    void testMaxVersionNumber() {
+        HttpVersion version = HttpVersion.valueOf("H/2147483647.0002147483647");
+        assertEquals(Integer.MAX_VALUE, version.majorVersion());
+        assertEquals(Integer.MAX_VALUE, version.minorVersion());
+        assertEquals("H/2147483647.2147483647", version.text());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
             "HTTP ",
             " HTTP",
             "H TTP",

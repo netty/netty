@@ -43,7 +43,7 @@ public class SubmissionQueueTest {
 
     @Test
     public void sqeFullTest() {
-        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        RingBuffer ringBuffer = Native.createRingBuffer(8, Native.IORING_SETUP_R_DISABLED);
         ringBuffer.enable();
         try {
             SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
@@ -71,7 +71,7 @@ public class SubmissionQueueTest {
 
     @Test
     public void useAfterClose() {
-        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        RingBuffer ringBuffer = Native.createRingBuffer(8, Native.IORING_SETUP_R_DISABLED);
         ringBuffer.enable();
         ringBuffer.close();
 
@@ -103,7 +103,8 @@ public class SubmissionQueueTest {
     @DisabledIf("setUpCQSizeUnavailable")
     public void testSetUpCqSize() {
         int cqSize = 8;
-        RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
+        RingBuffer ringBuffer = Native.createRingBuffer(
+                2, cqSize, Native.IORING_SETUP_CQSIZE | Native.IORING_SETUP_R_DISABLED);
         try {
             assertNotNull(ringBuffer);
             ringBuffer.enable();
@@ -130,7 +131,8 @@ public class SubmissionQueueTest {
     @DisabledIf("setUpCQSizeUnavailable")
     public void testCqOverflow() {
         int cqSize = 2;
-        RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
+        RingBuffer ringBuffer = Native.createRingBuffer(
+                2, cqSize, Native.IORING_SETUP_CQSIZE | Native.IORING_SETUP_R_DISABLED);
         try {
             assertNotNull(ringBuffer);
             ringBuffer.enable();
@@ -206,7 +208,7 @@ public class SubmissionQueueTest {
     public void testCqe(CqeSize cqeSize) {
         assumeTrue(Native.ioUringSetupSupportsFlags(cqeSize.setupFlag()));
 
-        RingBuffer ringBuffer = Native.createRingBuffer(8, cqeSize.setupFlag());
+        RingBuffer ringBuffer = Native.createRingBuffer(8, cqeSize.setupFlag() | Native.IORING_SETUP_R_DISABLED);
         ringBuffer.enable();
         try {
             SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
@@ -256,7 +258,7 @@ public class SubmissionQueueTest {
     public void testMixedCqe() {
         assumeTrue(Native.ioUringSetupSupportsFlags(CqeSize.MIXED.setupFlag()));
 
-        RingBuffer ringBuffer = Native.createRingBuffer(8, CqeSize.MIXED.setupFlag());
+        RingBuffer ringBuffer = Native.createRingBuffer(8, CqeSize.MIXED.setupFlag() | Native.IORING_SETUP_R_DISABLED);
         ringBuffer.enable();
         try {
             SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();

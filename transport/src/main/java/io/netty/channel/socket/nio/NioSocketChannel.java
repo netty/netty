@@ -343,7 +343,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
         } while (writeSpinCount > 0);
 
-        incompleteWrite(writeSpinCount < 0);
+        if (in.isEmpty()) {
+            // The last write may have drained the buffer while exhausting the write spin count.
+            clearOpWrite();
+        } else {
+            incompleteWrite(writeSpinCount < 0);
+        }
     }
 
     @Override

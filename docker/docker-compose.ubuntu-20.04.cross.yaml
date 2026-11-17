@@ -7,6 +7,12 @@ services:
     build:
       context: ../
       dockerfile: docker/Dockerfile.cross_compile_riscv64
+      args:
+        java_version: "25-zulu"
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross-riscv64-5.0
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:cross-riscv64-5.0,mode=max,ignore-error=true
 
   cross-compile-riscv64-common: &cross-compile-riscv64-common
     depends_on: [ cross-compile-riscv64-runtime-setup ]

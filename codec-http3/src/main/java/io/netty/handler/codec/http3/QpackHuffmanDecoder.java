@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 
-final class QpackHuffmanDecoder implements ByteProcessor {
+class QpackHuffmanDecoder implements ByteProcessor {
 
     /* Scroll to the bottom! */
 

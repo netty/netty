@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
+import io.netty.util.SecureObjectIdentityHash;
 import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.KeyManager;
@@ -31,6 +32,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Provider;
@@ -44,9 +46,9 @@ import java.util.Map;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.deepCheckNotNull;
 
 /**
@@ -55,6 +57,9 @@ import static io.netty.util.internal.ObjectUtil.deepCheckNotNull;
 public final class SslContextBuilder {
     @SuppressWarnings("rawtypes")
     private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
+    private static final byte[] SESSION_ID_CONTEXT_SEED =
+        "netty-server-session-id-context-v1".getBytes(StandardCharsets.ISO_8859_1);
+    private static final SecureObjectIdentityHash IDENTITY_HASHES = new SecureObjectIdentityHash();
 
     /**
      * Creates a builder for new client-side {@link SslContext}.
@@ -218,6 +223,9 @@ public final class SslContextBuilder {
     private String endpointIdentificationAlgorithm;
     private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
     private final List<SNIServerName> serverNames;
+    private final SessionIdContextBuilder sessionIdContextBuilder = new SessionIdContextBuilder(IDENTITY_HASHES)
+        .setSeed(SESSION_ID_CONTEXT_SEED)
+        .setClientAuth(clientAuth);
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
@@ -297,6 +305,7 @@ public final class SslContextBuilder {
     public SslContextBuilder trustManager(X509Certificate... trustCertCollection) {
         this.trustCertCollection = trustCertCollection != null ? trustCertCollection.clone() : null;
         trustManagerFactory = null;
+        sessionIdContextBuilder.setTrustedCertificates(this.trustCertCollection);
         return this;
     }
 
@@ -313,6 +322,7 @@ public final class SslContextBuilder {
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         trustCertCollection = null;
         this.trustManagerFactory = trustManagerFactory;
+        sessionIdContextBuilder.setTrustManagerFactory(trustManagerFactory);
         return this;
     }
 
@@ -330,6 +340,7 @@ public final class SslContextBuilder {
             trustManagerFactory = null;
         }
         trustCertCollection = null;
+        sessionIdContextBuilder.setTrustManager(trustManager);
         return this;
     }
 
@@ -461,6 +472,7 @@ public final class SslContextBuilder {
         this.key = key;
         this.keyPassword = keyPassword;
         keyManagerFactory = null;
+        sessionIdContextBuilder.setKeyCertificateChain(this.keyCertChain);
         return this;
     }
 
@@ -497,6 +509,7 @@ public final class SslContextBuilder {
         key = null;
         keyPassword = null;
         this.keyManagerFactory = keyManagerFactory;
+        sessionIdContextBuilder.setKeyManagerFactory(keyManagerFactory);
         return this;
     }
 
@@ -605,6 +618,7 @@ public final class SslContextBuilder {
         keyCertChain = null;
         key = null;
         keyPassword = null;
+        sessionIdContextBuilder.setKeyManager(keyManager);
         return this;
     }
 
@@ -658,6 +672,7 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder clientAuth(ClientAuth clientAuth) {
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        sessionIdContextBuilder.setClientAuth(clientAuth);
         return this;
     }
 
@@ -759,19 +774,27 @@ public final class SslContextBuilder {
      * responsible for releasing this object, or else native memory may leak.
      */
     public SslContext build() throws SSLException {
+        if (credentials != null) {
+            sessionIdContextBuilder.setCredentials(credentials.toArray(new OpenSslCredential[0]));
+        }
         if (forServer) {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
                 enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES),
-                credentials);
+                credentials, sessionIdContextBuilder);
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                 sessionTimeout, startTls, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials, sessionIdContextBuilder);
         }
+    }
+
+    // Visible for testing.
+    SessionIdContextBuilder sessionIdContextBuilder() {
+        return sessionIdContextBuilder;
     }
 
     private static <T> T[] toArray(Iterable<? extends T> iterable, T[] prototype) {

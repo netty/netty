@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test cases for RTSP decoder.
@@ -65,12 +64,12 @@ public class RtspDecoderTest {
 
         HttpObject res1 = ch.readInbound();
         assertNotNull(res1);
-        assertTrue(res1 instanceof FullHttpRequest);
+        assertInstanceOf(FullHttpRequest.class, res1);
         ((FullHttpRequest) res1).release();
 
         HttpObject res2 = ch.readInbound();
         assertNotNull(res2);
-        assertTrue(res2 instanceof FullHttpResponse);
+        assertInstanceOf(FullHttpResponse.class, res2);
         ((FullHttpResponse) res2).release();
     }
 

@@ -38,7 +38,7 @@ RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 
 # install rust and setup PATH
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.100.0
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 # Cleanup
