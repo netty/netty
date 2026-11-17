@@ -105,7 +105,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             this.maxIndex = maxIndex;
 
             index = initialIndex;
-            nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
+            nextReceiveBufferSize = min(max(SIZE_TABLE[index], minCapacity), maxCapacity);
             this.minCapacity = minCapacity;
             this.maxCapacity = maxCapacity;
         }
@@ -182,21 +182,21 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
         int minIndex = getSizeTableIndex(minimum);
         if (SIZE_TABLE[minIndex] < minimum) {
-            this.minIndex = minIndex + 1;
+            this.minIndex = min(minIndex + 1, SIZE_TABLE.length - 1);
         } else {
             this.minIndex = minIndex;
         }
 
         int maxIndex = getSizeTableIndex(maximum);
         if (SIZE_TABLE[maxIndex] > maximum) {
-            this.maxIndex = maxIndex - 1;
+            this.maxIndex = max(maxIndex - 1, 0);
         } else {
             this.maxIndex = maxIndex;
         }
 
         int initialIndex = getSizeTableIndex(initial);
         if (SIZE_TABLE[initialIndex] > initial) {
-            this.initialIndex = initialIndex - 1;
+            this.initialIndex = max(initialIndex - 1, 0);
         } else {
             this.initialIndex = initialIndex;
         }
