@@ -1274,25 +1274,13 @@ public class DnsNameResolver extends InetNameResolver {
                                 final DnsRecord[] additionals,
                                 final Promise<List<InetAddress>> promise,
                                 final DnsCache resolveCache) throws Exception {
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
-            promise.setSuccess(Collections.singletonList(loopbackAddress()));
-            return;
-        }
-        final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
-        if (address != null) {
-            // The unresolvedAddress was created via a String that contains an ipaddress.
-            promise.setSuccess(Collections.singletonList(address));
+        final List<InetAddress> addresses = resolveAllWithoutDns(inetHost);
+        if (addresses != null) {
+            promise.setSuccess(addresses);
             return;
         }
 
         final String hostname = hostname(inetHost);
-
-        List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
-        if (hostsFileEntries != null) {
-            promise.setSuccess(hostsFileEntries);
-            return;
-        }
 
         if (!doResolveAllCached(hostname, additionals, promise, resolveCache, this.searchDomains(),
                 ndots(), resolvedInternetProtocolFamilies)) {
@@ -1304,6 +1292,23 @@ public class DnsNameResolver extends InetNameResolver {
                         doResolveAllNow(f1, hostname, additionals, promise, resolveCache));
             }
         }
+    }
+
+    /**
+     * Returns the addresses of {@code inetHost} obtained without DNS: the loopback address for an empty host, the
+     * address of an IP literal or the hosts file entries; or {@code null} if DNS is needed.
+     */
+    final List<InetAddress> resolveAllWithoutDns(String inetHost) {
+        if (inetHost == null || inetHost.isEmpty()) {
+            // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
+            return Collections.singletonList(loopbackAddress());
+        }
+        final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
+        if (address != null) {
+            // The unresolvedAddress was created via a String that contains an ipaddress.
+            return Collections.singletonList(address);
+        }
+        return resolveHostsFileEntries(hostname(inetHost));
     }
 
     private void doResolveAllNow(ChannelFuture f, final String hostname, final DnsRecord[] additionals,
@@ -1416,7 +1421,7 @@ public class DnsNameResolver extends InetNameResolver {
         ctx.resolve(promise);
     }
 
-    private static String hostname(String inetHost) {
+    static String hostname(String inetHost) {
         String hostname = IDN.toASCII(inetHost);
         // Check for https://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
         if (StringUtil.endsWith(inetHost, '.') && !StringUtil.endsWith(hostname, '.')) {
