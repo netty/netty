@@ -74,7 +74,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // or create a new one to share among the entire group.
         return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
                 .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache())
+                .httpsCache(dnsResolverBuilder.getOrNewHttpsCache());
     }
 
     @SuppressWarnings("deprecation")
