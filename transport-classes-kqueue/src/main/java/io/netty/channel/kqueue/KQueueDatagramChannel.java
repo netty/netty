@@ -450,6 +450,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         SocketAddress localAddress;
                         SocketAddress remoteAddress;
                         int receivedAmount;
+                        int bytesRead;
                         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
                             final DomainDatagramSocketAddress received;
                             if (byteBuf.hasMemoryAddress()) {
@@ -470,6 +471,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                             }
                             localAddress = received.localAddress();
                             receivedAmount = received.receivedAmount();
+                            // Avoid signalling end-of-data for zero-sized datagrams, otherwise continueReading(...)
+                            // may stop the loop and leave the remaining datagrams unread.
+                            bytesRead = Math.max(1, receivedAmount);
                             remoteAddress = received;
                         } else {
                             final DatagramSocketAddress received;
@@ -490,14 +494,15 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                             }
                             localAddress = received.localAddress();
                             receivedAmount = received.receivedAmount();
+                            bytesRead = receivedAmount;
                             remoteAddress = received;
                         }
 
                         if (localAddress == null) {
                             localAddress = localAddress();
                         }
-                        allocHandle.lastBytesRead(receivedAmount);
-                        byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+                        allocHandle.lastBytesRead(bytesRead);
+                        byteBuf.writerIndex(byteBuf.writerIndex() + receivedAmount);
 
                         packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
                     }
