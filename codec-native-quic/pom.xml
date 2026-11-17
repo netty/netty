@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.21.Final-SNAPSHOT</version>
+    <version>4.2.22.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -77,6 +77,9 @@
     <macosxDeploymentTarget />
     <bundleNativeCode />
     <crossCompile />
+    <!-- The native library links quiche, BoringSSL and the Rust standard library, whose glibc symbol versions we don't
+         control, so it is exempt from the check-native-glibc-versions profile in the parent pom. -->
+    <skipNativeGlibcVersionsCheck>true</skipNativeGlibcVersionsCheck>
   </properties>
 
   <profiles>
