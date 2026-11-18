@@ -18,8 +18,11 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.MockTicker;
+import io.netty.util.concurrent.Ticker;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -32,6 +35,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -254,5 +258,60 @@ public class DefaultDnsCacheTest {
             expectedWriter.close();
             actualWriter.close();
         }
+    }
+
+    @Test
+    public void testEntryReportsItsDeadline() throws Exception {
+        MockTicker ticker = Ticker.newMockTicker();
+        ticker.advance(5, TimeUnit.SECONDS);
+        EmbeddedChannel channel = EmbeddedChannel.builder().ticker(ticker).build();
+        try {
+            DefaultDnsCache cache = new DefaultDnsCache();
+            cache.cache("netty.io", null, InetAddress.getByName("10.0.0.1"), 60, channel.eventLoop());
+
+            assertThat(cache.get("netty.io", null).get(0).deadlineNanos()).isEqualTo(TimeUnit.SECONDS.toNanos(65));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testEntryDeadlineIsClampedLikeTheCache() throws Exception {
+        EmbeddedChannel channel = EmbeddedChannel.builder().ticker(Ticker.newMockTicker()).build();
+        try {
+            DefaultDnsCache cache = new DefaultDnsCache(10, 30, 5);
+            cache.cache("netty.io", null, InetAddress.getByName("10.0.0.1"), 60, channel.eventLoop());
+            cache.cache("netty.com", null, InetAddress.getByName("10.0.0.2"), 1, channel.eventLoop());
+            cache.cache("netty.org", null, new UnknownHostException(), channel.eventLoop());
+
+            assertThat(cache.get("netty.io", null).get(0).deadlineNanos()).isEqualTo(TimeUnit.SECONDS.toNanos(30));
+            assertThat(cache.get("netty.com", null).get(0).deadlineNanos()).isEqualTo(TimeUnit.SECONDS.toNanos(10));
+            assertThat(cache.get("netty.org", null).get(0).deadlineNanos()).isEqualTo(TimeUnit.SECONDS.toNanos(5));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testEntryDeadlineIsUnknownByDefault() {
+        DnsCacheEntry entry = new DnsCacheEntry() {
+            @Override
+            public InetAddress address() {
+                return null;
+            }
+
+            @Override
+            public Throwable cause() {
+                return null;
+            }
+        };
+
+        assertThat(entry.deadlineNanos()).isEqualTo(-1);
+    }
+
+    @Test
+    public void testNoopEntryIsAlreadyExpired() throws Exception {
+        assertThat(NoopDnsCache.INSTANCE.cache("netty.io", null, InetAddress.getByName("10.0.0.1"), 60, null)
+                .deadlineNanos()).isEqualTo(0);
     }
 }
