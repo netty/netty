@@ -92,7 +92,7 @@ public class SslClientHelloHandlerTest {
     public void testLeadingZeroLengthHandshakeRecordFailsClosed() {
         // A zero-length TLS handshake record: content type = handshake (0x16), version 3.3, length = 0.
         // It is followed by a real ClientHello, which some TLS implementations would still process.
-        assertZeroLengthHandshakeRecordFailsClosed("1603030000", TLS_CLIENT_HELLO_HEX_PART1,
+        assertFailsClosed("1603030000", TLS_CLIENT_HELLO_HEX_PART1,
                 TLS_CLIENT_HELLO_HEX_PART2);
     }
 
@@ -103,13 +103,13 @@ public class SslClientHelloHandlerTest {
         String handshake = TLS_CLIENT_HELLO_HEX_PART2.substring(2);
         String firstFragment = handshake.substring(0, 20);
         String secondFragment = handshake.substring(20);
-        assertZeroLengthHandshakeRecordFailsClosed(
+        assertFailsClosed(
                 "160301" + String.format("%04x", firstFragment.length() / 2) + firstFragment,
                 "1603030000",
                 "160301" + String.format("%04x", secondFragment.length() / 2) + secondFragment);
     }
 
-    private static void assertZeroLengthHandshakeRecordFailsClosed(final String... chunks) {
+    private static void assertFailsClosed(final String... chunks) {
         final AtomicBoolean lookupCalled = new AtomicBoolean();
         final AtomicReference<SniCompletionEvent> eventRef = new AtomicReference<SniCompletionEvent>();
 
@@ -152,6 +152,28 @@ public class SslClientHelloHandlerTest {
         assertFalse(lookupCalled.get(), "Expected no context selection");
         assertNotNull(eventRef.get());
         assertInstanceOf(NotSslRecordException.class, eventRef.get().cause());
+    }
+
+    @Test
+    public void testMalformedServerNameExtensionFailsClosed() {
+        // server_name extension whose host_name runs past the extension into the next one. An SSLEngine might
+        // interpret this differently, so we must not select the default context.
+        String serverName = "0000" + "0009" + "ffff" + "00" + "000d" + "62657461";
+        String nextExtension = "ff01" + "0009" + "2e736e692e74657374";
+        String record = clientHelloRecord(serverName + nextExtension);
+        assertFailsClosed(record);
+        // Also when the record arrives in two chunks.
+        assertFailsClosed(record.substring(0, 20), record.substring(20));
+    }
+
+    private static String clientHelloRecord(String extensions) {
+        String body = "0303" + new String(new char[64]).replace('\0', '0') // client_version + random (32 zero bytes)
+                + "00" // session_id length
+                + "0002" + "002f" // cipher_suites
+                + "01" + "00" // compression_methods
+                + String.format("%04x", extensions.length() / 2) + extensions;
+        String handshake = "01" + String.format("%06x", body.length() / 2) + body;
+        return "160301" + String.format("%04x", handshake.length() / 2) + handshake;
     }
 
     @Test

@@ -228,7 +228,15 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                     }
                 }
             } catch (NotSslRecordException e) {
-                // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                if (!handshakeFailed) {
+                    // Thrown by lookup(...), e.g. because the server_name extension is malformed. Fail closed
+                    // instead of selecting the default: the SSLEngine might interpret the same bytes differently.
+                    handshakeFailed = true;
+                    in.skipBytes(in.readableBytes());
+                    ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                    SslUtils.handleHandshakeFailure(ctx, e, true);
+                }
+                // Rethrow as in this case we also closed the channel and this is consistent with SslHandler.
                 throw e;
             } catch (TooLongFrameException e) {
                 // Just rethrow as in this case we also closed the channel
