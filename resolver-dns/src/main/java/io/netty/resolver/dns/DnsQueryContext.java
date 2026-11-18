@@ -166,6 +166,15 @@ abstract class DnsQueryContext {
     }
 
     /**
+     * Returns the {@link Channel} that is used to write the query.
+     *
+     * @return the channel.
+     */
+    final Channel channel() {
+        return channel;
+    }
+
+    /**
      * Returns the {@link DnsQuestion} that will be written as part of the {@link DnsQuery}.
      *
      * @return the question.
