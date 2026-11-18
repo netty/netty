@@ -324,6 +324,38 @@ public class AbstractSniHandlerTest {
         }
     }
 
+    // RFC 6066, Section 3 applies to every name_type, and the JDK rejects a repeated unknown name type as well.
+    @Test
+    public void testExtractSniHostnameRejectsDuplicateUnknownNameType() {
+        for (int nameType : new int[] { 1, 63, 64, 128, 255 }) {
+            ByteBuf list = Unpooled.buffer();
+            writeServerNameEntry(list, nameType, "one".getBytes(CharsetUtil.US_ASCII));
+            writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+            writeServerNameEntry(list, nameType, "two".getBytes(CharsetUtil.US_ASCII));
+            ByteBuf buffer = clientHelloWithServerNameList(list);
+            try {
+                assertMalformedServerName(buffer, "nameType=" + nameType);
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameAcceptsDistinctUnknownNameTypes() throws Exception {
+        ByteBuf list = Unpooled.buffer();
+        writeServerNameEntry(list, 1, "one".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 64, "two".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 255, "three".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
     // Bytes after the last ServerName that are too short to hold another entry.
     @Test
     public void testExtractSniHostnameRejectsTrailingBytesInServerNameList() {
