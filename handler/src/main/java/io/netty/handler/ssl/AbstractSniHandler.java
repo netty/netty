@@ -41,8 +41,8 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
      * Package-private for testing purposes.
      *
      * @return the lower-cased host name, or {@code null} if the {@code ClientHello} carries no usable
-     *         {@code server_name} extension (e.g. because the extension is absent or the {@code ClientHello}
-     *         itself can not be parsed).
+     *         {@code server_name} extension (e.g. because the extension is absent, it only holds name types other
+     *         than {@code host_name}, or the {@code ClientHello} itself can not be parsed).
      * @throws NotSslRecordException if a {@code server_name} extension is present but malformed. Callers must
      *         fail closed in this case rather than fall back to a default as the {@code SSLEngine} may
      *         interpret the same bytes differently.
@@ -124,29 +124,39 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                                 serverNameListLength + " for extension length " + extensionLength);
                                     }
 
-                                    final int serverNameType = in.getUnsignedByte(offset);
-                                    offset++;
-
-                                    if (serverNameType == 0) {
-                                        final int serverNameLength = in.getUnsignedShort(offset);
-                                        offset += 2;
-
-                                        // HostName is opaque<1..2^16-1>.
-                                        if (serverNameLength == 0) {
-                                            throw malformedServerName("empty host_name");
+                                    // Walk the whole list like the JDK does, so we select based on the same host_name
+                                    // as the SSLEngine will see.
+                                    String hostname = null;
+                                    while (offset < extensionLimit) {
+                                        // ServerName: name_type (1) + 16-bit length prefixed name. RFC 6066, Section 3
+                                        // requires the data of future name types to begin with a 16-bit length too, so
+                                        // unknown name types can be skipped.
+                                        if (extensionLimit - offset < 3) {
+                                            throw malformedServerName("truncated server_name entry");
                                         }
+                                        final int serverNameType = in.getUnsignedByte(offset);
+                                        final int serverNameLength = in.getUnsignedShort(offset + 1);
+                                        offset += 3;
+
                                         if (extensionLimit - offset < serverNameLength) {
-                                            throw malformedServerName("host_name length " + serverNameLength +
+                                            throw malformedServerName("server_name entry length " + serverNameLength +
                                                     " exceeds the extension");
                                         }
 
-                                        final String hostname = in.toString(
-                                                offset, serverNameLength, CharsetUtil.US_ASCII);
-                                        return hostname.toLowerCase(Locale.US);
-                                    } else {
-                                        // invalid enum value
-                                        break;
+                                        if (serverNameType == 0) {
+                                            // HostName is opaque<1..2^16-1>, see RFC 6066, Section 3.
+                                            if (serverNameLength == 0) {
+                                                throw malformedServerName("empty host_name");
+                                            }
+                                            // RFC 6066, Section 3: no more than one name of the same name_type.
+                                            if (hostname != null) {
+                                                throw malformedServerName("duplicate host_name");
+                                            }
+                                            hostname = in.toString(offset, serverNameLength, CharsetUtil.US_ASCII);
+                                        }
+                                        offset += serverNameLength;
                                     }
+                                    return hostname == null ? null : hostname.toLowerCase(Locale.US);
                                 }
 
                                 offset += extensionLength;
