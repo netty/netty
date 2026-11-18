@@ -94,6 +94,8 @@ final class AdaptivePoolingAllocator {
      */
     private static final boolean DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM = SystemPropertyUtil.getBoolean(
             "io.netty.allocator.disableThreadLocalMagazinesOnLowMemory", true);
+    private static final boolean DISABLE_THREAD_LOCAL_MAGAZINES =
+            IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
 
     /**
      * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
@@ -230,8 +232,7 @@ final class AdaptivePoolingAllocator {
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new BuddyChunkManagementStrategy(), false);
 
-        boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
-        threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
+        threadLocalGroup = DISABLE_THREAD_LOCAL_MAGAZINES ? null : new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
                 if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
@@ -272,7 +273,7 @@ final class AdaptivePoolingAllocator {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
             if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
-                    IS_LOW_MEM ||
+                    DISABLE_THREAD_LOCAL_MAGAZINES ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
                 magazineGroups = sizeClassedMagazineGroups;
             }
