@@ -110,6 +110,11 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     }
 
     @Override
+    public HttpToHttp2ConnectionHandlerBuilder autoTuneFlowControlWindow(int maxWindowSize) {
+        return super.autoTuneFlowControlWindow(maxWindowSize);
+    }
+
+    @Override
     @Deprecated
     public HttpToHttp2ConnectionHandlerBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
