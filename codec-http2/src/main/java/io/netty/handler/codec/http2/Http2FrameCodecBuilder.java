@@ -16,6 +16,10 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.Channel;
+
+import java.util.function.ToLongFunction;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -206,6 +210,12 @@ public class Http2FrameCodecBuilder extends
     public Http2FrameCodecBuilder encoderEnforceMaxRstFramesPerWindow(
             int maxRstFramesPerWindow, int secondsPerWindow) {
         return super.encoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);
+    }
+
+    @Override
+    public Http2FrameCodecBuilder autoTuneFlowControlWindow(
+            int maxWindowSize, ToLongFunction<? super Channel> rttMicros) {
+        return super.autoTuneFlowControlWindow(maxWindowSize, rttMicros);
     }
 
     @Override
