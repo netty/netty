@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -186,6 +187,30 @@ public class HttpContentDecoderTest {
             assertFalse(o instanceof LastHttpContent);
             ReferenceCountUtil.release(o);
         }
+    }
+
+    @Test
+    public void testIncompleteBodyDoesNotFailNextMessage() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpContentDecompressor(0));
+
+        HttpResponse first = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        first.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        assertTrue(channel.writeInbound(first));
+        // drop the CRC32 and ISIZE footer, and never complete the message
+        ByteBuf truncated = Unpooled.wrappedBuffer(GZ_HELLO_WORLD, 0, GZ_HELLO_WORLD.length - 8);
+        assertTrue(channel.writeInbound(new DefaultHttpContent(truncated)));
+
+        // A new message starts, the incomplete body of the previous one must not fail it.
+        HttpResponse second = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertTrue(channel.writeInbound(second));
+
+        assertSame(first, channel.readInbound());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+        assertSame(second, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
