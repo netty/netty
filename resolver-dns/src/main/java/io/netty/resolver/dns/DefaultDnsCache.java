@@ -17,6 +17,7 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.util.concurrent.Ticker;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,6 +30,7 @@ import java.util.AbstractList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -134,11 +136,12 @@ public class DefaultDnsCache implements DnsCache {
         checkNotNull(hostname, "hostname");
         checkNotNull(address, "address");
         checkNotNull(loop, "loop");
-        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address);
+        final int ttl = ttls.ttl(originalTtl);
+        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address, loop.ticker(), ttl);
         if (!ttls.cachesResult(additionals)) {
             return e;
         }
-        resolveCache.cache(DnsCacheTtls.appendDot(hostname), e, ttls.ttl(originalTtl), loop);
+        resolveCache.cache(DnsCacheTtls.appendDot(hostname), e, ttl, loop);
         return e;
     }
 
@@ -148,7 +151,7 @@ public class DefaultDnsCache implements DnsCache {
         checkNotNull(cause, "cause");
         checkNotNull(loop, "loop");
 
-        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause);
+        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause, loop.ticker(), ttls.negativeTtl());
         if (!ttls.cachesFailure(additionals)) {
             return e;
         }
@@ -172,19 +175,22 @@ public class DefaultDnsCache implements DnsCache {
         private final String hostname;
         private final InetAddress address;
         private final Throwable cause;
+        private final long deadlineNanos;
         private final int hash;
 
-        DefaultDnsCacheEntry(String hostname, InetAddress address) {
+        DefaultDnsCacheEntry(String hostname, InetAddress address, Ticker ticker, int ttl) {
             this.hostname = hostname;
             this.address = address;
             cause = null;
+            deadlineNanos = ticker.nanoTime() + TimeUnit.SECONDS.toNanos(ttl);
             hash = System.identityHashCode(this);
         }
 
-        DefaultDnsCacheEntry(String hostname, Throwable cause) {
+        DefaultDnsCacheEntry(String hostname, Throwable cause, Ticker ticker, int ttl) {
             this.hostname = hostname;
             this.cause = cause;
             address = null;
+            deadlineNanos = ticker.nanoTime() + TimeUnit.SECONDS.toNanos(ttl);
             hash = System.identityHashCode(this);
         }
 
@@ -197,6 +203,7 @@ public class DefaultDnsCache implements DnsCache {
                 this.address = null;
                 this.cause = copyThrowable(entry.cause);
             }
+            this.deadlineNanos = entry.deadlineNanos;
             this.hash = entry.hash;
         }
 
@@ -208,6 +215,11 @@ public class DefaultDnsCache implements DnsCache {
         @Override
         public Throwable cause() {
             return cause;
+        }
+
+        @Override
+        public long deadlineNanos() {
+            return deadlineNanos;
         }
 
         String hostname() {

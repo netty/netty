@@ -83,6 +83,12 @@ public final class NoopDnsCache implements DnsCache {
         }
 
         @Override
+        public long deadlineNanos() {
+            // Not cached, so already expired.
+            return 0;
+        }
+
+        @Override
         public String toString() {
             return address.toString();
         }
