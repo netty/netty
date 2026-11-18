@@ -69,6 +69,8 @@ public class DelegatingDecompressorFrameListenerTest {
             }
         };
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
+        // The flow controller requires the context to be set before bytes can be returned to it.
+        connection.local().flowController().channelHandlerContext(ctx);
         listener = new DelegatingDecompressorFrameListener(connection, new Http2FrameAdapter() {
             @Override
             public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
