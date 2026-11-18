@@ -70,6 +70,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private boolean finSent;
     private boolean inputReset;
     private boolean outputStopped;
+    private long stopSendingErrorCode;
 
     private volatile boolean registered;
     private volatile boolean writable = true;
@@ -90,6 +91,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         this.address = new QuicStreamAddress(streamId);
         this.closePromise = newPromise();
         queue = new PendingWriteQueue(this);
+        stopSendingErrorCode = -1;
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for
         // these to be read.
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {
@@ -287,11 +289,15 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return finReceived || inputReset;
     }
 
+    void stopSendingErrorCode(long errorCode) {
+        stopSendingErrorCode = errorCode;
+    }
+
     private void outputStopped() {
         if (!outputStopped) {
             outputStopped = true;
             outputShutdown = true;
-            pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(parent().streamStoppedErrorCode(streamId())));
+            pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
         }
     }
 
