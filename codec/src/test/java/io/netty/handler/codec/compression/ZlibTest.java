@@ -222,13 +222,14 @@ public abstract class ZlibTest {
             // Closing an encoder channel will generate a footer.
             assertTrue(chEncoder.finish());
             for (;;) {
-                Object msg = chEncoder.readOutbound();
-                if (msg == null) {
+                ByteBuf footer = chEncoder.readOutbound();
+                if (footer == null) {
                     break;
                 }
-                ReferenceCountUtil.release(msg);
+                chDecoderZlib.writeInbound(footer);
             }
             // But, the footer will be decoded into nothing. It's only for validation.
+            assertNull(chDecoderZlib.readInbound());
             assertFalse(chDecoderZlib.finish());
 
             data.release();
