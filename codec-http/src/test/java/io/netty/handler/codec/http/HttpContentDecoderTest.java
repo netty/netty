@@ -154,6 +154,41 @@ public class HttpContentDecoderTest {
     }
 
     @Test
+    public void testMalformedChunkFailurePropagated() {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor(0);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        String headers = "HTTP/1.1 200 OK\r\n"
+                + "Transfer-Encoding: chunked\r\n"
+                + "Content-Encoding: gzip\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII)));
+        String chunkLength = Integer.toHexString(GZ_HELLO_WORLD.length);
+        channel.writeInbound(Unpooled.copiedBuffer(chunkLength + "\r\n", CharsetUtil.US_ASCII));
+        channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD));
+        // the chunk is not terminated by CRLF, so HttpObjectDecoder fails the message
+        channel.writeInbound(Unpooled.copiedBuffer("XX0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+
+        LastHttpContent last = null;
+        for (;;) {
+            HttpContent content = channel.readInbound();
+            assertNotNull(content);
+            content.release();
+            if (content instanceof LastHttpContent) {
+                last = (LastHttpContent) content;
+                break;
+            }
+        }
+        assertTrue(last.decoderResult().isFailure());
+        assertInstanceOf(InvalidChunkTerminationException.class, last.decoderResult().cause());
+        assertHasInboundMessages(channel, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testSnappyResponseDecompression() {
         // baseline test: response decoder, content decompressor && request aggregator work as expected
         HttpResponseDecoder decoder = new HttpResponseDecoder();
