@@ -1298,6 +1298,12 @@
         <version>2.0.0.AM27</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>3.7.1</version>
+        <scope>test</scope>
+      </dependency>
 
       <!-- Test dependency for log4j2 tests -->
       <dependency>

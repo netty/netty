@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
- * The TTL rules of {@link DefaultDnsCache}.
+ * The TTL rules shared by {@link DefaultDnsCache} and {@link DefaultDnsHttpsCache}.
  */
 final class DnsCacheTtls {
 
