@@ -18,7 +18,10 @@ package io.netty.util;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.ref.Reference;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
@@ -104,6 +107,43 @@ public class ResourceLeakDetectorTest {
         DefaultResource.detector.assertNoErrors();
 
         assertNoErrors(error);
+    }
+
+    @Test
+    public void testLeakListenerIsNotDeduplicated() {
+        RecordingLeakDetector detector = new RecordingLeakDetector(true);
+        List<String> reportedRecords = new ArrayList<String>();
+        detector.setLeakListener((resourceType, records) -> reportedRecords.add(records));
+
+        enqueueTwoLeaks(detector);
+
+        assertThat(reportedRecords).hasSize(2);
+        assertThat(reportedRecords.get(0)).isEqualTo(reportedRecords.get(1));
+        assertThat(detector.reportedLeaks).isOne();
+    }
+
+    @Test
+    public void testLeakListenerIsCalledWhenLoggingIsDisabled() {
+        RecordingLeakDetector detector = new RecordingLeakDetector(false);
+        List<String> reportedRecords = new ArrayList<String>();
+        detector.setLeakListener((resourceType, records) -> reportedRecords.add(records));
+
+        enqueueTwoLeaks(detector);
+
+        assertThat(reportedRecords).hasSize(2);
+        assertThat(reportedRecords.get(0)).isEqualTo(reportedRecords.get(1));
+        assertThat(detector.reportedLeaks).isZero();
+    }
+
+    private static void enqueueTwoLeaks(RecordingLeakDetector detector) {
+        for (int i = 0; i < 2; i++) {
+            ResourceLeakTracker<Object> leak = detector.track(new Object());
+            ((Reference<?>) leak).enqueue();
+        }
+
+        Object resource = new Object();
+        ResourceLeakTracker<Object> tracker = detector.track(resource);
+        tracker.close(resource);
     }
 
     @Timeout(10)
@@ -297,6 +337,31 @@ public class ResourceLeakDetectorTest {
 
         void assertNoErrors() throws Throwable {
             ResourceLeakDetectorTest.assertNoErrors(error);
+        }
+    }
+
+    private static final class RecordingLeakDetector extends ResourceLeakDetector<Object> {
+        private final boolean reportEnabled;
+        private int reportedLeaks;
+
+        RecordingLeakDetector(boolean reportEnabled) {
+            super(Object.class, 1);
+            this.reportEnabled = reportEnabled;
+        }
+
+        @Override
+        protected boolean needReport() {
+            return reportEnabled;
+        }
+
+        @Override
+        protected void reportTracedLeak(String resourceType, String records) {
+            reportedLeaks++;
+        }
+
+        @Override
+        protected void reportUntracedLeak(String resourceType) {
+            reportedLeaks++;
         }
     }
 }

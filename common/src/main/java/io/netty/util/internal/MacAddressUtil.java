@@ -188,11 +188,18 @@ public final class MacAddressUtil {
      * @return hex formatted MAC address.
      */
     public static String formatAddress(byte[] addr) {
-        StringBuilder buf = new StringBuilder(24);
-        for (byte b: addr) {
-            buf.append(String.format("%02x:", b & 0xff));
+        if (addr.length == 0) {
+            return "";
         }
-        return buf.substring(0, buf.length() - 1);
+        // avoid String.format: it pulls java.util.Formatter and its regex machinery into the startup path
+        StringBuilder buf = new StringBuilder(addr.length * 3 - 1);
+        for (byte b: addr) {
+            if (buf.length() > 0) {
+                buf.append(':');
+            }
+            buf.append(StringUtil.byteToHexStringPadded(b));
+        }
+        return buf.toString();
     }
 
     /**

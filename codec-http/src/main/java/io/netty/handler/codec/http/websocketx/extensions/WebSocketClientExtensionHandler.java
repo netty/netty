@@ -24,6 +24,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -105,6 +106,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
                             rsv = rsv | validExtension.rsv();
                             validExtensions.add(validExtension);
                         } else {
+                            ReferenceCountUtil.release(response);
                             throw new CodecException(
                                     "invalid WebSocket Extension handshake for \"" + extensionsHeader + '"');
                         }

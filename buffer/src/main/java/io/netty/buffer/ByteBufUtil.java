@@ -985,7 +985,8 @@ public final class ByteBufUtil {
                 char c2 = seq.charAt(i);
                 if (!Character.isLowSurrogate(c2)) {
                     buffer.put(writerIndex++, WRITE_UTF_UNKNOWN);
-                    buffer.put(writerIndex++, Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : (byte) c2);
+                    // c has no low surrogate, so encode c2 on its own in the next iteration.
+                    i--;
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
                     // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
@@ -1032,7 +1033,8 @@ public final class ByteBufUtil {
                 char c2 = seq.charAt(i);
                 if (!Character.isLowSurrogate(c2)) {
                     buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
-                    buffer._setByte(writerIndex++, Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2);
+                    // c has no low surrogate, so encode c2 on its own in the next iteration.
+                    i--;
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
                     // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
@@ -1075,7 +1077,8 @@ public final class ByteBufUtil {
                 // and increase the chance to inline CharSequence::charAt instead
                 if (!Character.isLowSurrogate(c2)) {
                     buffer[writerIndex++] = WRITE_UTF_UNKNOWN;
-                    buffer[writerIndex++] = (byte) (Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2);
+                    // c has no low surrogate, so encode c2 on its own in the next iteration.
+                    i--;
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
                     // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
@@ -1121,8 +1124,8 @@ public final class ByteBufUtil {
                 // and increase the chance to inline CharSequence::charAt instead
                 if (!Character.isLowSurrogate(c2)) {
                     PlatformDependent.putByte(buffer, writerOffset++, WRITE_UTF_UNKNOWN);
-                    PlatformDependent.putByte(buffer, writerOffset++,
-                                              (byte) (Character.isHighSurrogate(c2)? WRITE_UTF_UNKNOWN : c2));
+                    // c has no low surrogate, so encode c2 on its own in the next iteration.
+                    i--;
                 } else {
                     int codePoint = Character.toCodePoint(c, c2);
                     // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
@@ -1212,8 +1215,9 @@ public final class ByteBufUtil {
                     break;
                 }
                 if (!Character.isLowSurrogate(seq.charAt(i))) {
-                    // WRITE_UTF_UNKNOWN + (Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2)
-                    encodedLength += 2;
+                    // WRITE_UTF_UNKNOWN, the next character is counted on its own in the next iteration
+                    encodedLength++;
+                    i--;
                     continue;
                 }
                 // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
@@ -1350,6 +1354,11 @@ public final class ByteBufUtil {
 
     @SuppressWarnings("deprecation")
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
+        int capacity = src.capacity();
+        if (isOutOfBounds(readerIndex, len, capacity)) {
+            throw new IndexOutOfBoundsException("expected: " + "0 <= index(" + readerIndex + ") <= index + length("
+                    + len + ") <= " + "buf.capacity(" + capacity + ')');
+        }
         if (len == 0) {
             return StringUtil.EMPTY_STRING;
         }

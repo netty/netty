@@ -38,4 +38,22 @@ final class QuicStreamIdGenerator {
         nextUnidirectionalStreamId += 4;
         return stream;
     }
+
+    /**
+     * Rolls back the given {@code streamId} if it is the most recently allocated one of its
+     * direction, so a failed stream creation does not permanently consume it. Returns
+     * {@code true} if the rollback was done.
+     */
+    boolean rollbackStreamId(long streamId, boolean bidirectional) {
+        if (bidirectional) {
+            if (streamId == nextBidirectionalStreamId - 4) {
+                nextBidirectionalStreamId = streamId;
+                return true;
+            }
+        } else if (streamId == nextUnidirectionalStreamId - 4) {
+            nextUnidirectionalStreamId = streamId;
+            return true;
+        }
+        return false;
+    }
 }

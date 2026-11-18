@@ -16,6 +16,8 @@
 package io.netty.channel.embedded;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -29,7 +31,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.MockTicker;
@@ -48,6 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -529,6 +535,223 @@ public class EmbeddedChannelTest {
 
         expected = assertThrows(Exception.class, () -> channel.writeInbound("Hello, Netty!"));
         assertInstanceOf(ClosedChannelException.class, expected);
+    }
+
+    @Test
+    void testWriteInboundReleasesMessagesWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf first = retainedBuffer();
+        ByteBuf second = retainedBuffer();
+        try {
+            assertThat(catchThrowable(() -> channel.writeInbound(first, second)))
+                    .isInstanceOf(ClosedChannelException.class);
+            assertReleasedOnce(first, second);
+        } finally {
+            releaseFully(first, second);
+        }
+    }
+
+    @Test
+    void testWriteOutboundReleasesMessagesWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf first = retainedBuffer();
+        ByteBuf second = retainedBuffer();
+        try {
+            assertThat(catchThrowable(() -> channel.writeOutbound(first, second)))
+                    .isInstanceOf(ClosedChannelException.class);
+            assertReleasedOnce(first, second);
+        } finally {
+            releaseFully(first, second);
+        }
+    }
+
+    @Test
+    void testWriteOneInboundReleasesMessageWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf msg = retainedBuffer();
+        try {
+            channel.writeOneInbound(msg);
+            assertReleasedOnce(msg);
+        } finally {
+            releaseFully(msg);
+        }
+    }
+
+    @Test
+    void testWriteOneInboundWithPromiseReleasesMessageWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf msg = retainedBuffer();
+        try {
+            channel.writeOneInbound(msg, channel.newPromise());
+            assertReleasedOnce(msg);
+        } finally {
+            releaseFully(msg);
+        }
+    }
+
+    @Test
+    void testWriteOneOutboundReleasesMessageWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf msg = retainedBuffer();
+        try {
+            channel.writeOneOutbound(msg);
+            assertReleasedOnce(msg);
+        } finally {
+            releaseFully(msg);
+        }
+    }
+
+    @Test
+    void testWriteOneOutboundWithPromiseReleasesMessageWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf msg = retainedBuffer();
+        try {
+            channel.writeOneOutbound(msg, channel.newPromise());
+            assertReleasedOnce(msg);
+        } finally {
+            releaseFully(msg);
+        }
+    }
+
+    @Test
+    void testWriteInboundReleasesMixedBatchWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf buf = retainedBuffer();
+        ByteBufHolder holder = new DefaultByteBufHolder(retainedBuffer());
+        try {
+            assertThat(catchThrowable(() -> channel.writeInbound(buf, "not reference counted", holder)))
+                    .isInstanceOf(ClosedChannelException.class);
+            assertReleasedOnce(buf, holder);
+        } finally {
+            releaseFully(buf, holder);
+        }
+    }
+
+    @Test
+    void testWriteOutboundReleasesMixedBatchWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        ByteBuf buf = retainedBuffer();
+        ByteBufHolder holder = new DefaultByteBufHolder(retainedBuffer());
+        try {
+            assertThat(catchThrowable(() -> channel.writeOutbound(buf, "not reference counted", holder)))
+                    .isInstanceOf(ClosedChannelException.class);
+            assertReleasedOnce(buf, holder);
+        } finally {
+            releaseFully(buf, holder);
+        }
+    }
+
+    @Test
+    void testWriteOneInboundFailsFutureWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        assertThat(channel.writeOneInbound("Hello, Netty!").cause()).isInstanceOf(ClosedChannelException.class);
+
+        ChannelPromise promise = channel.newPromise();
+        assertThat(channel.writeOneInbound("Hello, Netty!", promise)).isSameAs(promise);
+        assertThat(promise.cause()).isInstanceOf(ClosedChannelException.class);
+    }
+
+    @Test
+    void testWriteOneOutboundFailsFutureWhenClosed() {
+        EmbeddedChannel channel = closedChannel();
+        assertThat(channel.writeOneOutbound("Hello, Netty!").cause()).isInstanceOf(ClosedChannelException.class);
+
+        ChannelPromise promise = channel.newPromise();
+        assertThat(channel.writeOneOutbound("Hello, Netty!", promise)).isSameAs(promise);
+        assertThat(promise.cause()).isInstanceOf(ClosedChannelException.class);
+    }
+
+    @Test
+    void testQueuedInboundMessageSurvivesFailedWriteAfterClose() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        ByteBuf queued = Unpooled.buffer().writeByte(1);
+        ByteBuf rejected = Unpooled.buffer().writeByte(2);
+        try {
+            assertTrue(channel.writeInbound(queued));
+            channel.close().syncUninterruptibly();
+            assertThat(catchThrowable(() -> channel.writeInbound(rejected)))
+                    .isInstanceOf(ClosedChannelException.class);
+
+            assertThat(queued.refCnt()).isEqualTo(1);
+            assertThat((Object) channel.readInbound()).isSameAs(queued);
+        } finally {
+            releaseFully(queued, rejected);
+        }
+    }
+
+    @Test
+    void testQueuedOutboundMessageSurvivesFailedWriteAfterClose() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        ByteBuf queued = Unpooled.buffer().writeByte(1);
+        ByteBuf rejected = Unpooled.buffer().writeByte(2);
+        try {
+            assertTrue(channel.writeOutbound(queued));
+            channel.close().syncUninterruptibly();
+            assertThat(catchThrowable(() -> channel.writeOutbound(rejected)))
+                    .isInstanceOf(ClosedChannelException.class);
+
+            assertThat(queued.refCnt()).isEqualTo(1);
+            assertThat((Object) channel.readOutbound()).isSameAs(queued);
+        } finally {
+            releaseFully(queued, rejected);
+        }
+    }
+
+    @Test
+    void testCloseDuringWriteOutboundBatchReleasesEachMessageOnce() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            private boolean closed;
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                if (!closed) {
+                    closed = true;
+                    ctx.channel().close();
+                }
+                ctx.write(msg, promise);
+            }
+        });
+        ByteBuf first = retainedBuffer();
+        ByteBuf second = retainedBuffer();
+        ByteBuf third = retainedBuffer();
+        try {
+            assertThat(catchThrowable(() -> channel.writeOutbound(first, second, third)))
+                    .isNotInstanceOf(IllegalReferenceCountException.class);
+            assertReleasedOnce(first, second, third);
+        } finally {
+            releaseFully(first, second, third);
+        }
+    }
+
+    private static EmbeddedChannel closedChannel() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.close().syncUninterruptibly();
+        return channel;
+    }
+
+    /**
+     * Returns a buffer with refCnt 2: one reference for the channel to release, one held by the test.
+     */
+    private static ByteBuf retainedBuffer() {
+        return Unpooled.buffer().writeByte(1).retain();
+    }
+
+    /**
+     * Each message must have been released exactly once by the channel: refCnt 2 means it leaked,
+     * 0 means it was released twice.
+     */
+    private static void assertReleasedOnce(ReferenceCounted... msgs) {
+        for (ReferenceCounted msg : msgs) {
+            assertThat(msg.refCnt()).as("refCnt of %s", msg).isEqualTo(1);
+        }
+    }
+
+    private static void releaseFully(ReferenceCounted... msgs) {
+        for (ReferenceCounted msg : msgs) {
+            if (msg.refCnt() > 0) {
+                msg.release(msg.refCnt());
+            }
+        }
     }
 
     @Test

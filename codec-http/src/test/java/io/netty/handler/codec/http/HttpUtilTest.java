@@ -45,6 +45,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpUtilTest {
 
     @Test
+    public void testSetContentLength() {
+        HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpUtil.setContentLength(message, 0);
+        assertEquals("0", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        HttpUtil.setContentLength(message, 42);
+        assertEquals(42, HttpUtil.getContentLength(message));
+    }
+
+    @Test
+    public void testSetNegativeContentLength() {
+        // normalizeAndGetContentLength() rejects a signed value when the message is decoded.
+        final HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        assertThrows(IllegalArgumentException.class, () -> HttpUtil.setContentLength(message, -1));
+        assertThrows(IllegalArgumentException.class, () -> HttpHeaders.setContentLength(message, -1));
+        assertNull(message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+    }
+
+    @Test
     public void testRecognizesOriginForm() {
         // Origin form: https://tools.ietf.org/html/rfc7230#section-5.3.1
         assertTrue(HttpUtil.isOriginForm(URI.create("/where?q=now")));

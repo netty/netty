@@ -335,6 +335,70 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @Test
+    public void testEmptyDatagramStartsReadLoop(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testEmptyDatagramStartsReadLoop(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testEmptyDatagramStartsReadLoop(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final String[] sent = { "A", "", "B", "", "C" };
+        final List<String> received = new ArrayList<String>();
+        final CountDownLatch firstReadComplete = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(sent.length);
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            sc = sb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
+                @Override
+                protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
+                    synchronized (received) {
+                        received.add(msg.content().toString(CharsetUtil.US_ASCII));
+                    }
+                    latch.countDown();
+                }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    firstReadComplete.countDown();
+                }
+            }).bind(newSocketAddress()).sync().channel();
+            cc = cb.handler(new ChannelInboundHandlerAdapter()).bind(newSocketAddress()).sync().channel();
+
+            SocketAddress localAddr = sc.localAddress();
+            SocketAddress addr = localAddr instanceof InetSocketAddress ?
+                    convertAnyAddress((InetSocketAddress) localAddr) : localAddr;
+
+            ByteBuf first = Unpooled.copiedBuffer(sent[0], CharsetUtil.US_ASCII);
+            ChannelFuture firstFuture = write(cc, first, addr, WrapType.NONE);
+            first.release();
+            cc.flush();
+            firstFuture.sync();
+            // Wait until the first read loop has completed so that the next one starts with the empty datagram.
+            assertTrue(firstReadComplete.await(10, TimeUnit.SECONDS), "received " + received);
+
+            for (int i = 1; i < sent.length; i++) {
+                ByteBuf buf = Unpooled.copiedBuffer(sent[i], CharsetUtil.US_ASCII);
+                write(cc, buf, addr, WrapType.NONE);
+                buf.release();
+            }
+            cc.flush();
+
+            // A read loop that starts with an empty datagram must not stop before all datagrams are read.
+            assertTrue(latch.await(10, TimeUnit.SECONDS), "received " + received);
+            synchronized (received) {
+                assertEquals(Arrays.asList(sent), received);
+            }
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
     public void testSendToUnresolvableAddress(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap, Bootstrap>() {
             @Override

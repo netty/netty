@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SessionIdContextBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
@@ -60,6 +61,7 @@ import java.util.function.BiConsumer;
 import java.util.function.LongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 final class QuicheQuicSslContext extends QuicSslContext {
 
@@ -164,13 +166,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
                          String[] applicationProtocols, String endpointIdentificationAlgorithm,
+                         SessionIdContextBuilder sessionIdContext,
                          Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         final X509TrustManager trustManager;
-        final boolean hasExternalTrustManagerFactorySpecified = trustManagerFactory != null;
         if (trustManagerFactory == null) {
             try {
                 trustManagerFactory =
@@ -241,7 +243,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
         sessionCache = server ? null : new QuicClientSessionCache();
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
-        nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
+        long sslCtx = BoringSSL.SSLContext_new(server, applicationProtocols,
                 new BoringSSLHandshakeCompleteCallback(engineMap),
                 new BoringSSLCertificateCallback(engineMap, keyManager, password, serverKeyTypes, clientKeyTypes),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
@@ -249,7 +251,18 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 keylog == null ? null : new BoringSSLKeylogCallback(engineMap, keylog),
                 server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), privateKeyMethod,
                 sessionTicketCallback, verifyMode,
-                BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
+                BoringSSL.subjectNames(trustManager.getAcceptedIssuers()));
+        if (sslCtx == -1) {
+            // Creating the native SSL_CTX failed, so there is nothing we could use.
+            String msg = "failed to create SSL_CTX";
+            String lastError = BoringSSL.ERR_last_error();
+            if (lastError != null) {
+                // We have some more details about why the operations failed, include these into the message.
+                msg += ": " + lastError;
+            }
+            throw new IllegalStateException(msg);
+        }
+        nativeSslContext = new NativeSslContext(sslCtx);
         boolean success = false;
         try {
             if (groups.length > 0 && BoringSSL.SSLContext_set1_groups_list(nativeSslContext.ctx, groups) == 0) {
@@ -290,14 +303,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 // Derive the session_id_context from what distinguishes this context, so sessions can not be
                 // resumed across QuicSslContext instances that differ in their ClientAuth mode or trust / key
                 // configuration, even if session-ticket keys or a session cache are shared between them.
-                // The trust and key material can only be digested if it was handed to us as plain certificates.
-                // Anything backed by a TrustManagerFactory / KeyManagerFactory we did not create ourselves is
-                // opaque to us, so we can not tell if two of them behave the same.
-                boolean opaqueConfiguration = keyCertChain == null ||
-                        (trustCertCollection == null && hasExternalTrustManagerFactorySpecified);
-                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(),
-                        deriveSessionIdContext(this.clientAuth, keyCertChain, trustCertCollection,
-                                opaqueConfiguration))) {
+                if (!BoringSSL.SSLContext_setSessionIdContext(nativeSslContext.address(), sessionIdContext.build())) {
                     // Without a session_id_context we must not continue as resumption would not be scoped.
                     String msg = "failed to set session id context";
                     String lastError = BoringSSL.ERR_last_error();
@@ -373,6 +379,11 @@ final class QuicheQuicSslContext extends QuicSslContext {
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator, QuicheQuicSslEngine engine) {
         nativeSslContext.retain();
         long ssl = BoringSSL.SSL_new(nativeSslContext.address(), isServer(), engine.tlsHostName);
+        if (ssl == -1) {
+            // SSL_new(...) failed, so there is nothing to create the connection with. Release what we retained.
+            nativeSslContext.release();
+            return null;
+        }
         engineMap.put(ssl, engine);
         long connection = connectionCreator.apply(ssl);
         if (connection == -1) {
@@ -509,6 +520,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     void setSessionTimeout(int seconds) throws IllegalArgumentException {
+        checkPositiveOrZero(seconds, "seconds");
         if (sessionCache != null) {
             sessionCache.setSessionTimeout(seconds);
         } else {
@@ -518,6 +530,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     void setSessionCacheSize(int size) throws IllegalArgumentException {
+        checkPositiveOrZero(size, "size");
         if (sessionCache != null) {
             sessionCache.setSessionCacheSize(size);
         } else {

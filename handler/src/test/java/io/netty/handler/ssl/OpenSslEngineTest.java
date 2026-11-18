@@ -33,6 +33,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.test.LeakPresenceExtension;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -246,6 +247,48 @@ public class OpenSslEngineTest extends SSLEngineTest {
             }
         }
         return true;
+    }
+
+    @Test
+    public void testEnabledProtocolsAreNotSharedBetweenEngines() throws Exception {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        SslContext context = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
+                .sslProvider(sslServerProvider())
+                .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)
+                .build();
+        SSLEngine first = null;
+        SSLEngine second = null;
+        try {
+            first = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            second = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            String[] contextProtocols = {
+                    SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2
+            };
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            Arrays.fill(first.getEnabledProtocols(), "modified");
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            first.setEnabledProtocols(new String[] { SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_2 });
+            assertArrayEquals(new String[] { SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_2 },
+                    first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            SSLEngine third = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                assertArrayEquals(contextProtocols, third.getEnabledProtocols());
+            } finally {
+                ReferenceCountUtil.release(third);
+            }
+        } finally {
+            ReferenceCountUtil.release(first);
+            ReferenceCountUtil.release(second);
+            ReferenceCountUtil.release(context);
+        }
     }
 
     @MethodSource("newTestParams")
@@ -1195,6 +1238,66 @@ public class OpenSslEngineTest extends SSLEngineTest {
             assertEquals(ByteBuffer.wrap(data), received);
             assertThat(alloc.directBytes).isLessThanOrEqualTo(
                     (long) calls * unwrapEngine(server).maxEncryptedPacketLength());
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapEmptySourceDrainsPendingPlaintext(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[MAX_PLAINTEXT_LENGTH];
+            int chunk = (data.length - 200) / 2;
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapFullRecord(param, client, data);
+            int recordLength = enc.remaining();
+            ByteBuffer received = ByteBuffer.allocate(data.length);
+
+            // The record is consumed at once, but only a part of its plaintext fits.
+            ByteBuffer plain = allocateBuffer(param.type(), chunk);
+            SSLEngineResult result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(recordLength, result.bytesConsumed());
+            assertEquals(chunk, result.bytesProduced());
+            assertFalse(enc.hasRemaining());
+            plain.flip();
+            received.put(plain);
+
+            // A single empty source must still hand out the plaintext that is left inside the engine.
+            plain.clear();
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(chunk, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+
+            // The same must hold when the empty source is one of multiple sources.
+            plain.clear();
+            ByteBuffer empty = allocateBuffer(param.type(), 0);
+            result = unwrapEngine(server).unwrap(new ByteBuffer[] { empty, enc }, new ByteBuffer[] { plain });
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(data.length - 2 * chunk, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+
+            received.flip();
+            assertEquals(ByteBuffer.wrap(data), received);
+
+            // Nothing is left, neither to feed nor to drain.
+            plain.clear();
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_UNDERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);

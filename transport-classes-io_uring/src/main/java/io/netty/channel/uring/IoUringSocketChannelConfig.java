@@ -634,7 +634,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         return this;
     }
 
-    private int getWriteZeroCopyThreshold() {
+    int getWriteZeroCopyThreshold() {
         return writeZeroCopyThreshold;
     }
 

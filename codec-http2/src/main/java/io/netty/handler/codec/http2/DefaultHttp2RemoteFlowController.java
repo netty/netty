@@ -73,7 +73,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                                             StreamByteDistributor streamByteDistributor,
                                             final Listener listener) {
         this.connection = checkNotNull(connection, "connection");
-        this.streamByteDistributor = checkNotNull(streamByteDistributor, "streamWriteDistributor");
+        this.streamByteDistributor = checkNotNull(streamByteDistributor, "streamByteDistributor");
 
         // Add a flow state for the connection.
         stateKey = connection.newKey();
