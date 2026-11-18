@@ -15,23 +15,38 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
+import io.netty.handler.codec.dns.DatagramDnsQueryDecoder;
+import io.netty.handler.codec.dns.DatagramDnsResponse;
+import io.netty.handler.codec.dns.DatagramDnsResponseEncoder;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -39,6 +54,8 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.handler.codec.dns.TcpDnsQueryDecoder;
+import io.netty.handler.codec.dns.TcpDnsResponseEncoder;
 import io.netty.resolver.HostsFileEntriesProvider;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
@@ -99,11 +116,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -3824,6 +3843,141 @@ public class DnsNameResolverTest {
                 serverSocket.close();
             }
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
+    public void testUdpResponseNotAcceptedForTcpFallbackQuery(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        final DnsQuestion question = new DefaultDnsQuestion("somehost.netty.io.", A);
+        final BlockingQueue<DatagramDnsQuery> udpQueries = new LinkedBlockingQueue<DatagramDnsQuery>();
+        final BlockingQueue<DnsQuery> tcpQueries = new LinkedBlockingQueue<DnsQuery>();
+        final AtomicReference<Channel> tcpChannel = new AtomicReference<Channel>();
+        final BlockingQueue<Boolean> processedDatagrams = new LinkedBlockingQueue<Boolean>();
+
+        Channel udpServer = new Bootstrap().group(group)
+                .channel(NioDatagramChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new DatagramDnsQueryDecoder(), new DatagramDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DatagramDnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsQuery query) {
+                                        udpQueries.add(query.retain());
+                                    }
+                                });
+                    }
+                }).bind(NetUtil.LOCALHOST4, 0).sync().channel();
+        InetSocketAddress nameServerAddr = (InetSocketAddress) udpServer.localAddress();
+        ChannelFuture tcpServerFuture = new ServerBootstrap().group(group)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DnsQuery query) {
+                                        tcpChannel.set(ctx.channel());
+                                        tcpQueries.add(query.retain());
+                                    }
+                                });
+                    }
+                }).bind(nameServerAddr).awaitUninterruptibly();
+        DnsNameResolver resolver = null;
+        DatagramDnsQuery udpQuery = null;
+        DnsQuery tcpQuery = null;
+        try {
+            Assumptions.assumeTrue(tcpServerFuture.isSuccess(), "Unable to bind TCP to " + nameServerAddr);
+
+            resolver = new DnsNameResolverBuilder(group.next())
+                    .datagramChannelFactory(new ChannelFactory<DatagramChannel>() {
+                        @Override
+                        public DatagramChannel newChannel() {
+                            DatagramChannel ch = new NioDatagramChannel();
+                            ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    ctx.fireChannelRead(msg);
+                                    // The resolver is done with the datagram.
+                                    processedDatagrams.add(Boolean.TRUE);
+                                }
+                            });
+                            return ch;
+                        }
+                    })
+                    .socketChannelType(NioSocketChannel.class)
+                    .datagramChannelStrategy(strategy)
+                    .dnsCookiesEnabled(true)
+                    .queryTimeoutMillis(DEFAULT_TEST_TIMEOUT_MS)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(nameServerAddr))
+                    .build();
+
+            // The nameserver echoes the client cookie, so from now on responses without the cookie are rejected.
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future = resolver.query(question);
+            DatagramDnsQuery query = udpQueries.take();
+            try {
+                udpServer.writeAndFlush(newUdpResponse(query, query.id(), false, true, new byte[] { 1, 2, 3, 4 }));
+            } finally {
+                query.release();
+            }
+            assertTrue(future.sync().getNow().release());
+
+            // The truncated response makes the resolver retry the query via TCP.
+            future = resolver.query(question);
+            udpQuery = udpQueries.take();
+            udpServer.writeAndFlush(newUdpResponse(udpQuery, udpQuery.id(), true, true, null));
+            tcpQuery = tcpQueries.take();
+
+            // A datagram that uses the id of the TCP query but carries no cookie must not complete the query.
+            processedDatagrams.clear();
+            udpServer.writeAndFlush(newUdpResponse(udpQuery, tcpQuery.id(), false, false, new byte[] { 6, 6, 6, 6 }));
+            processedDatagrams.take();
+            assertFalse(future.isDone());
+
+            DnsQuestion tcpQuestion = tcpQuery.recordAt(DnsSection.QUESTION);
+            DnsResponse tcpResponse = new DefaultDnsResponse(tcpQuery.id());
+            tcpResponse.addRecord(DnsSection.QUESTION, new DefaultDnsQuestion(tcpQuestion.name(), A));
+            tcpResponse.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                    tcpQuestion.name(), A, 60, Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 })));
+            tcpChannel.get().writeAndFlush(tcpResponse);
+
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = future.sync().getNow();
+            try {
+                DnsRawRecord answer = envelope.content().recordAt(DnsSection.ANSWER, 0);
+                assertArrayEquals(new byte[] { 1, 2, 3, 4 }, ByteBufUtil.getBytes(answer.content()));
+            } finally {
+                envelope.release();
+            }
+        } finally {
+            ReferenceCountUtil.release(udpQuery);
+            ReferenceCountUtil.release(tcpQuery);
+            if (resolver != null) {
+                resolver.close();
+            }
+            udpServer.close().sync();
+            tcpServerFuture.channel().close().sync();
+        }
+    }
+
+    private static DatagramDnsResponse newUdpResponse(DatagramDnsQuery query, int id, boolean truncated,
+                                                      boolean echoCookie, byte[] address) {
+        DatagramDnsResponse response = new DatagramDnsResponse(query.recipient(), query.sender(), id);
+        response.setTruncated(truncated);
+        DnsQuestion question = query.recordAt(DnsSection.QUESTION);
+        response.addRecord(DnsSection.QUESTION, new DefaultDnsQuestion(question.name(), question.type()));
+        if (address != null) {
+            response.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                    question.name(), question.type(), 60, Unpooled.wrappedBuffer(address)));
+        }
+        if (echoCookie) {
+            // The OPT record of the query carries the client cookie.
+            DnsRawRecord opt = query.recordAt(DnsSection.ADDITIONAL, 0);
+            response.addRecord(DnsSection.ADDITIONAL, opt.retainedDuplicate());
+        }
+        return response;
     }
 
     @ParameterizedTest

@@ -1594,7 +1594,9 @@ public class DnsNameResolver extends InetNameResolver {
             logger.debug("{} RECEIVED: UDP [{}: {}], {}", qCh, queryId, res.sender(), res);
 
             final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
-            if (qCtx == null) {
+            // Only accept the response for a query that was sent via this channel. A TCP fallback query shares the
+            // id space with the UDP queries, but its response must only be received via its own TCP connection.
+            if (qCtx == null || qCtx.channel() != qCh) {
                 logger.debug("{} Received a DNS response with an unknown ID: UDP [{}: {}]",
                         qCh, queryId, res.sender());
                 res.release();
