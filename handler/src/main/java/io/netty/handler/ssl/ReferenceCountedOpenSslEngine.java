@@ -2516,7 +2516,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
         checkNotNull(credential, "credential");
 
-        if (destroyed || !containsCredential(credential)) {
+        if (destroyed || !(credential instanceof OpenSslCredentialPointer) || !containsCredential(credential)) {
             return false;
         }
 
