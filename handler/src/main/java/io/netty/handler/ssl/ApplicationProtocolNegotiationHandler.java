@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -28,11 +29,14 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import javax.net.ssl.SSLException;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
- * {@link SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
+ * the nearest preceding {@link SslHandler}. With nested TLS, negotiation waits for that handler's handshake,
+ * rather than the handshake of an earlier TLS layer. For example, you could configure your HTTP pipeline
+ * depending on the result of ALPN:
  * <pre>
  * public class MyInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     private final {@link SslContext} sslCtx;
@@ -105,7 +109,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         bufferedMessages.add(msg);
         if (!sslHandlerChecked) {
             sslHandlerChecked = true;
-            if (ctx.pipeline().get(SslHandler.class) == null) {
+            if (findSslHandler(ctx) == null) {
                 // Just remove ourself if there is no SslHandler in the pipeline and so we would otherwise
                 // buffer forever.
                 removeSelfIfPresent(ctx);
@@ -130,9 +134,15 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
+            SslHandler sslHandler = handshakeEvent.isSuccess() ? findSslHandler(ctx) : null;
+            if (sslHandler != null && !sslHandler.handshakeFuture().isSuccess()) {
+                // A preceding TLS layer may finish before the layer whose application protocol we need.
+                // Its event must still propagate, but must not configure the pipeline or remove this handler.
+                ctx.fireUserEventTriggered(evt);
+                return;
+            }
             try {
                 if (handshakeEvent.isSuccess()) {
-                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                     if (sslHandler == null) {
                         throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
                                 + "application-level protocol negotiation)");
@@ -175,6 +185,19 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         fireBufferedMessages();
         super.channelInactive(ctx);
+    }
+
+    private static SslHandler findSslHandler(ChannelHandlerContext ctx) {
+        SslHandler sslHandler = null;
+        for (Map.Entry<String, ChannelHandler> entry : ctx.pipeline()) {
+            if (entry.getKey().equals(ctx.name())) {
+                break;
+            }
+            if (entry.getValue() instanceof SslHandler) {
+                sslHandler = (SslHandler) entry.getValue();
+            }
+        }
+        return sslHandler;
     }
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
