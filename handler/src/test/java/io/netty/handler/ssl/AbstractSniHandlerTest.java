@@ -267,8 +267,9 @@ public class AbstractSniHandlerTest {
         }
     }
 
+    // Unknown name types are skipped like the JDK does, as RFC 6066, Section 3 allows future name types.
     @Test
-    public void testExtractSniHostnameRejectsUnknownNameType() throws Exception {
+    public void testExtractSniHostnameIgnoresUnknownNameType() throws Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             byte[] host = "netty.io".getBytes(CharsetUtil.US_ASCII);
@@ -276,6 +277,92 @@ public class AbstractSniHandlerTest {
             writeServerNameExtension(buffer, 1, host);
 
             assertNull(AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // The JDK walks the whole server_name_list, so a host_name after an unknown name type must be found too.
+    // Otherwise we would select the default while the SSLEngine reports the host_name.
+    @Test
+    public void testExtractSniHostnameAfterUnknownNameType() throws Exception {
+        ByteBuf list = Unpooled.buffer();
+        writeServerNameEntry(list, 1, "other".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameBeforeUnknownNameType() throws Exception {
+        ByteBuf list = Unpooled.buffer();
+        writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 1, "other".getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertEquals("netty.io", AbstractSniHandler.extractSniHostname(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // RFC 6066, Section 3: The ServerNameList MUST NOT contain more than one name of the same name_type.
+    @Test
+    public void testExtractSniHostnameRejectsDuplicateHostName() {
+        ByteBuf list = Unpooled.buffer();
+        writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 0, "other.io".getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertMalformedServerName(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    // Bytes after the last ServerName that are too short to hold another entry.
+    @Test
+    public void testExtractSniHostnameRejectsTrailingBytesInServerNameList() {
+        for (int trailing = 1; trailing < 3; trailing++) {
+            ByteBuf list = Unpooled.buffer();
+            writeServerNameEntry(list, 0, "netty.io".getBytes(CharsetUtil.US_ASCII));
+            list.writeZero(trailing);
+            ByteBuf buffer = clientHelloWithServerNameList(list);
+            try {
+                assertMalformedServerName(buffer, "trailing=" + trailing);
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    // An entry of an unknown name type must still fit in the server_name_list.
+    @Test
+    public void testExtractSniHostnameRejectsUnknownNameTypeExceedingServerNameList() {
+        ByteBuf list = Unpooled.buffer();
+        list.writeByte(1); // unknown name type
+        list.writeShort(10); // but only 2 bytes follow
+        list.writeZero(2);
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertMalformedServerName(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testExtractSniHostnameRejectsEmptyHostNameAfterUnknownNameType() {
+        ByteBuf list = Unpooled.buffer();
+        writeServerNameEntry(list, 1, "other".getBytes(CharsetUtil.US_ASCII));
+        writeServerNameEntry(list, 0, new byte[0]);
+        ByteBuf buffer = clientHelloWithServerNameList(list);
+        try {
+            assertMalformedServerName(buffer);
         } finally {
             buffer.release();
         }
@@ -335,6 +422,29 @@ public class AbstractSniHandlerTest {
         buffer.writeByte(nameType);
         buffer.writeShort(host.length);
         buffer.writeBytes(host);
+    }
+
+    private static void writeServerNameEntry(ByteBuf list, int nameType, byte[] name) {
+        list.writeByte(nameType);
+        list.writeShort(name.length);
+        list.writeBytes(name);
+    }
+
+    // Builds a ClientHello holding only a server_name extension with the given server_name_list, and releases
+    // the list.
+    private static ByteBuf clientHelloWithServerNameList(ByteBuf list) {
+        try {
+            int listLength = list.readableBytes();
+            ByteBuf buffer = Unpooled.buffer();
+            writeClientHelloPrefix(buffer, 4 + 2 + listLength);
+            buffer.writeShort(0); // extension type: server_name
+            buffer.writeShort(2 + listLength);
+            buffer.writeShort(listLength); // server_name_list length
+            buffer.writeBytes(list);
+            return buffer;
+        } finally {
+            list.release();
+        }
     }
 
     private static void writeClientHelloPrefix(ByteBuf buffer, int extensionsLength) {
