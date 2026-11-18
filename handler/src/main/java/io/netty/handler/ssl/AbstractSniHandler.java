@@ -127,6 +127,8 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                     // Walk the whole list like the JDK does, so we select based on the same host_name
                                     // as the SSLEngine will see.
                                     String hostname = null;
+                                    // Name types other than host_name (0) seen so far, one bit per 8-bit name_type.
+                                    long[] seenNameTypes = null;
                                     while (offset < extensionLimit) {
                                         // ServerName: name_type (1) + 16-bit length prefixed name. RFC 6066, Section 3
                                         // requires the data of future name types to begin with a 16-bit length too, so
@@ -153,6 +155,18 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                                 throw malformedServerName("duplicate host_name");
                                             }
                                             hostname = in.toString(offset, serverNameLength, CharsetUtil.US_ASCII);
+                                        } else {
+                                            // Like the JDK, reject a repeated name_type of any kind. The bitmap is
+                                            // allocated lazily, so the common host_name-only case does not need it.
+                                            if (seenNameTypes == null) {
+                                                seenNameTypes = new long[4];
+                                            }
+                                            final int word = serverNameType >>> 6;
+                                            final long bit = 1L << (serverNameType & 63);
+                                            if ((seenNameTypes[word] & bit) != 0) {
+                                                throw malformedServerName("duplicate name_type " + serverNameType);
+                                            }
+                                            seenNameTypes[word] |= bit;
                                         }
                                         offset += serverNameLength;
                                     }
