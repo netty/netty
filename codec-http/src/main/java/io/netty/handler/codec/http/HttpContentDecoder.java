@@ -182,12 +182,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     HttpHeaders headers = last.trailingHeaders();
                     // Keep the decoder result, so that a failure of the last content (for example a malformed
                     // chunk) still reaches the next handlers.
-                    DecoderResult result = last.decoderResult();
+                    DecoderResult lastDecoderResult = last.decoderResult();
                     needRead = false;
-                    if (headers.isEmpty() && result.isSuccess()) {
+                    if (headers.isEmpty() && lastDecoderResult.isSuccess()) {
                         ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
                     } else {
-                        ctx.fireChannelRead(new ComposedLastHttpContent(headers, result));
+                        ctx.fireChannelRead(new ComposedLastHttpContent(headers, lastDecoderResult));
                     }
                 }
             }
