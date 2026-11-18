@@ -27,10 +27,27 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     static final String ROOT = ".";
 
+    private final boolean decodeSvcbRecords;
+
+    /**
+     * Creates a new instance. SVCB and HTTPS records are decoded as {@link DnsRawRecord}s.
+     */
+    protected DefaultDnsRecordDecoder() {
+        this(false);
+    }
+
     /**
      * Creates a new instance.
+     *
+     * @param decodeSvcbRecords {@code true} to decode SVCB and HTTPS records
+     *                          (<a href="https://www.rfc-editor.org/rfc/rfc9460.html">RFC 9460</a>) as
+     *                          {@link DnsSvcbRecord}s, {@code false} to decode them as {@link DnsRawRecord}s.
+     *                          When {@code true}, a malformed SVCB or HTTPS record makes decoding fail with a
+     *                          {@link CorruptedFrameException}.
      */
-    protected DefaultDnsRecordDecoder() { }
+    public DefaultDnsRecordDecoder(boolean decodeSvcbRecords) {
+        this.decodeSvcbRecords = decodeSvcbRecords;
+    }
 
     @Override
     public final DnsQuestion decodeQuestion(ByteBuf in) throws Exception {
@@ -87,6 +104,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        if (decodeSvcbRecords && (type == DnsRecordType.SVCB || type == DnsRecordType.HTTPS)) {
+            return DnsSvcbUtil.decodeRecord(name, type, dnsClass, timeToLive, in, offset, length);
+        }
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.

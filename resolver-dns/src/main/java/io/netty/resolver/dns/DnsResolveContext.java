@@ -120,6 +120,7 @@ abstract class DnsResolveContext<T> {
     private int allowedQueries;
     private boolean triedCNAME;
     private boolean completeEarly;
+    private boolean completionHandedOver;
 
     DnsResolveContext(DnsNameResolver parent, Channel channel,
                       Promise<?> originalPromise, String hostname, int dnsClass, DnsRecordType[] expectedTypes,
@@ -229,6 +230,88 @@ abstract class DnsResolveContext<T> {
     abstract void cache(String hostname, DnsRecord[] additionals,
                         UnknownHostException cause);
 
+    /**
+     * SVCB specific: returns the name to query next with the same type after {@code converted}, or {@code null}.
+     * Used to follow AliasMode records (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-6">RFC 9460,
+     * Section 6</a>).
+     */
+    String followUpName(DnsQuestion question, T converted) {
+        return null;
+    }
+
+    /**
+     * SVCB specific: called once all the records of a NOERROR {@code response} to {@code question} have been converted
+     * and cached, since the validity of an SVCB RRset depends on all its records
+     * (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-2.2">RFC 9460, Section 2.2</a>), and the absence
+     * of records is cached with the SOA of the response
+     * (<a href="https://www.rfc-editor.org/rfc/rfc2308.html#section-5">RFC 2308, Section 5</a>). Returns {@code true}
+     * to complete the resolution early, like {@link #isCompleteEarly} does for a record, which also applies to a
+     * response without records; {@code false} by default.
+     */
+    boolean afterResponseRecords(DnsQuestion question, DnsResponse response) {
+        return false;
+    }
+
+    /**
+     * Called once no more queries are in progress, before the resolution completes. Returns {@code true} if the
+     * subclass completes {@code promise} itself, now or later: {@code results} are then released and the resolution
+     * ends there, so a subclass completing later must copy or retain what it needs. Returns {@code false} by default.
+     *
+     * @param results the results collected so far, possibly empty
+     */
+    boolean beforeFinishResolve(Promise<List<T>> promise, List<T> results) {
+        return false;
+    }
+
+    /**
+     * Returns the name to query the records of {@code type} for {@code name} with, {@code name} by default. A subclass
+     * may query a type under another name, for instance the port prefixed name of the HTTPS records of a service on a
+     * non-default port (<a href="https://www.rfc-editor.org/rfc/rfc9460.html#section-9.1">RFC 9460, Section 9.1</a>).
+     */
+    String formatQuestionName(String name, DnsRecordType type) {
+        return name;
+    }
+
+    /**
+     * Returns the name to query per expected type for {@code name}, or {@code null} if it is {@code name} for all.
+     */
+    private String[] questionNames(String name) {
+        String[] questionNames = null;
+        for (int i = 0; i < expectedTypes.length; i++) {
+            final String questionName = formatQuestionName(name, expectedTypes[i]);
+            if (!questionName.equals(name) && questionNames == null) {
+                questionNames = new String[expectedTypes.length];
+                Arrays.fill(questionNames, 0, i, name);
+            }
+            if (questionNames != null) {
+                questionNames[i] = questionName;
+            }
+        }
+        return questionNames;
+    }
+
+    /**
+     * Queries each expected type under its own name, each resolved from the CNAME cache.
+     */
+    private void internalResolve(String[] questionNames, Promise<List<T>> promise) {
+        try {
+            for (int i = 0; i < expectedTypes.length; i++) {
+                final String name;
+                try {
+                    name = cnameResolveFromCache(cnameCache(), questionNames[i]);
+                } catch (Throwable cause) {
+                    promise.tryFailure(cause);
+                    return;
+                }
+                if (!query(name, expectedTypes[i], getNameServers(name).duplicate(), false, promise)) {
+                    return;
+                }
+            }
+        } finally {
+            channel.flush();
+        }
+    }
+
     void resolve(final Promise<List<T>> promise) {
         final String[] searchDomains = parent.searchDomains();
         if (searchDomains.length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
@@ -252,9 +335,9 @@ abstract class DnsResolveContext<T> {
                             }
                         }
                     } else {
-                        if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
-                                    searchDomains));
+                        final UnknownHostException failure = searchDomainFailure(cause, searchDomains);
+                        if (failure != null) {
+                            promise.tryFailure(failure);
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
                             newPromise.addListener(this);
@@ -270,6 +353,18 @@ abstract class DnsResolveContext<T> {
             });
             doSearchDomainQuery(initialHostname, searchDomainPromise);
         }
+    }
+
+    /**
+     * Returns the exception to fail the resolution with when a search domain attempt failed with {@code cause}, or
+     * {@code null} to continue with the next search domain. By default, only transport and timeout errors stop
+     * the search.
+     */
+    UnknownHostException searchDomainFailure(Throwable cause, String[] searchDomains) {
+        if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
+            return new SearchDomainUnknownHostException(cause, hostname, expectedTypes, searchDomains);
+        }
+        return null;
     }
 
     private boolean hasNDots() {
@@ -363,6 +458,11 @@ abstract class DnsResolveContext<T> {
         }
     }
     private void internalResolve(String name, Promise<List<T>> promise) {
+        final String[] questionNames = questionNames(name);
+        if (questionNames != null) {
+            internalResolve(questionNames, promise);
+            return;
+        }
         try {
             // Resolve from cnameCache() until there is no more cname entry cached.
             name = cnameResolveFromCache(cnameCache(), name);
@@ -475,7 +575,7 @@ abstract class DnsResolveContext<T> {
         f.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future -> {
             queriesInProgress.remove(future);
 
-            if (promise.isDone() || future.isCancelled()) {
+            if (future.isCancelled() || promise.isDone() && !completeEarly) {
                 queryLifecycleObserver.queryCancelled(allowedQueries);
 
                 // Check if we need to release the envelope itself. If the query was cancelled the getNow() will
@@ -820,6 +920,7 @@ abstract class DnsResolveContext<T> {
         boolean found = false;
         boolean completeEarly = this.completeEarly;
         boolean cnameNeedsFollow = !cnames.isEmpty();
+        String followUpName = null;
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
             final DnsRecordType type = r.type();
@@ -894,6 +995,10 @@ abstract class DnsResolveContext<T> {
                 continue;
             }
 
+            if (followUpName == null) {
+                followUpName = followUpName(question, converted);
+            }
+
             boolean shouldRelease = false;
             // Check if we did determine we wanted to complete early before. If this is the case we want to not
             // include the result
@@ -903,7 +1008,7 @@ abstract class DnsResolveContext<T> {
 
             // Check if the promise was done already, and only if not add things to the finalResult. Otherwise lets
             // just release things after we cached it.
-            if (!promise.isDone()) {
+            if (!promise.isDone() && !completionHandedOver) {
                 // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
                 //
                 // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
@@ -929,6 +1034,9 @@ abstract class DnsResolveContext<T> {
             }
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
+        if (afterResponseRecords(question, response)) {
+            this.completeEarly = true;
+        }
 
         if (found && !cnameNeedsFollow) {
             // If we found the correct result we can just stop here without following any extra CNAME records in the
@@ -943,6 +1051,37 @@ abstract class DnsResolveContext<T> {
             queryLifecycleObserver.querySucceed();
             // We also got a CNAME so we need to ensure we also query it.
             onResponseCNAME(question, cnames, newDnsQueryLifecycleObserver(question), promise);
+        }
+
+        if (followUpName != null && !promise.isDone()) {
+            followUp(question, followUpName, promise);
+        }
+    }
+
+    /**
+     * SVCB specific: queries {@code name} with the same type, see {@link #followUpName}.
+     */
+    private void followUp(DnsQuestion question, String name, Promise<List<T>> promise) {
+        final DnsQuestion followUpQuestion;
+        final DnsServerAddressStream stream;
+        try {
+            name = cnameResolveFromCache(cnameCache(), name);
+            stream = getNameServers(name);
+            followUpQuestion = new DefaultDnsQuestion(name, question.type(), dnsClass);
+        } catch (Throwable cause) {
+            releaseFinalResult();
+            promise.tryFailure(cause);
+            return;
+        }
+        query(stream, 0, followUpQuestion, newDnsQueryLifecycleObserver(followUpQuestion), true, promise, null);
+    }
+
+    private void releaseFinalResult() {
+        if (finalResult != null) {
+            for (T item : finalResult) {
+                ReferenceCountUtil.safeRelease(item);
+            }
+            finalResult = Collections.emptyList();
         }
     }
 
@@ -1097,6 +1236,17 @@ abstract class DnsResolveContext<T> {
                 i.remove();
 
                 f.cancel(false);
+            }
+        }
+
+        if (completionHandedOver) {
+            return;
+        }
+        if (!promise.isDone()) {
+            if (beforeFinishResolve(promise, finalResult != null ? finalResult : Collections.<T>emptyList())) {
+                completionHandedOver = true;
+                releaseFinalResult();
+                return;
             }
         }
 

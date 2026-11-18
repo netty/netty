@@ -53,6 +53,7 @@ public final class DnsNameResolverBuilder {
     private boolean retryOnTimeout;
 
     private DnsCache resolveCache;
+    private DnsHttpsCache httpsCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private SocketAddress localAddress = DEFAULT_LOCAL_ADDRESS;
@@ -257,7 +258,8 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets the cache for resolution results.
+     * Sets the cache for resolution results. It does not configure the cache of the HTTPS records, which still uses
+     * {@link #ttl(int, int)} and {@link #negativeTtl(int)}.
      *
      * @param resolveCache the DNS resolution results cache
      * @return {@code this}
@@ -330,6 +332,7 @@ public final class DnsNameResolverBuilder {
      * respectively.
      * The default value is {@code 0} and {@link Integer#MAX_VALUE}, which practically tells this resolver to
      * respect the TTL from the DNS server.
+     * They apply to every cache this builder creates, including the cache of the HTTPS records.
      *
      * @param minTtl the minimum TTL
      * @param maxTtl the maximum TTL
@@ -343,6 +346,7 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the TTL of the cache for the failed DNS queries (in seconds).
+     * It applies to every cache this builder creates, including the cache of the HTTPS records.
      *
      * @param negativeTtl the TTL for failed cached queries
      * @return {@code this}
@@ -593,6 +597,22 @@ public final class DnsNameResolverBuilder {
         return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
     }
 
+    /**
+     * Sets the cache of the HTTPS records.
+     */
+    DnsNameResolverBuilder httpsCache(DnsHttpsCache httpsCache) {
+        this.httpsCache = httpsCache;
+        return this;
+    }
+
+    DnsHttpsCache getOrNewHttpsCache() {
+        if (httpsCache != null) {
+            return httpsCache;
+        }
+        return new DefaultDnsHttpsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
+                intValue(negativeTtl, 0));
+    }
+
    AuthoritativeDnsServerCache getOrNewAuthoritativeDnsServerCache() {
         if (this.authoritativeDnsServerCache != null) {
             return this.authoritativeDnsServerCache;
@@ -704,15 +724,16 @@ public final class DnsNameResolverBuilder {
         }
 
         if (resolveCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
-            logger.debug("resolveCache and TTLs are mutually exclusive. TTLs are ignored.");
+            logger.debug("resolveCache and TTLs are mutually exclusive. TTLs are ignored for resolveCache.");
         }
 
         if (cnameCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
-            logger.debug("cnameCache and TTLs are mutually exclusive. TTLs are ignored.");
+            logger.debug("cnameCache and TTLs are mutually exclusive. TTLs are ignored for cnameCache.");
         }
 
         if (authoritativeDnsServerCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
-            logger.debug("authoritativeDnsServerCache and TTLs are mutually exclusive. TTLs are ignored.");
+            logger.debug("authoritativeDnsServerCache and TTLs are mutually exclusive. " +
+                    "TTLs are ignored for authoritativeDnsServerCache.");
         }
 
         DnsCache resolveCache = getOrNewCache();
@@ -749,7 +770,8 @@ public final class DnsNameResolverBuilder {
                 maxNumConsolidation,
                 datagramChannelStrategy,
                 caseRandomizationEnabled,
-                dnsCookiesEnabled);
+                dnsCookiesEnabled,
+                getOrNewHttpsCache());
     }
 
     /**
@@ -772,6 +794,10 @@ public final class DnsNameResolverBuilder {
 
         if (resolveCache != null) {
             copiedBuilder.resolveCache(resolveCache);
+        }
+
+        if (httpsCache != null) {
+            copiedBuilder.httpsCache(httpsCache);
         }
 
         if (cnameCache != null) {

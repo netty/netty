@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 
 /**
  * Decodes an {@link InetAddress} from an A or AAAA {@link DnsRawRecord}.
@@ -40,7 +41,7 @@ final class DnsAddressDecoder {
      * @param decodeIdn whether to convert {@code name} to a unicode host name
      *
      * @return the {@link InetAddress}, or {@code null} if {@code record} is not a {@link DnsRawRecord} or
-     *         its content is malformed
+     *         its content is malformed, including a length that does not match its type
      */
     static InetAddress decodeAddress(DnsRecord record, String name, boolean decodeIdn) {
         if (!(record instanceof DnsRawRecord)) {
@@ -48,7 +49,9 @@ final class DnsAddressDecoder {
         }
         final ByteBuf content = ((ByteBufHolder) record).content();
         final int contentLen = content.readableBytes();
-        if (contentLen != INADDRSZ4 && contentLen != INADDRSZ6) {
+        final DnsRecordType type = record.type();
+        if (type == DnsRecordType.A ? contentLen != INADDRSZ4 :
+                type != DnsRecordType.AAAA || contentLen != INADDRSZ6) {
             return null;
         }
 

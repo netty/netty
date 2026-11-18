@@ -16,15 +16,24 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -95,6 +104,288 @@ public class DefaultDnsRecordEncoderTest {
     public void testOptCookieRequiresEightBytes() {
         assertThrows(IllegalArgumentException.class, () -> new DefaultDnsOptCookieRecord(1232, new byte[7]));
         assertThrows(IllegalArgumentException.class, () -> new DefaultDnsOptCookieRecord(1232, new byte[16]));
+    }
+
+    @Test
+    public void testEncodeSvcbAliasMode() throws Exception {
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 0, "svc.example.com.",
+                Collections.<SvcParam>emptyList());
+
+        ByteBuf expected = Unpooled.buffer();
+        expected.writeBytes(new byte[] { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 });
+        expected.writeShort(DnsRecordType.SVCB.intValue());
+        expected.writeShort(DnsRecord.CLASS_IN);
+        expected.writeInt(300);
+        expected.writeShort(19); // RDLENGTH: priority (2) + target name (17)
+        expected.writeShort(0); // SvcPriority
+        expected.writeBytes(SVC_EXAMPLE_COM);
+
+        assertThat(encodeSvcb(record)).containsExactly(ByteBufUtil.getBytes(expected));
+        expected.release();
+    }
+
+    @Test
+    public void testEncodeSvcbServiceModeWithAlpn() throws Exception {
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.",
+                Collections.<SvcParam>singletonList(
+                        new SvcParam.Alpn(Arrays.asList(new AsciiString("h2"), new AsciiString("h3")))));
+
+        ByteBuf expected = Unpooled.buffer();
+        expected.writeBytes(new byte[] { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 });
+        expected.writeShort(DnsRecordType.SVCB.intValue());
+        expected.writeShort(DnsRecord.CLASS_IN);
+        expected.writeInt(300);
+        expected.writeShort(29); // RDLENGTH: priority (2) + target name (17) + alpn (4 + 6)
+        expected.writeShort(1); // SvcPriority
+        expected.writeBytes(SVC_EXAMPLE_COM);
+        expected.writeShort(1); // SvcParamKey alpn
+        expected.writeShort(6); // SvcParamValue length
+        expected.writeBytes(new byte[] { 2, 'h', '2', 2, 'h', '3' });
+
+        assertThat(encodeSvcb(record)).containsExactly(ByteBufUtil.getBytes(expected));
+        expected.release();
+    }
+
+    @Test
+    public void testEncodeSvcbSortsParamsWithoutMutatingInput() throws Exception {
+        SvcParam port = new SvcParam.Port(8443);
+        SvcParam alpn = new SvcParam.Alpn(Collections.singletonList(new AsciiString("h3")));
+        List<SvcParam> params = Collections.unmodifiableList(Arrays.asList(port, alpn));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.", params);
+
+        byte[] encoded = encodeSvcb(record);
+
+        ByteBuf expectedRdata = Unpooled.buffer();
+        expectedRdata.writeShort(1); // SvcPriority
+        expectedRdata.writeBytes(SVC_EXAMPLE_COM);
+        expectedRdata.writeShort(1); // SvcParamKey alpn
+        expectedRdata.writeShort(3);
+        expectedRdata.writeBytes(new byte[] { 2, 'h', '3' });
+        expectedRdata.writeShort(3); // SvcParamKey port
+        expectedRdata.writeShort(2);
+        expectedRdata.writeShort(8443);
+        byte[] rdata = ByteBufUtil.getBytes(expectedRdata);
+        expectedRdata.release();
+
+        // owner name (13) + type (2) + class (2) + ttl (4) + rdlength (2)
+        assertThat(Arrays.copyOfRange(encoded, 21, 23)).containsExactly(0, rdata.length);
+        assertThat(Arrays.copyOfRange(encoded, 23, encoded.length)).containsExactly(rdata);
+        assertThat(params).containsExactly(port, alpn);
+    }
+
+    @Test
+    public void testEncodeHttps() throws Exception {
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", DnsRecordType.HTTPS, 300, 1,
+                "svc.example.com.", Collections.<SvcParam>singletonList(new SvcParam.Port(8443)));
+
+        ByteBuf expected = Unpooled.buffer();
+        expected.writeBytes(new byte[] { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 });
+        expected.writeShort(DnsRecordType.HTTPS.intValue());
+        expected.writeShort(DnsRecord.CLASS_IN);
+        expected.writeInt(300);
+        expected.writeShort(25); // RDLENGTH: priority (2) + target name (17) + port (6)
+        expected.writeShort(1); // SvcPriority
+        expected.writeBytes(SVC_EXAMPLE_COM);
+        expected.writeShort(SvcParam.PORT).writeShort(2).writeShort(8443);
+
+        assertThat(encodeSvcb(record)).containsExactly(ByteBufUtil.getBytes(expected));
+        expected.release();
+    }
+
+    @Test
+    public void testEncodeSvcbRejectsDuplicateKeys() {
+        List<SvcParam> params = Arrays.asList(
+                new SvcParam.Alpn(Collections.singletonList(new AsciiString("h3"))),
+                new SvcParam.Port(443),
+                new SvcParam.Port(8443));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.", params);
+
+        assertThatThrownBy(() -> encodeSvcb(record)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testEncodeSvcbAlpnHonorsArrayOffset() throws Exception {
+        byte[] backing = { 'x', 'h', '2', 'y' };
+        AsciiString h2 = new AsciiString(backing, 1, 2, false);
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.",
+                Collections.<SvcParam>singletonList(new SvcParam.Alpn(Collections.singletonList(h2))));
+
+        byte[] encoded = encodeSvcb(record);
+
+        assertThat(Arrays.copyOfRange(encoded, encoded.length - 7, encoded.length))
+                .containsExactly(0, 1, 0, 3, 2, 'h', '2');
+    }
+
+    @Test
+    public void testAlpnRejectsTooLongProtocol() {
+        AsciiString tooLong = new AsciiString(new byte[256], false);
+        assertThatThrownBy(() -> new SvcParam.Alpn(Collections.singletonList(tooLong)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testAlpnCopiesProtocols() throws Exception {
+        List<AsciiString> protocols = new ArrayList<AsciiString>();
+        protocols.add(new AsciiString("h2"));
+        SvcParam alpn = new SvcParam.Alpn(protocols);
+        protocols.add(new AsciiString("h3"));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.",
+                Collections.singletonList(alpn));
+
+        byte[] encoded = encodeSvcb(record);
+
+        assertThat(Arrays.copyOfRange(encoded, encoded.length - 7, encoded.length))
+                .containsExactly(0, 1, 0, 3, 2, 'h', '2');
+    }
+
+    private static final byte[] SVC_EXAMPLE_COM = {
+            3, 's', 'v', 'c', 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0
+    };
+
+    private static byte[] encodeSvcb(DnsSvcbRecord record) throws Exception {
+        ByteBuf out = Unpooled.buffer();
+        try {
+            new DefaultDnsRecordEncoder().encodeRecord(record, out);
+            return ByteBufUtil.getBytes(out);
+        } finally {
+            out.release();
+        }
+    }
+
+    @Test
+    public void testEncodeSvcbMandatoryAlpnIpv4Hint() throws Exception {
+        // RFC 9460 Appendix D.2, Figure 9:
+        // example.com. SVCB 16 foo.example.org. (alpn=h2,h3-19 mandatory=ipv4hint,alpn ipv4hint=192.0.2.1)
+        List<SvcParam> params = Arrays.asList(
+                new SvcParam.Ipv4Hint(Collections.singletonList(
+                        (Inet4Address) InetAddress.getByAddress(new byte[] { (byte) 192, 0, 2, 1 }))),
+                new SvcParam.Alpn(Arrays.asList(new AsciiString("h2"), new AsciiString("h3-19"))),
+                new SvcParam.Mandatory(Arrays.asList(SvcParam.IPV4HINT, SvcParam.ALPN)));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 16, "foo.example.org.", params);
+
+        assertThat(svcbRdata(record)).containsExactly(
+                0x00, 0x10, // SvcPriority 16
+                3, 'f', 'o', 'o', 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'o', 'r', 'g', 0,
+                0x00, 0x00, 0x00, 0x04, 0x00, 0x01, 0x00, 0x04, // mandatory=alpn,ipv4hint
+                0x00, 0x01, 0x00, 0x09, 2, 'h', '2', 5, 'h', '3', '-', '1', '9', // alpn=h2,h3-19
+                0x00, 0x04, 0x00, 0x04, 192, 0, 2, 1); // ipv4hint=192.0.2.1
+    }
+
+    @Test
+    public void testEncodeSvcbNoDefaultAlpnPortEchIpv6HintUnknown() throws Exception {
+        byte[] ech = { 1, 2, 3 };
+        List<SvcParam> params = Arrays.<SvcParam>asList(
+                new SvcParam.Unknown(667, new byte[] { 'h', 'e', 'l', 'l', 'o' }),
+                new SvcParam.Ipv6Hint(Arrays.asList(
+                        (Inet6Address) InetAddress.getByName("2001:db8::1"),
+                        (Inet6Address) InetAddress.getByName("2001:db8::53:1"))),
+                new SvcParam.Ech(ech),
+                new SvcParam.Port(53),
+                SvcParam.NoDefaultAlpn.INSTANCE,
+                new SvcParam.Alpn(Collections.singletonList(new AsciiString("h3"))));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.", params);
+        ech[0] = 42;
+
+        ByteBuf expected = Unpooled.buffer();
+        expected.writeShort(1); // SvcPriority
+        expected.writeBytes(SVC_EXAMPLE_COM);
+        expected.writeShort(SvcParam.ALPN).writeShort(3).writeBytes(new byte[] { 2, 'h', '3' });
+        expected.writeShort(SvcParam.NO_DEFAULT_ALPN).writeShort(0);
+        expected.writeShort(SvcParam.PORT).writeShort(2).writeShort(53);
+        expected.writeShort(SvcParam.ECH).writeShort(3).writeBytes(new byte[] { 1, 2, 3 });
+        expected.writeShort(SvcParam.IPV6HINT).writeShort(32);
+        expected.writeBytes(new byte[] { 0x20, 0x01, 0x0d, (byte) 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 });
+        expected.writeBytes(new byte[] { 0x20, 0x01, 0x0d, (byte) 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x53, 0, 0x01 });
+        expected.writeShort(667).writeShort(5).writeBytes(new byte[] { 'h', 'e', 'l', 'l', 'o' });
+
+        assertThat(svcbRdata(record)).containsExactly(ByteBufUtil.getBytes(expected));
+        expected.release();
+    }
+
+    @Test
+    public void testEncodeSvcbRejectsMissingMandatoryKey() {
+        List<SvcParam> params = Arrays.<SvcParam>asList(
+                new SvcParam.Mandatory(Collections.singletonList(SvcParam.PORT)),
+                new SvcParam.Alpn(Collections.singletonList(new AsciiString("h3"))));
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.", params);
+
+        assertThatThrownBy(() -> encodeSvcb(record)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testEncodeSvcbRejectsNoDefaultAlpnWithoutAlpn() {
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.",
+                Collections.<SvcParam>singletonList(SvcParam.NoDefaultAlpn.INSTANCE));
+
+        assertThatThrownBy(() -> encodeSvcb(record)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testEncodeSvcbTargetNameIgnoresEncodeNameOverride() throws Exception {
+        DefaultDnsRecordEncoder compressingEncoder = new DefaultDnsRecordEncoder() {
+            @Override
+            protected void encodeName(String name, ByteBuf buf) {
+                // Writes a compression pointer for every name.
+                buf.writeShort(0xC00C);
+            }
+        };
+        DnsSvcbRecord record = new DefaultDnsSvcbRecord("example.com.", 300, 1, "svc.example.com.",
+                Collections.<SvcParam>emptyList());
+        ByteBuf out = Unpooled.buffer();
+        try {
+            compressingEncoder.encodeRecord(record, out);
+            byte[] encoded = ByteBufUtil.getBytes(out);
+
+            // owner name (2, compressed by the override) + type (2) + class (2) + ttl (4) + rdlength (2)
+            ByteBuf expectedRdata = Unpooled.buffer();
+            expectedRdata.writeShort(1); // SvcPriority
+            expectedRdata.writeBytes(SVC_EXAMPLE_COM);
+            assertThat(Arrays.copyOfRange(encoded, 12, encoded.length))
+                    .containsExactly(ByteBufUtil.getBytes(expectedRdata));
+            expectedRdata.release();
+        } finally {
+            out.release();
+        }
+    }
+
+    @Test
+    public void testSvcParamValidation() {
+        assertThatThrownBy(() -> new SvcParam.Unknown(-1, new byte[0]))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Mandatory(Collections.<Integer>emptyList()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Mandatory(Collections.singletonList(SvcParam.MANDATORY)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Mandatory(Arrays.asList(SvcParam.PORT, SvcParam.PORT)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Unknown(65536, new byte[0]))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Mandatory(Collections.singletonList(65536)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Alpn(Collections.<AsciiString>emptyList()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Alpn(Collections.singletonList(AsciiString.EMPTY_STRING)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Port(-1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Port(65536)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Ipv4Hint(Collections.<Inet4Address>emptyList()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SvcParam.Ipv6Hint(Collections.<Inet6Address>emptyList()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testMandatoryKeysAreSorted() {
+        SvcParam.Mandatory mandatory = new SvcParam.Mandatory(Arrays.asList(SvcParam.IPV4HINT, SvcParam.ALPN));
+        assertThat(mandatory.keys()).containsExactly(SvcParam.ALPN, SvcParam.IPV4HINT);
+    }
+
+    private static byte[] svcbRdata(DnsSvcbRecord record) throws Exception {
+        byte[] encoded = encodeSvcb(record);
+        // owner name "example.com." (13) + type (2) + class (2) + ttl (4) + rdlength (2)
+        int rdLength = (encoded[21] & 0xff) << 8 | encoded[22] & 0xff;
+        assertThat(encoded.length - 23).isEqualTo(rdLength);
+        return Arrays.copyOfRange(encoded, 23, encoded.length);
     }
 
     @Test
