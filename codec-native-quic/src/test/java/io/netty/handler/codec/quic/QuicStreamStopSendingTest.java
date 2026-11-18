@@ -159,6 +159,10 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
             serverStream.writeAndFlush(Unpooled.directBuffer().writeZero(8)).sync();
             assertThat(serverStreams.events).isEmpty();
 
+            clientStream.shutdownInput((int) ERROR_CODE).sync();
+            assertStopped(serverStreams.next());
+            assertThat(serverStream.isOutputShutdown()).isTrue();
+
             quicChannel.close().sync();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
