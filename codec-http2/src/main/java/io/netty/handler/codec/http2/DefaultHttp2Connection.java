@@ -863,6 +863,11 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (parent == null) {
                 throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
             }
+            // The parent of a PUSH_PROMISE must have been initiated by the opposite endpoint (RFC 9113, 5.1).
+            if (!opposite().created(parent)) {
+                throw connectionError(PROTOCOL_ERROR,
+                        "Stream %d was not initiated by the opposite endpoint", parent.id());
+            }
             if (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen()) {
                 throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
             }
