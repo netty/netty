@@ -58,6 +58,57 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpPostRequestEncoderTest {
 
     @Test
+    public void testEncodeEmptyAttributeNames() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/");
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, false);
+        try {
+            encoder.addBodyAttribute("", "first");
+            encoder.addBodyAttribute("key", "value");
+            encoder.addBodyAttribute("", "");
+            encoder.finalizeRequest();
+            assertEquals("=first&key=value&=", request.content().toString(UTF_8));
+        } finally {
+            encoder.cleanFiles();
+            request.release();
+        }
+    }
+
+    @Test
+    public void testMultipartEmptyNamesRoundTrip() throws Exception {
+        HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST, "/");
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
+        MemoryFileUpload upload = null;
+        HttpPostRequestDecoder decoder = null;
+        try {
+            encoder.addBodyAttribute("", "value");
+            upload = new MemoryFileUpload("", "file.txt", "text/plain", null, UTF_8, 4);
+            upload.setContent(Unpooled.copiedBuffer("file", UTF_8));
+            encoder.addBodyHttpData(upload);
+            decoder = new HttpPostRequestDecoder(encoder.finalizeRequest());
+            while (!encoder.isEndOfInput()) {
+                HttpContent chunk = encoder.readChunk((ByteBufAllocator) null);
+                try {
+                    decoder.offer(chunk);
+                } finally {
+                    chunk.release();
+                }
+            }
+            List<InterfaceHttpData> fields = decoder.getBodyHttpDatas("");
+            assertEquals(2, fields.size());
+            assertEquals("value", ((Attribute) fields.get(0)).getValue());
+            assertEquals("file", ((FileUpload) fields.get(1)).getString());
+        } finally {
+            if (decoder != null) {
+                decoder.destroy();
+            }
+            encoder.cleanFiles();
+            if (upload != null) {
+                upload.release();
+            }
+        }
+    }
+
+    @Test
     public void testAllowedMethods() throws Exception {
         shouldThrowExceptionIfNotAllowed(HttpMethod.CONNECT);
         shouldThrowExceptionIfNotAllowed(HttpMethod.PUT);
