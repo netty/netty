@@ -20,12 +20,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
@@ -57,10 +59,11 @@ class HttpServerLingeringCloseTest {
         assertThatIllegalArgumentException().isThrownBy(() -> aggregator.setCloseTimeoutMillis(-1));
     }
 
-    @Test
-    void tcpPeerCanFinishSendingAfterReading413() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void tcpPeerCanFinishSendingAfterReading413(boolean autoRead) throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, false, 5000);
+            checkDelivery(peer, false, 60000, autoRead);
         }
     }
 
@@ -119,7 +122,7 @@ class HttpServerLingeringCloseTest {
     @Test
     void rejectedExpectationClosesByDeadlineEvenIfPeerKeepsOutputOpen() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, true, 2000);
+            checkDelivery(peer, true, 2000, true);
         }
     }
 
@@ -156,41 +159,43 @@ class HttpServerLingeringCloseTest {
     @Test
     void zeroTimeoutClosesAfterResponseWhilePeerOutputIsOpen() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, false, 0);
+            checkDelivery(peer, false, 0, true);
         }
     }
 
-    private static void checkDelivery(Socket peer, boolean rejectExpectation, long timeoutMillis) throws Exception {
+    private static void checkDelivery(Socket peer, boolean rejectExpectation, long timeoutMillis,
+                                      boolean autoRead) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         CompletableFuture<Channel> accepted = new CompletableFuture<Channel>();
         try {
             Channel server = new ServerBootstrap().group(group).channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.AUTO_READ, autoRead)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
                             HttpObjectAggregator aggregator = new HttpObjectAggregator(4, rejectExpectation);
-                            if (timeoutMillis != 5000) {
-                                aggregator.setCloseTimeoutMillis(timeoutMillis);
-                            }
-                            ch.pipeline().addLast(new HttpServerCodec(), aggregator);
+                            aggregator.setCloseTimeoutMillis(timeoutMillis);
+                            ch.pipeline().addLast(new FlushConsolidationHandler(), new HttpServerCodec(), aggregator);
                             accepted.complete(ch);
                         }
                     }).bind("127.0.0.1", 0).sync().channel();
             peer.connect(server.localAddress());
             peer.setSoTimeout(10000);
-            sendRequest(peer, rejectExpectation);
             Channel child = accepted.get(10, TimeUnit.SECONDS);
+            if (!autoRead) {
+                child.read();
+            }
+            sendRequest(peer, rejectExpectation);
             assertThat(readHeaders(peer)).startsWith("HTTP/1.1 413 ");
             assertThat(peer.getInputStream().read()).isEqualTo(-1);
-            if (timeoutMillis > 0) {
-                assertThat(child.isActive()).isTrue();
-            }
             if (rejectExpectation || timeoutMillis == 0) {
                 assertThat(child.closeFuture().await(3, TimeUnit.SECONDS)).isTrue();
                 return;
             }
+            assertThat(child.isActive()).isTrue();
             peer.getOutputStream().write(new byte[1024]);
             peer.shutdownOutput();
+            // The peer's FIN must complete the close well before the 60-second deadline.
             assertThat(child.closeFuture().await(10, TimeUnit.SECONDS)).isTrue();
         } finally {
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();

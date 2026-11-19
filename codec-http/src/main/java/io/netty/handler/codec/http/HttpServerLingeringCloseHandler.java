@@ -91,10 +91,8 @@ final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt == ChannelInputShutdownEvent.INSTANCE) {
-            if (shuttingDown) {
-                ctx.close();
-            }
+        if (evt == ChannelInputShutdownEvent.INSTANCE && shuttingDown) {
+            ctx.close();
         } else {
             ctx.fireUserEventTriggered(evt);
         }
@@ -118,6 +116,8 @@ final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
+            // An outbound handler may be waiting for read-complete to flush the rejection.
+            ctx.fireChannelReadComplete();
             ctx.read();
         }
     }

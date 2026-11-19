@@ -459,6 +459,32 @@ public class HttpObjectAggregatorTest {
         runUnsupportedExceptHeaderExceptionTest(false);
     }
 
+    @Test
+    public void testExpectationRejectionOverriddenToKeepAlive() {
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(4, true) {
+            @Override
+            protected boolean closeAfterContinueResponse(Object msg) {
+                return super.closeAfterContinueResponse(msg) &&
+                        ((HttpResponse) msg).status().equals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), aggregator);
+        try {
+            assertFalse(channel.writeInbound(Unpooled.copiedBuffer(
+                    "GET / HTTP/1.1\r\nExpect: unsupported\r\n\r\n", CharsetUtil.US_ASCII)));
+            FullHttpResponse response = channel.readOutbound();
+            try {
+                assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+            } finally {
+                response.release();
+            }
+            assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET /next HTTP/1.1\r\n\r\n",
+                    CharsetUtil.US_ASCII)));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
     private static void runUnsupportedExceptHeaderExceptionTest(final boolean close) {
         final HttpObjectAggregator aggregator;
         final int maxContentLength = 4;

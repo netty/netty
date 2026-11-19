@@ -62,6 +62,7 @@ import static io.netty.util.internal.StringUtil.className;
  * and drains input until peer EOF or the {@linkplain #setCloseTimeoutMillis(long) configured deadline}
  * (RFC 9112, section 9.6). During teardown
  * the pipeline discards further requests and incoming application data. TLS closure alerts are processed normally.
+ * During the drain, the transport may defer additional close requests until peer EOF or the deadline.
  * The deadline bounds the response write and any TLS close wait as well as the drain.
  * Subclasses replacing {@link #handleOversizedMessage} control their own oversized-request teardown.
  * <p>
@@ -218,11 +219,12 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean closeAfterContinueResponse(Object msg) {
-        boolean close = closeOnExpectationFailed && ignoreContentAfterContinueResponse(msg);
-        if (close) {
-            prepareToClose(ctx());
-        }
-        return close;
+        return closeOnExpectationFailed && ignoreContentAfterContinueResponse(msg);
+    }
+
+    @Override
+    protected void prepareToCloseAfterContinueResponse(ChannelHandlerContext ctx) {
+        prepareToClose(ctx);
     }
 
     @Override
