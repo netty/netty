@@ -24,13 +24,14 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DelegatingDecompressorFrameListenerTest {
 
@@ -109,8 +110,12 @@ public class DelegatingDecompressorFrameListenerTest {
         // drop the CRC32 and ISIZE footer
         final byte[] truncated = Arrays.copyOf(gz, gz.length - 8);
 
-        assertThatThrownBy(() -> listener.onDataRead(ctx, STREAM_ID, Unpooled.wrappedBuffer(truncated), 0, true))
-                .isInstanceOf(Http2Exception.StreamException.class);
+        assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                listener.onDataRead(ctx, STREAM_ID, Unpooled.wrappedBuffer(truncated), 0, true);
+            }
+        });
 
         // The data that could be decoded was delivered, but the application must never see the end of the stream.
         assertThat(received.toString()).isEqualTo("hello, world");

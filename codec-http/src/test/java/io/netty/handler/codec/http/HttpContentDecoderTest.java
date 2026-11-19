@@ -178,7 +178,12 @@ public class HttpContentDecoderTest {
         assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
         content.release();
 
-        assertThrows(DecompressionException.class, channel::finish);
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.finish();
+            }
+        });
         // the truncated body is not completed
         for (;;) {
             Object o = channel.readInbound();
