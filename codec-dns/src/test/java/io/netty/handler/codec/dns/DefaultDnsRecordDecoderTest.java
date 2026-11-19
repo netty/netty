@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -93,13 +94,16 @@ public class DefaultDnsRecordDecoderTest {
 
     @ParameterizedTest
     @ValueSource(ints = { 21, 23 })
-    public void testDecodeSoaRecordWithInvalidIntegerFields(int length) {
-        ByteBuf packet = Unpooled.buffer().writeZero(length);
+    public void testDecodeSoaRecordWithInvalidIntegerFields(final int length) {
+        final ByteBuf packet = Unpooled.buffer().writeZero(length);
         try {
-            assertThatThrownBy(() -> {
-                DnsRawRecord record = (DnsRawRecord) new DefaultDnsRecordDecoder().decodeRecord(
-                        "netty.io.", DnsRecordType.SOA, DnsRecord.CLASS_IN, 60, packet, 0, length);
-                record.release();
+            assertThatThrownBy(new ThrowingCallable() {
+                @Override
+                public void call() throws Throwable {
+                    DnsRawRecord record = (DnsRawRecord) new DefaultDnsRecordDecoder().decodeRecord(
+                            "netty.io.", DnsRecordType.SOA, DnsRecord.CLASS_IN, 60, packet, 0, length);
+                    record.release();
+                }
             }).isInstanceOf(CorruptedFrameException.class);
             assertThat(packet.readerIndex()).isZero();
             assertThat(packet.writerIndex()).isEqualTo(length);
