@@ -156,6 +156,7 @@ public class DefaultHttp2ConnectionDecoderTest {
                 return properties.put(invocationOnMock.getArgument(0), invocationOnMock.getArgument(1));
             }
         });
+        when(connection.newKey()).thenReturn(mock(Http2Connection.PropertyKey.class));
 
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         doAnswer(new Answer<Boolean>() {
@@ -730,6 +731,10 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
+
+    // See Http2ConnectTunnelTest for coverage of HEADERS being rejected once a CONNECT tunnel is established:
+    // that requires a real DefaultHttp2ConnectionEncoder so the decoder can learn that the local endpoint sent a
+    // successful response, which this file's mocked Http2ConnectionEncoder cannot provide.
 
     @Test
     public void responseMissingStatusRejectedWhenEnabled() throws Exception {
