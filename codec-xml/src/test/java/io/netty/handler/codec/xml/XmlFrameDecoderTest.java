@@ -267,6 +267,24 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testFramingWithXmlDeclarationInItsOwnChunk() {
+        final String declaration = "<?xml version=\"1.0\"?>";
+        testDecodeWithXml(Arrays.asList(declaration, "<a>1</a>"), declaration + "<a>1</a>");
+        // the '<' of the element arrives with nothing after it, so the next chunk has to classify it.
+        testDecodeWithXml(Arrays.asList(declaration + "<", "a>1</a>"), declaration + "<a>1</a>");
+    }
+
+    @Test
+    public void testFramingWithCommentInItsOwnChunk() {
+        testDecodeWithXml(Arrays.asList("<!-- c -->", "<a/>"), "<!-- c --><a/>");
+    }
+
+    @Test
+    public void testFramingWithDoctypeInItsOwnChunk() {
+        testDecodeWithXml(Arrays.asList("<!DOCTYPE a>", "<a/>"), "<!DOCTYPE a><a/>");
+    }
+
+    @Test
     public void testFramingWithCommentStartSplitAcrossChunks() {
         final String frame = "<root><!-- comment --></root>";
         // split right in the middle of the "<!--" start marker, so the decoder cannot
