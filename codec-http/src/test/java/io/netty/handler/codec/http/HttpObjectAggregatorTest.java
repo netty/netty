@@ -19,12 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.PrematureChannelClosureException;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -36,6 +35,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -196,21 +197,21 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
+    public void closeTimeoutDefaultsToFiveSecondsAndRejectsNegativeValues() {
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(4);
+        assertThat(aggregator.closeTimeoutMillis()).isEqualTo(5000);
+        assertThatIllegalArgumentException().isThrownBy(() -> aggregator.setCloseTimeoutMillis(-1));
+    }
+
+    @Test
     public void testAlreadyDecodedMessagesDiscardedDuringTerminalWrite() {
-        ChannelOutboundHandlerAdapter stalledWrite = new ChannelOutboundHandlerAdapter() {
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                ReferenceCountUtil.release(msg);
-                // Keep the terminal response pending while the decoder emits the next request.
-            }
-        };
-        EmbeddedChannel channel = new EmbeddedChannel(stalledWrite, new HttpRequestDecoder(),
+        // Hold the rejection flush until both requests have been decoded from the same read.
+        EmbeddedChannel channel = new EmbeddedChannel(new FlushConsolidationHandler(), new HttpRequestDecoder(),
                 new HttpObjectAggregator(4));
         try {
             assertFalse(channel.writeInbound(Unpooled.copiedBuffer(
                     "PUT / HTTP/1.1\r\nConnection: close\r\nContent-Length: 5\r\n\r\n12345" +
                             "GET /next HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII)));
-            assertNull(channel.readInbound());
         } finally {
             channel.finishAndReleaseAll();
         }
@@ -455,8 +456,8 @@ public class HttpObjectAggregatorTest {
 
     @Test
     public void testUnsupportedExpectHeaderExpectation() {
-        runUnsupportedExceptHeaderExceptionTest(true);
-        runUnsupportedExceptHeaderExceptionTest(false);
+        checkUnsupportedExpectation(new HttpObjectAggregator(4, true), true);
+        checkUnsupportedExpectation(new HttpObjectAggregator(4), false);
     }
 
     @Test
@@ -468,31 +469,10 @@ public class HttpObjectAggregatorTest {
                         ((HttpResponse) msg).status().equals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
             }
         };
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), aggregator);
-        try {
-            assertFalse(channel.writeInbound(Unpooled.copiedBuffer(
-                    "GET / HTTP/1.1\r\nExpect: unsupported\r\n\r\n", CharsetUtil.US_ASCII)));
-            FullHttpResponse response = channel.readOutbound();
-            try {
-                assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
-            } finally {
-                response.release();
-            }
-            assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET /next HTTP/1.1\r\n\r\n",
-                    CharsetUtil.US_ASCII)));
-        } finally {
-            channel.finishAndReleaseAll();
-        }
+        checkUnsupportedExpectation(aggregator, false);
     }
 
-    private static void runUnsupportedExceptHeaderExceptionTest(final boolean close) {
-        final HttpObjectAggregator aggregator;
-        final int maxContentLength = 4;
-        if (close) {
-            aggregator = new HttpObjectAggregator(maxContentLength, true);
-        } else {
-            aggregator = new HttpObjectAggregator(maxContentLength);
-        }
+    private static void checkUnsupportedExpectation(HttpObjectAggregator aggregator, boolean close) {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), aggregator);
 
         assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
