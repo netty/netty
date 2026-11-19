@@ -32,6 +32,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import static io.netty.buffer.PoolChunk.isSubpage;
 import static java.lang.Math.max;
 
+/**
+ * Manages pooled allocations for one backing-memory type.
+ * <p>
+ * Small and normal allocations first consult the calling thread's {@link PoolThreadCache}. On a cache miss,
+ * small allocations try a {@link PoolSubpage} pool, while normal allocations search the arena's
+ * {@link PoolChunkList}s. If no existing chunk can satisfy the request, the arena creates a new
+ * {@link PoolChunk}. Requests outside the pooled size classes are handled as unpooled ("huge") chunks.
+ * <p>
+ * Pooled chunks are grouped into chunk lists according to utilization. As allocations and frees change a
+ * chunk's free space, {@link PoolChunkList} moves it between neighboring lists. Access to pooled chunk state is
+ * serialized by the arena lock, while the subpage pools use their own locks.
+ */
 abstract class PoolArena<T> implements PoolArenaMetric {
     private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
@@ -44,6 +56,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     final PoolSubpage<T>[] smallSubpagePools;
 
+    /*
+     * Chunks are grouped by utilization. The ranges overlap, and a chunk moves between lists only after it
+     * crosses the thresholds of its current list.
+     */
     private final PoolChunkList<T> q050;
     private final PoolChunkList<T> q025;
     private final PoolChunkList<T> q000;
