@@ -18,9 +18,12 @@ package io.netty.handler.codec.http;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -32,7 +35,18 @@ final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
     private ScheduledFuture<?> deadline;
     private boolean shuttingDown;
 
-    HttpServerLingeringCloseHandler(long closeTimeoutMillis) {
+    static void install(ChannelPipeline pipeline, long closeTimeoutMillis) {
+        ChannelHandlerContext ssl = pipeline.context(SslHandler.class);
+        if (ssl == null) {
+            pipeline.addFirst(DiscardInputHandler.INSTANCE);
+        } else {
+            // Let TLS consume close_notify while discarding application data before HTTP decoding.
+            pipeline.addAfter(ssl.name(), null, DiscardInputHandler.INSTANCE);
+        }
+        pipeline.addFirst(new HttpServerLingeringCloseHandler(closeTimeoutMillis));
+    }
+
+    private HttpServerLingeringCloseHandler(long closeTimeoutMillis) {
         this.closeTimeoutMillis = closeTimeoutMillis;
     }
 
@@ -76,16 +90,6 @@ final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ReferenceCountUtil.release(msg);
-    }
-
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
-    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt == ChannelInputShutdownEvent.INSTANCE) {
             if (shuttingDown) {
@@ -100,6 +104,21 @@ final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
     public void handlerRemoved(ChannelHandlerContext ctx) {
         if (deadline != null) {
             deadline.cancel(false);
+        }
+    }
+
+    @Sharable
+    private static final class DiscardInputHandler extends ChannelInboundHandlerAdapter {
+        static final DiscardInputHandler INSTANCE = new DiscardInputHandler();
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ReferenceCountUtil.release(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            ctx.read();
         }
     }
 }

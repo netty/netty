@@ -18,20 +18,25 @@ package io.netty.handler.codec.http;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -55,27 +60,66 @@ class HttpServerLingeringCloseTest {
     @Test
     void tcpPeerCanFinishSendingAfterReading413() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, null, false, 5000);
+            checkDelivery(peer, false, 5000);
         }
     }
 
-    @Test
-    void tlsPeerReceives413AndOrderlyShutdown() throws Exception {
+    @ParameterizedTest
+    @ValueSource(longs = { 0, 10000 })
+    void tlsPeerReceives413AndOrderlyShutdown(long closeNotifyReadTimeoutMillis) throws Exception {
         X509Bundle cert = new CertificateBuilder().subject("CN=localhost")
                 .setIsCertificateAuthority(true).buildSelfSigned();
         SslContext serverTls = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(SslProvider.JDK).build();
         SSLContext clientTls = SSLContext.getInstance("TLS");
         clientTls.init(null, new TrustManager[] { cert.toTrustManager() }, null);
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        CompletableFuture<SslHandler> accepted = new CompletableFuture<SslHandler>();
+        CompletableFuture<Void> outputShutdown = new CompletableFuture<Void>();
         try (Socket peer = clientTls.getSocketFactory().createSocket()) {
-            checkDelivery(peer, serverTls, false, 5000);
+            Channel server = new ServerBootstrap().group(group).channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            SslHandler ssl = serverTls.newHandler(ch.alloc());
+                            ssl.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeoutMillis);
+                            ch.pipeline().addLast(ssl, new HttpServerCodec(), new HttpObjectAggregator(4),
+                                    new ChannelInboundHandlerAdapter() {
+                                        @Override
+                                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                            if (evt == ChannelOutputShutdownEvent.INSTANCE) {
+                                                outputShutdown.complete(null);
+                                            }
+                                            ctx.fireUserEventTriggered(evt);
+                                        }
+                                    });
+                            accepted.complete(ssl);
+                        }
+                    }).bind("127.0.0.1", 0).sync().channel();
+            peer.connect(server.localAddress());
+            peer.setSoTimeout(10000);
+            sendRequest(peer, false);
+            assertThat(readHeaders(peer)).startsWith("HTTP/1.1 413 ");
+            // The rejection is on the wire. Send another application-data record before reading close_notify.
+            peer.getOutputStream().write(new byte[1024]);
+            if (closeNotifyReadTimeoutMillis == 0) {
+                outputShutdown.get(10, TimeUnit.SECONDS);
+            }
+            assertThat(peer.getInputStream().read()).isEqualTo(-1);
+            peer.close();
+            SslHandler ssl = accepted.get(10, TimeUnit.SECONDS);
+            assertThat(ssl.sslCloseFuture().await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(ssl.sslCloseFuture().isSuccess()).isTrue();
+            assertThat(ssl.sslCloseFuture().getNow().closeFuture().await(3, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         }
     }
 
     @Test
     void rejectedExpectationClosesByDeadlineEvenIfPeerKeepsOutputOpen() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, null, true, 2000);
+            checkDelivery(peer, true, 2000);
         }
     }
 
@@ -112,12 +156,11 @@ class HttpServerLingeringCloseTest {
     @Test
     void zeroTimeoutClosesAfterResponseWhilePeerOutputIsOpen() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, null, false, 0);
+            checkDelivery(peer, false, 0);
         }
     }
 
-    private static void checkDelivery(Socket peer, final SslContext tls, boolean rejectExpectation,
-                                      long timeoutMillis) throws Exception {
+    private static void checkDelivery(Socket peer, boolean rejectExpectation, long timeoutMillis) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         CompletableFuture<Channel> accepted = new CompletableFuture<Channel>();
         try {
@@ -125,9 +168,6 @@ class HttpServerLingeringCloseTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            if (tls != null) {
-                                ch.pipeline().addLast(tls.newHandler(ch.alloc()));
-                            }
                             HttpObjectAggregator aggregator = new HttpObjectAggregator(4, rejectExpectation);
                             if (timeoutMillis != 5000) {
                                 aggregator.setCloseTimeoutMillis(timeoutMillis);
@@ -138,16 +178,10 @@ class HttpServerLingeringCloseTest {
                     }).bind("127.0.0.1", 0).sync().channel();
             peer.connect(server.localAddress());
             peer.setSoTimeout(10000);
-            String request = "PUT / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n" +
-                    (rejectExpectation ? "Expect: 100-continue\r\n" : "") + "Content-Length: 65536\r\n\r\nabcde";
-            peer.getOutputStream().write(request.getBytes(CharsetUtil.US_ASCII));
+            sendRequest(peer, rejectExpectation);
             Channel child = accepted.get(10, TimeUnit.SECONDS);
-            ByteArrayOutputStream response = new ByteArrayOutputStream();
-            int next;
-            while ((next = peer.getInputStream().read()) != -1) {
-                response.write(next);
-            }
-            assertThat(response.toString("US-ASCII")).startsWith("HTTP/1.1 413 ").endsWith("\r\n\r\n");
+            assertThat(readHeaders(peer)).startsWith("HTTP/1.1 413 ");
+            assertThat(peer.getInputStream().read()).isEqualTo(-1);
             if (timeoutMillis > 0) {
                 assertThat(child.isActive()).isTrue();
             }
@@ -155,15 +189,29 @@ class HttpServerLingeringCloseTest {
                 assertThat(child.closeFuture().await(3, TimeUnit.SECONDS)).isTrue();
                 return;
             }
-            if (tls == null) {
-                peer.getOutputStream().write(new byte[1024]);
-                peer.shutdownOutput();
-            } else {
-                peer.close();
-            }
+            peer.getOutputStream().write(new byte[1024]);
+            peer.shutdownOutput();
             assertThat(child.closeFuture().await(10, TimeUnit.SECONDS)).isTrue();
         } finally {
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         }
+    }
+
+    private static void sendRequest(Socket peer, boolean expectContinue) throws Exception {
+        String request = "PUT / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n" +
+                (expectContinue ? "Expect: 100-continue\r\n" : "") + "Content-Length: 65536\r\n\r\nabcde";
+        peer.getOutputStream().write(request.getBytes(CharsetUtil.US_ASCII));
+    }
+
+    private static String readHeaders(Socket peer) throws Exception {
+        ByteArrayOutputStream response = new ByteArrayOutputStream();
+        int next;
+        while ((next = peer.getInputStream().read()) != -1) {
+            response.write(next);
+            if (next == '\n' && response.toString("US-ASCII").endsWith("\r\n\r\n")) {
+                return response.toString("US-ASCII");
+            }
+        }
+        throw new AssertionError("EOF before the end of response headers: " + response.toString("US-ASCII"));
     }
 }

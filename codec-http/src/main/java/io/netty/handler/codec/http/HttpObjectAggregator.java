@@ -61,7 +61,7 @@ import static io.netty.util.internal.StringUtil.className;
  * On a socket connection, the default terminal rejection sends the response, half-closes TCP output,
  * and drains input until peer EOF or the {@linkplain #setCloseTimeoutMillis(long) configured deadline}
  * (RFC 9112, section 9.6). During teardown
- * the pipeline discards further requests and raw input, including inbound TLS closure alerts.
+ * the pipeline discards further requests and incoming application data. TLS closure alerts are processed normally.
  * The deadline bounds the response write and any TLS close wait as well as the drain.
  * Subclasses replacing {@link #handleOversizedMessage} control their own oversized-request teardown.
  * <p>
@@ -276,7 +276,7 @@ public class HttpObjectAggregator
         closing = true;
         long timeoutMillis = closeTimeoutMillis;
         if (timeoutMillis > 0 && ctx.channel() instanceof SocketChannel) {
-            ctx.pipeline().addFirst(new HttpServerLingeringCloseHandler(timeoutMillis));
+            HttpServerLingeringCloseHandler.install(ctx.pipeline(), timeoutMillis);
         }
     }
 
