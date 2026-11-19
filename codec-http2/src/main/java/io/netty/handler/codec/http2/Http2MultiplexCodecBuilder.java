@@ -227,6 +227,11 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public Http2MultiplexCodecBuilder autoTuneFlowControlWindow(int maxWindowSize) {
+        return super.autoTuneFlowControlWindow(maxWindowSize);
+    }
+
+    @Override
     public int decoderEnforceMaxSmallContinuationFrames() {
         return super.decoderEnforceMaxSmallContinuationFrames();
     }

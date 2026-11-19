@@ -136,6 +136,11 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public Http2ConnectionHandlerBuilder autoTuneFlowControlWindow(int maxWindowSize) {
+        return super.autoTuneFlowControlWindow(maxWindowSize);
+    }
+
+    @Override
     public Http2ConnectionHandler build() {
         return super.build();
     }

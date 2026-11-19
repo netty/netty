@@ -114,6 +114,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
     private int maxSmallContinuationFrames = Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME;
+    private int maxAutoTunedWindowSize;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -513,6 +514,27 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Enables auto-tuning of the local flow control windows, like Cloudflare's nginx patch and TCP receive buffer
+     * auto-tuning: once per round trip, the connection and stream windows grow to four times the bytes the application
+     * consumed per round trip, or twice the bytes consumed since the last round trip when it consumes in batches or
+     * late, if that is larger. The round trip time is measured from the {@code WINDOW_UPDATE} frames that are sent
+     * anyway, so no extra frames are sent. Requires the default {@link DefaultHttp2LocalFlowController}.
+     * <p>
+     * Auto-tuning never grows a window beyond {@code maxWindowSize}, so a remote peer can make each stream and
+     * connection buffer up to that many bytes before the application consumes them; pauses in consumption also grow
+     * the windows up to that limit. It never shrinks a window, and lowering one after it was grown turns auto-tuning
+     * off. When the windows are never the bottleneck, the measured round trip time includes the time to use up the
+     * window, so windows configured above about twice the bandwidth-delay product can be doubled once.
+     * <p>
+     * A {@code maxWindowSize} of {@code 0} disables auto-tuning, which is the default.
+     */
+    protected B autoTuneFlowControlWindow(int maxWindowSize) {
+        enforceNonCodecConstraints("autoTuneFlowControlWindow");
+        maxAutoTunedWindowSize = checkPositiveOrZero(maxWindowSize, "maxWindowSize");
+        return self();
+    }
+
+    /**
      * Determine if settings frame should automatically be acknowledged and applied.
      * @return this.
      */
@@ -666,6 +688,16 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
             promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders(),
             isValidateRequiredPseudoHeaders());
+        if (maxAutoTunedWindowSize > 0) {
+            Http2LocalFlowController flowController = decoder.flowController();
+            if (!(flowController instanceof DefaultHttp2LocalFlowController)) {
+                encoder.close();
+                decoder.close();
+                throw new IllegalArgumentException(
+                        "autoTuneFlowControlWindow requires a DefaultHttp2LocalFlowController: " + flowController);
+            }
+            ((DefaultHttp2LocalFlowController) flowController).autoTuneWindowSize(maxAutoTunedWindowSize);
+        }
         return buildFromCodec(decoder, encoder);
     }
 

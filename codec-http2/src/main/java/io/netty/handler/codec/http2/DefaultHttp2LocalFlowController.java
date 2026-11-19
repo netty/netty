@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -52,6 +53,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private ChannelHandlerContext ctx;
     private float windowUpdateRatio;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
+    private WindowAutoTuner autoTuner;
 
     public DefaultHttp2LocalFlowController(Http2Connection connection) {
         this(connection, DEFAULT_WINDOW_UPDATE_RATIO, false);
@@ -141,6 +143,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         assert ctx == null || ctx.executor().inEventLoop();
         int delta = newWindowSize - initialWindowSize;
         initialWindowSize = newWindowSize;
+        windowLowered(delta);
 
         WindowUpdateVisitor visitor = new WindowUpdateVisitor(delta);
         connection.forEachActiveStream(visitor);
@@ -166,6 +169,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
         assert ctx != null && ctx.executor().inEventLoop();
         FlowState state = state(stream);
+        windowLowered(delta);
         // Just add the delta to the stream-specific initial window size so that the next time the window
         // expands it will grow to the new initial size.
         state.incrementInitialStreamWindow(delta);
@@ -220,6 +224,20 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         assert ctx == null || ctx.executor().inEventLoop();
         checkValidRatio(ratio);
         windowUpdateRatio = ratio;
+    }
+
+    /**
+     * Grows the connection and stream windows like TCP receive buffer auto-tuning, up to {@code maxWindowSize}.
+     */
+    void autoTuneWindowSize(int maxWindowSize) {
+        autoTuner = new WindowAutoTuner(checkPositive(maxWindowSize, "maxWindowSize"));
+    }
+
+    private void windowLowered(int delta) {
+        // A window lowered after auto-tuning grew it must stay lowered.
+        if (delta < 0 && autoTuner != null && autoTuner.windowSize > 0) {
+            autoTuner = null;
+        }
     }
 
     /**
@@ -444,6 +462,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Flow control window exceeded for stream: %d", stream.id());
             }
+            if (autoTuner != null) {
+                autoTuner.received(this, dataLength);
+            }
         }
 
         private void returnProcessedBytes(int delta) throws Http2Exception {
@@ -458,7 +479,18 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         public boolean consumeBytes(int numBytes) throws Http2Exception {
             // Return the bytes processed and update the window.
             returnProcessedBytes(numBytes);
-            return writeWindowUpdateIfNeeded();
+            WindowAutoTuner tuner = autoTuner;
+            if (tuner == null) {
+                return writeWindowUpdateIfNeeded();
+            }
+            tuner.consumed(this, numBytes);
+            int windowBefore = window;
+            if (!writeWindowUpdateIfNeeded()) {
+                return false;
+            }
+            // Only time WINDOW_UPDATEs for consumed bytes: others, like one sent at startup, may precede idle time.
+            tuner.windowUpdate(this, windowBefore);
+            return true;
         }
 
         @Override
@@ -498,6 +530,72 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
             // Send a window update for the stream/connection.
             frameWriter.writeWindowUpdate(ctx, stream.id(), deltaWindowSize, ctx.newPromise());
+        }
+    }
+
+    /**
+     * Grows the windows like Cloudflare's nginx patch and TCP receive buffer auto-tuning: once per round trip, the
+     * windows grow to four times the bandwidth-delay product, or twice the bytes consumed since the last sample, if
+     * that is larger. The round trip time is the minimum time
+     * between sending a connection {@code WINDOW_UPDATE} for consumed bytes and receiving the first byte it allowed, as
+     * the peer cannot send that byte before the {@code WINDOW_UPDATE} reached it. No extra frames are sent.
+     */
+    private final class WindowAutoTuner {
+        private final int maxWindowSize;
+        private int windowSize;
+        private boolean timingRtt;
+        private int rttBytesLeft;
+        private long rttStartNanos;
+        private long rttNanos;
+        private long sampleStartNanos;
+        private long sampleBytes;
+
+        WindowAutoTuner(int maxWindowSize) {
+            this.maxWindowSize = maxWindowSize;
+        }
+
+        void windowUpdate(DefaultState state, int windowBefore) {
+            if (!timingRtt && state.stream.id() == CONNECTION_STREAM_ID) {
+                timingRtt = true;
+                rttBytesLeft = windowBefore;
+                rttStartNanos = ctx.executor().ticker().nanoTime();
+            }
+        }
+
+        void received(DefaultState state, int dataLength) {
+            if (timingRtt && state.stream.id() == CONNECTION_STREAM_ID) {
+                rttBytesLeft -= dataLength;
+                if (rttBytesLeft < 0) {
+                    timingRtt = false;
+                    long rtt = max(1, ctx.executor().ticker().nanoTime() - rttStartNanos);
+                    rttNanos = rttNanos == 0 ? rtt : min(rttNanos, rtt);
+                }
+            }
+        }
+
+        void consumed(DefaultState state, int numBytes) {
+            if (state.stream.id() == CONNECTION_STREAM_ID) {
+                sampleBytes += numBytes;
+                long now = ctx.executor().ticker().nanoTime();
+                long elapsedNanos = now - sampleStartNanos;
+                if (elapsedNanos >= rttNanos) {
+                    if (rttNanos != 0) {
+                        // WINDOW_UPDATE goes out once half a window is consumed, so a peer limited by the window
+                        // delivers about half of it per round trip; four times the BDP keeps the window ahead.
+                        long bdp = (long) (sampleBytes * ((double) rttNanos / elapsedNanos));
+                        // TCP's rule, twice the bytes of the period, keeps the windows growing when the application
+                        // consumes in batches or late, where the BDP alone would stop growing.
+                        windowSize = (int) min(maxWindowSize, max(windowSize, max(bdp * 4, sampleBytes * 2)));
+                    }
+                    sampleStartNanos = now;
+                    sampleBytes = 0;
+                }
+            }
+            // The larger window is announced by the WINDOW_UPDATE that follows.
+            int delta = windowSize - state.initialStreamWindowSize;
+            if (delta > 0) {
+                state.incrementInitialStreamWindow(delta);
+            }
         }
     }
 
