@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -59,6 +60,90 @@ public class JdkZlibTest extends ZlibTest {
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
         assertThrows(DecompressionException.class, JdkZlibTest.super::testZLIB_OR_NONE3);
+    }
+
+    @Test
+    public void testTruncatedGzipFooterFailsOnClose() throws Exception {
+        byte[] gz = gzipCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        // drop the CRC32 and ISIZE footer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length - 8));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(true, 0), Arrays.copyOf(gz, gz.length - 8));
+        // drop only a part of the footer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length - 3));
+    }
+
+    @Test
+    public void testTruncatedDeflateDataFailsOnClose() throws Exception {
+        byte[] data = new byte[64 * 1024];
+        ThreadLocalRandom.current().nextBytes(data);
+        byte[] gz = gzipCompress(data);
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length / 2));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(true, 0), Arrays.copyOf(gz, gz.length / 2));
+        // truncated inside the GZIP header
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, 5));
+
+        byte[] zlib = zlibCompress(data);
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), Arrays.copyOf(zlib, zlib.length / 2));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0),
+                Arrays.copyOf(zlib, zlib.length / 2));
+        // ZLIB_OR_NONE can't decide yet
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0), Arrays.copyOf(zlib, 1));
+        // zlib stream without the ADLER32 trailer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), Arrays.copyOf(zlib, zlib.length - 4));
+    }
+
+    @Test
+    public void testCompleteOrEmptyInputDoesNotFailOnClose() throws Exception {
+        byte[] gz = gzipCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        byte[] zlib = zlibCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), gz);
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), zlib);
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0), zlib);
+        // ends between two concatenated members
+        byte[] twoMembers = Arrays.copyOf(gz, gz.length * 2);
+        System.arraycopy(gz, 0, twoMembers, gz.length, gz.length);
+        assertNotTruncated(new JdkZlibDecoder(true, 0), twoMembers);
+        // raw deflate is not checked, as permessage-deflate (RFC 7692) never terminates the stream
+        byte[] raw = new byte[64];
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+        deflater.setInput("hello, world".getBytes(CharsetUtil.US_ASCII));
+        int rawLength = deflater.deflate(raw, 0, raw.length, Deflater.SYNC_FLUSH);
+        deflater.end();
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.NONE, 0), Arrays.copyOf(raw, rawLength));
+        // no input at all, e.g. the response to a HEAD request
+        for (ZlibWrapper wrapper : new ZlibWrapper[] {
+                ZlibWrapper.GZIP, ZlibWrapper.ZLIB, ZlibWrapper.ZLIB_OR_NONE, ZlibWrapper.NONE }) {
+            EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(wrapper, 0));
+            assertFalse(channel.finish());
+        }
+    }
+
+    private static void assertTruncatedFailsOnClose(JdkZlibDecoder decoder, byte[] input) throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        channel.writeInbound(Unpooled.wrappedBuffer(input));
+        for (;;) {
+            Object o = channel.readInbound();
+            if (o == null) {
+                break;
+            }
+            ReferenceCountUtil.release(o);
+        }
+        assertThrows(DecompressionException.class, channel::finish);
+        assertTrue(decoder.isClosed());
+    }
+
+    private static void assertNotTruncated(JdkZlibDecoder decoder, byte[] input) throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(input)));
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    private static byte[] zlibCompress(byte[] input) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DeflaterOutputStream out = new DeflaterOutputStream(baos);
+        out.write(input);
+        out.close();
+        return baos.toByteArray();
     }
 
     @Test
