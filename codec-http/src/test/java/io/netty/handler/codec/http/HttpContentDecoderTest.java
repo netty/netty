@@ -24,6 +24,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -46,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -152,6 +154,69 @@ public class HttpContentDecoderTest {
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTruncatedGzipResponseFails() {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor(0);
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        // The body is delimited by the end of the connection, so only the compressed stream can tell that the
+        // connection was closed too early.
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
+        // drop the CRC32 and ISIZE footer
+        ByteBuf buf = Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII), GZ_HELLO_WORLD);
+        buf.writerIndex(buf.writerIndex() - 8);
+        assertTrue(channel.writeInbound(buf));
+
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.finish();
+            }
+        });
+        // the truncated body is not completed
+        for (;;) {
+            Object o = channel.readInbound();
+            if (o == null) {
+                break;
+            }
+            assertFalse(o instanceof LastHttpContent);
+            ReferenceCountUtil.release(o);
+        }
+    }
+
+    @Test
+    public void testIncompleteBodyDoesNotFailNextMessage() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpContentDecompressor(0));
+
+        HttpResponse first = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        first.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        assertTrue(channel.writeInbound(first));
+        // drop the CRC32 and ISIZE footer, and never complete the message
+        ByteBuf truncated = Unpooled.wrappedBuffer(GZ_HELLO_WORLD, 0, GZ_HELLO_WORLD.length - 8);
+        assertTrue(channel.writeInbound(new DefaultHttpContent(truncated)));
+
+        // A new message starts, the incomplete body of the previous one must not fail it.
+        HttpResponse second = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertTrue(channel.writeInbound(second));
+
+        assertSame(first, channel.readInbound());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+        assertSame(second, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
