@@ -238,6 +238,21 @@ public class HttpObjectAggregator
         }
     }
 
+    /**
+     * Writes the 413 response for an oversized request that requires closing the connection.
+     * The default implementation closes the channel when the write completes, including on failure.
+     * An override takes ownership of {@code response} and is responsible for closing the connection.
+     */
+    protected void writeOversizedRequestResponseAndClose(ChannelHandlerContext ctx, FullHttpResponse response) {
+        ChannelFuture future = ctx.writeAndFlush(response);
+        future.addListener(f -> {
+            if (!f.isSuccess()) {
+                logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());
+            }
+            ctx.close();
+        });
+    }
+
     @Override
     protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) throws Exception {
         if (oversized instanceof HttpRequest) {
@@ -248,13 +263,7 @@ public class HttpObjectAggregator
             // If auto read is false the channel must be closed or it will be stuck without a call to read()
             if (oversized instanceof FullHttpMessage || !ctx.channel().config().isAutoRead() ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
-                ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
-                future.addListener(f -> {
-                    if (!f.isSuccess()) {
-                        logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());
-                    }
-                    ctx.close();
-                });
+                writeOversizedRequestResponseAndClose(ctx, TOO_LARGE_CLOSE.retainedDuplicate());
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {
                     if (!future.isSuccess()) {

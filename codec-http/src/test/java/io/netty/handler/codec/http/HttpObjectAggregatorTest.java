@@ -194,6 +194,31 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
+    public void testCustomCloseForOversizedRequest() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4) {
+            @Override
+            protected void writeOversizedRequestResponseAndClose(ChannelHandlerContext ctx, FullHttpResponse response) {
+                ctx.writeAndFlush(response); // The application will close after draining input.
+            }
+        });
+        try {
+            assertFalse(channel.writeInbound(Unpooled.copiedBuffer(
+                    "PUT /upload HTTP/1.1\r\nConnection: close\r\nContent-Length: 5\r\n\r\n", CharsetUtil.US_ASCII)));
+            FullHttpResponse response = channel.readOutbound();
+            try {
+                assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+                assertEquals(0, HttpUtil.getContentLength(response));
+                assertFalse(HttpUtil.isKeepAlive(response));
+                assertTrue(channel.isOpen());
+            } finally {
+                response.release();
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     public void testOversizedRequestWithoutKeepAlive() {
         // send an HTTP/1.0 request with no keep-alive header
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
