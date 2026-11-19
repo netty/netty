@@ -50,7 +50,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
         IoUringIoHandler handler = registration().attachment();
         LinuxSocket socket = new LinuxSocket(fd);
         if (acceptedAddressMemory != null) {
-            // We didnt use ACCEPT_MULTISHOT And so can depend on the addresses.
+            // We didn't use ACCEPT_MULTISHOT And so can depend on the addresses.
             final InetSocketAddress address;
             if (socket.isIpv6()) {
                 byte[] ipv6Array = handler.inet6AddressArray();

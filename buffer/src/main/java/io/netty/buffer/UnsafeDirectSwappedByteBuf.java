@@ -28,7 +28,7 @@ final class UnsafeDirectSwappedByteBuf extends AbstractUnsafeSwappedByteBuf {
     }
 
     private static long addr(AbstractByteBuf wrapped, int index) {
-        // We need to call wrapped.memoryAddress() everytime and NOT cache it as it may change if the buffer expand.
+        // We need to call wrapped.memoryAddress() every time and NOT cache it as it may change if the buffer expand.
         // See:
         // - https://github.com/netty/netty/issues/2587
         // - https://github.com/netty/netty/issues/2580

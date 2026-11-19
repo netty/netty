@@ -85,7 +85,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded(ctx);
-        // The user want's to be notified about control frames, add the handler to the pipeline.
+        // The user wants to be notified about control frames, add the handler to the pipeline.
         if (controlFrameHandler != null) {
             ctx.pipeline().addLast(controlFrameHandler);
         }

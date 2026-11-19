@@ -1653,7 +1653,7 @@ final class AdaptivePoolingAllocator {
          */
         void releaseFromMagazine() {
             // Chunks can be reused before they become empty.
-            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
+            // We can therefore put them in the shared queue as soon as the magazine is done with this chunk.
             Magazine mag = magazine;
             detachFromMagazine();
             if (!mag.offerToQueue(this)) {
@@ -2123,7 +2123,7 @@ final class AdaptivePoolingAllocator {
                 claims = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
                 siblingIndex = (index << 1) + 1;
             } else {
-                // Must be down the rigth path.
+                // Must be down the right path.
                 claims = unreserveMatchingBuddy((index << 1) + 1, size, offset, currOffset + (currSize >> 1));
                 siblingIndex = index << 1;
             }

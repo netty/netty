@@ -866,7 +866,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Resolves the specified name into an address.
      *
      * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      *
      * @return the address as the result of the resolution
      */
@@ -878,7 +878,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Resolves the specified name into an address.
      *
      * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
      *
      * @return the address as the result of the resolution
@@ -899,7 +899,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Resolves the specified host name and port into a list of address.
      *
      * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      *
      * @return the list of the address as the result of the resolution
      */
@@ -911,7 +911,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Resolves the specified host name and port into a list of address.
      *
      * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
      *
      * @return the list of the address as the result of the resolution
@@ -956,7 +956,7 @@ public class DnsNameResolver extends InetNameResolver {
      * {@link HostsFileEntries}, a synthetic {@code A} or {@code AAAA} record will be returned.
      *
      * @param question the question
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      *
      * @return the list of the {@link DnsRecord}s as the result of the resolution
      */
@@ -972,7 +972,7 @@ public class DnsNameResolver extends InetNameResolver {
      * {@link HostsFileEntries}, a synthetic {@code A} or {@code AAAA} record will be returned.
      *
      * @param question the question
-     * @param additionals additional records ({@code OPT})
+     * @param additional additional records ({@code OPT})
      * @param promise the {@link Promise} which will be fulfilled when the resolution is finished
      *
      * @return the list of the {@link DnsRecord}s as the result of the resolution

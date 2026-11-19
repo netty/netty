@@ -596,7 +596,7 @@ public class HashedWheelTimer implements Timer {
                     }
                 }
 
-                // Check if we run on windows, as if thats the case we will need
+                // Check if we run on windows, as if that's the case we will need
                 // to round the sleepTime as workaround for a bug that only affect
                 // the JVM if it runs on windows.
                 //
