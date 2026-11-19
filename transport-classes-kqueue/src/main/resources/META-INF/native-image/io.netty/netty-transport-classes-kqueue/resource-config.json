@@ -1,0 +1,12 @@
+{
+  "resources":{
+    "includes":[
+      {
+        "condition": {
+          "typeReachable": "io.netty.channel.kqueue.Native"
+        },
+        "pattern":".*libnetty_transport_native_kqueue_.*\\.jnilib"
+      }
+    ]},
+  "bundles":[]
+}
