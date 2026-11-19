@@ -15,23 +15,38 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
+import io.netty.handler.codec.dns.DatagramDnsQueryDecoder;
+import io.netty.handler.codec.dns.DatagramDnsResponse;
+import io.netty.handler.codec.dns.DatagramDnsResponseEncoder;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -39,6 +54,8 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.handler.codec.dns.TcpDnsQueryDecoder;
+import io.netty.handler.codec.dns.TcpDnsResponseEncoder;
 import io.netty.resolver.HostsFileEntriesProvider;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
@@ -90,7 +107,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -105,12 +121,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -261,7 +279,7 @@ public class DnsNameResolverTest {
         DOMAINS_PUNYCODE.put("müller.de", "xn--mller-kva.de");
     }
 
-    private static final Set<String> DOMAINS_ALL;
+    static final Set<String> DOMAINS_ALL;
 
     static {
         Set<String> all = new HashSet<String>(DOMAINS.size() + DOMAINS_PUNYCODE.size());
@@ -393,7 +411,13 @@ public class DnsNameResolverTest {
     private static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
                                                       DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
                                                       TestDnsServer dnsServer) {
-        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
+        return newResolver(strategy, decodeToUnicode, dnsServerAddressStreamProvider, dnsServer, group.next());
+    }
+
+    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
+                                                      DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+                                                      TestDnsServer dnsServer, EventLoop eventLoop) {
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop)
                 .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
                 .datagramChannelType(NioDatagramChannel.class)
                 .maxQueriesPerResolve(1)
@@ -445,6 +469,22 @@ public class DnsNameResolverTest {
     public void testResolveAorAAAA(DnsNameResolverChannelStrategy strategy) throws Exception {
         DnsNameResolver resolver = newResolver(strategy, ResolvedAddressTypes.IPV4_PREFERRED).build();
         try {
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_A, AAAA);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveWithCaseRandomizationAndCookies(DnsNameResolverChannelStrategy strategy) throws Exception {
+        DnsNameResolver resolver = newResolver(strategy, ResolvedAddressTypes.IPV4_ONLY)
+                .caseRandomizationEnabled(true)
+                .dnsCookiesEnabled(true)
+                .build();
+        try {
+            assertTrue(resolver.isCaseRandomizationEnabled());
+            assertTrue(resolver.isDnsCookiesEnabled());
             testResolve0(resolver, EXCLUSIONS_RESOLVE_A, AAAA);
         } finally {
             resolver.close();
@@ -782,18 +822,20 @@ public class DnsNameResolverTest {
 
         TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
                 (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
-        TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
-        if (observer != null) {
-            Object o = observer.events.poll();
-            if (o instanceof QueryCancelledEvent) {
-                assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
-                        "unexpected type: " + observer.question);
-            } else if (o instanceof QueryWrittenEvent) {
-                QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
-            } else if (!(o instanceof QueryFailedEvent)) {
-                fail("unexpected event type: " + o);
+        // Queries which are not answered from the cache (e.g. the AAAA query until its negative answer is cached)
+        // complete asynchronously on the EventLoop, so the observer may only have seen some of its events yet.
+        // Only verify that no unexpected event was recorded.
+        TestDnsQueryLifecycleObserver observer;
+        while ((observer = lifecycleObserverFactory.observers.poll()) != null) {
+            Object o;
+            while ((o = observer.events.poll()) != null) {
+                if (o instanceof QueryCancelledEvent) {
+                    assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
+                            "unexpected type: " + observer.question);
+                } else if (!(o instanceof QueryWrittenEvent) && !(o instanceof QueryFailedEvent)) {
+                    fail("unexpected event type: " + o);
+                }
             }
-            assertTrue(observer.events.isEmpty());
         }
         return e;
     }
@@ -1855,7 +1897,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
@@ -1988,7 +2030,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
@@ -2173,7 +2215,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static final class TestRecursiveCacheDnsQueryLifecycleObserverFactory
+    static final class TestRecursiveCacheDnsQueryLifecycleObserverFactory
             implements DnsQueryLifecycleObserverFactory {
         final Queue<TestDnsQueryLifecycleObserver> observers =
                 new ConcurrentLinkedQueue<TestDnsQueryLifecycleObserver>();
@@ -2237,7 +2279,7 @@ public class DnsNameResolverTest {
     }
 
     private static final class TestDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
-        final Queue<Object> events = new ArrayDeque<Object>();
+        final Queue<Object> events = new ConcurrentLinkedQueue<Object>();
         final DnsQuestion question;
 
         TestDnsQueryLifecycleObserver(DnsQuestion question) {
@@ -2885,6 +2927,115 @@ public class DnsNameResolverTest {
             resolver.close();
             server.stop();
         }
+    }
+
+    /**
+     * A {@link DnsCache} that serves pre-seeded entries, so cache lookup semantics can be exercised without
+     * an {@link io.netty.channel.EventLoop} or a DNS server.
+     */
+    private static final class FixedDnsCache implements DnsCache {
+        private final Map<String, List<DnsCacheEntry>> entries = new HashMap<String, List<DnsCacheEntry>>();
+
+        void put(String hostname, final InetAddress address, final Throwable cause) {
+            entries.put(hostname, Collections.<DnsCacheEntry>singletonList(new DnsCacheEntry() {
+                @Override
+                public InetAddress address() {
+                    return address;
+                }
+
+                @Override
+                public Throwable cause() {
+                    return cause;
+                }
+            }));
+        }
+
+        @Override
+        public void clear() {
+            entries.clear();
+        }
+
+        @Override
+        public boolean clear(String hostname) {
+            return entries.remove(hostname) != null;
+        }
+
+        @Override
+        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            return entries.get(hostname);
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl,
+                                   EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowPositiveOne() throws Exception {
+        // Mirrors a Kubernetes resolv.conf: the pod's own namespace is the first search domain, so a service in
+        // another namespace always yields NXDOMAIN for the first permutation and resolves via the second.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+        InetAddress expected = InetAddress.getByAddress(
+                hostname + '.' + searchDomains[1], new byte[] { 10, 96, 0, 42 });
+        cache.put(hostname + '.' + searchDomains[1], expected, null);
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertTrue(promise.isSuccess(), "a negatively cached '" + hostname + '.' + searchDomains[0] +
+                "' must not shadow the positively cached '" + hostname + '.' + searchDomains[1] + '\'');
+        assertEquals(Collections.singletonList(expected), promise.getNow());
+    }
+
+    @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowUncachedOne() {
+        // If a positively cached permutation expired and only a negative entry remains, the remaining search
+        // domains and the bare hostname must still be queried.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertFalse(isCached);
+        assertFalse(promise.isDone());
+    }
+
+    @Test
+    public void testNegativelyCachedBareHostnameStillShortCircuits() throws Exception {
+        // A negative entry for the hostname that is actually being resolved must keep failing fast.
+        String[] searchDomains = { "ns1.svc.cluster.local" };
+        String hostname = "missing-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname, null, new UnknownHostException("failed to resolve " + hostname));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause()).isInstanceOf(UnknownHostException.class);
     }
 
     @ParameterizedTest
@@ -3565,7 +3716,17 @@ public class DnsNameResolverTest {
             serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
             try {
                 dns.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
-                return serverSocket;
+                if (dns.localAddress() != null) {
+                    return serverSocket;
+                }
+                // The underlying UDP acceptor sometimes fails to bind without throwing (observed on Windows),
+                // leaving localAddress() null. Treat this the same as a failed bind and retry.
+                dns.stop();
+                serverSocket.close();
+                if (i == 10) {
+                    Assumptions.abort(
+                            "Unable to bind TestDnsServer and ServerSocket to the same address: localAddress is null");
+                }
             } catch (IOException e) {
                 serverSocket.close();
                 if (i == 10) {
@@ -3672,6 +3833,141 @@ public class DnsNameResolverTest {
                 serverSocket.close();
             }
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
+    public void testUdpResponseNotAcceptedForTcpFallbackQuery(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        final DnsQuestion question = new DefaultDnsQuestion("somehost.netty.io.", A);
+        final BlockingQueue<DatagramDnsQuery> udpQueries = new LinkedBlockingQueue<DatagramDnsQuery>();
+        final BlockingQueue<DnsQuery> tcpQueries = new LinkedBlockingQueue<DnsQuery>();
+        final AtomicReference<Channel> tcpChannel = new AtomicReference<Channel>();
+        final BlockingQueue<Boolean> processedDatagrams = new LinkedBlockingQueue<Boolean>();
+
+        Channel udpServer = new Bootstrap().group(group)
+                .channel(NioDatagramChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new DatagramDnsQueryDecoder(), new DatagramDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DatagramDnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsQuery query) {
+                                        udpQueries.add(query.retain());
+                                    }
+                                });
+                    }
+                }).bind(NetUtil.LOCALHOST4, 0).sync().getNow();
+        InetSocketAddress nameServerAddr = (InetSocketAddress) udpServer.localAddress();
+        Future<Channel> tcpServerFuture = new ServerBootstrap().group(group)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
+                                new SimpleChannelInboundHandler<DnsQuery>() {
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, DnsQuery query) {
+                                        tcpChannel.set(ctx.channel());
+                                        tcpQueries.add(query.retain());
+                                    }
+                                });
+                    }
+                }).bind(nameServerAddr).awaitUninterruptibly();
+        DnsNameResolver resolver = null;
+        DatagramDnsQuery udpQuery = null;
+        DnsQuery tcpQuery = null;
+        try {
+            Assumptions.assumeTrue(tcpServerFuture.isSuccess(), "Unable to bind TCP to " + nameServerAddr);
+
+            resolver = new DnsNameResolverBuilder(group.next())
+                    .datagramChannelFactory(new ChannelFactory<DatagramChannel>() {
+                        @Override
+                        public DatagramChannel newChannel(EventLoop eventLoop) {
+                            DatagramChannel ch = new NioDatagramChannel(eventLoop);
+                            ch.pipeline().addFirst(new ChannelInboundHandler() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    ctx.fireChannelRead(msg);
+                                    // The resolver is done with the datagram.
+                                    processedDatagrams.add(Boolean.TRUE);
+                                }
+                            });
+                            return ch;
+                        }
+                    })
+                    .socketChannelType(NioSocketChannel.class)
+                    .datagramChannelStrategy(strategy)
+                    .dnsCookiesEnabled(true)
+                    .queryTimeoutMillis(DEFAULT_TEST_TIMEOUT_MS)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(nameServerAddr))
+                    .build();
+
+            // The nameserver echoes the client cookie, so from now on responses without the cookie are rejected.
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future = resolver.query(question);
+            DatagramDnsQuery query = udpQueries.take();
+            try {
+                udpServer.writeAndFlush(newUdpResponse(query, query.id(), false, true, new byte[] { 1, 2, 3, 4 }));
+            } finally {
+                query.release();
+            }
+            assertTrue(future.sync().getNow().release());
+
+            // The truncated response makes the resolver retry the query via TCP.
+            future = resolver.query(question);
+            udpQuery = udpQueries.take();
+            udpServer.writeAndFlush(newUdpResponse(udpQuery, udpQuery.id(), true, true, null));
+            tcpQuery = tcpQueries.take();
+
+            // A datagram that uses the id of the TCP query but carries no cookie must not complete the query.
+            processedDatagrams.clear();
+            udpServer.writeAndFlush(newUdpResponse(udpQuery, tcpQuery.id(), false, false, new byte[] { 6, 6, 6, 6 }));
+            processedDatagrams.take();
+            assertFalse(future.isDone());
+
+            DnsQuestion tcpQuestion = tcpQuery.recordAt(DnsSection.QUESTION);
+            DnsResponse tcpResponse = new DefaultDnsResponse(tcpQuery.id());
+            tcpResponse.addRecord(DnsSection.QUESTION, new DefaultDnsQuestion(tcpQuestion.name(), A));
+            tcpResponse.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                    tcpQuestion.name(), A, 60, Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 })));
+            tcpChannel.get().writeAndFlush(tcpResponse);
+
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = future.sync().getNow();
+            try {
+                DnsRawRecord answer = envelope.content().recordAt(DnsSection.ANSWER, 0);
+                assertArrayEquals(new byte[] { 1, 2, 3, 4 }, ByteBufUtil.getBytes(answer.content()));
+            } finally {
+                envelope.release();
+            }
+        } finally {
+            ReferenceCountUtil.release(udpQuery);
+            ReferenceCountUtil.release(tcpQuery);
+            if (resolver != null) {
+                resolver.close();
+            }
+            udpServer.close().sync();
+            tcpServerFuture.getNow().close().sync();
+        }
+    }
+
+    private static DatagramDnsResponse newUdpResponse(DatagramDnsQuery query, int id, boolean truncated,
+                                                      boolean echoCookie, byte[] address) {
+        DatagramDnsResponse response = new DatagramDnsResponse(query.recipient(), query.sender(), id);
+        response.setTruncated(truncated);
+        DnsQuestion question = query.recordAt(DnsSection.QUESTION);
+        response.addRecord(DnsSection.QUESTION, new DefaultDnsQuestion(question.name(), question.type()));
+        if (address != null) {
+            response.addRecord(DnsSection.ANSWER, new DefaultDnsRawRecord(
+                    question.name(), question.type(), 60, Unpooled.wrappedBuffer(address)));
+        }
+        if (echoCookie) {
+            // The OPT record of the query carries the client cookie.
+            DnsRawRecord opt = query.recordAt(DnsSection.ADDITIONAL, 0);
+            response.addRecord(DnsSection.ADDITIONAL, opt.retainedDuplicate());
+        }
+        return response;
     }
 
     @ParameterizedTest

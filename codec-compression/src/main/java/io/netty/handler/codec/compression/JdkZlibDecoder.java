@@ -63,6 +63,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private final int maxForwardBytes;
 
     private volatile boolean finished;
+    private boolean failed;
+    // Raw deflate (ZlibWrapper.NONE) is also used for data that is never terminated, e.g. permessage-deflate
+    // (RFC 7692) removes the end of every message, so only formats with a defined end are checked.
+    private final boolean detectTruncation;
 
     private boolean decideZlibOrNone;
 
@@ -169,6 +173,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         ObjectUtil.checkNotNull(wrapper, "wrapper");
 
         this.decompressConcatenated = decompressConcatenated;
+        this.detectTruncation = wrapper != ZlibWrapper.NONE;
         switch (wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
@@ -200,6 +205,15 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        try {
+            decode0(ctx, in);
+        } catch (Exception e) {
+            failed = true;
+            throw e;
+        }
+    }
+
+    private void decode0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         needsRead = true;
         if (finished) {
             // Skip data received after finished.
@@ -282,7 +296,12 @@ public class JdkZlibDecoder extends ZlibDecoder {
                         throw new DecompressionException(
                                 "decompression failure, unable to set dictionary as non was specified");
                     }
-                    inflater.setDictionary(dictionary);
+                    try {
+                        inflater.setDictionary(dictionary);
+                    } catch (IllegalArgumentException e) {
+                        // The dictionary ID in the stream header does not match the configured dictionary.
+                        throw new DecompressionException("decompression failure, dictionary mismatch", e);
+                    }
                 }
 
                 if (inflater.finished()) {
@@ -324,11 +343,38 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (!finished) {
                 inflater.reset();
                 crc.reset();
+                xlen = -1;
                 gzipState = GzipState.HEADER_START;
                 return true;
             }
         }
         return false;
+    }
+
+    @Override
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        super.decodeLast(ctx, in, out);
+        // If decoding already failed, that failure was reported and the stream state says nothing about truncation.
+        if (detectTruncation && !finished && !failed && isTruncated(in)) {
+            // The input ended inside a stream: the deflate data has no final block, or a GZIP header or footer is
+            // incomplete. Don't let the data decoded so far look like the complete content.
+            finished = true;
+            throw new DecompressionException("Input ended before the end of the compressed stream");
+        }
+    }
+
+    /**
+     * Whether the input ended inside a stream. No input at all is not truncated, and neither is input that ends
+     * between two concatenated GZIP members.
+     */
+    private boolean isTruncated(ByteBuf in) {
+        if (in.isReadable()) {
+            return true;
+        }
+        if (crc != null) {
+            return gzipState != GzipState.HEADER_START;
+        }
+        return inflater != null && inflater.getBytesRead() != 0;
     }
 
     @Override
@@ -351,10 +397,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     return false;
                 }
                 // read magic numbers
-                int magic0 = in.readByte();
-                int magic1 = in.readByte();
+                int magic0 = in.readUnsignedByte();
+                int magic1 = in.readUnsignedByte();
 
-                if (magic0 != 31) {
+                if (magic0 != 31 || magic1 != 139) {
                     throw new DecompressionException("Input is not in the GZIP format");
                 }
                 crc.update(magic0);
@@ -394,7 +440,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     crc.update(xlen1);
                     crc.update(xlen2);
 
-                    xlen |= xlen1 << 8 | xlen2;
+                    // XLEN is a little-endian unsigned 16-bit value (RFC 1952), so xlen1 is the
+                    // low byte and xlen2 the high byte. This must be an assignment, not |=: xlen
+                    // starts at the -1 "no extra field" sentinel, and OR-ing into -1 (0xFFFFFFFF)
+                    // would leave it -1, so the extra field was never skipped.
+                    xlen = xlen2 << 8 | xlen1;
                 }
                 gzipState = GzipState.XLEN_READ;
                 // fall through

@@ -26,6 +26,14 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io"
 
+  # Same as "build-leak" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-leak-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io"
+
   build:
     <<: *common
     command: '/bin/bash -cl "
@@ -33,6 +41,29 @@ services:
       cd testsuite-shading &&
       ../mvnw -B -ntp integration-test -Pboringssl failsafe:verify
     "'
+
+  # Same as "build" but only builds and tests the modules affected by a change, as given by the
+  # NETTY_AFFECTED_MODULES environment variable (see .github/scripts/mvn_affected.sh). Behaves like "build"
+  # when it is not set to a list of modules.
+  build-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: '/bin/bash -cl "
+      ./.github/scripts/mvn_affected.sh -B -ntp clean install -Pboringssl -Dio.netty5.testsuite.badHost=netty.io &&
+      if ./.github/scripts/affected_includes.sh testsuite-shading; then
+        cd testsuite-shading &&
+        ../mvnw -B -ntp integration-test -Pboringssl failsafe:verify;
+      fi
+    "'
+
+  # Build just what netty-codec-native-quic needs, and install it so the musl verification legs
+  # can pick the jars out of ~/.m2. `build` above runs the whole reactor plus its tests, which is
+  # far more than a load check needs.
+  build-native-quic:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -pl codec-native-quic -am clean install -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   deploy:
     <<: *common
@@ -61,9 +92,25 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -Pboringssl,unsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
+  # Same as "build-unsafe-buffer" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-unsafe-buffer-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -Pboringssl,unsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
+
   build-leak-adaptive:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty5.allocator.type=adaptive"
+
+  # Same as "build-leak-adaptive" but only builds and tests the modules affected by a change, see "build-affected-only".
+  build-leak-adaptive-affected-only:
+    <<: *common
+    environment:
+      - MAVEN_OPTS
+      - NETTY_AFFECTED_MODULES
+    command: /bin/bash -cl "./.github/scripts/mvn_affected.sh -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty5.allocator.type=adaptive"
 
   build-boringssl-snapshot:
     <<: *common

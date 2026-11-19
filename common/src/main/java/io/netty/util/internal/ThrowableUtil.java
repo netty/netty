@@ -88,9 +88,10 @@ public final class ThrowableUtil {
      * @param cause The cause to attach a stack trace to.
      */
     public static void interruptAndAttachAsyncStackTrace(Thread thread, Throwable cause) {
+        Thread.State state = thread.getState();
         StackTraceElement[] stackTrace = thread.getStackTrace();
         InterruptedException asyncIE = new InterruptedException(
-                "Asynchronous interruption: " + thread);
+                "Asynchronous interruption: " + thread + " (" + state + ')');
         thread.interrupt();
         asyncIE.setStackTrace(stackTrace);
         addSuppressed(cause, asyncIE);

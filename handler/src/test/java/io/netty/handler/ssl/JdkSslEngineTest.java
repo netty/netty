@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -237,7 +238,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             setupHandlers(param, serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
-            assertTrue(serverException instanceof SSLHandshakeException);
+            assertInstanceOf(SSLHandshakeException.class, serverException);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test

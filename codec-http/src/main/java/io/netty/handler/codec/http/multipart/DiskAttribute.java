@@ -95,9 +95,9 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     public DiskAttribute(String name, String value, Charset charset,
                          String baseDir, boolean deleteOnExit) throws IOException {
         super(name, charset, 0); // Attribute have no default size
-        setValue(value);
         this.baseDir = baseDir == null ? baseDirectory : baseDir;
         this.deleteOnExit = deleteOnExit;
+        setValue(value);
     }
 
     @Override

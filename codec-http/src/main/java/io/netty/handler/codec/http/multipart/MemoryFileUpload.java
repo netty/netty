@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -57,7 +56,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public void setFilename(String filename) {
-        this.filename = ObjectUtil.checkNotNull(filename, "filename");
+        this.filename = FileUploadUtil.validateFileNameForMultiPart(filename);
     }
 
     @Override
@@ -85,7 +84,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public void setContentType(String contentType) {
-        this.contentType = ObjectUtil.checkNotNull(contentType, "contentType");
+        this.contentType = FileUploadUtil.validateContentTypeForMultiPart(contentType);
     }
 
     @Override

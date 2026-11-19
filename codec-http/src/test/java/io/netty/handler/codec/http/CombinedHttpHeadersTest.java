@@ -59,6 +59,27 @@ public class CombinedHttpHeadersTest {
     }
 
     @Test
+    public void addCombinedHeadersWithDifferentValueValidatorWhenEmpty() {
+        final DefaultHttpHeadersFactory validating = DefaultHttpHeadersFactory.headersFactory()
+            .withCombiningHeaders(true);
+        final DefaultHttpHeadersFactory nonValidating = validating.withValueValidation(false);
+
+        final HttpHeaders source = nonValidating.newHeaders();
+        source.add(HEADER_NAME, "a");
+        source.add(HEADER_NAME, "b");
+
+        final HttpHeaders added = validating.newHeaders();
+        added.add(source);
+        assertEquals("a,b", added.get(HEADER_NAME));
+        assertEquals(Arrays.asList("a", "b"), added.getAll(HEADER_NAME));
+
+        final HttpHeaders set = validating.newHeaders();
+        set.set(source);
+        assertEquals("a,b", set.get(HEADER_NAME));
+        assertEquals(Arrays.asList("a", "b"), set.getAll(HEADER_NAME));
+    }
+
+    @Test
     public void addCombinedHeadersWhenNotEmpty() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, "a");

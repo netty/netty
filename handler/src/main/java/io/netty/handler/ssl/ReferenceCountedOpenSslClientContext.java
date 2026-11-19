@@ -65,8 +65,23 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>[] options,
                                          List<OpenSslCredential> credentials) throws SSLException {
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
+                cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, false, enableOcsp, keyStore,
+                endpointIdentificationAlgorithm, serverNames, resumptionController, options, credentials);
+    }
+
+    ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout,
+                                         boolean startTls, boolean enableOcsp, String keyStore,
+                                         String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                                         ResumptionController resumptionController,
+                                         Map.Entry<SslContextOption<?>, Object>[] options,
+                                         List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
+              ClientAuth.NONE, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, true,
                 serverNames, resumptionController, options, credentials);
         boolean success = false;
         try {
@@ -88,7 +103,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     }
 
     static OpenSslSessionContext newSessionContext(ReferenceCountedOpenSslContext thiz, long ctx,
-                                                   Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                                   OpenSslEngineMap engines,
                                                    X509Certificate[] trustCertCollection,
                                                    TrustManagerFactory trustManagerFactory,
                                                    X509Certificate[] keyCertChain, PrivateKey key,
@@ -168,6 +183,14 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 //
                 //            See https://github.com/netty/netty/issues/5372
 
+                if (thiz.endpointIdentificationAlgorithm != null && !thiz.endpointIdentificationAlgorithm.isEmpty() &&
+                        !useExtendedTrustManager(manager)) {
+                    throw new UnsupportedOperationException(
+                            "Endpoint identification algorithm '" + thiz.endpointIdentificationAlgorithm + "' is " +
+                            "configured but the trust manager does not support extended trust manager verification. " +
+                            "Please provide an X509ExtendedTrustManager or use the SslProvider.JDK.");
+                }
+
                 setVerifyCallback(ctx, engines, manager);
             } catch (Exception e) {
                 if (keyMaterialProvider != null) {
@@ -198,7 +221,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     }
 
     private static void setVerifyCallback(long ctx,
-                                          Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                          OpenSslEngineMap engines,
                                           X509TrustManager manager) {
         // Use this to prevent an error when running on java < 7
         if (useExtendedTrustManager(manager)) {
@@ -218,7 +241,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509TrustManager manager;
 
-        TrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines, X509TrustManager manager) {
+        TrustManagerVerifyCallback(OpenSslEngineMap engines, X509TrustManager manager) {
             super(engines);
             this.manager = manager;
         }
@@ -233,7 +256,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509ExtendedTrustManager manager;
 
-        ExtendedTrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engines,
                                            X509ExtendedTrustManager manager) {
             super(engines);
             this.manager = manager;
@@ -247,10 +270,10 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     }
 
     private static final class OpenSslClientCertificateCallback implements CertificateCallback {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslKeyMaterialManager keyManagerHolder;
 
-        OpenSslClientCertificateCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        OpenSslClientCertificateCallback(OpenSslEngineMap engines,
                                          OpenSslKeyMaterialManager keyManagerHolder) {
             this.engines = engines;
             this.keyManagerHolder = keyManagerHolder;

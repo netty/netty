@@ -185,10 +185,10 @@ final class DnsMessageUtil {
         DnsQuery query = newQuery(buf, supplier);
         boolean success = false;
         try {
-            int questionCount = buf.readUnsignedShort();
-            int answerCount = buf.readUnsignedShort();
-            int authorityRecordCount = buf.readUnsignedShort();
-            int additionalRecordCount = buf.readUnsignedShort();
+            int questionCount = DnsCodecUtil.checkRecordCount(DnsSection.QUESTION, buf.readUnsignedShort());
+            int answerCount = DnsCodecUtil.checkRecordCount(DnsSection.ANSWER, buf.readUnsignedShort());
+            int authorityRecordCount = DnsCodecUtil.checkRecordCount(DnsSection.AUTHORITY, buf.readUnsignedShort());
+            int additionalRecordCount = DnsCodecUtil.checkRecordCount(DnsSection.ADDITIONAL, buf.readUnsignedShort());
             decodeQuestions(decoder, query, buf, questionCount);
             decodeRecords(decoder, query, DnsSection.ANSWER, buf, answerCount);
             decodeRecords(decoder, query, DnsSection.AUTHORITY, buf, authorityRecordCount);

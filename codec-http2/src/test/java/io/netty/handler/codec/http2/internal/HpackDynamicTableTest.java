@@ -41,6 +41,25 @@ public class HpackDynamicTableTest {
     }
 
     @Test
+    public void testFillToCapacityWithMinimumSizedEntries() {
+        // HEADER_ENTRY_OVERHEAD is 32, so an empty name/value entry has size 32. A capacity that is an exact
+        // multiple of 32 lets exactly capacity/32 such entries fit. The circular queue must keep all of them
+        // reachable instead of wrapping head onto tail and reporting an empty table.
+        for (int entries = 1; entries <= 4; entries++) {
+            HpackDynamicTable table = new HpackDynamicTable(32L * entries);
+            for (int i = 0; i < entries; i++) {
+                table.add(new HpackHeaderField(AsciiString.EMPTY_STRING, AsciiString.EMPTY_STRING));
+            }
+            assertEquals(entries, table.length());
+            assertEquals(32L * entries, table.size());
+            // the oldest entry must still be reachable at index length()
+            HpackHeaderField oldest = table.getEntry(entries);
+            assertEquals(0, oldest.name.length());
+            assertEquals(0, oldest.value.length());
+        }
+    }
+
+    @Test
     public void testSize() {
         HpackDynamicTable table = new HpackDynamicTable(100);
         assertEquals(0, table.size());

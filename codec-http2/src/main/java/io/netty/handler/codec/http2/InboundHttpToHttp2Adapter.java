@@ -21,6 +21,9 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpScheme;
 
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+
 /**
  * Translates HTTP/1.x object reads into HTTP/2 frames.
  */
@@ -59,17 +62,28 @@ public class InboundHttpToHttp2Adapter implements ChannelInboundHandler {
                 stream = connection.remote().createStream(streamId, false);
             }
             message.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTP.name());
-            Http2Headers messageHeaders = HttpConversionUtil.toHttp2Headers(message, true);
             boolean hasContent = message.content().isReadable();
             boolean hasTrailers = !message.trailingHeaders().isEmpty();
+            Http2Headers messageHeaders;
+            Http2Headers trailers = null;
+            try {
+                messageHeaders = HttpConversionUtil.toHttp2Headers(message, true);
+                if (hasTrailers) {
+                    trailers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true);
+                }
+            } catch (IllegalArgumentException e) {
+                // The message (e.g. its request-target) can not be represented as HTTP/2 headers. Fail the stream,
+                // like we do for invalid headers received over HTTP/2, so it does not stay open forever.
+                throw streamError(streamId, PROTOCOL_ERROR, e,
+                        "Failed to convert HTTP/1.x message to HTTP/2 headers: %s", e.getMessage());
+            }
             listener.onHeadersRead(
                     ctx, streamId, messageHeaders, 0, !(hasContent || hasTrailers));
             if (hasContent) {
                 listener.onDataRead(ctx, streamId, message.content(), 0, !hasTrailers);
             }
             if (hasTrailers) {
-                Http2Headers headers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true);
-                listener.onHeadersRead(ctx, streamId, headers, 0, true);
+                listener.onHeadersRead(ctx, streamId, trailers, 0, true);
             }
             stream.closeRemoteSide();
         } finally {

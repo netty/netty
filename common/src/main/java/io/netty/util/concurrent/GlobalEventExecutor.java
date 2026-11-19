@@ -18,7 +18,6 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Schedule;
@@ -85,9 +84,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
                 DefaultThreadFactory.toPoolName(getClass()), false, Thread.NORM_PRIORITY, null), this);
 
-        UnsupportedOperationException terminationFailure = new UnsupportedOperationException();
-        ThrowableUtil.unknownStackTrace(terminationFailure, GlobalEventExecutor.class, "terminationFuture");
-        terminationFuture = new FailedFuture<Object>(this, terminationFailure);
+        terminationFuture = new FailedFuture<Object>(this,
+                StacklessUnsupportedOperationException.newInstance(GlobalEventExecutor.class, "terminationFuture"));
     }
 
     /**

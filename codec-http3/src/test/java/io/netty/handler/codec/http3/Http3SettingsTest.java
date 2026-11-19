@@ -107,6 +107,28 @@ public class Http3SettingsTest {
     }
 
     @Test
+    void testDefaultGet() {
+        Http3Settings settings = new Http3Settings();
+
+        assertNull(settings.get(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id()));
+
+        assertEquals(Long.MAX_VALUE, settings
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(),
+                        Long.MAX_VALUE)
+        );
+        assertEquals(Long.MIN_VALUE, settings
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(),
+                        Long.MIN_VALUE)
+        );
+
+        assertNull(settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(), 1000L));
+
+        assertEquals(1000L, settings.get(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id()));
+    }
+
+    @Test
     void testForEachConsumer() {
         Http3Settings settings = new Http3Settings()
                 .qpackMaxTableCapacity(5)

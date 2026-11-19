@@ -48,7 +48,7 @@ final class DnsQueryEncoder {
     private static void encodeHeader(DnsQuery query, ByteBuf buf) {
         buf.writeShort(query.id());
         int flags = 0;
-        flags |= (query.opCode().byteValue() & 0xFF) << 14;
+        flags |= (query.opCode().byteValue() & 0xF) << 11;
         if (query.isRecursionDesired()) {
             flags |= 1 << 8;
         }

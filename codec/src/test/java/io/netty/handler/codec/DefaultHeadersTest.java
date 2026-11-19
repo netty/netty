@@ -37,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link DefaultHeaders}.
@@ -196,12 +195,7 @@ public class DefaultHeadersTest {
         assertEquals(0, headers.size());
         assertTrue(headers.isEmpty());
         assertTrue(values.contains(of("value1")));
-        try {
-            itr.remove();
-            fail();
-        } catch (IllegalStateException ignored) {
-            // ignored
-        }
+        assertThrows(IllegalStateException.class, () -> itr.remove());
     }
 
     @Test
@@ -214,12 +208,7 @@ public class DefaultHeadersTest {
             values.add(itr.next());
         }
         assertEquals(0, values.size());
-        try {
-            itr.next();
-            fail();
-        } catch (NoSuchElementException ignored) {
-            // ignored
-        }
+        assertThrows(NoSuchElementException.class, () -> itr.next());
     }
 
     @Test

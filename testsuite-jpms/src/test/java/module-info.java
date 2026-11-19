@@ -43,6 +43,7 @@ open module io.netty5.testsuite_jpms.test {
     requires io.netty5.codec.http3;
     requires io.netty5.codec.classes.quic;
     requires org.bouncycastle.pkix;
+    requires org.bouncycastle.provider;
 
     requires static org.slf4j;
     requires static ch.qos.logback.core;

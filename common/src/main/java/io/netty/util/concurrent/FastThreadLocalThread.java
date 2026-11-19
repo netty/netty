@@ -189,7 +189,7 @@ public class FastThreadLocalThread extends Thread {
      * Subclasses of {@link FastThreadLocalThread} can override this method if they are not meant to be used for
      * running event-loops.
      *
-     * @return {@code false}, unless overriden by a subclass.
+     * @return {@code false}, unless overridden by a subclass.
      */
     public boolean permitBlockingCalls() {
         return false;

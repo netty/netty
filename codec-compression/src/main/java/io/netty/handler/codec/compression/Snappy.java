@@ -32,6 +32,8 @@ public final class Snappy {
 
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
+    // The offset of a copy is encoded as an unsigned 16 bit value, so we can't reference data that is further back.
+    private static final int MAX_COPY_OFFSET = 0xFFFF;
 
     // used as a return value to indicate that we haven't yet read our full preamble
     private static final int PREAMBLE_NOT_FULL = -1;
@@ -93,6 +95,7 @@ public final class Snappy {
 
         int inIndex = in.readerIndex();
         final int baseIndex = inIndex;
+        final int endIndex = baseIndex + length;
 
         int hashTableSize = MathUtil.findNextPositivePowerOfTwo(length);
         hashTableSize = Math.min(hashTableSize, MAX_HT_SIZE);
@@ -101,7 +104,7 @@ public final class Snappy {
 
         int nextEmit = inIndex;
 
-        if (length - inIndex >= MIN_COMPRESSIBLE_BYTES) {
+        if (length >= MIN_COMPRESSIBLE_BYTES) {
             int nextHash = hash(in, ++inIndex, shift);
             outer: while (true) {
                 int skip = 32;
@@ -115,43 +118,41 @@ public final class Snappy {
                     nextIndex = inIndex + bytesBetweenHashLookups;
 
                     // We need at least 4 remaining bytes to read the hash
-                    if (nextIndex > length - 4) {
+                    if (nextIndex > endIndex - 4) {
                         break outer;
                     }
 
                     nextHash = hash(in, nextIndex, shift);
 
-                    // equivalent to Short.toUnsignedInt
-                    // use unsigned short cast to avoid loss precision when 32767 <= length <= 65355
-                    candidate = baseIndex + (table[hash] & 0xffff);
+                    candidate = candidate(table[hash], inIndex, baseIndex);
 
                     table[hash] = (short) (inIndex - baseIndex);
                 }
-                while (in.getInt(inIndex) != in.getInt(candidate));
+                while (!isMatch(in, inIndex, candidate));
 
                 encodeLiteral(in, out, inIndex - nextEmit);
 
                 int insertTail;
                 do {
                     int base = inIndex;
-                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, length);
+                    int matched = 4 + findMatchingLength(in, candidate + 4, inIndex + 4, endIndex);
                     inIndex += matched;
                     int offset = base - candidate;
                     encodeCopy(out, offset, matched);
                     in.readerIndex(in.readerIndex() + matched);
                     insertTail = inIndex - 1;
                     nextEmit = inIndex;
-                    if (inIndex >= length - 4) {
+                    if (inIndex >= endIndex - 4) {
                         break outer;
                     }
 
                     int prevHash = hash(in, insertTail, shift);
                     table[prevHash] = (short) (inIndex - baseIndex - 1);
                     int currentHash = hash(in, insertTail + 1, shift);
-                    candidate = baseIndex + (table[currentHash] & 0xFFFF);
+                    candidate = candidate(table[currentHash], insertTail + 1, baseIndex);
                     table[currentHash] = (short) (inIndex - baseIndex);
                 }
-                while (in.getInt(insertTail + 1) == in.getInt(candidate));
+                while (isMatch(in, insertTail + 1, candidate));
 
                 nextHash = hash(in, insertTail + 2, shift);
                 ++inIndex;
@@ -159,9 +160,29 @@ public final class Snappy {
         }
 
         // If there are any remaining characters, write them out as a literal
-        if (nextEmit < length) {
-            encodeLiteral(in, out, length - nextEmit);
+        if (nextEmit < endIndex) {
+            encodeLiteral(in, out, endIndex - nextEmit);
         }
+    }
+
+    /**
+     * Returns the position of the closest earlier occurrence of the hash table entry, that is at most
+     * {@link #MAX_COPY_OFFSET} bytes before the index.
+     * <p>
+     * The hash table only stores the lower 16 bits of a position, so for an input longer than 65535 bytes we
+     * need to restore the upper bits from the index. The result is only a candidate and needs to be verified with
+     * {@link #isMatch(ByteBuf, int, int)}.
+     */
+    private static int candidate(short entry, int index, int baseIndex) {
+        return index - ((index - baseIndex - (entry & 0xFFFF)) & MAX_COPY_OFFSET);
+    }
+
+    /**
+     * Returns {@code true} if the candidate is before the index (so it can be referenced with a copy) and the
+     * 4 bytes at the candidate are the same as at the index.
+     */
+    private static boolean isMatch(ByteBuf in, int index, int candidate) {
+        return candidate < index && in.getInt(index) == in.getInt(candidate);
     }
 
     /**
@@ -477,7 +498,12 @@ public final class Snappy {
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readIntLE();
+            // The length - 1 is stored as unsigned 32-bit integer.
+            long literalLength = in.readUnsignedIntLE();
+            if (literalLength >= Integer.MAX_VALUE) {
+                throw new DecompressionException("Literal length too large: " + (literalLength + 1));
+            }
+            length = (int) literalLength;
             break;
         default:
             length = tag >> 2 & 0x3F;

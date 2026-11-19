@@ -17,6 +17,7 @@ package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -37,6 +38,9 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     // Length for source/destination addresses for the UNIX family must be 108 bytes each.
     static final int UNIX_ADDRESS_BYTES_LENGTH = 108;
     static final int TOTAL_UNIX_ADDRESS_BYTES_LENGTH = UNIX_ADDRESS_BYTES_LENGTH * 2;
+
+    // The v2 header carries the length of the address and TLV section in 16 bits.
+    private static final int V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH = 65535;
 
     public static final HAProxyMessageEncoder INSTANCE = new HAProxyMessageEncoder();
 
@@ -67,14 +71,17 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
         out.writeBytes(TEXT_PREFIX);
         out.writeByte((byte) ' ');
         out.writeCharSequence(msg.proxiedProtocol().name(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
-        out.writeByte((byte) ' ');
-        out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
+        // "PROXY UNKNOWN" has no addresses and ports
+        if (msg.proxiedProtocol() != HAProxyProxiedProtocol.UNKNOWN) {
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
+            out.writeByte((byte) ' ');
+            out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
+        }
         out.writeByte((byte) '\r');
         out.writeByte((byte) '\n');
     }
@@ -90,7 +97,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 byte[] srcAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
                 byte[] dstAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
                 // srcAddrLen + dstAddrLen + 4 (srcPort + dstPort) + numTlvBytes
-                out.writeShort(srcAddrBytes.length + dstAddrBytes.length + 4 + msg.tlvNumBytes());
+                out.writeShort(checkV2Length(srcAddrBytes.length + dstAddrBytes.length + 4 + msg.tlvNumBytes()));
                 out.writeBytes(srcAddrBytes);
                 out.writeBytes(dstAddrBytes);
                 out.writeShort(msg.sourcePort());
@@ -98,7 +105,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 encodeTlvs(msg.tlvs(), out);
                 break;
             case AF_UNIX:
-                out.writeShort(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes());
+                out.writeShort(checkV2Length(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes()));
                 int srcAddrBytesWritten = out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
                 out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - srcAddrBytesWritten);
                 int dstAddrBytesWritten = out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
@@ -113,6 +120,18 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
         }
     }
 
+    /**
+     * Every TLV is part of the address and TLV section, so bounding the section length also bounds the
+     * 16-bit length of each (nested) TLV.
+     */
+    private static int checkV2Length(int length) {
+        if (length > V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH) {
+            throw new EncoderException("address and TLV section too long: " + length +
+                    " (expected: <= " + V2_MAX_ADDRESS_AND_TLV_BYTES_LENGTH + ')');
+        }
+        return length;
+    }
+
     private static void encodeTlv(HAProxyTLV haProxyTLV, ByteBuf out) {
         if (haProxyTLV instanceof HAProxySSLTLV) {
             HAProxySSLTLV ssltlv = (HAProxySSLTLV) haProxyTLV;
@@ -120,18 +139,42 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
             out.writeShort(ssltlv.contentNumBytes());
             out.writeByte(ssltlv.client());
             out.writeInt(ssltlv.verify());
-            encodeTlvs(ssltlv.encapsulatedTLVs(), out);
+            encodeChildTlvs(ssltlv.encapsulatedTLVs(), out);
         } else {
             out.writeByte(haProxyTLV.typeByteValue());
             ByteBuf value = haProxyTLV.content();
             int readableBytes = value.readableBytes();
             out.writeShort(readableBytes);
-            out.writeBytes(value.readSlice(readableBytes));
+            // Do not use readSlice(...) (or similar) here as it would mutate the reader index of the
+            // content, which is observable by the caller (e.g. HAProxyMessage.tlvs() exposes the same
+            // TLV instance both as a top-level entry and, if it is a direct child of a PP2_TYPE_SSL TLV,
+            // flattened into the top-level list) and could result in the same TLV being encoded
+            // correctly the first time and as empty content thereafter.
+            out.writeBytes(value, value.readerIndex(), readableBytes);
         }
     }
 
-    private static void encodeTlvs(List<HAProxyTLV> haProxyTLVs, ByteBuf out) {
+    /**
+     * Encodes a genuine tree of encapsulated TLVs, e.g. the direct children of a {@link HAProxySSLTLV}.
+     * Unlike {@link HAProxyMessage#tlvs()}, this list is not a flattened view, so every element must be
+     * encoded.
+     */
+    private static void encodeChildTlvs(List<HAProxyTLV> haProxyTLVs, ByteBuf out) {
         for (int i = 0; i < haProxyTLVs.size(); i++) {
+            encodeTlv(haProxyTLVs.get(i), out);
+        }
+    }
+
+    /**
+     * Encodes the top-level TLV list as returned by {@link HAProxyMessage#tlvs()}. That list flattens the
+     * direct children of any {@link HAProxySSLTLV} into it for convenience, so those flattened entries must
+     * be skipped here: they are already encoded (recursively) as part of their parent
+     * {@link HAProxySSLTLV}. Encoding them again would both duplicate their bytes on the wire and make the
+     * declared TLV length (see {@link HAProxyMessage#tlvNumBytes()}) not match the number of bytes actually
+     * written.
+     */
+    private static void encodeTlvs(List<HAProxyTLV> haProxyTLVs, ByteBuf out) {
+        for (int i = 0; i < haProxyTLVs.size(); i += 1 + HAProxyMessage.flattenedChildren(haProxyTLVs, i)) {
             encodeTlv(haProxyTLVs.get(i), out);
         }
     }

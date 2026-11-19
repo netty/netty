@@ -49,6 +49,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
@@ -314,6 +315,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -370,7 +373,13 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         if (msg instanceof ByteBuf) {
             return writeBytes(in, (ByteBuf) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel channel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened by sendFile.
+            if (channel == null || UnixChannelUtil.isFileChannelImpl(channel)) {
+                return writeDefaultFileRegion(in, region);
+            }
+            return writeFileRegion(in, region);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
         } else if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
@@ -422,6 +431,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         boolean write = false;
         switch (type.direction()) {
             case Outbound:
+                // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the
+                // output.
+                removeFastOpenData();
                 write = true;
                 break;
             case Inbound:
@@ -616,9 +628,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
                 long localFlushedAmount = doWriteOrSendBytes(
                         initialData, (InetSocketAddress) remote, true);
                 if (localFlushedAmount > 0) {
-                    // We had a cookie and our fast-open proceeded. Remove written data
-                    // then continue with normal TCP operation.
-                    outbound.removeBytes(localFlushedAmount);
+                    // We had a cookie and our fast-open proceeded. The written data is removed once the connect
+                    // is complete, then we continue with normal TCP operation.
+                    fastOpenDataSent(outbound, initialData, localFlushedAmount);
                     return true;
                 }
             }
@@ -628,6 +640,8 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     @Override
     protected Executor prepareToClose() {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+        removeFastOpenData();
         try {
             // Check isOpen() first as otherwise it will throw a RuntimeException
             // when call getSoLinger() as the fd is not valid anymore.

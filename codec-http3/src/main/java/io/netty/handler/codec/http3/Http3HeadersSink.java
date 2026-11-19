@@ -16,8 +16,11 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.AsciiString;
 
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.AUTHORITY;
@@ -74,6 +77,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
             // Validate that all mandatory pseudo-headers are included.
             if (request) {
+                validateAuthorityAndHost();
                 CharSequence method = headers.method();
                 // fast-path
                 if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
@@ -138,6 +142,30 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     }
 
     /**
+     * https://www.rfc-editor.org/rfc/rfc9114#section-4.3.1
+     * the request MUST contain either an :authority pseudo-header field or a Host header field.
+     * If both fields are present, they MUST contain the same value.
+     * https://datatracker.ietf.org/doc/html/rfc9110#section-5.3
+     * a sender MUST NOT generate multiple field lines with the same name ...
+     * unless that field's definition allows ... a comma-separated list
+     */
+    private void validateAuthorityAndHost() {
+        if (!headers.contains(HttpHeaderNames.HOST)) {
+            return;
+        }
+        CharSequence authority = headers.authority();
+        List<CharSequence> hosts = headers.getAll(HttpHeaderNames.HOST);
+        CharSequence expected = authority != null ? authority : hosts.get(0);
+        for (int i = 0; i < hosts.size(); i++) {
+            if (!AsciiString.contentEqualsIgnoreCase(expected, hosts.get(i))) {
+                throw new Http3HeadersValidationException(authority != null ?
+                        "Conflicting ':authority' pseudo-header and 'host' header field." :
+                        "Conflicting 'host' header fields.");
+            }
+        }
+    }
+
+    /**
      * Find host header field in case the :authority pseudo header is not specified.
      * See:
      * https://www.rfc-editor.org/rfc/rfc9110#section-7.2
@@ -159,7 +187,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
 
         if (validate) {
             try {
-                 validate(headers, name);
+                 validate(headers, name, value);
             } catch (Http3HeadersValidationException ex) {
                 validationException = ex;
                 return;
@@ -169,7 +197,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         headers.add(name, value);
     }
 
-    private void validate(Http3Headers headers, CharSequence name) {
+    private void validate(Http3Headers headers, CharSequence name, CharSequence value) {
         if (hasPseudoHeaderFormat(name)) {
             if (previousType == HeaderType.REGULAR_HEADER) {
                 throw new Http3HeadersValidationException(
@@ -193,7 +221,27 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
             request = pseudoHeader.isRequestOnly();
             previousType = currentHeaderType;
         } else {
+            // https://www.rfc-editor.org/rfc/rfc9114.html#section-4.2
+            if (HttpHeaderValidationUtil.validateToken(name) != -1) {
+                throw new Http3HeadersValidationException(String.format("Invalid header name '%s'.", name));
+            }
+            if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+                throw new Http3HeadersValidationException(
+                        String.format("Illegal connection-specific header '%s' encountered.", name));
+            }
+            if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+                throw new Http3HeadersValidationException(
+                        "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+            }
             previousType = HeaderType.REGULAR_HEADER;
+        }
+
+        // https://www.rfc-editor.org/rfc/rfc9114.html#section-10.3
+        int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
+        if (index != -1) {
+            throw new Http3HeadersValidationException(String.format(
+                    "Value of header '%s' contains prohibited character 0x%02X at index %d.",
+                    name, (int) value.charAt(index), index));
         }
     }
 

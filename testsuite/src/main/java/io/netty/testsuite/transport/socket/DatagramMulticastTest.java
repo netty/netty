@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -142,6 +143,50 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
+    @Test
+    public void testMulticastWithWildcardLocalAddress(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testMulticastWithWildcardLocalAddress(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testMulticastWithWildcardLocalAddress(Bootstrap sb, Bootstrap cb) throws Throwable {
+        NetworkInterface iface = multicastNetworkInterface();
+        assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
+                             socketInternetProtocalFamily());
+
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+        cb.option(ChannelOption.IP_MULTICAST_IF, iface);
+        cb.option(ChannelOption.SO_REUSEADDR, true);
+
+        // Bound to the wildcard address, so the interface can't be derived from the local address and the
+        // methods without a NetworkInterface argument have to use IP_MULTICAST_IF.
+        DatagramChannel cc = (DatagramChannel) cb.bind(newAnySocketAddress()).get();
+        try {
+            InetAddress groupAddress = InetAddress.getByName(groupAddress());
+
+            cc.joinGroup(groupAddress).sync();
+
+            Future<Void> blockFuture = cc.block(groupAddress, sourceAddress()).await();
+            if (!blockFuture.isSuccess()) {
+                // Source filtering is not supported by all transports.
+                assertInstanceOf(UnsupportedOperationException.class, blockFuture.cause());
+            }
+
+            cc.leaveGroup(groupAddress).sync();
+        } finally {
+            cc.close().awaitUninterruptibly();
+        }
+    }
+
     private static void assertInterfaceAddress(NetworkInterface networkInterface, InetAddress expected) {
         Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
         while (addresses.hasMoreElements()) {
@@ -238,6 +283,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             }
         }
         return null;
+    }
+
+    private InetAddress sourceAddress() throws UnknownHostException {
+        return InetAddress.getByName(groupInternetProtocalFamily() == SocketProtocolFamily.INET?
+                "192.0.2.1" : "2001:db8::1");
     }
 
     private String groupAddress() {

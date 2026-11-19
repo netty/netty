@@ -18,11 +18,13 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -36,9 +38,12 @@ import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
@@ -196,7 +201,42 @@ public class SocketConnectTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectDirectBufferReaderIndex(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> directBufferWithReaderIndex(
+                                channel, "BAD-PREFIX-", "[fastopen-reader-index]"),
+                        "[fastopen-reader-index]"));
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectCompositeBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> compositeBuffer(channel, "[fastopen-", "composite-", "data]"),
+                        "[fastopen-composite-data]"));
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectCompositeBufferReaderIndex(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> compositeBufferWithReaderIndex(
+                                channel, "BAD-PREFIX-", "[fastopen-", "composite-reader-", "index]"),
+                        "[fastopen-composite-reader-index]"));
+    }
+
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testWriteWithFastOpenBeforeConnect(sb, cb, channel -> writeAscii(DEFAULT, "[fastopen]"), "[fastopen]");
+    }
+
+    protected void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb,
+                                                      Function<Channel, ByteBuf> initialDataFactory,
+                                                      String expectedInitialData) throws Throwable {
         enableTcpFastOpen(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);
@@ -209,25 +249,171 @@ public class SocketConnectTest extends AbstractSocketTest {
         });
 
         Channel sc = sb.bind().get();
-        connectAndVerifyDataTransfer(cb, sc);
-        connectAndVerifyDataTransfer(cb, sc);
+        connectAndVerifyDataTransfer(cb, sc, initialDataFactory, expectedInitialData);
+        connectAndVerifyDataTransfer(cb, sc, initialDataFactory, expectedInitialData);
     }
 
-    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc)
-            throws Exception {
+    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc,
+                                                     Function<Channel, ByteBuf> initialDataFactory,
+                                                     String expectedInitialData)
+            throws InterruptedException, ExecutionException {
         BufferingClientHandler handler = new BufferingClientHandler();
         cb.handler(handler);
         Future<Channel> register = cb.register();
         Channel channel = register.get();
-        Future<Void> write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        Future<Void> write = channel.write(initialDataFactory.apply(channel));
         SocketAddress remoteAddress = sc.localAddress();
         channel.connect(remoteAddress).sync();
         channel.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
         write.sync();
-        String expectedString = "[fastopen][normal data]";
+        String expectedString = expectedInitialData + "[normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
         channel.disconnect().sync();
         assertEquals(expectedString, result);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteFromFastOpenInitialDataListener(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testWriteFromFastOpenInitialDataListener);
+    }
+
+    public void testWriteFromFastOpenInitialDataListener(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        cb.option(ChannelOption.AUTO_READ, true);
+
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new EchoServerHandler());
+            }
+        });
+
+        Channel sc = sb.bind().get();
+        // The first connection obtains the fast open cookie, the second one sends its initial data as part of the
+        // connect.
+        connectAndWriteFromInitialDataListener(cb, sc);
+        connectAndWriteFromInitialDataListener(cb, sc);
+    }
+
+    private static void connectAndWriteFromInitialDataListener(Bootstrap cb, Channel sc) throws Exception {
+        BufferingClientHandler handler = new BufferingClientHandler();
+        cb.handler(handler);
+        Channel cc = cb.register().get();
+        AtomicBoolean activeInListener = new AtomicBoolean();
+        BlockingQueue<Future<Void>> followUpFutures = new LinkedBlockingQueue<>();
+        Future<Void> initialFuture = cc.write(writeAscii(DEFAULT, "[fastopen]")).addListener(f -> {
+            activeInListener.set(cc.isActive());
+            followUpFutures.add(cc.writeAndFlush(writeAscii(DEFAULT, "[follow-up]")));
+        });
+        cc.connect(sc.localAddress()).sync();
+        // Without a fast open cookie the initial data is still queued and is written by this flush.
+        cc.flush();
+
+        initialFuture.sync();
+        // Waiters may be woken up before the listeners were notified, so wait for the listener itself.
+        Future<Void> followUpFuture = followUpFutures.poll(2, TimeUnit.SECONDS);
+        assertNotNull(followUpFuture, "listener of the initial write was not notified");
+        assertTrue(activeInListener.get(), "channel was not active when the initial write was notified");
+        followUpFuture.sync();
+        String expectedString = "[fastopen][follow-up]";
+        String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
+        cc.close().sync();
+        assertEquals(expectedString, result);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testShutdownOutputFromFastOpenConnectListener(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testShutdownOutputFromFastOpenConnectListener);
+    }
+
+    public void testShutdownOutputFromFastOpenConnectListener(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        enableTcpFastOpen(sb, cb);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        BlockingQueue<String> received = new LinkedBlockingQueue<>();
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
+                    private final StringBuilder data = new StringBuilder();
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        data.append(buf.toString(US_ASCII));
+                        buf.release();
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                        received.add(data.toString());
+                    }
+                });
+            }
+        });
+
+        Channel sc = sb.bind().get();
+        // The first connection obtains the fast open cookie, the second one sends its initial data as part of the
+        // connect.
+        shutdownOutputFromConnectListener(cb, sc, received);
+        shutdownOutputFromConnectListener(cb, sc, received);
+    }
+
+    private static void shutdownOutputFromConnectListener(Bootstrap cb, Channel sc, BlockingQueue<String> received)
+            throws Exception {
+        cb.handler(new ChannelInboundHandler() { });
+        Channel channel = cb.register().get();
+        Future<Void> initialFuture = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        try {
+            // Add the listener on the EventLoop right after connecting, so it is notified as part of the connect
+            // completion.
+            channel.executor().submit(() -> channel.connect(sc.localAddress()).addListener(
+                    f -> channel.shutdown(ChannelShutdownType.newOutbound()))).get().sync();
+            String data = received.poll(2, TimeUnit.SECONDS);
+            assertNotNull(data, "connection was not closed by the server");
+            initialFuture.await();
+            // The initial write must only succeed if the initial data was sent.
+            if (initialFuture.isSuccess()) {
+                assertEquals("[fastopen]", data);
+            } else {
+                assertEquals("", data, "initial data was sent but the write failed");
+            }
+        } finally {
+            channel.close().sync();
+        }
+    }
+
+    private static ByteBuf directBufferWithReaderIndex(Channel channel, String prefix, String data) {
+        ByteBuf buffer = directBuffer(channel, prefix + data);
+        buffer.readerIndex(prefix.getBytes(US_ASCII).length);
+        return buffer;
+    }
+
+    private static ByteBuf compositeBufferWithReaderIndex(Channel channel, String prefix, String... parts) {
+        CompositeByteBuf buffer = channel.alloc().compositeDirectBuffer(parts.length + 1);
+        buffer.addComponent(true, directBuffer(channel, prefix));
+        for (String part : parts) {
+            buffer.addComponent(true, directBuffer(channel, part));
+        }
+        buffer.readerIndex(prefix.getBytes(US_ASCII).length);
+        return buffer;
+    }
+
+    private static ByteBuf compositeBuffer(Channel channel, String... parts) {
+        CompositeByteBuf buffer = channel.alloc().compositeDirectBuffer(parts.length);
+        for (String part : parts) {
+            buffer.addComponent(true, directBuffer(channel, part));
+        }
+        return buffer;
+    }
+
+    private static ByteBuf directBuffer(Channel channel, String data) {
+        byte[] bytes = data.getBytes(US_ASCII);
+        ByteBuf buffer = channel.alloc().directBuffer(bytes.length);
+        buffer.writeBytes(bytes);
+        return buffer;
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {

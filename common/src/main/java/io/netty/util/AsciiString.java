@@ -996,7 +996,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (start == 0 && end == last) {
             return c;
         }
-        return c.subSequence(start, end);
+        return c.subSequence(start, end + 1);
     }
 
     /**
@@ -1387,14 +1387,28 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Returns an {@link AsciiString} containing the given string and retains/caches the input
-     * string for later use in {@link #toString()}.
+     * Returns an {@link AsciiString} containing the given string and retains/caches the
+     * input string for later use in {@link #toString()}.
+     * If the input contains only Latin-1 characters (0-255), the original string is reused
+     * to preserve identity for faster equality checks. Otherwise, the string is reconstructed
+     * from the Latin-1 byte content to guarantee consistency (the constructor's {@link #c2b(char)}
+     * converts non-Latin-1 characters to {@code '?'}).
      * Used for the constants (which already stored in the JVM's string table) and in cases
      * where the guaranteed use of the {@link #toString()} method.
      */
     public static AsciiString cached(String string) {
-        AsciiString asciiString = new AsciiString(string);
-        asciiString.string = string;
+        byte[] value = PlatformDependent.allocateUninitializedArray(string.length());
+        boolean allLatin1 = true;
+        for (int i = 0; i < value.length; i++) {
+            char c = string.charAt(i);
+            value[i] = c2b(c);
+            if (c > MAX_CHAR_VALUE) {
+                allLatin1 = false;
+            }
+        }
+
+        AsciiString asciiString = new AsciiString(value, false);
+        asciiString.string = allLatin1 ? string : asciiString.toString(0);
         return asciiString;
     }
 
@@ -1571,18 +1585,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (b.length() == 0) {
             return true;
         }
-        int bStart = 0;
-        for (int i = 0; i < a.length(); ++i) {
-            if (cmp.equals(b.charAt(bStart), a.charAt(i))) {
-                // If b is consumed then true.
-                if (++bStart == b.length()) {
-                    return true;
-                }
-            } else if (a.length() - i < b.length()) {
-                // If there are not enough characters left in a for b to be contained, then false.
-                return false;
-            } else {
-                bStart = 0;
+        for (int i = 0, last = a.length() - b.length(); i <= last; ++i) {
+            if (regionMatchesCharSequences(a, i, b, 0, b.length(), cmp)) {
+                return true;
             }
         }
         return false;

@@ -27,17 +27,27 @@ public class OcspResponse {
     public OcspResponse(Status status, Date thisUpdate, Date nextUpdate) {
         this.status = checkNotNull(status, "Status");
         this.thisUpdate = checkNotNull(thisUpdate, "ThisUpdate");
-        this.nextUpdate = checkNotNull(nextUpdate, "NextUpdate");
+        this.nextUpdate = nextUpdate; // The 'nextUpdate' field is optional.
     }
 
+    /**
+     * The OCSP response status, saying if the certificate is valid or not.
+     */
     public Status status() {
         return status;
     }
 
+    /**
+     * The date of the given OCSP update, never {@code null}.
+     */
     public Date thisUpdate() {
         return thisUpdate;
     }
 
+    /**
+     * The future date of the next OCSP update, if any.
+     * This field is optional, and if {@code null}, indicates that an update is available at any time.
+     */
     public Date nextUpdate() {
         return nextUpdate;
     }

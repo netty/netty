@@ -122,13 +122,6 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-nativeimage-metadata-gen</artifactId>
-      <version>${project.version}</version>
-      <optional>true</optional>
-    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

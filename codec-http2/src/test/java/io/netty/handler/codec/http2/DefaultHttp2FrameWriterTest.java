@@ -14,7 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -28,6 +30,8 @@ import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -35,10 +39,17 @@ import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -140,6 +151,20 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, MAX_PADDING + 1})
+    public void writeHeadersRejectsInvalidPadding(int padding) {
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> frameWriter.writeHeaders(ctx, streamId, headers, padding, true, promise));
+
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertFalse(outbound.isReadable());
     }
 
     @Test
@@ -297,7 +322,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @Test
     public void writeFrameZeroPayload() throws Exception {
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
 
         byte[] expectedFrameBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, // payload length
@@ -316,7 +341,7 @@ public class DefaultHttp2FrameWriterTest {
 
         // will auto release after frameWriter.writeFrame succeed
         ByteBuf payloadByteBuf = Unpooled.wrappedBuffer(payload);
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf, promise);
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payloadByteBuf, promise);
 
         byte[] expectedFrameHeaderBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length
@@ -326,6 +351,72 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameHeaderBytes, payload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writeFrameExceedingMaxFrameSizeFailsPromiseAndReleasesPayload() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND + 1);
+
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payload, promise);
+
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertTrue(promise.cause().getMessage().contains("0xf"));
+        // Nothing must have been written and the payload must have been released
+        assertEquals(0, outbound.readableBytes());
+        assertEquals(0, payload.refCnt());
+        verify(ctx, never()).write(any(), any(CompletionHandler.class));
+    }
+
+    @Test
+    public void writeFrameAtMaxFrameSizeSucceeds() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        frameWriter.writeFrame(ctx, (short) 0xf, 0, new Http2Flags(), payload, promise);
+
+        // The mocked context never completes the writes, so only verify that the write was not rejected
+        assertFalse(promise.isDone() && !promise.isSuccess());
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // 24 bit payload length field must hold exactly the payload size
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+    }
+
+    @Test
+    public void writeSettingsExceedingMaxFrameSizeFailsPromise() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        Http2Settings settings = new Http2Settings();
+        // Each setting takes 6 bytes, so this is one entry more than fits into a single frame
+        int entries = Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND / Http2CodecUtil.SETTING_ENTRY_LENGTH + 1;
+        for (int i = 0; i < entries; i++) {
+            settings.put((char) (0x100 + i), Long.valueOf(0));
+        }
+
+        frameWriter.writeSettings(ctx, settings, promise);
+
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
+        assertTrue(promise.cause().getMessage().contains("0x4"));
+        assertEquals(0, outbound.readableBytes());
+    }
+
+    @Test
+    public void writeGoAwayTruncatesDebugDataExceedingMaxFrameSize() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf debugData = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        frameWriter.writeGoAway(ctx, 0, Http2Error.NO_ERROR.code(), debugData, promise);
+
+        // 8 bytes of last stream id and error code plus the truncated debug data fill exactly one frame
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // The original debug data buffer must have been released
+        assertEquals(0, debugData.refCnt());
     }
 
     @Test
@@ -358,6 +449,116 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x0F, // weight = 15 (implicit +1)
         });
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writeHeadersReleasesHeaderBlockWhenFrameHeaderAllocationFails() {
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.HEADERS_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(OutOfMemoryError.class,
+                () -> frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise));
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    @Test
+    public void writePushPromiseReleasesHeaderBlockWhenFrameHeaderAllocationFails() {
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.PUSH_PROMISE_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        int streamId = 1;
+        int promisedStreamId = 2;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(OutOfMemoryError.class,
+                () -> frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, 0, promise));
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    @Test
+    public void writeContinuationFramesReleasesHeaderBlockWhenFrameHeaderAllocationFails() throws Exception {
+        int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+        final Http2Headers largeHeaders = dummyHeaders(headers, 60);
+
+        http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        assertThrows(OutOfMemoryError.class,
+                () -> frameWriter.writeHeaders(ctx, streamId, largeHeaders, 0, true, promise));
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    private static void assertAllTrackedBuffersReleased(TrackingFailingAllocator allocator) {
+        assertFalse(allocator.allocated.isEmpty(), "expected at least one buffer to be allocated");
+        for (ByteBuf buf : allocator.allocated) {
+            assertEquals(0, buf.refCnt(), "expected tracked buffer to be fully released");
+        }
+    }
+
+    /**
+     * A {@link ByteBufAllocator} that throws an {@link OutOfMemoryError} when asked to allocate a buffer with a
+     * given {@code initialCapacity}, and otherwise delegates to an unpooled allocator while tracking every
+     * successfully allocated buffer for leak verification.
+     */
+    private static final class TrackingFailingAllocator extends AbstractByteBufAllocator {
+        private static final int NEVER_FAIL = -1;
+
+        private final ByteBufAllocator delegate = new UnpooledByteBufAllocator(false);
+        private final List<ByteBuf> allocated = new ArrayList<ByteBuf>();
+        private final int failOnInitialCapacity;
+
+        TrackingFailingAllocator() {
+            this(NEVER_FAIL);
+        }
+
+        TrackingFailingAllocator(int failOnInitialCapacity) {
+            super(false);
+            this.failOnInitialCapacity = failOnInitialCapacity;
+        }
+
+        private void failIfTargeted(int initialCapacity) {
+            if (failOnInitialCapacity != NEVER_FAIL && initialCapacity == failOnInitialCapacity) {
+                throw new OutOfMemoryError("simulated allocation failure for capacity " + initialCapacity);
+            }
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.heapBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.directBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return delegate.isDirectBufferPooled();
+        }
     }
 
     private byte[] headerPayload(int streamId, Http2Headers headers, byte padding) throws Http2Exception, IOException {

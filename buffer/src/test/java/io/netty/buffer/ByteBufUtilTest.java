@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
@@ -124,6 +125,38 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void toStringRejectsRangeOutsideSlice() {
+        ByteBuf owner = Unpooled.wrappedBuffer(new byte[] {'S', 'A', 'F', 'E', '!'});
+        final ByteBuf view = owner.slice(1, 3);
+        try {
+            assertEquals("AFE", view.toString(CharsetUtil.UTF_8));
+            assertEquals("A", view.toString(0, 1, CharsetUtil.UTF_8));
+            assertEquals("", view.toString(3, 0, CharsetUtil.UTF_8));
+            // The bytes before and after the slice are in the same backing array, so they must not be decoded.
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(-1, 1, CharsetUtil.UTF_8);
+                }
+            });
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(2, 2, CharsetUtil.UTF_8);
+                }
+            });
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    view.toString(-1, 0, CharsetUtil.US_ASCII);
+                }
+            });
+        } finally {
+            owner.release();
+        }
+    }
+
+    @Test
     public void decodeHexDumpWithOddLength() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
@@ -176,6 +209,69 @@ public class ByteBufUtilTest {
         assertEquals(3, ByteBufUtil.indexOf(Unpooled.copiedBuffer("aab", CharsetUtil.UTF_8), haystack));
         haystack.release();
         needle.release();
+    }
+
+    @Test
+    public void testIndexOfNeedleWithReaderIndex() {
+        ByteBuf needle = Unpooled.copiedBuffer("abc123", CharsetUtil.US_ASCII);
+        needle.readerIndex(3);
+        ByteBuf haystack = Unpooled.copiedBuffer("ab1123", CharsetUtil.US_ASCII);
+        assertEquals(3, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+
+        needle = Unpooled.copiedBuffer("xab", CharsetUtil.US_ASCII);
+        needle.readerIndex(1);
+        haystack = Unpooled.copiedBuffer("aab", CharsetUtil.US_ASCII);
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+        needle.release();
+    }
+
+    @Test
+    public void testIndexOfEmptyNeedle() {
+        ByteBuf haystack = Unpooled.copiedBuffer("abc", CharsetUtil.US_ASCII);
+        assertEquals(0, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.readerIndex(1);
+        assertEquals(1, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.readerIndex(3);
+        assertEquals(3, ByteBufUtil.indexOf(Unpooled.EMPTY_BUFFER, haystack));
+        haystack.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    public void testIndexOfMatchesNaiveSearch(int needleReaderIndex) {
+        Random random = new Random(needleReaderIndex);
+        for (int i = 0; i < 10000; i++) {
+            byte[] needleBytes = new byte[2 + random.nextInt(5)];
+            byte[] haystackBytes = new byte[random.nextInt(16)];
+            byte[] prefix = new byte[needleReaderIndex];
+            for (byte[] bytes : Arrays.asList(needleBytes, haystackBytes, prefix)) {
+                for (int j = 0; j < bytes.length; j++) {
+                    bytes[j] = (byte) random.nextInt(3);
+                }
+            }
+            ByteBuf needle = Unpooled.buffer().writeBytes(prefix).writeBytes(needleBytes);
+            needle.readerIndex(prefix.length);
+            ByteBuf haystack = Unpooled.wrappedBuffer(haystackBytes);
+            assertEquals(naiveIndexOf(needleBytes, haystackBytes), ByteBufUtil.indexOf(needle, haystack));
+            needle.release();
+            haystack.release();
+        }
+    }
+
+    private static int naiveIndexOf(byte[] needle, byte[] haystack) {
+        for (int i = 0; i <= haystack.length - needle.length; i++) {
+            int j = 0;
+            while (j < needle.length && haystack[i + j] == needle[j]) {
+                j++;
+            }
+            if (j == needle.length) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Test
@@ -672,6 +768,28 @@ public class ByteBufUtilTest {
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
+    public void testWriteUtf8InvalidLeadingSurrogateFollowedByNonAscii(BufferType bufferType) {
+        // The character after an unpaired leading surrogate must still be encoded, like the JDK does.
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\u00E9b");
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\u4E2Db");
+        checkWriteUtf8SameAsJdk(bufferType, "a\uD800\uD83D\uDE00b");
+    }
+
+    private void checkWriteUtf8SameAsJdk(BufferType bufferType, String seq) {
+        ByteBuf expected = Unpooled.wrappedBuffer(seq.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf = buffer(bufferType, 16);
+        try {
+            ByteBufUtil.writeUtf8(buf, seq);
+            assertEquals(ByteBufUtil.hexDump(expected), ByteBufUtil.hexDump(buf));
+            assertEquals(expected.readableBytes(), ByteBufUtil.utf8Bytes(seq));
+        } finally {
+            buf.release();
+            expected.release();
+        }
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
     public void testWriteUsAsciiString(BufferType bufferType) {
         AsciiString usAscii = new AsciiString("NettyRocks");
         int expectedCapacity = usAscii.length();
@@ -772,10 +890,8 @@ public class ByteBufUtilTest {
         for (int [] range : INVALID_RANGES) {
             ByteBuf buf = buffer(bufferType, 16);
             try {
-                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
-                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
-            } catch (IndexOutOfBoundsException iiobe) {
-                // expected
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]));
             } finally {
                 assertFalse(buf.isReadable());
                 buf.release();
@@ -927,12 +1043,8 @@ public class ByteBufUtilTest {
                     {1, 5},
             };
             for (int[] pair : invalidIndexLengthPairs) {
-                try {
-                    ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
-                    fail("Expected IndexOutOfBoundsException");
-                } catch (IndexOutOfBoundsException e) {
-                    // expected
-                }
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII));
             }
         } finally {
             buffer.release();

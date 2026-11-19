@@ -39,6 +39,10 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     private float headerArraySizeAccumulator = 8;
 
+    /**
+     * Create a new instance with default settings.
+     * Header validation is enabled by default.
+     */
     public DefaultHttp2HeadersDecoder() {
         this(true);
     }
@@ -46,9 +50,10 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * Validates both header name and header value.
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders) {
-        this(validateHeaders, DEFAULT_HEADER_LIST_SIZE);
+        this(validateHeaders, validateHeaders, DEFAULT_HEADER_LIST_SIZE);
     }
 
     /**
@@ -66,13 +71,14 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * Validates both header name and header value.
      * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
      *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
      *  (which is dangerous).
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize) {
-        this(validateHeaders, false, new HpackDecoder(maxHeaderListSize));
+        this(validateHeaders, validateHeaders, new HpackDecoder(maxHeaderListSize));
     }
 
     /**
@@ -93,7 +99,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
-     * This validates everything except header values.
+     * Validates both header name and header value.
      * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
      *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
@@ -102,7 +108,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
                                       @Deprecated int initialHuffmanDecodeCapacity) {
-        this(validateHeaders, false, new HpackDecoder(maxHeaderListSize));
+        this(validateHeaders, validateHeaders, new HpackDecoder(maxHeaderListSize));
     }
 
     /**

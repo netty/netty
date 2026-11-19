@@ -101,6 +101,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         super(WebSocketVersion.V08, webSocketURL, subprotocols, decoderConfig);
     }
 
+    WebSocketServerHandshaker08(boolean isSecure, String host, String path,
+                                String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V08, isSecure, host, path, subprotocols, decoderConfig);
+    }
+
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
@@ -142,7 +147,16 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             throw new WebSocketServerHandshakeException("Invalid WebSocket handshake method: " + method, req);
         }
 
-        CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        HttpHeaders reqHeaders = req.headers();
+        if (!reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: a |Connection| header must include a token 'Upgrade'", req);
+        }
+        if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: an |Upgrade| header must containing the value 'websocket'", req);
+        }
+        CharSequence key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }

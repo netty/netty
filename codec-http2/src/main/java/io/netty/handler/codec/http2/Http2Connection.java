@@ -241,7 +241,7 @@ public interface Http2Connection {
     }
 
     /**
-     * A key to be used for associating application-defined properties with streams within this connection.
+     * A key to be used for associating application-defined properties with streams within a connection.
      */
     interface PropertyKey {
     }

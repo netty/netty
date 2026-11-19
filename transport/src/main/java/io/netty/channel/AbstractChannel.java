@@ -37,6 +37,7 @@ import java.net.SocketException;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -508,8 +509,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     neverRegistered = false;
                     registered = true;
 
-                    handler.success(null);
+                    // Fire channelRegistered before notifying the handler. This ensures ChannelInitializer
+                    // implementations (which do the initialization once the Channel is registered) have set up the
+                    // pipeline before the user is notified and so may start to fire events / operations through it.
                     pipeline.fireChannelRegistered();
+                    handler.success(null);
                     // Only fire a channelActive if the channel has never been registered. This prevents firing
                     // multiple channel actives if the channel is deregistered and re-registered.
                     if (isActive()) {
@@ -1249,6 +1253,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected final void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
         DefaultFileRegion.validate(region, position);
+    }
+
+    /**
+     * Returns the underlying {@link FileChannel}, or {@code null} if the region is not open.
+     * This method does not open the region.
+     */
+    protected FileChannel fileChannel(DefaultFileRegion region) {
+        return region.fileChannel();
     }
 
     static final class CloseFuture extends DefaultPromise<Void> {

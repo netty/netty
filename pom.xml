@@ -201,13 +201,35 @@
       </properties>
     </profile>
     <profile>
+      <id>java27</id>
+      <activation>
+        <jdk>27</jdk>
+      </activation>
+      <properties>
+        <argLine.java9.extras />
+        <argLine.java9>${argLine.java9.extras} -Djdk.tls.SunX509KeyManager.certChecking=false</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
+      </properties>
+    </profile>
+    <profile>
       <id>java26</id>
       <activation>
         <jdk>26</jdk>
       </activation>
       <properties>
         <argLine.java9.extras />
-        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras} -Djdk.tls.SunX509KeyManager.certChecking=false</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -317,7 +339,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.78.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.87.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -339,7 +361,11 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</argLine.leak>
+        <argLine.leak>
+          -Dio.netty.leakDetectionLevel=paranoid
+          -Dio.netty.leakDetection.targetRecords=32
+          -Dio.netty.test.leakPresenceDetection.disabled=true
+        </argLine.leak>
       </properties>
     </profile>
     <profile>
@@ -377,6 +403,7 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
         <skipHttp2Testsuite>true</skipHttp2Testsuite>
+        <skipH3Spec>true</skipH3Spec>
       </properties>
     </profile>
     <profile>
@@ -418,11 +445,11 @@
   </profiles>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.release />
-    <javadoc.release>9</javadoc.release>
-    <javadoc.source>9</javadoc.source>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.release>25</maven.compiler.release>
+    <javadoc.release>25</javadoc.release>
+    <javadoc.source>25</javadoc.source>
     <netty.dev.tools.directory>${project.basedir}/../dev-tools/src/main/resources/</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -449,7 +476,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.77.Final</tcnative.version>
+    <tcnative.version>2.0.86.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -470,6 +497,7 @@
     <junit.version>5.14.4</junit.version>
     <junit.platform.version>1.14.0</junit.platform.version>
     <jazzer.version>0.30.0</jazzer.version>
+    <jctools.version>4.0.7</jctools.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
@@ -477,7 +505,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>25.0.3</graalvm.version>
-    <brotli4j.version>1.23.0</brotli4j.version>
+    <brotli4j.version>1.24.0</brotli4j.version>
     <aalto.version>1.3.4</aalto.version>
     <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
@@ -491,6 +519,7 @@
   <modules>
     <module>all</module>
     <module>dev-tools</module>
+    <module>jextract-maven-plugin</module>
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
@@ -559,7 +588,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.10.Final</version>
+        <version>0.0.12.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
@@ -587,7 +616,7 @@
       <dependency>
         <groupId>com.google.protobuf.nano</groupId>
         <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-7</version>
+        <version>3.1.0</version>
       </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
@@ -649,12 +678,12 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.1</version>
       </dependency>
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.11.0</version>
+        <version>1.13.0</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -722,7 +751,12 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>4.0.6</version>
+        <version>${jctools.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jctools</groupId>
+        <artifactId>jctools-core-jdk11</artifactId>
+        <version>${jctools.version}</version>
       </dependency>
 
       <!-- Annotations for IDE integration and analysis -->
@@ -993,6 +1027,18 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initBidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
+                  <justification>Allow applications to customize initialization of bidirectional streams by subclassing.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initUnidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
+                  <justification>Allow applications to customize initialization of unidirectional streams by subclassing.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
                   <regex>true</regex>
                   <package>io\.netty\..*</package>
@@ -1176,7 +1222,7 @@
               <encoding>UTF-8</encoding>
               <sourceDirectories>${basedir}</sourceDirectories>
               <includes>**/*</includes>
-              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
+              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class,**/.github/ghsa/**</excludes>
             </configuration>
             <goals>
               <goal>check</goal>
@@ -1249,7 +1295,7 @@
             <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload -Dio.netty.eventLoopThreads=2</argLine>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
@@ -1585,12 +1631,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -1790,7 +1836,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>flatten-maven-plugin</artifactId>
-          <version>1.2.2</version>
+          <version>1.8.0</version>
         </plugin>
       </plugins>
     </pluginManagement>

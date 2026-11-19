@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 import java.io.Closeable;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.internal.HpackEncoder;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -30,7 +29,6 @@ public class DefaultHttp2HeadersEncoder implements
 
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
-    private ByteBuf tableSizeChangeOutput;
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -60,20 +58,13 @@ public class DefaultHttp2HeadersEncoder implements
      * for testing but violate the RFC if used outside the scope of testing.
      */
     DefaultHttp2HeadersEncoder(SensitivityDetector sensitivityDetector, HpackEncoder hpackEncoder) {
-        this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitiveDetector");
+        this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitivityDetector");
         this.hpackEncoder = checkNotNull(hpackEncoder, "hpackEncoder");
     }
 
     @Override
     public void encodeHeaders(int streamId, Http2Headers headers, ByteBuf buffer) throws Http2Exception {
         try {
-            // If there was a change in the table size, serialize the output from the hpackEncoder
-            // resulting from that change.
-            if (tableSizeChangeOutput != null && tableSizeChangeOutput.isReadable()) {
-                buffer.writeBytes(tableSizeChangeOutput);
-                tableSizeChangeOutput.clear();
-            }
-
             hpackEncoder.encodeHeaders(streamId, buffer, headers, sensitivityDetector);
         } catch (Http2Exception e) {
             throw e;
@@ -84,10 +75,7 @@ public class DefaultHttp2HeadersEncoder implements
 
     @Override
     public void maxHeaderTableSize(long max) throws Http2Exception {
-        if (tableSizeChangeOutput == null) {
-            tableSizeChangeOutput = Unpooled.buffer();
-        }
-        hpackEncoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
+        hpackEncoder.setMaxHeaderTableSize(max);
     }
 
     @Override
@@ -115,9 +103,5 @@ public class DefaultHttp2HeadersEncoder implements
      */
     @Override
     public void close() {
-        if (tableSizeChangeOutput != null) {
-            tableSizeChangeOutput.release();
-            tableSizeChangeOutput = null;
-        }
     }
 }

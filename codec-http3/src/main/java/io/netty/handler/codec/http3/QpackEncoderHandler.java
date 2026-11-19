@@ -36,13 +36,31 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
     private static final QpackException INVALID_LENGTH_STRING_LITERAL =
             QpackException.newStatic(QpackEncoderHandler.class, "decodeStringLiteral(...)",
                     "QPACK - invalid length for STRING_LITERAL");
+    private static final QpackException STRING_LITERAL_TOO_LARGE =
+            QpackException.newStatic(QpackEncoderHandler.class, "checkStringLiteralLength(...)",
+                    "QPACK - string literal exceeds the maximum dynamic table capacity");
     private final QpackHuffmanDecoder huffmanDecoder;
     private final QpackDecoder qpackDecoder;
+    // No single name/value string literal can ever be inserted into the dynamic table if it alone already
+    // exceeds the maximum table capacity, so this also bounds the amount of data that decode(...) will ever
+    // buffer for a single string literal while waiting for more bytes to arrive.
+    private final long maxTableCapacity;
+    // The name of an "Insert With Literal Name" instruction whose value has not been fully received yet. The name
+    // bytes are already consumed from the cumulation, so a value that arrives in many small fragments does not
+    // cause the name to be (Huffman) decoded over and over again.
+    @Nullable
+    private CharSequence pendingName;
     private boolean discard;
 
     QpackEncoderHandler(@Nullable Long maxTableCapacity, QpackDecoder qpackDecoder) {
-        checkInRange(maxTableCapacity == null ? 0 : maxTableCapacity, 0, MAX_UNSIGNED_INT, "maxTableCapacity");
-        huffmanDecoder = new QpackHuffmanDecoder();
+        this(maxTableCapacity, qpackDecoder, new QpackHuffmanDecoder());
+    }
+
+    QpackEncoderHandler(@Nullable Long maxTableCapacity, QpackDecoder qpackDecoder,
+                        QpackHuffmanDecoder huffmanDecoder) {
+        this.maxTableCapacity = checkInRange(
+                maxTableCapacity == null ? 0 : maxTableCapacity, 0, MAX_UNSIGNED_INT, "maxTableCapacity");
+        this.huffmanDecoder = huffmanDecoder;
         this.qpackDecoder = qpackDecoder;
     }
 
@@ -56,6 +74,13 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
             return;
         }
 
+        if (pendingName != null) {
+            // We already decoded the name of an "Insert With Literal Name" instruction and are waiting for the
+            // value. We can only be here if the decoder stream was available when the name was decoded.
+            decodeInsertLiteralValue(ctx, in, Http3.getQpackAttributes(ctx.channel().parent()));
+            return;
+        }
+
         byte b = in.getByte(in.readerIndex());
 
         // 4.3.1. Set Dynamic Table Capacity
@@ -66,13 +91,13 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //+---+---+---+-------------------+
         if ((b & 0b1110_0000) == 0b0010_0000) {
             // new capacity
-            long capacity = QpackUtil.decodePrefixedInteger(in, 5);
-            if (capacity < 0) {
-                // Not enough readable bytes
-                return;
-            }
-
             try {
+                long capacity = QpackUtil.decodePrefixedInteger(in, 5);
+                if (capacity < 0) {
+                    // Not enough readable bytes
+                    return;
+                }
+
                 qpackDecoder.setDynamicTableCapacity(capacity);
             } catch (QpackException e) {
                 handleDecodeFailure(ctx, e, "setDynamicTableCapacity failed.");
@@ -109,14 +134,14 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
                 return;
             }
 
-            CharSequence value = decodeLiteralValue(in);
-            if (value == null) {
-                // Reset readerIndex
-                in.readerIndex(readerIndex);
-                // Not enough readable bytes
-                return;
-            }
             try {
+                CharSequence value = decodeLiteralValue(in);
+                if (value == null) {
+                    // Reset readerIndex
+                    in.readerIndex(readerIndex);
+                    // Not enough readable bytes
+                    return;
+                }
                 qpackDecoder.insertWithNameReference(decoderStream, isStaticTableIndex, nameIdx,
                         value);
             } catch (QpackException e) {
@@ -146,26 +171,24 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
                 // Not enough readable bytes
                 return;
             }
-            if (in.readableBytes() < nameLength) {
-                // Reset readerIndex
-                in.readerIndex(readerIndex);
-                // Not enough readable bytes
-                return;
-            }
 
-            CharSequence name = decodeStringLiteral(in, nameHuffEncoded, nameLength);
-            CharSequence value = decodeLiteralValue(in);
-            if (value == null) {
-                // Reset readerIndex
-                in.readerIndex(readerIndex);
-                // Not enough readable bytes
-                return;
-            }
             try {
-                qpackDecoder.insertLiteral(decoderStream, name, value);
+                checkStringLiteralLength(nameHuffEncoded, nameLength);
+                if (in.readableBytes() < nameLength) {
+                    // Reset readerIndex
+                    in.readerIndex(readerIndex);
+                    // Not enough readable bytes
+                    return;
+                }
+
+                // Remember the name and continue with the value. If the value is not complete yet we will only
+                // continue with the value once more data arrives, so the name is decoded exactly once.
+                pendingName = decodeStringLiteral(in, nameHuffEncoded, nameLength);
             } catch (QpackException e) {
                 handleDecodeFailure(ctx, e, "insertLiteral failed.");
+                return;
             }
+            decodeInsertLiteralValue(ctx, in, qpackAttributes);
             return;
         }
         // 4.3.4. Duplicate
@@ -220,21 +243,59 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         ctx.fireChannelInactive();
     }
 
+    private void decodeInsertLiteralValue(ChannelHandlerContext ctx, ByteBuf in, QpackAttributes qpackAttributes) {
+        assert pendingName != null;
+        try {
+            CharSequence value = decodeLiteralValue(in);
+            if (value == null) {
+                // Not enough readable bytes, keep the name and retry once more data arrives.
+                return;
+            }
+            CharSequence name = pendingName;
+            pendingName = null;
+            qpackDecoder.insertLiteral(qpackAttributes.decoderStream(), name, value);
+        } catch (QpackException e) {
+            handleDecodeFailure(ctx, e, "insertLiteral failed.");
+        }
+    }
+
     private void handleDecodeFailure(ChannelHandlerContext ctx, QpackException cause, String message) {
         discard = true;
+        pendingName = null;
         connectionError(ctx, new Http3Exception(QPACK_ENCODER_STREAM_ERROR, message, cause), true);
     }
 
     @Nullable
     private CharSequence decodeLiteralValue(ByteBuf in) throws QpackException {
-        final boolean valueHuffEncoded = QpackUtil.firstByteEquals(in, (byte) 0b1000_0000);
+        int readerIndex = in.readerIndex();
         int valueLength = decodePrefixedIntegerAsInt(in, 7);
-        if (valueLength < 0 || in.readableBytes() < valueLength) {
+        if (valueLength < 0) {
             // Not enough readable bytes
             return null;
         }
-
+        final boolean valueHuffEncoded = QpackUtil.byteEquals(in, readerIndex, (byte) 0b1000_0000);
+        checkStringLiteralLength(valueHuffEncoded, valueLength);
+        if (in.readableBytes() < valueLength) {
+            // Not enough readable bytes, so reset the readerIndex to the start of the value.
+            in.readerIndex(readerIndex);
+            return null;
+        }
         return decodeStringLiteral(in, valueHuffEncoded, valueLength);
+    }
+
+    private void checkStringLiteralLength(boolean huffmanEncoded, int length) throws QpackException {
+        // A string literal that is larger than the maximum dynamic table capacity can never be inserted into the
+        // dynamic table, so there is no reason to buffer it. This also guards against a peer declaring an
+        // (attacker-controlled) length of up to Integer.MAX_VALUE and forcing this handler to accumulate up to
+        // ~2 GiB per string literal before giving up.
+        //
+        // The `maxTableCapacity` is the decoded bound. If the value is huffman encoded, then
+        // inflate the limit by the max possible huffman expansion.
+        // Actual, precise table size is checked in `QpackDecoderDynamicTable.add()`.
+        final long limit = huffmanEncoded ? (maxTableCapacity * 8 + 4) / 5 : maxTableCapacity;
+        if (length > limit) {
+            throw STRING_LITERAL_TOO_LARGE;
+        }
     }
 
     private CharSequence decodeStringLiteral(ByteBuf in, boolean huffmanEncoded, int length)

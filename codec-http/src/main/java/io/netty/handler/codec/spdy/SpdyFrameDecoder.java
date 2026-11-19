@@ -50,7 +50,9 @@ public class SpdyFrameDecoder {
 
     protected final SpdyFrameDecoderDelegate delegate;
     protected final int spdyVersion;
+    static final int DEFAULT_MAX_NUM_SETTINGS = 64;
     private final int maxChunkSize;
+    private final int maxNumSettings;
 
     private int frameType;
     private State state;
@@ -92,9 +94,18 @@ public class SpdyFrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(SpdyVersion spdyVersion, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
+        this(spdyVersion, delegate, maxChunkSize, DEFAULT_MAX_NUM_SETTINGS);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public SpdyFrameDecoder(SpdyVersion spdyVersion, SpdyFrameDecoderDelegate delegate,
+                            int maxChunkSize, int maxNumSettings) {
         this.spdyVersion = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").version();
         this.delegate = ObjectUtil.checkNotNull(delegate, "delegate");
         this.maxChunkSize = ObjectUtil.checkPositive(maxChunkSize, "maxChunkSize");
+        this.maxNumSettings = ObjectUtil.checkPositive(maxNumSettings, "maxNumSettings");
         state = State.READ_COMMON_HEADER;
     }
 
@@ -249,6 +260,10 @@ public class SpdyFrameDecoder {
                     if ((length & 0x07) != 0 || length >> 3 != numSettings) {
                         state = State.FRAME_ERROR;
                         delegate.readFrameError("Invalid SETTINGS Frame");
+                    } else if (numSettings > maxNumSettings) {
+                        state = State.FRAME_ERROR;
+                        delegate.readFrameError("Invalid SETTINGS Frame (allowed number of settings exceeded: "
+                                + numSettings + " > " + maxNumSettings + ')');
                     } else {
                         state = State.READ_SETTING;
                         delegate.readSettingsFrame(clear);

@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -35,6 +36,11 @@ import java.nio.ByteBuffer;
 final class MsgHdr {
 
     private MsgHdr() { }
+
+    static int iovLength(ByteBuffer memory) {
+        int offset = memory.position() + Native.MSGHDR_OFFSETOF_MSG_IOVLEN;
+        return Native.SIZEOF_SIZE_T == 4 ? memory.getInt(offset) : (int) memory.getLong(offset);
+    }
 
     static void set(ByteBuffer memory, long iovMemory, int iovLength) {
         int memoryPosition = memory.position();
@@ -55,7 +61,7 @@ final class MsgHdr {
         }
     }
 
-    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, ByteBuffer iovMemory, int iovLength,
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, long iovMemory, int iovLength,
                     ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
         int memoryPosition = memory.position();
         memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
@@ -74,19 +80,25 @@ final class MsgHdr {
         long sockAddr = sockAddrMemory == null ? 0 : Buffer.memoryAddress(sockAddrMemory);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, (int) sockAddr);
-            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) Buffer.memoryAddress(iovMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) iovMemory);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, sockAddr);
-            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, iovMemory);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         }
         // No flags (we assume the memory was memset before)
+    }
+
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, ByteBuffer iovMemory, int iovLength,
+                    ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
+        set(memory, sockAddrMemory, addressSize, Buffer.memoryAddress(iovMemory), iovLength,
+                msgControl, cmsgHdrDataOffset, segmentSize);
     }
 
     static void prepSendFd(ByteBuffer memory, int fd, ByteBuffer msgControl,
@@ -126,7 +138,16 @@ final class MsgHdr {
         }
     }
 
-    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
-        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset);
+    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) throws IOException {
+        int memoryPosition = memory.position();
+        long msgControlLen = Native.SIZEOF_SIZE_T == 4
+                ? memory.getInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN) & 0xFFFFFFFFL
+                : memory.getLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN);
+        if (msgControlLen <= 0) {
+            throw new IOException("Received no ancillary data while expecting a SCM_RIGHTS file descriptor");
+        }
+        int msgFlags = memory.getInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_FLAGS);
+        boolean truncated = (msgFlags & Native.MSG_CTRUNC) != 0;
+        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset, truncated);
     }
 }

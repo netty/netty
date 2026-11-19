@@ -91,6 +91,53 @@ public class SctpMessageCompletionHandlerTest {
     }
 
     @Test
+    public void testBufferedBytesLimited() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertEquals(1, buffer.refCnt());
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 2), buffer2)));
+        assertEquals(1, buffer2.refCnt());
+
+        assertThrows(CodecException.class, () ->
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer3)));
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+        assertEquals(0, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testBufferedBytesReleasedAfterCompletion() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 5, 6, 7, 8 });
+        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 9, 10, 11, 12, 13, 14, 15, 16 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertTrue(channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer2)));
+        SctpMessage read = channel.readInbound();
+        assertEquals(8, read.content().readableBytes());
+        read.release();
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 2), buffer3)));
+        assertEquals(1, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+        assertEquals(0, buffer3.refCnt());
+    }
+
+    @Test
+    public void testBufferedBytesLimitMustBePositive() {
+        assertThrows(IllegalArgumentException.class, () -> new SctpMessageCompletionHandler(1, 1, 0));
+    }
+
+    @Test
     public void testNotFragmented() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler());
         ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.AppendableCharSequence;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,7 +106,12 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe stompHeadersSubframe = (StompHeadersSubframe) msg;
             ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(stompHeadersSubframe));
-            encodeHeaders(stompHeadersSubframe, buf);
+            try {
+                encodeHeaders(stompHeadersSubframe, buf);
+            } catch (Exception e) {
+                buf.release();
+                PlatformDependent.throwException(e);
+            }
 
             out.add(convertHeadersSubFrame(stompHeadersSubframe, buf));
         } else if (msg instanceof StompContentSubframe) {
@@ -162,7 +168,12 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     private ByteBuf encodeFullFrame(StompFrame frame, ChannelHandlerContext ctx) {
         int contentReadableBytes = frame.content().readableBytes();
         ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(frame) + contentReadableBytes);
-        encodeHeaders(frame, buf);
+        try {
+            encodeHeaders(frame, buf);
+        } catch (Exception e) {
+            buf.release();
+            PlatformDependent.throwException(e);
+        }
 
         if (contentReadableBytes > 0) {
             buf.writeBytes(frame.content());
@@ -180,19 +191,27 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         LinkedHashMap<CharSequence, CharSequence> cache = ESCAPE_HEADER_KEY_CACHE.get();
         for (Entry<CharSequence, CharSequence> entry : frame.headers()) {
             CharSequence headerKey = entry.getKey();
+            CharSequence headerValue = entry.getValue();
+            if (headerKey.length() == 0) {
+                throw new IllegalArgumentException("STOMP " + command + " contains empty header name");
+            }
             if (shouldEscape) {
                 CharSequence cachedHeaderKey = cache.get(headerKey);
                 if (cachedHeaderKey == null) {
-                    cachedHeaderKey = escape(headerKey);
+                    cachedHeaderKey = escape(command, "header name", headerKey);
                     cache.put(headerKey, cachedHeaderKey);
                 }
                 headerKey = cachedHeaderKey;
+                headerValue = escape(command, "header value", headerValue);
+            } else {
+                // For CONNECT/CONNECTED: don't escape but REJECT illegal characters
+                validateNoIllegalCharacters(command, headerKey, "header name");
+                validateNoIllegalCharacters(command, headerValue, "header value");
             }
 
             ByteBufUtil.writeUtf8(buf, headerKey);
             buf.writeByte(StompConstants.COLON);
 
-            CharSequence headerValue = shouldEscape? escape(entry.getValue()) : entry.getValue();
             ByteBufUtil.writeUtf8(buf, headerValue);
             buf.writeByte(StompConstants.LF);
         }
@@ -215,7 +234,21 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         return command != StompCommand.CONNECT && command != StompCommand.CONNECTED;
     }
 
-    private static CharSequence escape(CharSequence input) {
+    private static void validateNoIllegalCharacters(StompCommand command, CharSequence value, String type) {
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\n' || c == '\r' || c == ':' || c == '\0') {
+                throw newIllegalCharacterException(command, type, i);
+            }
+        }
+    }
+
+    private static IllegalArgumentException newIllegalCharacterException(StompCommand command, String type, int index) {
+        return new IllegalArgumentException(
+                "STOMP " + command + " " + type + " contains illegal character at index " + index);
+    }
+
+    private static CharSequence escape(StompCommand command, String type, CharSequence input) {
         AppendableCharSequence builder = null;
         for (int i = 0; i < input.length(); i++) {
             char chr = input.charAt(i);
@@ -231,6 +264,9 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
             } else if (chr == '\r') {
                 builder = escapeBuilder(builder, input, i);
                 builder.append("\\r");
+            } else if (chr == '\0') {
+                // The NUL character has no escape and is always illegal.
+                throw newIllegalCharacterException(command, type, i);
             } else if (builder != null) {
                 builder.append(chr);
             }

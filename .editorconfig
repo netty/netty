@@ -1,0 +1,42 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.java]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+[*.c]
+indent_style = space
+indent_size = 4
+
+[*.h]
+indent_style = space
+indent_size = 4
+
+[*.xml]
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,js,css}]
+indent_style = space
+indent_size = 2
+
+[*.{md,txt}]
+indent_style = space
+indent_size = 2
+
+[*.properties]
+indent_style = space
+indent_size = 2
+
+[*.sh]
+indent_style = space
+indent_size = 4
+[Makefile]
+indent_style = tab

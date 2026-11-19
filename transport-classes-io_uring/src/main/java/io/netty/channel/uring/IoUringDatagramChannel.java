@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelShutdownType;
@@ -30,6 +31,8 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.channel.unix.Socket;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
@@ -45,7 +48,10 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -131,7 +137,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+    protected void doShutdown0(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -148,13 +154,22 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     @Override
     public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            joinGroup(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(
-                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
+            joinGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
+    }
+
+    /**
+     * Returns the interface to use when none was given: the one set via
+     * {@link io.netty.channel.ChannelOption#IP_MULTICAST_IF} or, if unset, the interface of the local address.
+     */
+    private NetworkInterface defaultMulticastInterface() throws SocketException {
+        NetworkInterface iface = config.getOption(ChannelOption.IP_MULTICAST_IF);
+        if (iface == null) {
+            iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+        }
+        return iface;
     }
 
     @Override
@@ -183,9 +198,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     @Override
     public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(
-                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
+            leaveGroup(multicastAddress, defaultMulticastInterface(), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -228,9 +241,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     public void block(
             InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
         try {
-            block(multicastAddress,
-                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
-                    sourceToBlock, promise);
+            block(multicastAddress, defaultMulticastInterface(), sourceToBlock, promise);
         } catch (Throwable e) {
             promise.setFailure(e);
         }
@@ -466,18 +477,25 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-        ChannelOutboundBuffer outboundBuffer = outboundBuffer();
-
+    boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
+        // data is the MsgHdrMemoryArray index that scheduleSendmsg(...) submitted, so it is always within
+        // [0, sendmsgHdrs.capacity()) (256) and never uses the overflow id range. Narrowing to int is safe.
+        assert data >= 0 && data < sendmsgHdrs.capacity();
+        int idx = (int) data;
         // Reset the id as this write was completed and so don't need to be cancelled later.
-        sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
-        sendmsgResArray[data] = res;
+        sendmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
+        sendmsgResArray[idx] = res;
         // Store the result so we can handle it as soon as we have no outstanding writes anymore.
         if (outstanding == 0) {
             // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer
             boolean writtenSomething = false;
             int numWritten = sendmsgHdrs.length();
             sendmsgHdrs.clear();
+            ChannelOutboundBuffer outboundBuffer = outboundBuffer();
+            if (retainedWriteBuffers != null) {
+                // Close, shutdownOutput() or an inactive flush may already have failed this batch.
+                return true;
+            }
             for (int i = 0; i < numWritten; i++) {
                 writtenSomething |= removeFromOutboundBuffer(
                         outboundBuffer, sendmsgResArray[i], "io_uring sendmsg");
@@ -505,7 +523,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    void connectComplete(byte op, int res, int flags, short data) {
+    void connectComplete(byte op, int res, int flags, long data) {
         if (res >= 0) {
             connected = true;
         }
@@ -554,20 +572,49 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             // before we can write again.
             return false;
         }
-        hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
-
-        int fd = fd().intValue();
-        int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-        IoRegistration registration = registration();
-        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
-        long id = registration.submit(ops);
-        if (id == 0) {
-            // Submission failed we don't used the MsgHdrMemory and so should give it back.
-            sendmsgHdrs.restoreNextHdr(hdr);
-            return false;
+        long id = 0;
+        try {
+            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+            int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
+            IoUringIoOps ops = IoUringIoOps.newSendmsg(
+                    fd().intValue(), (byte) 0, msgFlags, hdr.address(), hdr.idx());
+            id = submitWrite(ops);
+            if (id == 0) {
+                return false;
+            }
+            sendmsgHdrs.setId(hdr.idx(), id);
+            return true;
+        } finally {
+            if (id == 0) {
+                sendmsgHdrs.restoreNextHdr(hdr);
+            }
         }
-        sendmsgHdrs.setId(hdr.idx(), id);
-        return true;
+    }
+
+    @Override
+    List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+        final int count = (int) currentWrite.userData() + 1;
+        final List<ReferenceCounted> buffers = new ArrayList<>(count);
+        try {
+            buffer.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
+                @Override
+                public boolean processMessage(Object msg) {
+                    int index = buffers.size();
+                    buffers.add(sendmsgHdrs.id(index) != MsgHdrMemoryArray.NO_ID ?
+                            ((ReferenceCounted) msg).retain() : null);
+                    return buffers.size() < count;
+                }
+            });
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        return buffers;
+    }
+
+    @Override
+    void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
+        // Batched SENDMSG requests may complete out of order; clear and release only the slot indexed by data.
+        ReferenceCountUtil.safeRelease(buffers.set((int) data, null));
     }
 
     @Override

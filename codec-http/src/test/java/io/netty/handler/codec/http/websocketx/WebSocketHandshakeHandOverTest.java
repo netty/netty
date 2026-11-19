@@ -299,7 +299,7 @@ public class WebSocketHandshakeHandOverTest {
             Object srcData = srcChannel.readOutbound();
 
             if (srcData != null) {
-                assertTrue(srcData instanceof ByteBuf);
+                assertInstanceOf(ByteBuf.class, srcData);
                 ByteBuf srcBuf = (ByteBuf) srcData;
                 try {
                     if (mergedBuffer == null) {

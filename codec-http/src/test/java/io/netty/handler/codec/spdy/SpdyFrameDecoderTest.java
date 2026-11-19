@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
+import static io.netty.handler.codec.spdy.SpdyFrameDecoder.DEFAULT_MAX_NUM_SETTINGS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -818,6 +819,31 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(0); // invalid num_settings
+        for (int i = 0; i < numSettings; i++) {
+            buf.writeByte(idFlags);
+            buf.writeMedium(id);
+            buf.writeInt(value);
+        }
+
+        decoder.decode(buf);
+        verify(delegate).readFrameError(anyString());
+        assertFalse(buf.isReadable());
+        buf.release();
+    }
+
+    @Test
+    public void testSpdySettingsFrameContainTooManySettings() throws Exception {
+        short type = 4;
+        byte flags = 0;
+        int numSettings = DEFAULT_MAX_NUM_SETTINGS * 2;
+        int length = 8 * numSettings + 4;
+        byte idFlags = 0;
+        int id = RANDOM.nextInt() & 0x00FFFFFF;
+        int value = RANDOM.nextInt();
+
+        ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
+        encodeControlFrameHeader(buf, type, flags, length);
+        buf.writeInt(numSettings);
         for (int i = 0; i < numSettings; i++) {
             buf.writeByte(idFlags);
             buf.writeMedium(id);

@@ -24,6 +24,7 @@ import java.util.SplittableRandom;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -33,6 +34,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
+
+    @Test
+    public void testVarHandleQueuesWhenUnsafeIsUnavailable() {
+        assumeTrue(!PlatformDependent.hasUnsafe() && PlatformDependent.hasJctoolsVarHandle());
+
+        assertEquals("org.jctools.queues.varhandle.MpscUnboundedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscChunkedVarHandleArrayQueue",
+                PlatformDependent.newMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.SpscLinkedVarHandleQueue",
+                PlatformDependent.newSpscQueue().getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpscVarHandleArrayQueue",
+                PlatformDependent.newFixedMpscQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.unpadded.MpscVarHandleUnpaddedArrayQueue",
+                PlatformDependent.newFixedMpscUnpaddedQueue(16).getClass().getName());
+        assertEquals("org.jctools.queues.varhandle.MpmcVarHandleArrayQueue",
+                PlatformDependent.newFixedMpmcQueue(16).getClass().getName());
+    }
+
     @Test
     public void testEqualsConsistentTime() {
         testEquals(new EqualityChecker() {
@@ -127,6 +147,28 @@ public class PlatformDependentTest {
 
         assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, 0));
         assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, -1));
+    }
+
+    @Test
+    public void testSplittableRandomNextBytesFallbackFillsEveryByte() {
+        long seed = r.nextLong();
+        for (int len = 0; len <= 64; len++) {
+            byte[] actual = new byte[len];
+            PlatformDependent.splittableRandomNextBytesFallback(new SplittableRandom(seed), actual);
+
+            // Same layout as SplittableRandom.nextBytes: one nextLong() per 8 bytes, low byte first,
+            // and one more for the remaining bytes.
+            SplittableRandom rng = new SplittableRandom(seed);
+            byte[] expected = new byte[len];
+            long val = 0;
+            for (int i = 0; i < len; i++) {
+                if ((i & 7) == 0) {
+                    val = rng.nextLong();
+                }
+                expected[i] = (byte) (val >>> ((i & 7) * Byte.SIZE));
+            }
+            assertArrayEquals(expected, actual, "length " + len);
+        }
     }
 
     @Test

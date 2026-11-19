@@ -24,6 +24,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -150,6 +152,99 @@ public class HttpContentDecoderTest {
         assertEquals("42", lastContent.trailingHeaders().get("My-Trailer"));
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTruncatedGzipResponseFails() throws Exception {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor(0);
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        // The body is delimited by the end of the connection, so only the compressed stream can tell that the
+        // connection was closed too early.
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
+        // drop the CRC32 and ISIZE footer
+        ByteBuf buf = Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII), GZ_HELLO_WORLD);
+        buf.writerIndex(buf.writerIndex() - 8);
+        assertTrue(channel.writeInbound(buf));
+
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+
+        assertThrows(DecompressionException.class, channel::finish);
+        // the truncated body is not completed
+        for (;;) {
+            Object o = channel.readInbound();
+            if (o == null) {
+                break;
+            }
+            assertFalse(o instanceof LastHttpContent);
+            ReferenceCountUtil.release(o);
+        }
+    }
+
+    @Test
+    public void testIncompleteBodyDoesNotFailNextMessage() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpContentDecompressor(0));
+
+        HttpResponse first = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        first.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        assertTrue(channel.writeInbound(first));
+        // drop the CRC32 and ISIZE footer, and never complete the message
+        ByteBuf truncated = Unpooled.wrappedBuffer(GZ_HELLO_WORLD, 0, GZ_HELLO_WORLD.length - 8);
+        assertTrue(channel.writeInbound(new DefaultHttpContent(truncated)));
+
+        // A new message starts, the incomplete body of the previous one must not fail it.
+        HttpResponse second = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertTrue(channel.writeInbound(second));
+
+        assertSame(first, channel.readInbound());
+        HttpContent content = channel.readInbound();
+        assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
+        content.release();
+        assertSame(second, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testMalformedChunkFailurePropagated() throws Exception {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor(0);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        String headers = "HTTP/1.1 200 OK\r\n"
+                + "Transfer-Encoding: chunked\r\n"
+                + "Content-Encoding: gzip\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII)));
+        String chunkLength = Integer.toHexString(GZ_HELLO_WORLD.length);
+        channel.writeInbound(Unpooled.copiedBuffer(chunkLength + "\r\n", CharsetUtil.US_ASCII));
+        channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD));
+        // the chunk is not terminated by CRLF, so HttpObjectDecoder fails the message
+        channel.writeInbound(Unpooled.copiedBuffer("XX0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+
+        LastHttpContent last = null;
+        for (;;) {
+            HttpContent content = channel.readInbound();
+            assertNotNull(content);
+            content.release();
+            if (content instanceof LastHttpContent) {
+                last = (LastHttpContent) content;
+                break;
+            }
+        }
+        assertTrue(last.decoderResult().isFailure());
+        assertInstanceOf(InvalidChunkTerminationException.class, last.decoderResult().cause());
+        assertHasInboundMessages(channel, false);
         assertFalse(channel.finish());
     }
 
@@ -748,33 +843,33 @@ public class HttpContentDecoderTest {
 
     @Test
     public void testTransferCodingGZIP() throws Exception {
-        String requestStr = "POST / HTTP/1.1\r\n" +
-                "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Connection: close\r\n" +
                 "Transfer-Encoding: gzip\r\n" +
                 "\r\n";
-        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
 
-        channel.writeInbound(Unpooled.copiedBuffer(requestStr.getBytes()));
+        channel.writeInbound(Unpooled.copiedBuffer(responseStr.getBytes()));
         channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD));
 
-        HttpRequest request = channel.readInbound();
-        assertTrue(request.decoderResult().isSuccess());
-        assertFalse(request.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertFalse(response.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
 
         HttpContent content = channel.readInbound();
         assertTrue(content.decoderResult().isSuccess());
         assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
         content.release();
 
+        assertTrue(channel.finish());
         LastHttpContent lastHttpContent = channel.readInbound();
         assertTrue(lastHttpContent.decoderResult().isSuccess());
         lastHttpContent.release();
 
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
-        assertFalse(channel.finish());
         channel.releaseInbound();
     }
 

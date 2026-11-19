@@ -34,6 +34,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
@@ -164,6 +165,80 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void gracefulShutdownWritesAllDataOfFramesMergedWhileWaitingForTheWindow() throws Exception {
+        // Use the real frame writer so that we can see what is written to the channel.
+        EmbeddedChannel ch = new EmbeddedChannel(Http2FrameCodecBuilder.forServer().build());
+        try {
+            Http2FrameInboundWriter inboundWriter = new Http2FrameInboundWriter(ch);
+            ch.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+            // The client accepts only 8 bytes per stream until it sends a WINDOW_UPDATE.
+            inboundWriter.writeInboundSettings(new Http2Settings().initialWindowSize(8));
+            inboundWriter.writeInboundSettingsAck();
+            inboundWriter.writeInboundHeaders(3, request, 0, true);
+            Http2FrameStream stream = null;
+            for (Object msg; (msg = ch.readInbound()) != null;) {
+                if (msg instanceof Http2HeadersFrame) {
+                    stream = ((Http2HeadersFrame) msg).stream();
+                }
+                ReferenceCountUtil.release(msg);
+            }
+            assertNotNull(stream);
+            // Used to parse what was written, the handlers are removed once the channel is closed.
+            final ChannelHandlerContext readerCtx = ch.pipeline().firstContext();
+
+            // The two DATA frames are merged in the flow controller. Only the first one fits into the window.
+            ch.write(new DefaultHttp2HeadersFrame(response).stream(stream));
+            Future<Void> first = ch.write(new DefaultHttp2DataFrame(bb("abcdefgh")).stream(stream));
+            Future<Void> last = ch.writeAndFlush(new DefaultHttp2DataFrame(bb("ijklmnop"), true).stream(stream));
+            assertTrue(first.isSuccess());
+            assertFalse(last.isDone());
+
+            // Graceful shutdown: the connection must stay open until the stream is done. Don't use
+            // EmbeddedChannel.close() as it also cancels the scheduled graceful shutdown timeout and closes.
+            Future<Void> closeFuture = ch.pipeline().close();
+            assertFalse(closeFuture.isDone());
+            assertTrue(ch.isActive());
+
+            // The client opens the window, so the rest of the data is written and the connection is closed.
+            inboundWriter.writeInboundWindowUpdate(3, 8);
+            assertTrue(last.isSuccess());
+            assertTrue(closeFuture.isDone());
+
+            // Check the END_STREAM DATA frame was flushed to the channel and not dropped by the close.
+            final StringBuilder data = new StringBuilder();
+            final AtomicBoolean endOfStream = new AtomicBoolean();
+            DefaultHttp2FrameReader reader = new DefaultHttp2FrameReader();
+            CompositeByteBuf written = Unpooled.compositeBuffer();
+            try {
+                for (ByteBuf buf; (buf = ch.readOutbound()) != null;) {
+                    written.addComponent(true, buf);
+                }
+                int readable;
+                do {
+                    readable = written.readableBytes();
+                    reader.readFrame(readerCtx, written, new Http2FrameAdapter() {
+                        @Override
+                        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf buf, int padding,
+                                              boolean endStream) {
+                            data.append(buf.toString(CharsetUtil.US_ASCII));
+                            endOfStream.compareAndSet(false, endStream);
+                            return buf.readableBytes() + padding;
+                        }
+                    });
+                    // Stop if the rest is a truncated frame, the assertions below then fail instead of looping forever.
+                } while (written.isReadable() && written.readableBytes() < readable);
+            } finally {
+                written.release();
+                reader.close();
+            }
+            assertEquals("abcdefghijklmnop", data.toString());
+            assertTrue(endOfStream.get());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     public void stateChanges() throws Exception {
         frameInboundWriter.writeInboundHeaders(1, request, 31, true);
 
@@ -242,7 +317,7 @@ public class Http2FrameCodecTest {
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
         new Http2FrameCodec(enc, dec, new Http2Settings(), false, true) {
             @Override
-            protected Http2StreamFrame newHttp2UnknownFrame(byte frameType,
+            protected Http2StreamFrame newHttp2UnknownFrame(short frameType,
                                                       int streamId,
                                                       Http2Flags flags,
                                                       ByteBuf payload) {
@@ -313,6 +388,30 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeRstStream(eqFrameCodecCtx(), eq(3), eq(314L), anyChannelPromise());
         assertEquals(State.CLOSED, stream.state());
         assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void validateRequiredPseudoHeadersOptionRejectsMalformedRequest() throws Exception {
+        // Verify the builder option is propagated into the decoder end-to-end.
+        setUp(Http2FrameCodecBuilder.forServer().validateRequiredPseudoHeaders(true), new Http2Settings());
+
+        Http2Headers malformed = new DefaultHttp2Headers().method(HttpMethod.GET.asciiName());
+        frameInboundWriter.writeInboundHeaders(3, malformed, 31, false);
+
+        // The malformed request (no :scheme/:path) must be rejected with a PROTOCOL_ERROR stream error.
+        Http2FrameStreamException e = assertThrows(Http2FrameStreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
+        // It must not be delivered as a HEADERS frame.
+        Object msg;
+        while ((msg = inboundHandler.readInboundMessageOrUserEvent()) != null) {
+            assertFalse(msg instanceof Http2HeadersFrame);
+            ReferenceCountUtil.release(msg);
+        }
     }
 
     @Test
@@ -405,7 +504,7 @@ public class Http2FrameCodecTest {
         // handle the case where unknown frames are sent before a stream is created,
         // for example: HTTP/2 GREASE testing
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 0, new Http2Flags(), debugData);
         channel.flush();
 
         assertEquals(0, debugData.refCnt());
@@ -415,7 +514,7 @@ public class Http2FrameCodecTest {
     @Test
     public void unknownFrameOnMissingStream() throws Exception {
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 101, new Http2Flags(), debugData);
         channel.flush();
 
         assertEquals(0, debugData.refCnt());
@@ -450,7 +549,7 @@ public class Http2FrameCodecTest {
         frameInboundWriter.writeInboundSettings(new Http2Settings());
 
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 101, new Http2Flags(), debugData);
 
         channel.pipeline().remove("combine");
         channel.flushInbound();
@@ -632,8 +731,8 @@ public class Http2FrameCodecTest {
         final Http2FrameStream stream = frameCodec.newStream();
 
         ByteBuf buffer = Unpooled.buffer().writeByte(1);
-        DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
-                (byte) 20, new Http2Flags().ack(true), buffer);
+    DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
+            (short) 20, new Http2Flags().ack(true), buffer);
         unknownFrame.stream(stream);
         channel.write(unknownFrame);
 

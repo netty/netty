@@ -24,6 +24,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
 
 import java.util.ArrayList;
@@ -105,6 +106,7 @@ public class WebSocketClientExtensionHandler implements ChannelInboundHandler, C
                             rsv = rsv | validExtension.rsv();
                             validExtensions.add(validExtension);
                         } else {
+                            ReferenceCountUtil.release(response);
                             throw new CodecException(
                                     "invalid WebSocket Extension handshake for \"" + extensionsHeader + '"');
                         }

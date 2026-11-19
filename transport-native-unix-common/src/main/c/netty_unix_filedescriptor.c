@@ -136,7 +136,9 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            // maxBytesToWrite becomes negative once the first buffer was bigger than it, so we need to compare it
+            // as signed value. Otherwise it would be converted to a huge unsigned value and the limit is ignored.
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -159,7 +161,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -182,7 +184,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -205,7 +207,7 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
-            if (bytesLength > maxBytesToWrite && i != offset) {
+            if ((jlong) bytesLength > maxBytesToWrite && i != offset) {
               length = i - offset;
               break;
             }
@@ -237,35 +239,41 @@ static jint netty_unix_filedescriptor_readAddress(JNIEnv* env, jclass clazz, jin
 
 static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
     int fd[2];
+#ifdef __APPLE__
+    //  'pipe2' is only available on macOS 27.0 or newer
+    if (__builtin_available (macOS 27.0, *)) {
+#endif // __APPLE__
     if (pipe2) {
         // we can just use pipe2 and so save extra syscalls;
         if (pipe2(fd, O_NONBLOCK) != 0) {
             return -errno;
         }
-    } else {
-         if (pipe(fd) == 0) {
-            // Read current flags and OR-ing in O_NONBLOCK to preserve old flags as well.
-            int flags0 = fcntl(fd[0], F_GETFL, 0);
-            if (flags0 < 0 || fcntl(fd[0], F_SETFL, flags0 | O_NONBLOCK) < 0) {
-                int err = errno;
-                close(fd[0]);
-                close(fd[1]);
-                return -err;
-            }
-            int flags1 = fcntl(fd[1], F_GETFL, 0);
-            if (flags1 < 0 || fcntl(fd[1], F_SETFL, flags1 | O_NONBLOCK) < 0) {
-                int err = errno;
-                close(fd[0]);
-                close(fd[1]);
-                return -err;
-            }
-         } else {
-            return -errno;
+        // encode the fds into a 64 bit value
+        return (((jlong) fd[0]) << 32) | fd[1];
+     }
+#ifdef __APPLE__
+     }
+#endif // __APPLE__
+     if (pipe(fd) == 0) {
+         // Read current flags and OR-ing in O_NONBLOCK to preserve old flags as well.
+         int flags0 = fcntl(fd[0], F_GETFL, 0);
+         if (flags0 < 0 || fcntl(fd[0], F_SETFL, flags0 | O_NONBLOCK) < 0) {
+             int err = errno;
+             close(fd[0]);
+             close(fd[1]);
+             return -err;
          }
-    }
-
-    // encode the fds into a 64 bit value
-    return (((jlong) fd[0]) << 32) | fd[1];
+         int flags1 = fcntl(fd[1], F_GETFL, 0);
+         if (flags1 < 0 || fcntl(fd[1], F_SETFL, flags1 | O_NONBLOCK) < 0) {
+             int err = errno;
+             close(fd[0]);
+             close(fd[1]);
+             return -err;
+         }
+         // encode the fds into a 64 bit value
+         return (((jlong) fd[0]) << 32) | fd[1];
+     }
+     return -errno;
 }
 // JNI Registered Methods End
 
@@ -306,7 +314,7 @@ jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     if (cls == NULL) {
         goto done;
     }
- 
+
     // Get the method id for Buffer.position() and Buffer.limit(). These are used as fallback if
     // it is not possible to obtain the position and limit using the fields directly.
     NETTY_JNI_UTIL_GET_METHOD(env, cls, posId, "position", "()I", done);

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2026 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>netty5-jextract-maven-plugin</artifactId>
+  <packaging>maven-plugin</packaging>
+
+  <name>Netty/Build/Jextract Maven Plugin</name>
+  <description>
+    Generates java.lang.foreign (FFM) bindings from C headers by driving a pre-installed
+    jextract binary. Generation is on-demand; the produced sources are committed to git so
+    ordinary builds never require jextract.
+  </description>
+
+  <properties>
+    <!-- Build tool, not a published API: opt out of the checks that do not apply. -->
+    <revapi.skip>true</revapi.skip>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!--
+      This is a Maven plugin that runs inside Maven's own JVM using only plain Java
+      (ProcessBuilder). It needs none of the Java 25 / FFM features the transport modules do, so
+      it targets Java 17. This also keeps its bytecode readable by maven-plugin-plugin's descriptor
+      generator, whose bundled ASM cannot parse Java 25 (class file major version 69) bytecode.
+    -->
+    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <!-- Coordinates for the Maven APIs we compile against. -->
+    <mavenPlugin.api.version>3.9.16</mavenPlugin.api.version>
+    <mavenPlugin.tools.version>3.15.2</mavenPlugin.tools.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>${mavenPlugin.api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>${mavenPlugin.api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugin-tools</groupId>
+      <artifactId>maven-plugin-annotations</artifactId>
+      <version>${mavenPlugin.tools.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <!-- @Nullable for parameters/fields that deliberately tolerate null (version managed by parent). -->
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>${mavenPlugin.tools.version}</version>
+        <configuration>
+          <goalPrefix>jextract</goalPrefix>
+        </configuration>
+        <executions>
+          <execution>
+            <id>default-descriptor</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>descriptor</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!--
+          The parent binds maven-jar-plugin to a manifestFile produced by maven-bundle-plugin.
+          maven-bundle-plugin only supports jar/bundle packaging, so for this maven-plugin module
+          no such manifest is generated; override the execution to let the jar plugin build its
+          own manifest (the plugin descriptor is already written into target/classes).
+        -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration combine.self="override">
+              <archive>
+                <addMavenDescriptor>true</addMavenDescriptor>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

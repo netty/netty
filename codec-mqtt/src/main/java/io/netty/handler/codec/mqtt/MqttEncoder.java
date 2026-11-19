@@ -29,6 +29,8 @@ import java.util.List;
 import static io.netty.buffer.ByteBufUtil.*;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.getMqttVersion;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidClientId;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidPublishTopicName;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidUserName;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.setMqttVersion;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
 import static io.netty.handler.codec.mqtt.MqttProperties.ASSIGNED_CLIENT_IDENTIFIER;
@@ -68,6 +70,9 @@ import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
+
+    // A Variable Byte Integer uses at most four bytes, which limits it to 268,435,455.
+    private static final int MAX_VARIABLE_LENGTH_INT = 268_435_455;
 
     private MqttEncoder() {
         super(MqttMessage.class);
@@ -158,8 +163,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         // Client id
         String clientIdentifier = payload.clientIdentifier();
-        if (!isValidClientId(mqttVersion, DEFAULT_MAX_CLIENT_ID_LENGTH, clientIdentifier)) {
-            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
+        if (!isValidClientId(mqttVersion, DEFAULT_MAX_CLIENT_ID_LENGTH, clientIdentifier, false)) {
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier");
         }
         int clientIdentifierBytes = utf8Bytes(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes;
@@ -170,6 +175,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         byte[] willMessage = payload.willMessageInBytes();
         byte[] willMessageBytes = willMessage != null ? willMessage : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.isWillFlag()) {
+            if (!isValidPublishTopicName(willTopic)) {
+                throw new MqttIdentifierRejectedException("invalid willTopic");
+            }
             payloadBufferSize += 2 + willTopicBytes;
             payloadBufferSize += 2 + willMessageBytes.length;
         }
@@ -177,6 +185,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         String userName = payload.userName();
         int userNameBytes = nullableUtf8Bytes(userName);
         if (variableHeader.hasUserName()) {
+            if (!isValidUserName(userName)) {
+                throw new MqttIdentifierRejectedException("invalid userName");
+            }
             payloadBufferSize += 2 + userNameBytes;
         }
 
@@ -271,9 +282,11 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 message.variableHeader().properties());
 
         try {
-            ByteBuf buf = ctx.alloc().buffer(4 + propertiesBuf.readableBytes());
+            final int variablePartSize = 2 + propertiesBuf.readableBytes();
+            final int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+            ByteBuf buf = ctx.alloc().buffer(fixedHeaderBufferSize + variablePartSize);
             buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
-            writeVariableLengthInt(buf, 2 + propertiesBuf.readableBytes());
+            writeVariableLengthInt(buf, variablePartSize);
             buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
             buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
             buf.writeBytes(propertiesBuf);
@@ -421,13 +434,18 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             MqttUnsubAckMessage message) {
         if (message.variableHeader() instanceof  MqttMessageIdAndPropertiesVariableHeader) {
             MqttVersion mqttVersion = getMqttVersion(ctx);
+            // Reason Codes were introduced in MQTT 5.0 only. MQTT 3.1.1 (and 3.1) UNSUBACK packets
+            // have no payload, so reason codes must be suppressed for older protocol versions
+            // even when the caller populated them via MqttMessageBuilders.
+            final boolean writeReasonCodes = mqttVersion == MqttVersion.MQTT_5;
             ByteBuf propertiesBuf = encodePropertiesIfNeeded(mqttVersion,
                     ctx.alloc(),
                     message.idAndPropertiesVariableHeader().properties());
             try {
                 int variableHeaderBufferSize = 2 + propertiesBuf.readableBytes();
                 MqttUnsubAckPayload payload = message.payload();
-                int payloadBufferSize = payload == null ? 0 : payload.unsubscribeReasonCodes().size();
+                int payloadBufferSize = writeReasonCodes && payload != null
+                        ? payload.unsubscribeReasonCodes().size() : 0;
                 int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
                 int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
                 ByteBuf buf = ctx.alloc().buffer(fixedHeaderBufferSize + variablePartSize);
@@ -436,7 +454,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 buf.writeShort(message.variableHeader().messageId());
                 buf.writeBytes(propertiesBuf);
 
-                if (payload != null) {
+                if (writeReasonCodes && payload != null) {
                     for (Short reasonCode : payload.unsubscribeReasonCodes()) {
                         buf.writeByte(reasonCode);
                     }
@@ -460,6 +478,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         ByteBuf payload = message.payload().duplicate();
 
         String topicName = variableHeader.topicName();
+        if (!isValidPublishTopicName(topicName)) {
+            throw new MqttIdentifierRejectedException("invalid topicName");
+        }
         int topicNameBytes = utf8Bytes(topicName);
 
         ByteBuf propertiesBuf = encodePropertiesIfNeeded(mqttVersion,
@@ -716,6 +737,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static void writeVariableLengthInt(ByteBuf buf, int num) {
+        checkVariableLengthInt(num);
         do {
             int digit = num & 0x7F;
             num >>>= 7;
@@ -753,7 +775,16 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         buf.setShort(writerIndex, utf8Length);
     }
 
+    private static void checkVariableLengthInt(int num) {
+        // A negative value means that the computed size overflowed.
+        if (num < 0 || num > MAX_VARIABLE_LENGTH_INT) {
+            throw new EncoderException("Variable Byte Integer out of range: " + num +
+                    " (max: " + MAX_VARIABLE_LENGTH_INT + ')');
+        }
+    }
+
     private static int getVariableLengthInt(int num) {
+        checkVariableLengthInt(num);
         if (num < 128) {
             return 1;
         }

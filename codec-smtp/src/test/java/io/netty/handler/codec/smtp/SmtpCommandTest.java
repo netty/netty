@@ -16,11 +16,14 @@
 package io.netty.handler.codec.smtp;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SmtpCommandTest {
@@ -45,5 +48,13 @@ public class SmtpCommandTest {
         assertFalse(SmtpCommand.HELO.isContentExpected());
         assertFalse(SmtpCommand.HELP.isContentExpected());
         assertFalse(SmtpCommand.valueOf("DATA2").isContentExpected());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\r", "\n", "\r\n", "\n\r"})
+    public void mustRejectCRLFInCommandName(String sep) {
+        assertThrows(IllegalArgumentException.class, () -> SmtpCommand.valueOf(sep + "EHLO"));
+        assertThrows(IllegalArgumentException.class, () -> SmtpCommand.valueOf("EH" + sep + "LO"));
+        assertThrows(IllegalArgumentException.class, () -> SmtpCommand.valueOf("EHLO" + sep));
     }
 }

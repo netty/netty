@@ -21,9 +21,9 @@ import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultSocks5CommandResponseTest {
     @Test
@@ -31,12 +31,12 @@ public class DefaultSocks5CommandResponseTest {
         try {
             new DefaultSocks5CommandResponse(null, Socks5AddressType.DOMAIN);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
         try {
             new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 
@@ -141,13 +141,13 @@ public class DefaultSocks5CommandResponseTest {
         try {
             new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "127.0.0", 0);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
 
         try {
             new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "127.0.0", 65536);
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 }

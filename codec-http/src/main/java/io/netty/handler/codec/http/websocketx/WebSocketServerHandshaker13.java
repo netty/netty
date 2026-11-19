@@ -103,6 +103,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         super(WebSocketVersion.V13, webSocketURL, subprotocols, decoderConfig);
     }
 
+    WebSocketServerHandshaker13(boolean isSecure, String host, String path,
+                                String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V13, isSecure, host, path, subprotocols, decoderConfig);
+    }
+
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
@@ -147,7 +152,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         HttpHeaders reqHeaders = req.headers();
         if (!reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
             throw new WebSocketServerHandshakeException(
-                    "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
+                    "not a WebSocket request: a |Connection| header must include a token 'Upgrade'", req);
         }
 
         if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {

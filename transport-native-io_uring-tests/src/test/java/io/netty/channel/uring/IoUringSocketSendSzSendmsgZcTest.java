@@ -24,6 +24,7 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -37,10 +38,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.channel.uring.IoUringRefCntZeroAwaiter.awaitRefCntZero;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
+
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
@@ -180,13 +189,9 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     if (cause != null) {
                         fail(cause);
                     }
-                    // The buffer should still have a reference count of 1 as we did not receive the second notification
-                    // yet as the remote peer did not start reading and did not close the socket yet.
-                    if (multiple) {
-                        assertEquals(numBuffers, buffer.refCnt());
-                    } else {
-                        assertEquals(numBuffers, buffer.refCnt());
-                    }
+                    // This is the primary CQE with IORING_CQE_F_MORE. The zero-copy references must remain live
+                    // until the following IORING_CQE_F_NOTIF, because the peer has neither acknowledged nor closed.
+                    assertEquals(numBuffers, buffer.refCnt());
 
                     switch (remoteClose) {
                         case REMOTE:
@@ -213,9 +218,8 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     }
 
                     // Wait till the buffer was finally released, which should be done in a timely fashion.
-                    while (buffer.refCnt() != 0) {
-                        Thread.sleep(50);
-                    }
+                    assertTrue(awaitRefCntZero(channel, buffer, 5, TimeUnit.SECONDS),
+                            "zero-copy buffer was not released in time");
                 } finally {
                     // Close the channel now
                     channel.close().sync();

@@ -32,8 +32,10 @@ import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,6 +60,90 @@ public class JdkZlibTest extends ZlibTest {
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
         assertThrows(DecompressionException.class, JdkZlibTest.super::testZLIB_OR_NONE3);
+    }
+
+    @Test
+    public void testTruncatedGzipFooterFailsOnClose() throws Exception {
+        byte[] gz = gzipCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        // drop the CRC32 and ISIZE footer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length - 8));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(true, 0), Arrays.copyOf(gz, gz.length - 8));
+        // drop only a part of the footer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length - 3));
+    }
+
+    @Test
+    public void testTruncatedDeflateDataFailsOnClose() throws Exception {
+        byte[] data = new byte[64 * 1024];
+        ThreadLocalRandom.current().nextBytes(data);
+        byte[] gz = gzipCompress(data);
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, gz.length / 2));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(true, 0), Arrays.copyOf(gz, gz.length / 2));
+        // truncated inside the GZIP header
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), Arrays.copyOf(gz, 5));
+
+        byte[] zlib = zlibCompress(data);
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), Arrays.copyOf(zlib, zlib.length / 2));
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0),
+                Arrays.copyOf(zlib, zlib.length / 2));
+        // ZLIB_OR_NONE can't decide yet
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0), Arrays.copyOf(zlib, 1));
+        // zlib stream without the ADLER32 trailer
+        assertTruncatedFailsOnClose(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), Arrays.copyOf(zlib, zlib.length - 4));
+    }
+
+    @Test
+    public void testCompleteOrEmptyInputDoesNotFailOnClose() throws Exception {
+        byte[] gz = gzipCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        byte[] zlib = zlibCompress("hello, world".getBytes(CharsetUtil.US_ASCII));
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.GZIP, 0), gz);
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.ZLIB, 0), zlib);
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.ZLIB_OR_NONE, 0), zlib);
+        // ends between two concatenated members
+        byte[] twoMembers = Arrays.copyOf(gz, gz.length * 2);
+        System.arraycopy(gz, 0, twoMembers, gz.length, gz.length);
+        assertNotTruncated(new JdkZlibDecoder(true, 0), twoMembers);
+        // raw deflate is not checked, as permessage-deflate (RFC 7692) never terminates the stream
+        byte[] raw = new byte[64];
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+        deflater.setInput("hello, world".getBytes(CharsetUtil.US_ASCII));
+        int rawLength = deflater.deflate(raw, 0, raw.length, Deflater.SYNC_FLUSH);
+        deflater.end();
+        assertNotTruncated(new JdkZlibDecoder(ZlibWrapper.NONE, 0), Arrays.copyOf(raw, rawLength));
+        // no input at all, e.g. the response to a HEAD request
+        for (ZlibWrapper wrapper : new ZlibWrapper[] {
+                ZlibWrapper.GZIP, ZlibWrapper.ZLIB, ZlibWrapper.ZLIB_OR_NONE, ZlibWrapper.NONE }) {
+            EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(wrapper, 0));
+            assertFalse(channel.finish());
+        }
+    }
+
+    private static void assertTruncatedFailsOnClose(JdkZlibDecoder decoder, byte[] input) throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        channel.writeInbound(Unpooled.wrappedBuffer(input));
+        for (;;) {
+            Object o = channel.readInbound();
+            if (o == null) {
+                break;
+            }
+            ReferenceCountUtil.release(o);
+        }
+        assertThrows(DecompressionException.class, channel::finish);
+        assertTrue(decoder.isClosed());
+    }
+
+    private static void assertNotTruncated(JdkZlibDecoder decoder, byte[] input) throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(input)));
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    private static byte[] zlibCompress(byte[] input) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DeflaterOutputStream out = new DeflaterOutputStream(baos);
+        out.write(input);
+        out.close();
+        return baos.toByteArray();
     }
 
     @Test
@@ -134,6 +220,114 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
+    public void testGZIPDecodeWithExtraField() throws Exception {
+        byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 }; // 6 arbitrary bytes
+        byte[] gzipWithExtra = gzipWithExtraField(data, extra);
+
+        // Sanity-check the crafted stream is a valid gzip by decoding it with the JDK itself.
+        assertArrayEquals(data, jdkGunzip(gzipWithExtra));
+
+        // netty must decode it identically; before the FEXTRA fix the extra bytes were never
+        // skipped, corrupting the deflate stream and throwing DecompressionException.
+        EmbeddedChannel ch = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(gzipWithExtra)));
+            ByteBuf out = ch.readInbound();
+            assertEquals(new String(data, CharsetUtil.UTF_8), out.toString(CharsetUtil.UTF_8));
+            out.release();
+        } finally {
+            assertFalse(ch.finish());
+            ch.close();
+        }
+    }
+
+    @Test
+    public void testConcatenatedGzipFirstStreamHasExtraField() throws Exception {
+        // Regression guard: with concatenated streams, an FEXTRA field on the first stream must not
+        // leak its XLEN into the second stream's header parsing. The xlen state has to be reset
+        // between streams; otherwise the second stream (which has no extra field) would skip
+        // xlen bytes that are actually deflate data and fail to decode.
+        String firstText = "first stream";
+        String secondText = "second stream";
+        byte[] first = firstText.getBytes(CharsetUtil.UTF_8);
+        byte[] second = secondText.getBytes(CharsetUtil.UTF_8);
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 };
+
+        byte[] firstGz = gzipWithExtraField(first, extra); // first stream HAS an extra field
+        byte[] secondGz = gzip(second);                    // second stream has none
+        byte[] both = new byte[firstGz.length + secondGz.length];
+        System.arraycopy(firstGz, 0, both, 0, firstGz.length);
+        System.arraycopy(secondGz, 0, both, firstGz.length, secondGz.length);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(both)));
+            ByteArrayOutputStream decoded = new ByteArrayOutputStream();
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                msg.readBytes(decoded, msg.readableBytes());
+                msg.release();
+            }
+            assertArrayEquals((firstText + secondText).getBytes(CharsetUtil.UTF_8),
+                    decoded.toByteArray());
+            decoded.close();
+        } finally {
+            assertFalse(ch.finish());
+        }
+    }
+
+    private static byte[] gzip(byte[] data) throws IOException {
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(bytesOut);
+        gzipOut.write(data);
+        gzipOut.close();
+        return bytesOut.toByteArray();
+    }
+
+    private static byte[] gzipWithExtraField(byte[] data, byte[] extra) throws IOException {
+        // GZIPOutputStream never emits an FEXTRA field, so build a standard gzip stream first ...
+        byte[] standard = gzip(data);
+
+        // ... then splice in an FEXTRA field by hand: set the FEXTRA flag in FLG and insert
+        // XLEN (2 bytes, little-endian per RFC 1952) followed by the extra subfield, right after
+        // the fixed 10-byte gzip header.
+        ByteArrayOutputStream withExtra = new ByteArrayOutputStream();
+        try {
+            byte[] header = Arrays.copyOfRange(standard, 0, 10);
+            header[3] |= 0x04; // FLG.FEXTRA
+            withExtra.write(header);
+            withExtra.write(extra.length & 0xff);          // XLEN low byte (little-endian)
+            withExtra.write((extra.length >>> 8) & 0xff);  // XLEN high byte
+            withExtra.write(extra);
+            withExtra.write(standard, 10, standard.length - 10);
+            return withExtra.toByteArray();
+        } finally {
+            withExtra.close();
+        }
+    }
+
+    private static byte[] jdkGunzip(byte[] gz) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            java.util.zip.GZIPInputStream in =
+                    new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz));
+            try {
+                byte[] buf = new byte[256];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            } finally {
+                in.close();
+            }
+            return out.toByteArray();
+        } finally {
+            out.close();
+        }
+    }
+
+    @Test
     public void testDecodeWithHeaderFollowingFooter() throws Exception {
         byte[] bytes = new byte[1024];
         ThreadLocalRandom.current().nextBytes(bytes);
@@ -181,6 +375,29 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
+    public void testDictionaryMismatchThrowsDecompressionException() {
+        Deflater deflater = new Deflater();
+        byte[] compressed = new byte[64];
+        int length;
+        try {
+            deflater.setDictionary("some dictionary".getBytes(CharsetUtil.UTF_8));
+            deflater.setInput("hello".getBytes(CharsetUtil.UTF_8));
+            deflater.finish();
+            length = deflater.deflate(compressed);
+            assertTrue(deflater.finished());
+        } finally {
+            deflater.end();
+        }
+
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new JdkZlibDecoder("another dictionary".getBytes(CharsetUtil.UTF_8), 0));
+        final ByteBuf input = Unpooled.wrappedBuffer(compressed, 0, length);
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(input));
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, channel::finishAndReleaseAll);
+    }
+
+    @Test
     void testAllowDefaultCompression() {
         assertDoesNotThrow(() -> new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION));
     }
@@ -219,6 +436,26 @@ public class JdkZlibTest extends ZlibTest {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
         ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testGzipInvalidSecondMagicByteThrows() throws Exception {
+        byte[] data = "hello gzip".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        // Replace ID2 (0x8b) of the header.
+        compressed[1] = 0;
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertThrows(DecompressionException.class, () -> {
+            ch.writeInbound(Unpooled.wrappedBuffer(compressed));
+        });
+        // the remaining input is decoded again when the channel is closed
+        assertThrows(DecompressionException.class, ch::finishAndReleaseAll);
     }
 
     @Test

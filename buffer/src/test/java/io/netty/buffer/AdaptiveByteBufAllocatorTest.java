@@ -17,14 +17,18 @@ package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,8 +42,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import io.netty.buffer.AbstractByteBufTest.TestGatheringByteChannel;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -75,6 +82,45 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertInstanceOf(heapBuffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
         assertFalse(heapBuffer.isDirect());
         heapBuffer.release();
+    }
+
+    @Test
+    public void testDirectBufferMemoryAddressFollowsItsSegment() {
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        // A direct buffer's address is the chunk's address plus the buffer's offset in the chunk. The second buffer
+        // is likely at an offset above zero.
+        ByteBuf first = allocator.directBuffer(16, 1 << 20);
+        ByteBuf second = allocator.directBuffer(16, 1 << 20);
+        AbstractByteBuf unwrappedSecond = unwrapToAbstractByteBuf(second);
+        try {
+            assumeTrue(first.hasMemoryAddress());
+            assumeTrue(PlatformDependent.hasDirectByteBufferAddress(first.nioBuffer(0, first.capacity())));
+            assertMemoryAddressMatchesTheNioBuffer(first);
+            assertMemoryAddressMatchesTheNioBuffer(second);
+            // growing beyond its segment moves the buffer to another segment, with another address
+            second.ensureWritable(128 * 1024);
+            assertMemoryAddressMatchesTheNioBuffer(second);
+        } finally {
+            first.release();
+            second.release();
+        }
+        // a released buffer has no address
+        assertEquals(0L, unwrappedSecond._memoryAddress());
+    }
+
+    // The NIO buffer's address is computed from the chunk's buffer separately from memoryAddress(), and comparing the
+    // addresses avoids reading memory through a wrong one.
+    private static void assertMemoryAddressMatchesTheNioBuffer(ByteBuf buf) {
+        assertEquals(PlatformDependent.directBufferAddress(buf.nioBuffer(0, buf.capacity())), buf.memoryAddress());
+    }
+
+    // with leak detection, the allocator wraps the AdaptiveByteBuf
+    private static AbstractByteBuf unwrapToAbstractByteBuf(ByteBuf buf) {
+        ByteBuf unwrapped = buf;
+        while (!(unwrapped instanceof AbstractByteBuf)) {
+            unwrapped = unwrapped.unwrap();
+        }
+        return (AbstractByteBuf) unwrapped;
     }
 
     @Override
@@ -144,6 +190,42 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
         while (!bufs.isEmpty()) {
             bufs.pop().release();
+        }
+    }
+
+    @Test
+    public void getBytesBoundaryCheckWithFileChannel() {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, (FileChannel) null, 0L, 8);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesBoundaryCheckWithGatheringByteChannel() throws Exception {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        TestGatheringByteChannel channel = new TestGatheringByteChannel();
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, channel, 8);
+                }
+            });
+        } finally {
+            channel.close();
+            buf.release();
         }
     }
 

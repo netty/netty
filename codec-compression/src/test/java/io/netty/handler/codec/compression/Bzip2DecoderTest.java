@@ -22,13 +22,16 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
 import java.util.Arrays;
-import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 public class Bzip2DecoderTest extends AbstractDecoderTest {
 
@@ -47,16 +50,12 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         return new EmbeddedChannel(new Bzip2Decoder());
     }
 
-    private void writeInboundDestroyAndExpectDecompressionException(ByteBuf in) throws Exception {
+    private void writeInboundAndFinish(ByteBuf in) throws Exception {
         try {
             channel.writeInbound(in);
         } finally {
-            try {
-                destroyChannel();
-                fail();
-            } catch (CompletionException exception) {
-                assertThat(exception).hasCauseInstanceOf(DecompressionException.class);
-            }
+            // The decoder discards the rest of the input after an error
+            assertFalse(channel.finish());
         }
     }
 
@@ -65,7 +64,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final ByteBuf in = Unpooled.buffer();
         in.writeLong(1823080128301928729L); //random value
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "Unexpected stream identifier contents");
+                () -> writeInboundAndFinish(in), "Unexpected stream identifier contents");
     }
 
     @Test
@@ -113,23 +112,27 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testIncorrectHuffmanGroupsNumber() {
+    public void testIncorrectHuffmanGroupsNumber() throws Exception {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[25] = 0x70;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect huffman groups number");
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
-    public void testIncorrectSelectorsNumber() {
+    public void testIncorrectSelectorsNumber() throws Exception {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[25] = 0x2F;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect selectors number");
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -139,7 +142,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "block CRC error");
+                () -> writeInboundAndFinish(in), "block CRC error");
     }
 
     @Test
@@ -149,7 +152,136 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
-                () -> writeInboundDestroyAndExpectDecompressionException(in), "start pointer invalid");
+                () -> writeInboundAndFinish(in), "start pointer invalid");
+    }
+
+    /**
+     * Regression test for the infinite-loop in {@link Bzip2BlockDecompressor#read()}.
+     *
+     * <p>The bzip2 block below is hand-crafted so that its inverse-BWT output is exactly
+     * four consecutive 'A' bytes with no trailing run-length count byte. This is a
+     * malformed-stream
+     *
+     * <p>Stream construction (bit-level, MSB first after the byte-aligned header):
+     * <pre>
+     *   Bytes  0– 3   "BZh1"                  stream header (block size 1 = 100 000 bytes)
+     *   Bytes  4– 9   0x314159265359           block-header magic (pi)
+     *   Bytes 10–13   0x00000000               block CRC — intentionally wrong; a
+     *                                           DecompressionException from checkCRC() is the
+     *                                           expected outcome after the fix is applied
+     *   --- bit-level section (read via Bzip2BitReader, MSB-first) ---
+     *    1 bit          randomized = 0
+     *   24 bits         bwtStartPointer = 0
+     *   16 bits         huffmanInUse16 = 0x0800 (group 4, bytes 0x40–0x4F present)
+     *   16 bits         group-4 symbol bitmap = 0x4000 (only 0x41 = 'A' present)
+     *    3 bits         totalTables = 2 (minimum allowed)
+     *   15 bits         totalSelectors = 1
+     *    1 bit          selector[0] unary-coded as 0 → table 0
+     *    8 bits         table 0: initial length 2 (5 bits = 00010), then three 0-delta
+     *                   bits for RUNA/RUNB/EOB → all code lengths = 2
+     *    8 bits         table 1: identical to table 0
+     *    6 bits         Huffman data: RUNB(01) RUNA(00) EOB(10)
+     *                   RUNB first: repeatCount=2, RUNA: repeatCount=4, EOB flushes
+     *                   4 copies of huffmanSymbolMap[0]='A' into the BWT block.
+     *                   bwtBlockLength = 4 with NO trailing count byte → triggers the bug.
+     *   48 bits         end-of-stream magic 0x177245 0x385090
+     *   32 bits         stream CRC = 0
+     * </pre>
+     */
+    @Test
+    public void testRleOffByOneDoesNotCauseInfiniteLoop() {
+        final byte[] malformed = {
+            0x42, 0x5A, 0x68, 0x31,                                    // "BZh1"
+            0x31, 0x41, 0x59, 0x26, 0x53, 0x59,                        // block magic
+            0x00, 0x00, 0x00, 0x00,                                     // block CRC
+            // bit-level section (MSB-first packing, computed field-by-field):
+            0x00, 0x00, 0x00, 0x04, 0x00, 0x20,                        // random+bwtPtr+inUse16 start
+            0x00, 0x20, 0x00, 0x21, 0x01, 0x04,                        // inUse16 end+grp4+tbls+sel+tbl0
+            (byte) 0x85, (byte) 0xDC, (byte) 0x91, 0x4E, 0x14, 0x24,  // tbl1+data+EOS magic
+            0x00, 0x00, 0x00, 0x00, 0x00                               // stream CRC + padding
+        };
+
+        EmbeddedChannel ch = new EmbeddedChannel(new Bzip2Decoder());
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            assertThrows(DecompressionException.class, () -> {
+                ch.writeInbound(Unpooled.wrappedBuffer(malformed));
+                ch.finishAndReleaseAll();
+            });
+        }, "Bzip2Decoder hung: bwtBytesDecoded overshot bwtBlockLength and the " +
+           "equality termination check was permanently false");
+    }
+
+    /**
+     * Verifies that a well-formed bzip2 block whose inverse-BWT output ends with exactly
+     * four consecutive identical bytes followed by a run-length count byte is decoded
+     * correctly and terminates cleanly.
+     *
+     * <p>Compressing {@code "AAAA"}: bzip2's pre-BWT RLE encodes a run of exactly 4
+     * identical bytes as {@code [A,A,A,A,0x00]} (the four bytes plus count-byte 0,
+     * meaning zero additional copies beyond the initial four).  The post-BWT RLE
+     * decoder in {@link Bzip2BlockDecompressor#read()} must reach
+     * {@code rleAccumulator == 4}, read the count byte, and then terminate cleanly
+     * when {@code bwtBytesDecoded} reaches {@code bwtBlockLength == 5}.
+     */
+    @Test
+    public void testWellFormedFourByteRleRunAtBlockEnd() throws Exception {
+        byte[] compressed = compress(new byte[]{'A', 'A', 'A', 'A'});
+        channel.writeInbound(Unpooled.wrappedBuffer(compressed));
+        ByteBuf decoded = channel.readInbound();
+        assertNotNull(decoded, "expected decoded output for well-formed AAAA block");
+        try {
+            byte[] result = new byte[decoded.readableBytes()];
+            decoded.readBytes(result);
+            assertArrayEquals(new byte[]{'A', 'A', 'A', 'A'}, result);
+        } finally {
+            decoded.release();
+        }
+    }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() throws Exception {
+        final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange());
+        assertThrows(DecompressionException.class,
+                () -> channel.writeInbound(in), "incorrect selector index");
+        // The decoder discards the rest of the input after an error
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * Regression test: a Huffman code length read in {@code RECEIVE_HUFFMAN_LENGTH} was never
+     * validated against the 1..23 range before being stored and later used to index the per-table
+     * code-base array (sized for lengths up to 23), so a crafted stream could trigger an
+     * {@link ArrayIndexOutOfBoundsException} instead of a clean {@link DecompressionException}.
+     */
+    @Test
+    public void testCodeLengthOutOfRange() {
+        final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.codeLengthOutOfRange());
+        assertThrows(DecompressionException.class,
+            () -> channel.writeInbound(in), "Bzip2 block Huffman code length not in range");
+    }
+
+    /**
+     * Regression test: after an error, the decoder used to continue from its inconsistent state when it got more
+     * input or when the channel was closed, which could fail with an {@link ArrayIndexOutOfBoundsException}.
+     */
+    @Test
+    public void testNoDecodingAfterError() throws Exception {
+        final byte[] data = Bzip2MalformedStreams.tooFewSelectors();
+        // Keep some input in the cumulation for the second decode call
+        final ByteBuf in = Unpooled.wrappedBuffer(data, 0, data.length - 10);
+        DecompressionException e = assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
+        assertEquals("error decoding block", e.getMessage());
+
+        // Further input is discarded
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(data, data.length - 10, 10)));
+        assertFalse(channel.finish());
     }
 
     @Override

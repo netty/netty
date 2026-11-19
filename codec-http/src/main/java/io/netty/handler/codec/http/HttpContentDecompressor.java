@@ -114,7 +114,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder(maxAllocation))
+                    .handlers(BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation))
                     .build();
         }
 

@@ -267,6 +267,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             try {
                 onUpgradeEvent(ctx, upgrade.retain());
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
+                if (stream == null) {
+                    // The upgrade failed (e.g. because the channel was already closed), so the stream was never
+                    // created. The failure was already propagated through the pipeline.
+                    return;
+                }
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
                     // The stream was already made active, but ctx may have been null so it wasn't initialized.
@@ -586,8 +591,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final class FrameListener implements Http2FrameListener {
 
         @Override
-        public void onUnknownFrame(
-                ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+    public void onUnknownFrame(
+            ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags, ByteBuf payload) {
             if (streamId == 0) {
                 // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
                 return;
@@ -722,7 +727,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     /**
      * Create a Http2UnknownFrame. The ownership of the {@link ByteBuf} is transferred.
      * */
-    protected Http2StreamFrame newHttp2UnknownFrame(byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+    protected Http2StreamFrame newHttp2UnknownFrame(short frameType, int streamId, Http2Flags flags, ByteBuf payload) {
         return new DefaultHttp2UnknownFrame(frameType, flags, payload);
     }
 

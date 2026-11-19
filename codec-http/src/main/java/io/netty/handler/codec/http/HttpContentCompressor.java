@@ -185,6 +185,26 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        if the default should be used.
      */
     public HttpContentCompressor(int contentSizeThreshold, CompressionOptions... compressionOptions) {
+        this(contentSizeThreshold, DEFAULT_MAX_PIPELINE_DEPTH, compressionOptions);
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} instance with specified
+     * {@link CompressionOptions}s
+     *
+     * @param contentSizeThreshold
+     *        The response body is compressed when the size of the response
+     *        body exceeds the threshold. The value should be a non negative
+     *        number. {@code 0} will enable compression for all responses.
+     * @param maxPipelineDepth
+     *        The maximum allowed depth of the encoding pipeline queue, the default
+     *        value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}
+     * @param compressionOptions {@link CompressionOptions} or {@code null}
+     *        if the default should be used.
+     */
+    public HttpContentCompressor(int contentSizeThreshold, int maxPipelineDepth,
+            CompressionOptions... compressionOptions) {
+        super(maxPipelineDepth);
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
         BrotliOptions brotliOptions = null;
         GzipOptions gzipOptions = null;
@@ -367,16 +387,31 @@ public class HttpContentCompressor extends HttpContentEncoder {
             start = comma + 1;
         }
         if (brQ > 0.0f || zstdQ > 0.0f || snappyQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {
-                return "br";
-            } else if (zstdQ != -1.0f && zstdQ >= snappyQ && this.zstdOptions != null) {
-                return "zstd";
-            } else if (snappyQ != -1.0f && snappyQ >= gzipQ && this.snappyOptions != null) {
-                return "snappy";
-            } else if (gzipQ != -1.0f && gzipQ >= deflateQ && this.gzipOptions != null) {
-                return "gzip";
-            } else if (deflateQ != -1.0f && this.deflateOptions != null) {
-                return "deflate";
+            // Use the configured encoding with the highest qvalue. A qvalue of 0 means "not acceptable"
+            // (RFC 9110 12.4.2). If the qvalues are equal, prefer br, zstd, snappy, gzip and deflate in this order.
+            String encoding = null;
+            float q = 0.0f;
+            if (brQ > q && this.brotliOptions != null) {
+                encoding = "br";
+                q = brQ;
+            }
+            if (zstdQ > q && this.zstdOptions != null) {
+                encoding = "zstd";
+                q = zstdQ;
+            }
+            if (snappyQ > q && this.snappyOptions != null) {
+                encoding = "snappy";
+                q = snappyQ;
+            }
+            if (gzipQ > q && this.gzipOptions != null) {
+                encoding = "gzip";
+                q = gzipQ;
+            }
+            if (deflateQ > q && this.deflateOptions != null) {
+                encoding = "deflate";
+            }
+            if (encoding != null) {
+                return encoding;
             }
         }
         if (starQ > 0.0f) {

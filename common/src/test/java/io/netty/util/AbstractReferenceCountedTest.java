@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class AbstractReferenceCountedTest {
 
@@ -62,12 +61,9 @@ public class AbstractReferenceCountedTest {
     public void testReleaseErrorMessage() {
         AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
-        try {
-            referenceCounted.release(1);
-            fail("IllegalReferenceCountException didn't occur");
-        } catch (IllegalReferenceCountException e) {
-            assertEquals("refCnt: 0, decrement: 1", e.getMessage());
-        }
+        IllegalReferenceCountException e = assertThrows(IllegalReferenceCountException.class, () ->
+                referenceCounted.release(1));
+        assertEquals("refCnt: 0, decrement: 1", e.getMessage());
     }
 
     @Test

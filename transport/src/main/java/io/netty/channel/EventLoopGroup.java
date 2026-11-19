@@ -15,8 +15,11 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
+
+import java.util.Iterator;
 
 /**
  * Special {@link EventExecutorGroup} which allows registering {@link Channel}s that get
@@ -48,17 +51,19 @@ public interface EventLoopGroup extends EventExecutorGroup {
      * @return              if compatible of not.
      */
     default boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return next().isCompatible(handleType);
+        Iterator<EventExecutor> executors = iterator();
+        return executors.hasNext() && ((EventLoop) executors.next()).isCompatible(handleType);
     }
 
     /**
-     * Returns {@code true} if the given {@link IoHandler} type is used by this {@link EventLoopGroup},
+     * Returns {@code true} if the given {@link IoHandler} type is used by this {@link IoEventLoopGroup},
      * {@code false} otherwise.
      *
      * @param handlerType the type of the {@link IoHandler}.
      * @return            if used or not.
      */
     default boolean isIoType(Class<? extends IoHandler> handlerType) {
-        return next().isIoType(handlerType);
+        Iterator<EventExecutor> executors = iterator();
+        return executors.hasNext() && ((EventLoop) executors.next()).isIoType(handlerType);
     }
 }

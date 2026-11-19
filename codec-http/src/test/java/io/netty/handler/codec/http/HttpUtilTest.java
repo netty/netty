@@ -27,6 +27,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +41,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpUtilTest {
+
+    @Test
+    public void testSetContentLength() {
+        HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpUtil.setContentLength(message, 0);
+        assertEquals("0", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        HttpUtil.setContentLength(message, 42);
+        assertEquals(42, HttpUtil.getContentLength(message));
+    }
+
+    @Test
+    public void testSetNegativeContentLength() {
+        // normalizeAndGetContentLength() rejects a signed value when the message is decoded.
+        final HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        assertThrows(IllegalArgumentException.class, () -> HttpUtil.setContentLength(message, -1));
+        assertThrows(IllegalArgumentException.class, () -> HttpHeaders.setContentLength(message, -1));
+        assertNull(message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+    }
 
     @Test
     public void testRecognizesOriginForm() {
@@ -83,9 +101,39 @@ public class HttpUtilTest {
             "HTTP/ 1.1",
             "HTTP/\r0.9",
             "HTTP/\n1.1",
+            "/a\tHTTP/1.0",
+            "/admin\u0000/public",
+            "/a\u000Bb",
+            "/a\fb",
+            "/a\u001Bb",
+            "/a\u007Fb",
     })
     public void requestLineTokenValidationMustRejectInvalidTokens(String token) throws Exception {
         assertFalse(HttpUtil.isEncodingSafeStartLineToken(token));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustRejectAllControlCharactersSpaceAndDel() {
+        for (char c = 0; c <= 0x20; c++) {
+            assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a" + c + "b"), "0x" + Integer.toHexString(c));
+        }
+        assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a\u007Fb"));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustAcceptValidTokens() {
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("/path/to/resource?q=1&r=2"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("http://localhost/\u00e9"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken(""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "\t", "\u0000", "\u000B", "\f", "\u001B", "\u007F" })
+    public void defaultHttpRequestMustRejectControlCharactersInUri(String ctl) {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
     }
 
     @Test
@@ -158,6 +206,38 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
+    }
+
+    @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameter() {
+        // RFC 9110 5.6.6: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the next parameter
+        testGetCharsetUtf8("text/html; charset=utf-8 ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetQuotedWithWhitespaceBeforeNextParameter() {
+        testGetCharsetUtf8("text/html; charset=\"utf-8\" ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameterNonStringCharSequence() {
+        // must behave identically for a general CharSequence implementation
+        CharSequence contentType = CharBuffer.wrap("text/html; charset=utf-8 ; action=\"foo\"");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(contentType, CharsetUtil.ISO_8859_1));
+
+        CharSequence emptyCharset = CharBuffer.wrap("text/html; charset= ; action=\"foo\"");
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(emptyCharset, CharsetUtil.ISO_8859_1));
+    }
+
+    @Test
+    public void testGetCharsetWithLeadingWhitespaceIsNotAccepted() {
+        // Only trailing OWS is grammar-legal per RFC 9110 5.6.6; whitespace after '='
+        // is not, so such values keep falling back to the default charset.
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= utf-8 ; action=\"foo\"", CharsetUtil.ISO_8859_1));
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= ; action=\"foo\"", CharsetUtil.ISO_8859_1));
     }
 
     @Test
@@ -259,39 +339,38 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testGetMimeTypeWithWhitespaceBeforeParameter() {
+        // RFC 9110 8.3.1: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the first parameter
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html\t; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html \t ;charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ;"));
+
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json ; charset=UTF-8");
+        assertEquals("application/json", HttpUtil.getMimeType(message));
+    }
+
+    @Test
     public void testGetContentLengthThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message));
     }
 
     @Test
     public void testGetContentLengthIntDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1));
     }
 
     @Test
     public void testGetContentLengthLongDefaultValueThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        try {
-            HttpUtil.getContentLength(message, 1L);
-            fail();
-        } catch (final NumberFormatException e) {
-            // a number format exception is expected here
-        }
+        assertThrows(NumberFormatException.class, () -> HttpUtil.getContentLength(message, 1L));
     }
 
     @Test

@@ -26,6 +26,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.DefaultChannelId;
+import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
@@ -37,9 +38,11 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -55,6 +58,8 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.Collections;
+import java.util.List;
 
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
@@ -102,6 +107,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean inputClosedSeenErrorOnRead;
     private boolean socketIsEmpty;
     private Promise<Void> deregisterPromise;
+    // Only one primary write batch is submitted at a time. Notifications belong to older zero-copy writes.
+    final WriteOpsSnapshot currentWrite = new WriteOpsSnapshot();
+    // References retained before outbound messages are released. Non-null until the batch completes, even when empty.
+    List<ReferenceCounted> retainedWriteBuffers;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
@@ -111,6 +120,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private CleanableDirectBuffer cleanable;
     private ByteBuffer remoteAddressMemory;
     private MsgHdrMemoryArray msgHdrMemoryArray;
+
+    // The initial data of a TCP_FASTOPEN_CONNECT and the number of its bytes that were sent. These bytes are only
+    // removed from the ChannelOutboundBuffer once the connect is complete, so listeners of the initial write see an
+    // active channel.
+    private ChannelOutboundBuffer fastOpenOutboundBuffer;
+    private Object fastOpenData;
+    private long fastOpenBytes;
 
     private IoRegistration registration;
 
@@ -270,6 +286,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+    final MsgHdrMemory writeMsgHdr() {
+        if (msgHdrMemoryArray == null) {
+            msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
+        }
+        return msgHdrMemoryArray.hdr(0);
+    }
+
     private void freeMsgHdrArray() {
         if (msgHdrMemoryArray != null) {
             msgHdrMemoryArray.release();
@@ -298,7 +321,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
 
-            boolean cancelConnect = false;
+            boolean cancelConnect = connectId != 0;
             try {
                 Promise<Void> connectPromise = AbstractIoUringChannel.this.connectPromise;
                 if (connectPromise != null) {
@@ -333,6 +356,41 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             promise.setSuccess(null);
         }
     }
+
+    @Override
+    protected final void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        if (type.direction() == ChannelShutdownDirection.Outbound) {
+            // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the
+            // output.
+            removeFastOpenData();
+        }
+        doShutdown0(type, promise);
+    }
+
+    /**
+     * Removes the bytes that were sent by a TCP_FASTOPEN_CONNECT from the {@link ChannelOutboundBuffer} if the
+     * channel was connected, and forgets about them otherwise. Must be called before the
+     * {@link ChannelOutboundBuffer} is written or its messages are failed.
+     */
+    private void removeFastOpenData() {
+        ChannelOutboundBuffer in = fastOpenOutboundBuffer;
+        if (in == null) {
+            return;
+        }
+        Object data = fastOpenData;
+        long bytes = fastOpenBytes;
+        fastOpenOutboundBuffer = null;
+        fastOpenData = null;
+        fastOpenBytes = 0;
+        if (bytes > 0 && isActive() && in.current() == data) {
+            in.removeBytes(bytes);
+        }
+    }
+
+    /**
+     * Performs the actual shutdown. Implemented by subclasses.
+     */
+    protected abstract void doShutdown0(ChannelShutdownType type, Promise<Void> promise);
 
     @Override
     protected final void doBeginRead() {
@@ -405,17 +463,23 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         Object msg = in.current();
 
+        int scheduled;
         if (msgCount > 1 && in.current() instanceof ByteBuf) {
-            numOutstandingWrites = (short) scheduleWriteMultiple(in);
+            scheduled = scheduleWriteMultiple(in);
         } else if (msg instanceof ByteBuf && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     (msg instanceof ByteBufHolder && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
             // We also need some special handling for CompositeByteBuf
-            numOutstandingWrites = (short) scheduleWriteMultiple(in);
+            scheduled = scheduleWriteMultiple(in);
         } else {
-            numOutstandingWrites = (short) scheduleWriteSingle(msg);
+            scheduled = scheduleWriteSingle(msg);
         }
-        // Ensure we never overflow
-        assert numOutstandingWrites > 0;
+        // A zero return means the write could not be scheduled: registration.submit(...) failed because the
+        // registration is no longer valid, a FileRegion's open() threw, or transferTo(...) produced no bytes or
+        // threw. numOutstandingWrites is a short, so guard the narrowing before it happens: a future
+        // scheduleWriteSingle/scheduleWriteMultiple override that batches more writes than a short can hold must
+        // not silently wrap around.
+        assert scheduled <= Short.MAX_VALUE;
+        numOutstandingWrites = (short) scheduled;
         return numOutstandingWrites;
     }
 
@@ -452,7 +516,24 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final boolean isWriteFlushedScheduled() {
-        return (ioState & POLL_OUT_SCHEDULED) != 0;
+        if ((ioState & POLL_OUT_SCHEDULED) != 0) {
+            return true;
+        }
+        ChannelOutboundBuffer in = outboundBuffer();
+        if (in != null && !in.isEmpty() && !isActive()) {
+            // writeFlushedNow() fails flushed messages when the channel is inactive.
+            prepareToDiscardOutboundMessages(in);
+        }
+        return false;
+    }
+
+    // Write completions may carry an id that fell back out of the short range, so they get the untruncated
+    // user_data. Connect completions always submit a short id, but connectComplete(...) takes a long to stay
+    // consistent with writeComplete(...), so it is also handed the untruncated value. The remaining completions
+    // (read, poll, cancel) only ever submit short ids, so narrowUserData(...) below asserts and narrows those.
+    private static short narrowUserData(long userData) {
+        assert userData == (short) userData : "user_data does not fit a short: " + userData;
+        return (short) userData;
     }
 
     private final class IoUringIoHandleImpl implements IoUringIoHandle {
@@ -464,13 +545,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            short data = (short) event.userData();
+            long userData = event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
-                    readComplete(op, res, flags, data);
+                    readComplete(op, res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -479,20 +560,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SPLICE:
                 case Native.IORING_OP_SEND_ZC:
                 case Native.IORING_OP_SENDMSG_ZC:
-                    writeComplete(op, res, flags, data);
+                    writeComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_POLL_ADD:
-                    pollAddComplete(res, flags, data);
+                    pollAddComplete(res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
-                    cancelComplete0(op, res, flags, data);
+                    cancelComplete0(op, res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_CONNECT:
-                    connectComplete(op, res, flags, data);
-
-                    // once the connect was completed we can also free some resources that are not needed anymore.
-                    freeMsgHdrArray();
-                    freeRemoteAddressMemory();
+                    connectComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_CLOSE:
                     if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -536,6 +613,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void unregistered() {
         freeMsgHdrArray();
         freeRemoteAddressMemory();
+        assert retainedWriteBuffers == null;
     }
 
     @Override
@@ -544,15 +622,42 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 (RecvByteBufAllocator.ExtendedHandle) super.newRecvBufAllocHandle());
     }
 
+    final long submitWrite(IoUringIoOps ops) {
+        long id = registration().submit(ops);
+        if (id != 0) {
+            currentWrite.copyFrom(ops);
+        }
+        return id;
+    }
+
+    // Must be called before AbstractChannel fails flushed messages that in-flight writes may still use.
+    final void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
+        if (retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
+            return;
+        }
+        retainedWriteBuffers = numOutstandingWrites != 0 ? retainWriteBuffers(buffer) :
+                Collections.<ReferenceCounted>emptyList();
+    }
+
+    List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+        return Collections.emptyList();
+    }
+
+    void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
+        for (ReferenceCounted buffer : buffers) {
+            ReferenceCountUtil.safeRelease(buffer);
+        }
+    }
+
     /**
      * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
-     * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+     * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
      */
     protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
 
     /**
      * Schedule the write of a single message and returns the number of
-     * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+     * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
      */
     protected abstract int scheduleWriteSingle(Object msg);
 
@@ -652,10 +757,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
     }
 
+    protected final boolean isReadMultishot() {
+        return numOutstandingReads == -1;
+    }
+
     private void readComplete(byte op, int res, int flags, short data) {
         assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
 
-        boolean multishot = numOutstandingReads == -1;
+        boolean multishot = isReadMultishot();
         boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
         if (rearm) {
             // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
@@ -704,6 +813,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                             // in the meantime. If this is the case we need to schedule the read to ensure
                             // we do not stall.
                             if (pending) {
+                                readPending = true;
                                 doBeginReadNow();
                             }
                         } else if (rearm) {
@@ -721,6 +831,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     // in the meantime. If this is the case we need to schedule the read to ensure
                     // we do not stall.
                     if (pending) {
+                        readPending = true;
                         doBeginReadNow();
                     }
                 } else if (multishot && rearm) {
@@ -863,8 +974,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 schedulePollOut();
             }
         } else if (!socket.isOutputShutdown()) {
-            // Try writing again
-            writeFlushedNow();
+            // Try writing again. POLL_OUT_SCHEDULED is clear, so writeFlushed() retains in-flight writes if inactive.
+            writeFlushed();
         }
     }
 
@@ -876,27 +987,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * @param flags the flags.
      * @param data  the data that was passed when submitting the op.
      */
-    private void writeComplete(byte op, int res, int flags, short data) {
-        if ((ioState & CONNECT_SCHEDULED) != 0) {
-            // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
-            // TCP_FASTOPEN_CONNECT.
-            freeMsgHdrArray();
-            if (res > 0) {
-                // Connect complete!
-                outboundBuffer().removeBytes(res);
-
-                // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                connectComplete(op, 0, flags, data);
-            } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
-                // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
-                // In this case, our TCP connection will be established normally, but no data was transmitted at
-                // this time. We'll just transmit the data with normal writes later.
-                // Let's submit a normal connect.
-                submitConnect((InetSocketAddress) requestedRemoteAddress);
-            } else {
-                // There was an error, handle it as a normal connect error.
-                connectComplete(op, res, flags, data);
-            }
+    private void writeComplete(byte op, int res, int flags, long data) {
+        // UDP connect and ordinary writes can be in flight together,
+        // so CONNECT_SCHEDULED alone cannot identify TFO.
+        if ((ioState & CONNECT_SCHEDULED) != 0 && op == Native.IORING_OP_SENDMSG &&
+                (currentWrite.union3() & Native.MSG_FASTOPEN) != 0) {
+            completeFastOpenWrite(op, res, flags, (short) data);
             return;
         }
 
@@ -905,12 +1001,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             --numOutstandingWrites;
         }
 
-        boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        boolean writtenAll = retainedWriteBuffers == null ?
+                writeComplete0(op, res, flags, data, numOutstandingWrites) :
+                writeCompleteAndReleaseBuffers(op, res, flags, data);
         // We might have consumed data from the ChannelOutboundBuffer lets call updateWritabilityIfNeeded() so
         // we propagate changes related to the writability state if required.
         updateWritabilityIfNeeded();
 
-        if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+        if (!writtenAll && delayedClose == null && (ioState & POLL_OUT_SCHEDULED) == 0) {
 
             // We were not able to write everything, let's register for POLLOUT
             schedulePollOut();
@@ -919,12 +1017,64 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
         // while still removing messages internally in removeBytes(...) which then may corrupt state.
         if (numOutstandingWrites == 0) {
+            retainedWriteBuffers = null;
             ioState &= ~WRITE_SCHEDULED;
 
             // If we could write all and we did not schedule a pollout yet let us try to write again
             if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
                 scheduleWriteIfNeeded(outboundBuffer(), false);
             }
+        }
+    }
+
+    private boolean writeCompleteAndReleaseBuffers(byte op, int res, int flags, long data) {
+        // The socket may transfer these references to its zero-copy notification before we release them.
+        boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+            releaseWriteBuffers(retainedWriteBuffers, data);
+        }
+        return writtenAll;
+    }
+
+    private void completeFastOpenWrite(byte op, int res, int flags, short data) {
+        // TFO participates in the write count, but completes through the connect path.
+        assert numOutstandingWrites == 1;
+        --numOutstandingWrites;
+        connectId = 0;
+        freeMsgHdrArray();
+        try {
+            if (res > 0) {
+                // shutdownOutput() or an inactive flush may already have failed this batch.
+                if (retainedWriteBuffers == null) {
+                    fastOpenBytes = res;
+                }
+                // Complete connect before notifying the initial write. Keep WRITE_SCHEDULED set so
+                // connect listeners cannot submit the initial data again before it is removed.
+                connectComplete(op, 0, flags, data);
+                removeFastOpenData();
+            } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
+                // Without a fast-open cookie, connect normally and send the initial data later.
+                removeFastOpenData();
+                if (connectPromise != null && !connectPromise.isDone()) {
+                    submitConnect((InetSocketAddress) requestedRemoteAddress);
+                } else {
+                    connectComplete(op, Native.ERRNO_ECANCELED_NEGATIVE, flags, data);
+                }
+            } else {
+                // There was an error, handle it as a normal connect error.
+                removeFastOpenData();
+                connectComplete(op, res, flags, data);
+            }
+        } finally {
+            if (retainedWriteBuffers != null) {
+                releaseWriteBuffers(retainedWriteBuffers, data);
+            }
+            retainedWriteBuffers = null;
+            ioState &= ~WRITE_SCHEDULED;
+        }
+        // Write the remaining initial data and anything flushed by the connect or write listeners.
+        if (res > 0 && (ioState & POLL_OUT_SCHEDULED) == 0) {
+            scheduleWriteIfNeeded(outboundBuffer(), false);
         }
     }
 
@@ -936,7 +1086,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * @param data          the data that was passed when submitting the op.
      * @param outstanding   the outstanding write completions.
      */
-    abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
+    abstract boolean writeComplete0(byte op, int res, int flags, long data, int outstanding);
 
     /**
      * Called once a cancel was completed.
@@ -957,16 +1107,24 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * @param flags         the flags.
      * @param data          the data that was passed when submitting the op.
      */
-    void connectComplete(byte op, int res, int flags, short data) {
+    void connectComplete(byte op, int res, int flags, long data) {
         ioState &= ~CONNECT_SCHEDULED;
+        connectId = 0;
         assert connectPromise != null;
         freeRemoteAddressMemory();
+
+        Promise<Void> promise = connectPromise;
+        if (promise.isDone()) {
+            // The promise was already completed, for example by close(), and the connect completion raced with the
+            // cancellation. Do not activate the channel, schedule a POLLOUT or try to complete the promise again.
+            connectPromise = null;
+            return;
+        }
 
         if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
             // connect not complete yet need to wait for poll_out event
             schedulePollOut();
         } else {
-            Promise<Void> promise = connectPromise;
             connectPromise = null;
             if (res == 0) {
                 active = true;
@@ -985,7 +1143,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (readPending) {
                     doBeginReadNow();
                 }
-            } else if (!promise.isDone()) {
+            } else {
                 try {
                     Errors.throwConnectException("io_uring connect", res);
                 } catch (Throwable cause) {
@@ -1039,19 +1197,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
                 if (initialData != null) {
-                    msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
-                    MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
-                            initialData.readableBytes(), (short) 0);
+                    MsgHdrMemory hdr = writeMsgHdr();
+                    fillTFOInitData(hdr, inetSocketAddress, initialData);
 
                     int fd = fd().intValue();
-                    IoRegistration registration = registration();
                     IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
-                            hdr.address(), hdr.idx());
-                    connectId = registration.submit(ops);
-                    if (connectId == 0) {
-                        // Directly release the memory if submitting failed.
-                        freeMsgHdrArray();
+                            hdr.address(), nextOpsId());
+                    try {
+                        connectId = submitWrite(ops);
+                        if (connectId != 0) {
+                            numOutstandingWrites = 1;
+                            ioState |= WRITE_SCHEDULED;
+                        }
+                    } finally {
+                        if (connectId == 0) {
+                            freeMsgHdrArray();
+                        } else {
+                            fastOpenOutboundBuffer = outboundBuffer();
+                            fastOpenData = initialData;
+                        }
                     }
                 } else {
                     submitConnect(inetSocketAddress);
@@ -1072,6 +1236,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         connectPromise = promise;
         requestedRemoteAddress = remoteAddress;
+    }
+
+    private void fillTFOInitData(MsgHdrMemory hdr, InetSocketAddress inetSocketAddress,
+                                 ByteBuf initialData) throws Exception {
+        if (initialData.hasMemoryAddress()) {
+            hdr.set(socket, inetSocketAddress,
+                    initialData.memoryAddress() + initialData.readerIndex(),
+                    initialData.readableBytes(), (short) 0);
+        } else {
+            // Use an iovec array for CompositeByteBuf and other buffers without a memory address.
+            // If the shared IovArray has not enough space, the rest is sent after connect.
+            IoUringIoHandler handler = registration().attachment();
+            IovArray iovArray = handler.iovArray();
+            int iovOffset = iovArray.count();
+            iovArray.processMessage(initialData);
+            long iovArrayAddress = iovArray.memoryAddress(iovOffset);
+            int iovArrayLength = iovArray.count() - iovOffset;
+            hdr.setWithIovArrayAddress(socket, inetSocketAddress, iovArrayAddress, iovArrayLength, (short) 0);
+        }
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {

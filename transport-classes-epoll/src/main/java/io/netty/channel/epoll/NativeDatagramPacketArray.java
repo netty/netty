@@ -66,9 +66,8 @@ final class NativeDatagramPacketArray {
             // recvmmsg(...) / sendmmsg(...) call, we will try again later.
             return false;
         }
-        if (len == 0) {
-            return true;
-        }
+        // A zero-length datagram is valid and gets a packet with no iovecs: skipping it here would make
+        // EpollDatagramChannel.doWrite(...) remove the wrong messages for the packets sendmmsg reports as sent.
         int offset = iovArray.count();
         if (offset == Limits.IOV_MAX || !iovArray.add(buf, index, len)) {
             // Not enough space to hold the whole content, we will try again later.

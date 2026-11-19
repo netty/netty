@@ -23,14 +23,17 @@ import io.netty.handler.codec.http2.internal.SimpleChannelPromiseAggregator;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
+import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
@@ -40,12 +43,17 @@ import static java.lang.Math.min;
  * Default implementation of {@link Http2ConnectionEncoder}.
  */
 public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Http2SettingsReceivedConsumer {
+    // Bound the number of received but not yet ACKed SETTINGS frames we buffer for a connection. Without this a
+    // peer could send an unbounded number of SETTINGS frames (which are not subject to flow-control) while the
+    // application is slow (or never) calls writeSettingsAck, exhausting the heap.
+    static final int MAX_OUTSTANDING_REMOTE_SETTINGS = 128;
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
     private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
-    private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
+    private final Queue<OutstandingLocalSettings> outstandingLocalSettingsQueue =
+            new ArrayDeque<OutstandingLocalSettings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
@@ -283,7 +291,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public void writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
                               Promise<Void> promise) {
-        outstandingLocalSettingsQueue.add(settings);
         try {
             Boolean pushEnabled = settings.pushEnabled();
             if (pushEnabled != null && connection.isServer()) {
@@ -293,8 +300,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             promise.setFailure(e);
             return;
         }
-
+        final OutstandingLocalSettings outstandingLocalSettings = new OutstandingLocalSettings(settings);
+        outstandingLocalSettingsQueue.add(outstandingLocalSettings);
         frameWriter.writeSettings(ctx, settings, promise);
+        if (promise.isDone()) {
+            outstandingLocalSettings.operationComplete(promise);
+        } else {
+            promise.addListener(outstandingLocalSettings);
+        }
     }
 
     @Override
@@ -382,7 +395,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public void writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public void writeFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                            ByteBuf payload, Promise<Void> promise) {
         frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }
@@ -394,7 +407,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
     @Override
     public Http2Settings pollSentSettings() {
-        return outstandingLocalSettingsQueue.poll();
+        OutstandingLocalSettings outstandingLocalSettings = outstandingLocalSettingsQueue.poll();
+        return outstandingLocalSettings == null ? null : outstandingLocalSettings.settings;
     }
 
     @Override
@@ -416,10 +430,39 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         return stream;
     }
 
+    private final class OutstandingLocalSettings implements FutureListener<Void> {
+        private final Http2Settings settings;
+
+        OutstandingLocalSettings(Http2Settings settings) {
+            this.settings = settings;
+        }
+
+        @Override
+        public void operationComplete(Future<? extends Void> future) {
+            if (!future.isSuccess()) {
+                outstandingLocalSettingsQueue.remove(this);
+            }
+        }
+    }
+
     @Override
     public void consumeReceivedSettings(Http2Settings settings) {
         if (outstandingRemoteSettingsQueue == null) {
             outstandingRemoteSettingsQueue = new ArrayDeque<Http2Settings>(2);
+        }
+        if (outstandingRemoteSettingsQueue.size() >= MAX_OUTSTANDING_REMOTE_SETTINGS) {
+            // The peer is sending SETTINGS frames faster than we (the application) are acknowledging them via
+            // writeSettingsAck(...). SETTINGS frames are not subject to flow-control, so without this cap the
+            // queue could grow without bound and exhaust the heap. Treat this as a connection error.
+            Http2Exception exception = connectionError(ENHANCE_YOUR_CALM,
+                    "Too many outstanding SETTINGS frames received without acknowledgment: %d",
+                    outstandingRemoteSettingsQueue.size());
+            ChannelHandlerContext ctx = flowController().channelHandlerContext();
+            if (lifecycleManager != null && ctx != null) {
+                lifecycleManager.onError(ctx, false, exception);
+                ctx.close();
+            }
+            return;
         }
         outstandingRemoteSettingsQueue.add(settings);
     }
@@ -495,6 +538,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             ByteBuf toWrite = queue.remove(ctx.alloc(), writableData, writePromise);
             dataSize = queue.readableBytes();
 
+            // The queue reported writableData readable bytes but produced fewer: a queued buffer was released or
+            // consumed while still referenced by the queue, so the stream's data is corrupted. Fail the stream.
+            int producedBytes = toWrite.readableBytes();
+            if (producedBytes < writableData) {
+                ReferenceCountUtil.safeRelease(toWrite);
+                // Set dataSize and padding to 0 to signal that the whole frame was consumed, so it is removed and
+                // its bytes are returned to flow control (matching the error path above).
+                padding = dataSize = 0;
+                writePromise.tryFailure(streamError(stream.id(), INTERNAL_ERROR,
+                        "Stream %d flow-controlled queue produced %d bytes but reported %d",
+                        stream.id(), producedBytes, writableData));
+                return;
+            }
+
             // Determine how much padding to write.
             int writablePadding = min(allowedBytes - writableData, padding);
             padding -= writablePadding;
@@ -516,6 +573,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(padding, nextData.padding);
             endOfStream = nextData.endOfStream;
+            // The promise of the first frame may be completed long before the merged data is written in full.
+            // Use the promise of the last frame, so that the stream is only closed once all of its data was
+            // written. Otherwise a graceful shutdown could close the connection before the rest is flushed.
+            promise = nextData.promise;
             return true;
         }
     }

@@ -23,11 +23,14 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
+
+import java.nio.channels.ClosedChannelException;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -195,7 +198,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder(maxAllocation))
+                    .handlers(BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation))
                     .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
@@ -367,6 +370,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      */
     private static final class Http2Decompressor {
         private final EmbeddedChannel decompressor;
+        private final Http2FrameListener listener;
 
         private int compressed;
         private int decompressed;
@@ -374,9 +378,14 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         private int padding;
         private boolean dataDecompressed;
         private ChannelHandlerContext targetCtx;
+        // Set once the decompressor channel was closed. The end of the stream must only be reported to the listener
+        // after finish() returned successfully: if the compressed input was truncated, finish() throws after the
+        // channel became inactive, and the stream must not be reported as complete.
+        private boolean endOfStreamPending;
 
         Http2Decompressor(EmbeddedChannel decompressor,  Http2Connection connection, Http2FrameListener listener) {
             this.decompressor = decompressor;
+            this.listener = listener;
             this.decompressor.pipeline().addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -405,7 +414,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                    listener.onDataRead(targetCtx, stream.id(), Unpooled.EMPTY_BUFFER, padding, true);
+                    endOfStreamPending = true;
                 }
             });
         }
@@ -414,7 +423,13 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
          * Release remaining content from the {@link EmbeddedChannel}.
          */
         void cleanup() throws Exception {
-            decompressor.finishAndReleaseAll();
+            try {
+                decompressor.finishAndReleaseAll();
+            } catch (DecompressionException ignore) {
+                // The stream was removed before the compressed data was complete, for example because it was reset.
+                // That is not an error here, there is nobody left to report it to. Don't let it propagate, the
+                // connection would log it for every such stream.
+            }
         }
 
         int decompress(ChannelHandlerContext ctx, Http2Stream stream, ByteBuf data, int padding, boolean endOfStream)
@@ -427,10 +442,21 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 this.dataDecompressed = false;
                 this.targetCtx = ctx;
 
+                if (!decompressor.isOpen()) {
+                    // Fail fast without retaining the data. EmbeddedChannel would also release a message written
+                    // after it was closed, so the retain() below would still be balanced; this just avoids the
+                    // retain/release round trip. This mimics what EmbeddedChannel will throw.
+                    throw new ClosedChannelException();
+                }
                 // call retain here as it will call release after its written to the channel
                 decompressor.writeInbound(data.retain());
                 if (endOfStream) {
                     decompressor.finish();
+                    // Only reached if the compressed stream ended cleanly, otherwise finish() threw.
+                    if (endOfStreamPending) {
+                        endOfStreamPending = false;
+                        listener.onDataRead(targetCtx, stream.id(), Unpooled.EMPTY_BUFFER, this.padding, true);
+                    }
 
                     if (!dataDecompressed) {
                         // No new decompressed data was extracted from the compressed data. This means the application

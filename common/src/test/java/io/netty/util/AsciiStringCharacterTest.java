@@ -158,6 +158,10 @@ public class AsciiStringCharacterTest {
         assertContains(a, b, false, false);
         a += "0";
         assertContains(a, b, false, true);
+
+        assertContains("aab", "ab", true, true);
+        assertContains("ababc", "abc", true, true);
+        assertContains("xxYz", "xyz", false, true);
     }
 
     private static void assertContains(String a, String b, boolean caseSensitiveEquals, boolean caseInsenstaiveEquals) {
@@ -301,6 +305,18 @@ public class AsciiStringCharacterTest {
         assertEquals("abc", new AsciiString("  abc").trim().toString());
         assertEquals("abc", new AsciiString("abc  ").trim().toString());
         assertEquals("abc", new AsciiString("  abc  ").trim().toString());
+    }
+
+    @Test
+    public void testStaticTrimCharSequence() {
+        // Neither String nor AsciiString, so the generic code path is used.
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("abc  ")).toString());
+        assertEquals("abc", AsciiString.trim(new StringBuilder("  abc  ")).toString());
+        assertEquals("a", AsciiString.trim(new StringBuilder(" a ")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("")).toString());
+        assertEquals("", AsciiString.trim(new StringBuilder("   ")).toString());
     }
 
     @Test
@@ -551,5 +567,67 @@ public class AsciiStringCharacterTest {
         AsciiString hello = new AsciiString("Hello");
         assertFalse(AsciiString.regionMatchesAscii(str, false, -1, hello, 0, 5));
         assertFalse(AsciiString.regionMatchesAscii(str, false, 0, hello, -1, 5));
+    }
+
+    @Test
+    public void testCachedWithAsciiString() {
+        // Pure ASCII strings should reuse the original string to preserve identity
+        String ascii = "hello";
+        AsciiString cached = AsciiString.cached(ascii);
+        assertEquals(ascii, cached.toString());
+        assertSame(ascii, cached.toString());
+        assertEquals(ascii.length(), cached.length());
+        assertTrue(cached.contentEquals(ascii));
+    }
+
+    @Test
+    public void testCachedWithAsciiLatin1String() {
+        // Latin-1 strings (chars 128-255) should reuse the original string to preserve identity
+        String latin1 = "h" + (char) 233 + "llo"; // héllo
+        AsciiString cached = AsciiString.cached(latin1);
+        assertEquals(latin1, cached.toString());
+        assertSame(latin1, cached.toString());
+        assertEquals(latin1.length(), cached.length());
+        assertTrue(cached.contentEquals(latin1));
+    }
+
+    @Test
+    public void testCachedSanitizesNonLatin1String() {
+        // Chars > 255 should be sanitized to '?' in the cached string to match the byte content
+        String nonLatin1 = "test" + (char) 0x1234 + "ing";
+        AsciiString cached = AsciiString.cached(nonLatin1);
+        // The char 0x1234 gets converted to '?' by c2b, so toString should reflect that
+        assertEquals("test?ing", cached.toString());
+    }
+
+    @Test
+    public void testCachedEmptyString() {
+        AsciiString cached = AsciiString.cached("");
+        assertEquals("", cached.toString());
+        assertTrue(cached.isEmpty());
+    }
+
+    @Test
+    public void testCachedStringMatchesByteContent() {
+        // The cached string should always match the byte content round-trip
+        String nonLatin1 = "a" + (char) 0x4321 + "b";
+        AsciiString cached = AsciiString.cached(nonLatin1);
+        // Manually compute the expected sanitized string from the byte array
+        StringBuilder expected = new StringBuilder();
+        for (byte b : cached.toByteArray()) {
+            expected.append((char) (b & 0xFF));
+        }
+        assertEquals(expected.toString(), cached.toString());
+    }
+
+    @Test
+    public void testCachedWithAllAsciiConstants() {
+        // Constants used in the codebase should be unaffected
+        AsciiString host = AsciiString.cached("host");
+        assertEquals("host", host.toString());
+        AsciiString method = AsciiString.cached(":method");
+        assertEquals(":method", method.toString());
+        AsciiString status = AsciiString.cached(":status");
+        assertEquals(":status", status.toString());
     }
 }

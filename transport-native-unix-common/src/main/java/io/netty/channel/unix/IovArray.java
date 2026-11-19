@@ -26,6 +26,7 @@ import java.nio.ByteOrder;
 
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
+import static io.netty.util.internal.ObjectUtil.checkInRange;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.min;
 
@@ -223,6 +224,35 @@ public final class IovArray implements MessageProcessor {
             }
         }
         return true;
+    }
+
+    /**
+     * Removes all entries that were added after the first {@code count} entries, so these can be added again in
+     * another way. This doesn't change {@link #maxBytes()} and {@link #maxCount()}.
+     *
+     * @param count the number of entries to keep, as returned by {@link #count()} before the entries were added.
+     */
+    public void truncate(int count) {
+        checkInRange(count, 0, this.count, "count");
+        for (int i = count; i < this.count; i++) {
+            size -= length(i);
+        }
+        this.count = count;
+    }
+
+    /**
+     * Returns the number of bytes of the entry at the given index.
+     */
+    public long length(int index) {
+        final int lengthOffset = idx(index) + ADDRESS_SIZE;
+        if (ADDRESS_SIZE == 8) {
+            // 64bit
+            return PlatformDependent.hasUnsafe() ?
+                    PlatformDependent.getLong(lengthOffset + memoryAddress) : memory.getLong(lengthOffset);
+        }
+        assert ADDRESS_SIZE == 4;
+        return PlatformDependent.hasUnsafe() ?
+                PlatformDependent.getInt(lengthOffset + memoryAddress) : memory.getInt(lengthOffset);
     }
 
     /**

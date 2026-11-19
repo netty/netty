@@ -139,6 +139,13 @@ public class DefaultHttp2ConnectionEncoderTest {
                 return ((Promise<Void>) in.getArguments()[4]).setSuccess(null);
             }
         }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), any(Promise.class));
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock in) throws Throwable {
+                ((Promise<Void>) in.getArguments()[1]).setSuccess(null);
+                return null;
+            }
+        }).when(writer).writeSettingsAck(eq(ctx), any(Promise.class));
         writtenData = new ArrayList<String>();
         writtenPadding = new ArrayList<Integer>();
         doAnswer(in -> {
@@ -286,6 +293,28 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void mergedDataFramesShouldCloseStreamOnceTheLastFrameIsWritten() throws Exception {
+        Http2Stream stream = createStream(STREAM_ID, false);
+
+        Promise<Void> promise1 = newPromise();
+        encoder.writeData(ctx, STREAM_ID, dummyData(), 0, false, promise1);
+        Promise<Void> promise2 = newPromise();
+        encoder.writeData(ctx, STREAM_ID, dummyData(), 0, true, promise2);
+
+        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+        FlowControlled mergedPayload = capturedWrites.get(0);
+        assertTrue(mergedPayload.merge(ctx, capturedWrites.get(1)));
+        mergedPayload.write(ctx, 16);
+        assertEquals(0, mergedPayload.size());
+        mergedPayload.writeComplete();
+
+        // The stream must be closed with the promise of the frame that ended it, not with the promise of the first
+        // frame, which may have completed long before the rest of the data was written.
+        verify(lifecycleManager).closeStreamLocal(stream, promise2);
+        verify(lifecycleManager, never()).closeStreamLocal(stream, promise1);
+    }
+
+    @Test
     public void dataFramesDontMergeWithHeaders() throws Exception {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData().retain();
@@ -316,6 +345,31 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals(10, (int) writtenPadding.get(0));
         assertEquals(0, data.refCnt());
         assertTrue(p.isSuccess());
+    }
+
+    @Test
+    public void writeDataFailsStreamWhenFlowControlledQueueUnderDelivers() throws Exception {
+        createStream(STREAM_ID, false);
+        ByteBuf data = wrappedBuffer(new byte[10]);
+        Promise<Void> promise = newPromise();
+        // Include padding so we also cover that dataSize and padding are reset on failure.
+        encoder.writeData(ctx, STREAM_ID, data, 10, false, promise);
+        FlowControlled fc = payloadCaptor.getValue();
+        assertEquals(20, fc.size());
+
+        // Simulate a queued buffer being consumed out from under the queue
+        data.skipBytes(data.readableBytes());
+
+        fc.write(ctx, 20);
+
+        // Expect the stream to fail rather than emitting any frames
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(Http2Exception.class, promise.cause());
+        assertEquals(Http2Error.INTERNAL_ERROR, ((Http2Exception) promise.cause()).error());
+        assertTrue(writtenData.isEmpty());
+        // The frame reports as fully consumed so it is removed and its bytes return to flow control.
+        assertEquals(0, fc.size());
+        assertEquals(0, data.refCnt());
     }
 
     @Test
@@ -659,6 +713,77 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void settingsValidationFailureDoesNotConsumeNextSettingsAck() {
+        Http2Settings invalidSettings = new Http2Settings().pushEnabled(true);
+        Promise<Void> failedPromise = newPromise();
+
+        encoder.writeSettings(ctx, invalidSettings, failedPromise);
+
+        assertFalse(failedPromise.isSuccess());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) failedPromise.cause()).error());
+        verify(writer, never()).writeSettings(eq(ctx), eq(invalidSettings), any(Promise.class));
+
+        Http2Settings validSettings = new Http2Settings().initialWindowSize(100);
+        encoder.writeSettings(ctx, validSettings, newPromise());
+
+        assertSame(validSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
+    }
+
+    @Test
+    public void synchronousSettingsWriteFailureDoesNotConsumeNextSettingsAck() {
+        final Promise<Void> failedPromise = newPromise();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) {
+                Promise<Void> promise = invocation.getArgument(2);
+                if (promise == failedPromise) {
+                    promise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
+                } else {
+                    promise.setSuccess(null);
+                }
+                return null;
+            }
+        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(Promise.class));
+
+        encoder.writeSettings(ctx, new Http2Settings().initialWindowSize(100), failedPromise);
+        Http2Settings validSettings = new Http2Settings().initialWindowSize(200);
+        encoder.writeSettings(ctx, validSettings, newPromise());
+
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, failedPromise.cause());
+        assertSame(validSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
+    }
+
+    @Test
+    public void asynchronousSettingsWriteFailurePreservesQueueOrder() {
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) {
+                return null;
+            }
+        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(Promise.class));
+
+        Http2Settings firstSettings = new Http2Settings().initialWindowSize(100);
+        Http2Settings failedSettings = new Http2Settings().initialWindowSize(100);
+        Http2Settings lastSettings = new Http2Settings().initialWindowSize(200);
+        Promise<Void> firstPromise = newPromise();
+        Promise<Void> failedPromise = newPromise();
+        Promise<Void> lastPromise = newPromise();
+
+        encoder.writeSettings(ctx, firstSettings, firstPromise);
+        encoder.writeSettings(ctx, failedSettings, failedPromise);
+        encoder.writeSettings(ctx, lastSettings, lastPromise);
+        failedPromise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
+        firstPromise.setSuccess(null);
+        lastPromise.setSuccess(null);
+
+        assertSame(firstSettings, encoder.pollSentSettings());
+        assertSame(lastSettings, encoder.pollSentSettings());
+        assertNull(encoder.pollSentSettings());
+    }
+
+    @Test
     public void dataWriteShouldCreateHalfClosedStream() throws Exception {
         writeAllFlowControlledFrames();
 
@@ -877,5 +1002,38 @@ public class DefaultHttp2ConnectionEncoderTest {
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
+    }
+
+    @Test
+    public void tooManyOutstandingRemoteSettingsClosesConnection() {
+        when(remoteFlow.channelHandlerContext()).thenReturn(ctx);
+        when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+
+        for (int i = 0; i < DefaultHttp2ConnectionEncoder.MAX_OUTSTANDING_REMOTE_SETTINGS; i++) {
+            encoder.consumeReceivedSettings(new Http2Settings());
+        }
+        verify(lifecycleManager, never()).onError(any(ChannelHandlerContext.class), anyBoolean(), any(Throwable.class));
+        verify(ctx, never()).close();
+
+        // One more than the configured maximum should be treated as a connection error rather than being queued
+        // without bound.
+        encoder.consumeReceivedSettings(new Http2Settings());
+
+        ArgumentCaptor<Throwable> causeCaptor = ArgumentCaptor.forClass(Throwable.class);
+        verify(lifecycleManager).onError(eq(ctx), eq(false), causeCaptor.capture());
+        verify(ctx).close();
+        assertInstanceOf(Http2Exception.class, causeCaptor.getValue());
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM, ((Http2Exception) causeCaptor.getValue()).error());
+
+        // The queue must not have grown past the configured maximum: draining it should yield exactly that many
+        // acks and no more.
+        for (int i = 0; i < DefaultHttp2ConnectionEncoder.MAX_OUTSTANDING_REMOTE_SETTINGS; i++) {
+            Promise<Void> promise = newPromise();
+            encoder.writeSettingsAck(ctx, promise);
+            assertTrue(promise.isSuccess());
+        }
+        Promise<Void> promise = newPromise();
+        encoder.writeSettingsAck(ctx, promise);
+        assertFalse(promise.isSuccess());
     }
 }

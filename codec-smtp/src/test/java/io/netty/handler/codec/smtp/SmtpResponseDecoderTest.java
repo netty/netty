@@ -19,8 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -122,10 +125,68 @@ public class SmtpResponseDecoderTest {
         assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("xyz Ok\r\n")));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "5x0 denied\r\n", "2:0 hm\r\n", "4?1 later\r\n" })
+    public void testDecodeCodeWithNonDigit(String line) throws Exception {
+        // Each of these used to be decoded as a valid code (490, 190 and 391).
+        final EmbeddedChannel channel = newChannel();
+        DecoderException exception = assertThrows(DecoderException.class,
+                () -> channel.writeInbound(newBuffer(line)));
+        assertNull(exception.getCause());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testDecodeLineWithOnlyCodeAndNoSeparator() throws Exception {
+        final EmbeddedChannel channel = newChannel();
+        // A line consisting of just the 3-digit code (no separator, no detail) must be rejected as an invalid
+        // line rather than crash the decoder: ByteToMessageDecoder wraps any *unexpected* exception thrown out
+        // of decode() (e.g. an IndexOutOfBoundsException from reading past the line) into a DecoderException
+        // with that exception as its cause, whereas the intentional "invalid line" rejection path throws a
+        // DecoderException with no cause. Asserting there is no cause distinguishes the two.
+        DecoderException exception = assertThrows(DecoderException.class,
+            () -> channel.writeInbound(newBuffer("250\r\n")));
+        assertNull(exception.getCause());
+        channel.finishAndReleaseAll();
+    }
+
     @Test
     public void testDecodeInvalidLine() {
         final EmbeddedChannel channel = newChannel();
         assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("Ok\r\n")));
+    }
+
+    @Test
+    public void testDecodeMultiLineResponseExceedingMaxResponseSize() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        assertThrows(TooLongFrameException.class, () -> {
+            for (int i = 0; i < 1000; i++) {
+                channel.writeInbound(newBuffer("250-A\r\n"));
+            }
+        });
+    }
+
+    @Test
+    public void testDecodeMultiLineResponseWithinMaxResponseSize() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        assertTrue(channel.writeInbound(newBuffer("250-Hello\r\n250-World\r\n250 Ok\r\n")));
+        assertTrue(channel.finish());
+
+        SmtpResponse response = channel.readInbound();
+        assertEquals(250, response.code());
+        assertEquals(3, response.details().size());
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testMaxResponseSizeAppliesPerResponse() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        for (int i = 0; i < 100; i++) {
+            assertTrue(channel.writeInbound(newBuffer("250-Hello\r\n250 Ok\r\n")));
+            SmtpResponse response = channel.readInbound();
+            assertEquals(2, response.details().size());
+        }
+        assertFalse(channel.finish());
     }
 
     private static EmbeddedChannel newChannel() {
