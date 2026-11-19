@@ -57,6 +57,11 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public Http2ConnectionHandlerBuilder gracefulShutdownDrainMillis(long gracefulShutdownDrainMillis) {
+        return super.gracefulShutdownDrainMillis(gracefulShutdownDrainMillis);
+    }
+
+    @Override
     public Http2ConnectionHandlerBuilder server(boolean isServer) {
         return super.server(isServer);
     }
