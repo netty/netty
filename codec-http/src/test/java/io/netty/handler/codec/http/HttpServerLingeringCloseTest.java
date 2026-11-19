@@ -17,7 +17,10 @@ package io.netty.handler.codec.http;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -27,22 +30,32 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.net.Socket;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class HttpServerLingeringCloseTest {
     @Test
+    void closeTimeoutDefaultsToFiveSecondsAndRejectsNegativeValues() {
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(4);
+        assertThat(aggregator.closeTimeoutMillis()).isEqualTo(5000);
+        assertThatIllegalArgumentException().isThrownBy(() -> aggregator.setCloseTimeoutMillis(-1));
+    }
+
+    @Test
     void tcpPeerCanFinishSendingAfterReading413() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, null, false);
+            checkDelivery(peer, null, false, 5000);
         }
     }
 
@@ -55,18 +68,56 @@ class HttpServerLingeringCloseTest {
         SSLContext clientTls = SSLContext.getInstance("TLS");
         clientTls.init(null, new TrustManager[] { cert.toTrustManager() }, null);
         try (Socket peer = clientTls.getSocketFactory().createSocket()) {
-            checkDelivery(peer, serverTls, false);
+            checkDelivery(peer, serverTls, false, 5000);
         }
     }
 
     @Test
     void rejectedExpectationClosesByDeadlineEvenIfPeerKeepsOutputOpen() throws Exception {
         try (Socket peer = new Socket()) {
-            checkDelivery(peer, null, true);
+            checkDelivery(peer, null, true, 2000);
         }
     }
 
-    private static void checkDelivery(Socket peer, final SslContext tls, boolean rejectExpectation) throws Exception {
+    @Test
+    void deadlineClosesSocketWhileRejectionWriteIsPending() throws Exception {
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        CompletableFuture<Channel> writing = new CompletableFuture<Channel>();
+        try (Socket peer = new Socket()) {
+            Channel server = new ServerBootstrap().group(group).channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            HttpObjectAggregator aggregator = new HttpObjectAggregator(4);
+                            aggregator.setCloseTimeoutMillis(200);
+                            ch.pipeline().addLast(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+                                @Override
+                                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                                    ReferenceCountUtil.release(msg);
+                                    ch.closeFuture().addListener(f -> promise.tryFailure(new ClosedChannelException()));
+                                    writing.complete(ch);
+                                }
+                            }, aggregator);
+                        }
+                    }).bind("127.0.0.1", 0).sync().channel();
+            peer.connect(server.localAddress());
+            peer.getOutputStream().write(("PUT / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n" +
+                    "Content-Length: 5\r\n\r\n").getBytes(CharsetUtil.US_ASCII));
+            assertThat(writing.get(10, TimeUnit.SECONDS).closeFuture().await(3, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
+    void zeroTimeoutClosesAfterResponseWhilePeerOutputIsOpen() throws Exception {
+        try (Socket peer = new Socket()) {
+            checkDelivery(peer, null, false, 0);
+        }
+    }
+
+    private static void checkDelivery(Socket peer, final SslContext tls, boolean rejectExpectation,
+                                      long timeoutMillis) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         CompletableFuture<Channel> accepted = new CompletableFuture<Channel>();
         try {
@@ -77,8 +128,11 @@ class HttpServerLingeringCloseTest {
                             if (tls != null) {
                                 ch.pipeline().addLast(tls.newHandler(ch.alloc()));
                             }
-                            ch.pipeline().addLast(new HttpServerCodec(),
-                                    new HttpObjectAggregator(4, rejectExpectation));
+                            HttpObjectAggregator aggregator = new HttpObjectAggregator(4, rejectExpectation);
+                            if (timeoutMillis != 5000) {
+                                aggregator.setCloseTimeoutMillis(timeoutMillis);
+                            }
+                            ch.pipeline().addLast(new HttpServerCodec(), aggregator);
                             accepted.complete(ch);
                         }
                     }).bind("127.0.0.1", 0).sync().channel();
@@ -94,9 +148,11 @@ class HttpServerLingeringCloseTest {
                 response.write(next);
             }
             assertThat(response.toString("US-ASCII")).startsWith("HTTP/1.1 413 ").endsWith("\r\n\r\n");
-            assertThat(child.isActive()).isTrue();
-            if (rejectExpectation) {
-                assertThat(child.closeFuture().await(10, TimeUnit.SECONDS)).isTrue();
+            if (timeoutMillis > 0) {
+                assertThat(child.isActive()).isTrue();
+            }
+            if (rejectExpectation || timeoutMillis == 0) {
+                assertThat(child.closeFuture().await(3, TimeUnit.SECONDS)).isTrue();
                 return;
             }
             if (tls == null) {

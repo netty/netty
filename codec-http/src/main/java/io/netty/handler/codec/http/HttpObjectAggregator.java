@@ -31,6 +31,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPECT;
 import static io.netty.handler.codec.http.HttpUtil.getContentLength;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.StringUtil.className;
 
 /**
@@ -58,7 +59,8 @@ import static io.netty.util.internal.StringUtil.className;
  * as it functions as both a {@link HttpRequestDecoder} and a {@link HttpResponseEncoder}.
  * </p>
  * On a socket connection, the default terminal rejection sends the response, half-closes TCP output,
- * and drains input until peer EOF or a five-second deadline (RFC 9112, section 9.6). During teardown
+ * and drains input until peer EOF or the {@linkplain #setCloseTimeoutMillis(long) configured deadline}
+ * (RFC 9112, section 9.6). During teardown
  * the pipeline discards further requests and raw input, including inbound TLS closure alerts.
  * The deadline bounds the response write and any TLS close wait as well as the drain.
  * Subclasses replacing {@link #handleOversizedMessage} control their own oversized-request teardown.
@@ -111,6 +113,7 @@ public class HttpObjectAggregator
     }
 
     private final boolean closeOnExpectationFailed;
+    private volatile long closeTimeoutMillis = 5000;
     private boolean closing;
 
     /**
@@ -135,6 +138,25 @@ public class HttpObjectAggregator
     public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
         super(maxContentLength, HttpObject.class);
         this.closeOnExpectationFailed = closeOnExpectationFailed;
+    }
+
+    /**
+     * Returns the deadline in milliseconds for closing a socket after a terminal request rejection.
+     * The default is 5000 milliseconds. Zero disables staged teardown.
+     */
+    public long closeTimeoutMillis() {
+        return closeTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum time from initiating the rejection response to fully closing the socket.
+     * The deadline includes flushing the response and waiting for peer EOF after shutting down output.
+     * Set to zero to close as soon as the rejection write completes. Changes apply to subsequent rejections.
+     *
+     * @param closeTimeoutMillis a non-negative timeout in milliseconds
+     */
+    public void setCloseTimeoutMillis(long closeTimeoutMillis) {
+        this.closeTimeoutMillis = checkPositiveOrZero(closeTimeoutMillis, "closeTimeoutMillis");
     }
 
     @Override
@@ -252,8 +274,9 @@ public class HttpObjectAggregator
 
     private void prepareToClose(ChannelHandlerContext ctx) {
         closing = true;
-        if (ctx.channel() instanceof SocketChannel) {
-            ctx.pipeline().addFirst(new HttpServerLingeringCloseHandler());
+        long timeoutMillis = closeTimeoutMillis;
+        if (timeoutMillis > 0 && ctx.channel() instanceof SocketChannel) {
+            ctx.pipeline().addFirst(new HttpServerLingeringCloseHandler(timeoutMillis));
         }
     }
 

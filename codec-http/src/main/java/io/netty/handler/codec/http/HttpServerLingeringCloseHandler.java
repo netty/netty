@@ -28,18 +28,20 @@ import java.util.concurrent.TimeUnit;
 
 /** Staged TCP teardown after a terminal HTTP rejection (RFC 9112, section 9.6). */
 final class HttpServerLingeringCloseHandler extends ChannelDuplexHandler {
-    static final int CLOSE_TIMEOUT_SECONDS = 5;
+    private final long closeTimeoutMillis;
     private ScheduledFuture<?> deadline;
     private boolean shuttingDown;
+
+    HttpServerLingeringCloseHandler(long closeTimeoutMillis) {
+        this.closeTimeoutMillis = closeTimeoutMillis;
+    }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         SocketChannel socket = (SocketChannel) ctx.channel();
         socket.config().setAllowHalfClosure(true);
         // Bound the complete teardown, including a stalled response write or TLS close_notify.
-        deadline = ctx.executor().schedule(() -> {
-            ctx.close();
-        }, CLOSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        deadline = ctx.executor().schedule(() -> ctx.close(), closeTimeoutMillis, TimeUnit.MILLISECONDS);
         ctx.read();
     }
 
