@@ -154,6 +154,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.http.HttpServerLingeringCloseHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerLingeringCloseHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.http.HttpServerUpgradeHandler",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http.HttpServerUpgradeHandler"
