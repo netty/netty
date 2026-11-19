@@ -17,12 +17,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -56,6 +57,12 @@ import static io.netty.util.internal.StringUtil.className;
  * For convenience, consider putting a {@link HttpServerCodec} before the {@link HttpObjectAggregator}
  * as it functions as both a {@link HttpRequestDecoder} and a {@link HttpResponseEncoder}.
  * </p>
+ * On a socket connection, the default terminal rejection sends the response, half-closes TCP output,
+ * and drains input until peer EOF or a five-second deadline (RFC 9112, section 9.6). During teardown
+ * the pipeline discards further requests and raw input, including inbound TLS closure alerts.
+ * The deadline bounds the response write and any TLS close wait as well as the drain.
+ * Subclasses replacing {@link #handleOversizedMessage} control their own oversized-request teardown.
+ * <p>
  * Be aware that {@link HttpObjectAggregator} may end up sending a {@link HttpResponse}:
  * <table border summary="Possible Responses">
  *   <tbody>
@@ -104,6 +111,7 @@ public class HttpObjectAggregator
     }
 
     private final boolean closeOnExpectationFailed;
+    private boolean closing;
 
     /**
      * Creates a new instance.
@@ -188,7 +196,11 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean closeAfterContinueResponse(Object msg) {
-        return closeOnExpectationFailed && ignoreContentAfterContinueResponse(msg);
+        boolean close = closeOnExpectationFailed && ignoreContentAfterContinueResponse(msg);
+        if (close) {
+            prepareToClose(ctx());
+        }
+        return close;
     }
 
     @Override
@@ -238,19 +250,21 @@ public class HttpObjectAggregator
         }
     }
 
-    /**
-     * Writes the 413 response for an oversized request that requires closing the connection.
-     * The default implementation closes the channel when the write completes, including on failure.
-     * An override takes ownership of {@code response} and is responsible for closing the connection.
-     */
-    protected void writeOversizedRequestResponseAndClose(ChannelHandlerContext ctx, FullHttpResponse response) {
-        ChannelFuture future = ctx.writeAndFlush(response);
-        future.addListener(f -> {
-            if (!f.isSuccess()) {
-                logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());
-            }
-            ctx.close();
-        });
+    private void prepareToClose(ChannelHandlerContext ctx) {
+        closing = true;
+        if (ctx.channel() instanceof SocketChannel) {
+            ctx.pipeline().addFirst(new HttpServerLingeringCloseHandler());
+        }
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (closing) {
+            // The decoder may already have emitted more messages from the same read.
+            ReferenceCountUtil.release(msg);
+        } else {
+            super.channelRead(ctx, msg);
+        }
     }
 
     @Override
@@ -263,7 +277,15 @@ public class HttpObjectAggregator
             // If auto read is false the channel must be closed or it will be stuck without a call to read()
             if (oversized instanceof FullHttpMessage || !ctx.channel().config().isAutoRead() ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
-                writeOversizedRequestResponseAndClose(ctx, TOO_LARGE_CLOSE.retainedDuplicate());
+                prepareToClose(ctx);
+                ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                        HttpServerLingeringCloseHandler.abort(ctx);
+                    } else {
+                        ctx.close();
+                    }
+                });
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {
                     if (!future.isSuccess()) {

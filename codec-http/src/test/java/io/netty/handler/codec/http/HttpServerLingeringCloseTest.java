@@ -1,0 +1,113 @@
+/*
+ * Copyright 2026 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.http;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
+import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.Test;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import java.io.ByteArrayOutputStream;
+import java.net.Socket;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class HttpServerLingeringCloseTest {
+    @Test
+    void tcpPeerCanFinishSendingAfterReading413() throws Exception {
+        try (Socket peer = new Socket()) {
+            checkDelivery(peer, null, false);
+        }
+    }
+
+    @Test
+    void tlsPeerReceives413AndOrderlyShutdown() throws Exception {
+        X509Bundle cert = new CertificateBuilder().subject("CN=localhost")
+                .setIsCertificateAuthority(true).buildSelfSigned();
+        SslContext serverTls = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+                .sslProvider(SslProvider.JDK).build();
+        SSLContext clientTls = SSLContext.getInstance("TLS");
+        clientTls.init(null, new TrustManager[] { cert.toTrustManager() }, null);
+        try (Socket peer = clientTls.getSocketFactory().createSocket()) {
+            checkDelivery(peer, serverTls, false);
+        }
+    }
+
+    @Test
+    void rejectedExpectationClosesByDeadlineEvenIfPeerKeepsOutputOpen() throws Exception {
+        try (Socket peer = new Socket()) {
+            checkDelivery(peer, null, true);
+        }
+    }
+
+    private static void checkDelivery(Socket peer, final SslContext tls, boolean rejectExpectation) throws Exception {
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        CompletableFuture<Channel> accepted = new CompletableFuture<Channel>();
+        try {
+            Channel server = new ServerBootstrap().group(group).channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            if (tls != null) {
+                                ch.pipeline().addLast(tls.newHandler(ch.alloc()));
+                            }
+                            ch.pipeline().addLast(new HttpServerCodec(),
+                                    new HttpObjectAggregator(4, rejectExpectation));
+                            accepted.complete(ch);
+                        }
+                    }).bind("127.0.0.1", 0).sync().channel();
+            peer.connect(server.localAddress());
+            peer.setSoTimeout(10000);
+            String request = "PUT / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n" +
+                    (rejectExpectation ? "Expect: 100-continue\r\n" : "") + "Content-Length: 65536\r\n\r\nabcde";
+            peer.getOutputStream().write(request.getBytes(CharsetUtil.US_ASCII));
+            Channel child = accepted.get(10, TimeUnit.SECONDS);
+            ByteArrayOutputStream response = new ByteArrayOutputStream();
+            int next;
+            while ((next = peer.getInputStream().read()) != -1) {
+                response.write(next);
+            }
+            assertThat(response.toString("US-ASCII")).startsWith("HTTP/1.1 413 ").endsWith("\r\n\r\n");
+            assertThat(child.isActive()).isTrue();
+            if (rejectExpectation) {
+                assertThat(child.closeFuture().await(10, TimeUnit.SECONDS)).isTrue();
+                return;
+            }
+            if (tls == null) {
+                peer.getOutputStream().write(new byte[1024]);
+                peer.shutdownOutput();
+            } else {
+                peer.close();
+            }
+            assertThat(child.closeFuture().await(10, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        }
+    }
+}

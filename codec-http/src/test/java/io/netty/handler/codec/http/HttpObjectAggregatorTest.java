@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
@@ -194,25 +196,21 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testCustomCloseForOversizedRequest() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4) {
+    public void testAlreadyDecodedMessagesDiscardedDuringTerminalWrite() {
+        ChannelOutboundHandlerAdapter stalledWrite = new ChannelOutboundHandlerAdapter() {
             @Override
-            protected void writeOversizedRequestResponseAndClose(ChannelHandlerContext ctx, FullHttpResponse response) {
-                ctx.writeAndFlush(response); // The application will close after draining input.
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ReferenceCountUtil.release(msg);
+                // Keep the terminal response pending while the decoder emits the next request.
             }
-        });
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(stalledWrite, new HttpRequestDecoder(),
+                new HttpObjectAggregator(4));
         try {
             assertFalse(channel.writeInbound(Unpooled.copiedBuffer(
-                    "PUT /upload HTTP/1.1\r\nConnection: close\r\nContent-Length: 5\r\n\r\n", CharsetUtil.US_ASCII)));
-            FullHttpResponse response = channel.readOutbound();
-            try {
-                assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-                assertEquals(0, HttpUtil.getContentLength(response));
-                assertFalse(HttpUtil.isKeepAlive(response));
-                assertTrue(channel.isOpen());
-            } finally {
-                response.release();
-            }
+                    "PUT / HTTP/1.1\r\nConnection: close\r\nContent-Length: 5\r\n\r\n12345" +
+                            "GET /next HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII)));
+            assertNull(channel.readInbound());
         } finally {
             channel.finishAndReleaseAll();
         }
