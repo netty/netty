@@ -131,7 +131,7 @@ public class MultiThreadIoEventLoopGroupTest {
             super(maxThreads, (Executor) null,
                   new AutoScalingEventExecutorChooserFactory(
                           minThreads, maxThreads, checkPeriod, unit, 0.4, 0.8,
-                          maxThreads, 1, 1),
+                          maxThreads, 1, 1, 1024),
                   new TestIoHandlerFactory());
         }
 
