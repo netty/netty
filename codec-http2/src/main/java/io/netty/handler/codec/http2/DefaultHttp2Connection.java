@@ -861,10 +861,16 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public DefaultStream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception {
             if (parent == null) {
-                throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
-            }
-            if (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen()) {
-                throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
+                if (isLocal()) {
+                    throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
+                }
+            } else {
+                boolean parentOpen = isLocal() ? parent.state().localSideOpen() :
+                        parent.state().remoteSideOpen() || parent.isResetSent() || parent.state() == CLOSED;
+                if (!parentOpen) {
+                    throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise",
+                            parent.id());
+                }
             }
             if (!opposite().allowPushTo()) {
                 throw connectionError(PROTOCOL_ERROR, "Server push not allowed to opposite endpoint");
