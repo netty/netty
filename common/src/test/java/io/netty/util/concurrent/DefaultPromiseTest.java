@@ -24,17 +24,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static java.lang.Math.max;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -359,6 +366,377 @@ public class DefaultPromiseTest {
             if (executor != null) {
                 executor.shutdownGracefully();
             }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testAwaitIsNotifiedWhenCompletedConcurrently() throws Exception {
+        // Unlike testSignalRace() this awaits without a timeout, so a lost wake-up makes this test hang instead of
+        // just being slow.
+        for (int i = 0; i < 4096; i++) {
+            final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+            Thread completer = startWaiter(() -> promise.setSuccess(null));
+            promise.await();
+            completer.join();
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testAwaitNotifiesAllWaiters() throws Exception {
+        final int waiterCount = 8;
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch done = new CountDownLatch(waiterCount);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicInteger completedButNotSuccessful = new AtomicInteger();
+
+        List<Thread> waiters = new ArrayList<Thread>(waiterCount);
+        try {
+            for (int i = 0; i < waiterCount; i++) {
+                waiters.add(startWaiter(() -> {
+                    try {
+                        promise.await();
+                        if (!promise.isSuccess()) {
+                            completedButNotSuccessful.incrementAndGet();
+                        }
+                    } catch (Throwable t) {
+                        error.compareAndSet(null, t);
+                    } finally {
+                        done.countDown();
+                    }
+                }));
+            }
+
+            for (Thread waiter : waiters) {
+                awaitBlocked(waiter);
+            }
+            promise.setSuccess(null);
+
+            assertTrue(done.await(10, TimeUnit.SECONDS), "Not all waiters were notified");
+            assertNull(error.get());
+            assertEquals(0, completedButNotSuccessful.get());
+        } finally {
+            release(promise, waiters);
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testCancelNotifiesWaiter() throws Exception {
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch done = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+        Thread waiter = startWaiter(() -> {
+            try {
+                promise.await();
+                assertTrue(promise.isCancelled());
+            } catch (Throwable t) {
+                error.set(t);
+            } finally {
+                done.countDown();
+            }
+        });
+        try {
+            awaitBlocked(waiter);
+
+            assertTrue(promise.cancel(false));
+            assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter was not notified");
+            assertNull(error.get());
+        } finally {
+            release(promise, waiter);
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testAwaitThrowsWhenInterrupted() throws Exception {
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch done = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicBoolean interruptedAfterThrow = new AtomicBoolean();
+
+        Thread waiter = startWaiter(() -> {
+            try {
+                promise.await();
+                error.set(new AssertionError("await() was expected to be interrupted"));
+            } catch (InterruptedException e) {
+                // Throwing InterruptedException must have cleared the interrupted status.
+                interruptedAfterThrow.set(Thread.currentThread().isInterrupted());
+            } catch (Throwable t) {
+                error.set(t);
+            } finally {
+                done.countDown();
+            }
+        });
+        try {
+            awaitBlocked(waiter);
+
+            waiter.interrupt();
+            assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter was not interrupted");
+            assertNull(error.get());
+            assertFalse(interruptedAfterThrow.get(), "The interrupted status was not cleared");
+            assertFalse(promise.isDone());
+        } finally {
+            release(promise, waiter);
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testAwaitUninterruptiblyKeepsWaitingWhenInterrupted() throws Exception {
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch done = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicBoolean interruptedOnReturn = new AtomicBoolean();
+
+        Thread waiter = startWaiter(() -> {
+            try {
+                promise.awaitUninterruptibly();
+                interruptedOnReturn.set(Thread.currentThread().isInterrupted());
+            } catch (Throwable t) {
+                error.set(t);
+            } finally {
+                done.countDown();
+            }
+        });
+        try {
+            awaitBlocked(waiter);
+
+            waiter.interrupt();
+            assertFalse(done.await(200, TimeUnit.MILLISECONDS), "awaitUninterruptibly() returned before completion");
+
+            promise.setSuccess(null);
+            assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter was not notified");
+            assertNull(error.get());
+            assertTrue(interruptedOnReturn.get(), "The interrupted status was not restored");
+        } finally {
+            release(promise, waiter);
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testCompletionDoesNotNeedTheMonitorOfThePromise() throws Exception {
+        // Awaiting no longer releases the monitor of the promise, so completing one must not require that monitor
+        // either. Otherwise a thread that awaits while holding it would keep the promise from ever being completed,
+        // and the completing thread - often an event loop - would be stuck behind it.
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch holdsMonitor = new CountDownLatch(1);
+        final CountDownLatch keepHoldingMonitor = new CountDownLatch(1);
+        final CountDownLatch done = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+        // Waits while holding the monitor and, once woken up, keeps holding it until this test lets go of it.
+        Thread waiter = startWaiter(() -> {
+            synchronized (promise) {
+                holdsMonitor.countDown();
+                try {
+                    promise.await();
+                    keepHoldingMonitor.await();
+                } catch (Throwable t) {
+                    error.set(t);
+                } finally {
+                    done.countDown();
+                }
+            }
+        });
+        final CountDownLatch completed = new CountDownLatch(1);
+        Thread completer = null;
+        try {
+            assertTrue(holdsMonitor.await(10, TimeUnit.SECONDS));
+            awaitBlocked(waiter);
+
+            // Completing runs on its own thread: were it to block on the monitor, this test would hang instead of
+            // failing, since a thread waiting to enter a monitor cannot be interrupted.
+            completer = startWaiter(() -> {
+                try {
+                    promise.setSuccess(null);
+                } catch (Throwable t) {
+                    error.compareAndSet(null, t);
+                } finally {
+                    completed.countDown();
+                }
+            });
+
+            assertTrue(completed.await(10, TimeUnit.SECONDS),
+                    "Completing the promise waited for the thread holding its monitor");
+            assertTrue(promise.isDone());
+
+            keepHoldingMonitor.countDown();
+            assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter was not woken up");
+            assertNull(error.get());
+        } finally {
+            keepHoldingMonitor.countDown();
+            if (completer == null) {
+                release(promise, waiter);
+            } else {
+                release(promise, waiter, completer);
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
+    public void testAwaitWithTimeoutDoesNotReturnEarly() throws Exception {
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(100);
+
+        long startTime = System.nanoTime();
+        assertFalse(promise.await(timeoutNanos, TimeUnit.NANOSECONDS));
+        assertThat(System.nanoTime() - startTime).isGreaterThanOrEqualTo(timeoutNanos);
+        assertFalse(promise.isDone());
+    }
+
+    @Test
+    @Timeout(value = 60)
+    public void testTimedAwaitReportsInterruptRatherThanTimeout() throws Exception {
+        // An interrupt that arrives around the moment the timeout expires must still be reported as an
+        // InterruptedException. Reporting it as a plain timeout instead would leave the interrupted status set and
+        // make Future.get(long, TimeUnit) throw a TimeoutException for a thread that was in fact interrupted.
+        //
+        // The interrupt is aimed at the deadline itself, which is the window that used to be handled wrongly. It
+        // cannot be aimed exactly: an interrupt that lands after await(...) has already returned, but before the
+        // waiter reads its own interrupted status, looks just like the defect from the outside. Those stragglers are
+        // rare, while the defect turns well over half of the rounds into a silent timeout, so the two are told apart
+        // by how often it happens rather than by a single round.
+        final int rounds = 300;
+        final long timeoutMillis = 3;
+        int timedOutWhileInterrupted = 0;
+
+        for (int i = 0; i < rounds; i++) {
+            final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+            final CountDownLatch done = new CountDownLatch(1);
+            final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+            final AtomicBoolean swallowedInterrupt = new AtomicBoolean();
+
+            Thread waiter = startWaiter(() -> {
+                try {
+                    if (!promise.await(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                        swallowedInterrupt.set(Thread.currentThread().isInterrupted());
+                    }
+                } catch (InterruptedException e) {
+                    // Expected whenever the interrupt landed before await(...) returned.
+                } catch (Throwable t) {
+                    error.set(t);
+                } finally {
+                    done.countDown();
+                }
+            });
+            try {
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(timeoutMillis));
+                waiter.interrupt();
+
+                assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter did not return");
+                assertNull(error.get());
+                if (swallowedInterrupt.get()) {
+                    timedOutWhileInterrupted++;
+                }
+            } finally {
+                release(promise, waiter);
+            }
+        }
+
+        assertThat(timedOutWhileInterrupted)
+                .describedAs("rounds where await(...) reported a timeout although the thread had been interrupted")
+                .isLessThan(rounds / 4);
+    }
+
+    @Test
+    @Timeout(value = 60)
+    public void testConcurrentTimedWaitsDoNotLoseAWaiter() throws Exception {
+        // Several threads keep timing out and awaiting again on the same promise, so they enter and leave the wait
+        // set all the time. A waiter without a timeout takes part as well: it must still be woken up by the
+        // completion, no matter how much churn the others cause.
+        final int timingOutWaiters = 6;
+        for (int round = 0; round < 64; round++) {
+            final DefaultPromise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+            final CyclicBarrier started = new CyclicBarrier(timingOutWaiters + 1);
+            final CountDownLatch timedOut = new CountDownLatch(timingOutWaiters);
+            final CountDownLatch blockingDone = new CountDownLatch(1);
+            final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+            List<Thread> waiters = new ArrayList<Thread>(timingOutWaiters + 1);
+            try {
+                waiters.add(startWaiter(() -> {
+                    try {
+                        started.await(10, TimeUnit.SECONDS);
+                        promise.await();
+                    } catch (Throwable t) {
+                        error.compareAndSet(null, t);
+                    } finally {
+                        blockingDone.countDown();
+                    }
+                }));
+                for (int i = 0; i < timingOutWaiters; i++) {
+                    waiters.add(startWaiter(() -> {
+                        try {
+                            started.await(10, TimeUnit.SECONDS);
+                            for (int j = 0; j < 8; j++) {
+                                promise.await(1, TimeUnit.MILLISECONDS);
+                            }
+                        } catch (Throwable t) {
+                            error.compareAndSet(null, t);
+                        } finally {
+                            timedOut.countDown();
+                        }
+                    }));
+                }
+
+                assertTrue(timedOut.await(30, TimeUnit.SECONDS), "The timing out waiters got stuck");
+                assertNull(error.get());
+
+                promise.setSuccess(null);
+                assertTrue(blockingDone.await(30, TimeUnit.SECONDS), "The waiter was never woken up");
+                assertNull(error.get());
+            } finally {
+                release(promise, waiters);
+            }
+        }
+    }
+
+    private static Thread startWaiter(Runnable body) {
+        Thread thread = new Thread(body);
+        // Never keep the JVM alive: an assertion that fires before the promise is completed would otherwise leave
+        // these threads parked for the rest of the surefire fork.
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
+    }
+
+    private static void release(Promise<Void> promise, Thread... waiters) throws InterruptedException {
+        release(promise, Arrays.asList(waiters));
+    }
+
+    /**
+     * Complete the promise no matter how the test ended, so no waiter stays blocked, and wait for them to notice.
+     */
+    private static void release(Promise<Void> promise, List<Thread> waiters) throws InterruptedException {
+        promise.trySuccess(null);
+        for (Thread waiter : waiters) {
+            waiter.join(TimeUnit.SECONDS.toMillis(10));
+        }
+    }
+
+    /**
+     * Wait until the given thread is blocked, so the promise is completed while the thread really is waiting for it
+     * and not before it even started to.
+     */
+    private static void awaitBlocked(Thread thread) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        for (;;) {
+            Thread.State state = thread.getState();
+            if (state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
+                return;
+            }
+            if (state == Thread.State.TERMINATED) {
+                fail("The thread terminated before it started to wait");
+            }
+            if (System.nanoTime() - deadline >= 0) {
+                fail("The thread did not start to wait within 10 seconds, last seen state: " + state);
+            }
+            Thread.sleep(1);
         }
     }
 
