@@ -171,6 +171,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile String applicationProtocol;
     private volatile boolean needTask;
     private boolean hasTLSv13Cipher;
+    // Set once the cipher suites of this engine may differ from the ones of its context.
+    private boolean cipherSuitesChanged;
     private boolean sessionSet;
 
     // Reference Counting
@@ -455,11 +457,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
+    /**
+     * Returns the authentication methods of the enabled cipher suites. The returned array may be shared with other
+     * engines and must not be modified.
+     */
     final synchronized String[] authMethods() {
         if (destroyed) {
             return EMPTY_STRINGS;
         }
-        return SSL.authenticationMethods(ssl);
+        if (cipherSuitesChanged) {
+            return SSL.authenticationMethods(ssl);
+        }
+        String[] authMethods = parentContext.authMethods;
+        if (authMethods == null) {
+            authMethods = SSL.authenticationMethods(ssl);
+            parentContext.authMethods = authMethods;
+        }
+        return authMethods;
     }
 
     final synchronized boolean isTLSv13() {
@@ -1798,6 +1812,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             hasTLSv13Cipher = !cipherSuiteSpecTLSv13.isEmpty();
+            cipherSuitesChanged = true;
             if (!destroyed) {
                 try {
                     // Set non TLSv1.3 ciphers.

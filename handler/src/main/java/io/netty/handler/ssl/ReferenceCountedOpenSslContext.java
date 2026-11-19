@@ -184,6 +184,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
+    // The authentication methods of the cipher suites this context was configured with. They are the same for every
+    // engine that did not change its cipher suites, so they are obtained from the first such engine and reused.
+    // The array is never modified.
+    volatile String[] authMethods;
+
     @SuppressWarnings("deprecation")
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
