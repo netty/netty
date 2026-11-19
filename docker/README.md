@@ -16,24 +16,55 @@ docker compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.1
 docker compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run test
 ```
 
-## aarch64 cross compile for transport-native-epoll on X86_64
+## Cross compiling the native libraries
+
+All native libraries that are released (Linux x86_64, aarch64 and riscv64, macOS x86_64 and aarch64, Windows x86_64)
+are built with one (CentOS 7 based) image, `Dockerfile.cross_compile`, on an x86_64 host:
 
 ```
-docker compose -f docker/docker-compose.yaml run cross-compile-aarch64-build
+NETTY_CROSS_TARGET=osx-aarch_64 docker compose -f docker/docker-compose.cross.yaml run cross-compile-build
 ```
-The default version of aarch64 gcc is `4.9-2016.02`. Update the parameter `gcc_version` in `docker-compose.yaml` to use a version you want.
 
-## riscv64 cross compile for transport-native-epoll on X86_64
+`NETTY_CROSS_TARGET` is one of `linux-x86_64`, `linux-aarch_64`, `linux-riscv64`, `osx-x86_64`, `osx-aarch_64` and
+`windows-x86_64`. `NETTY_CROSS_MODULES` optionally restricts the build to some of the native modules of the target
+(comma separated), or extends it to the whole project with `all`.
+
+[zig](https://ziglang.org) is used as the C/C++ compiler and linker for all targets. It brings its own glibc stubs
+(of any version), macOS libSystem stubs and headers, and MinGW-w64, so what the libraries are compatible with does not
+depend on the glibc of the image, and no macOS SDK is needed. `cross-compile/zig-toolchain.sh` makes it look like the
+`<triple>-gcc` style cross toolchain our builds expect, and `cross-compile/build.sh` selects the maven profiles,
+modules and environment of a target. The minimum versions are:
+
+| Target | Minimum |
+| ------ | ------- |
+| Linux x86_64, aarch64 | glibc 2.17 (checked, see below) |
+| Linux riscv64 | glibc 2.31 |
+| macOS x86_64, aarch64 | macOS 11.0 |
+| Windows x86_64 | Windows 10 (UCRT) |
+
+To build the native libraries for all targets at once, in one maven build, use the `cross-compile-all` profile of
+the native modules:
 
 ```
-docker compose -f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-build
+docker compose -f docker/docker-compose.cross.yaml run --rm cross-compile-shell -c \
+  "./mvnw -B -ntp -Pcross-compile-all clean package -DskipTests"
 ```
+
+It builds (and attaches) the jars of all classifiers: `linux-x86_64`, `linux-aarch_64` and `linux-riscv64` for
+epoll and io_uring, `osx-x86_64` and `osx-aarch_64` for kqueue and the macOS DNS resolver, these five for
+unix-common, and all but riscv64 plus `windows-x86_64` for quic. The steps for a target are the same as for the
+build of only one target, and happen in `target/cross/<classifier>` of a module, see `cross-compile/cross-compile-all.xml`
+and the `cross-compile-all` profiles. `cross-compile/env.sh <target> <command>` runs a command in the environment of
+a target, which is what both use.
+
+Running `cross-compile/build.sh` outside of the image also works, given zig, Rust (with the standard libraries of the
+targets), cmake, ninja, nasm, autotools, libclang (for bindgen), patchelf and python3 on the `PATH`.
 
 etc, etc
 
 ## Pinned toolchain downloads
 
-The Dockerfiles verify downloaded toolchains (SDKMAN! installer, `rustup-init`, ARM GCC) against a pinned SHA-256 before using them.
+The Dockerfiles verify downloaded toolchains (SDKMAN! installer, `rustup-init`, zig) against a pinned SHA-256 before using them.
 SDKMAN! does not version its installer script, so if a docker build fails with a checksum mismatch for `sdkman-install.sh`, review the new script and refresh the pinned hash in all Dockerfiles with:
 
 ```
@@ -44,8 +75,8 @@ Use `docker/update-sdkman-sha.sh --check` to only verify whether the pinned hash
 
 ## Minimum glibc version of the native libraries
 
-`Dockerfile.centos7` and `Dockerfile.cross_compile_aarch64` set `NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true`, which activates the `check-native-glibc-versions` profile in `pom.xml`.
-It fails the build if a Linux native library requires a glibc symbol version newer than `GLIBC_2.14` (x86_64) or `GLIBC_2.17` (aarch64).
+`Dockerfile.centos7` and `Dockerfile.cross_compile` set `NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true`, which activates the `check-native-glibc-versions` profile in `pom.xml`.
+It fails the build if a Linux native library requires a glibc symbol version newer than `GLIBC_2.17` (x86_64 and aarch64).
 Version needs marked as `WEAK` are only reported, as they do not prevent loading the library.
 Modules can opt out by setting the `skipNativeGlibcVersionsCheck` property to `true`, which `codec-native-quic` does.
 The check is done by `.github/scripts/check_native_glibc_versions.sh`, which can also be run by hand:

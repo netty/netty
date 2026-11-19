@@ -1,0 +1,177 @@
+# One image to build the native libraries of Netty for all the platforms we release them for, see
+# docker/cross-compile/build.sh:
+#
+#   linux-x86_64, linux-aarch_64, linux-riscv64, osx-x86_64, osx-aarch_64, windows-x86_64
+#
+# zig (https://ziglang.org) is used as the C/C++ compiler and linker for all of them, see
+# docker/cross-compile/zig-toolchain.sh. It brings its own copies of the glibc (stubs of any version we want to
+# link against), macOS (libSystem) and MinGW-w64 headers and libraries, so a macOS SDK is not needed, and the glibc of
+# this image does not end up in the libraries.
+
+# NASM (for the Windows assembly of BoringSSL): CentOS 7 only has 2.10, and building a recent one from source needs
+# a newer autoconf than CentOS 7 has, so build a static binary here.
+FROM --platform=linux/amd64 alpine:3.22 AS nasm
+
+ARG nasm_version=2.16.03
+# SHA-256 of the GitHub source archive of the nasm-$nasm_version tag
+ARG nasm_sha256=e525fa6fdc3df33cec6b499111f44afa78ce50bf260158580dcf014015a21ba9
+
+RUN apk add --no-cache autoconf automake build-base curl perl
+RUN curl -fsSL -o /tmp/nasm.tar.gz "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-$nasm_version.tar.gz" && \
+    echo "$nasm_sha256  /tmp/nasm.tar.gz" | sha256sum -c - && \
+    mkdir -p /tmp/nasm && \
+    tar -xzf /tmp/nasm.tar.gz -C /tmp/nasm --strip-components=1 && \
+    cd /tmp/nasm && \
+    ./autogen.sh && \
+    ./configure LDFLAGS=-static && \
+    make dirs && \
+    make nasm && \
+    strip nasm && \
+    ./nasm -v
+
+FROM --platform=linux/amd64 centos:7.9.2009
+
+ENV CMAKE_VERSION=3.26.4
+ENV CLANG_VERSION=18.1.8
+
+# Update as we need to use the vault now.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.9.2009\//g' /etc/yum.repos.d/CentOS-Base.repo
+
+# - autoconf, automake, libtool, make: hawtjni (configure based builds)
+# - perl: BoringSSL
+# - gcc, glibc-devel: to link the build scripts of Rust crates for the host
+# - binutils: readelf for .github/scripts/check_native_glibc_versions.sh
+# - python3: docker/cross-compile/macho-hide-symbols.py
+# - gnupg2: signing the release artifacts
+RUN yum install -y \
+      autoconf \
+      automake \
+      binutils \
+      bzip2 \
+      ca-certificates \
+      curl \
+      file \
+      gcc \
+      git \
+      glibc-devel \
+      gnupg2 \
+      libtool \
+      make \
+      perl \
+      python3 \
+      tar \
+      unzip \
+      which \
+      xz \
+      zip && \
+    yum update -y ca-certificates
+
+# The config.sub / config.guess of CentOS 7's automake and libtool don't know riscv64 (or other newer targets), and
+# hawtjni copies them into every native package (autogen.sh), so replace them with newer ones. Taken from GCC, which
+# imports them unchanged from the GNU config project (https://savannah.gnu.org/projects/config).
+ARG gnu_config_commit=6fad101f3063d722e3348d07dc93cf737f8709e4
+ARG config_sub_sha256=71b8d73e46e0c31b1dc91ba5306f5ef0af009273b3bb283f31d8dad69666fa9e
+ARG config_guess_sha256=7d1e3c79b86de601c3a0457855ab854dffd15163f53c91edac54a7be2e9c931b
+RUN curl -fsSL -o /tmp/config.sub "https://raw.githubusercontent.com/gcc-mirror/gcc/$gnu_config_commit/config.sub" && \
+    curl -fsSL -o /tmp/config.guess "https://raw.githubusercontent.com/gcc-mirror/gcc/$gnu_config_commit/config.guess" && \
+    echo "$config_sub_sha256  /tmp/config.sub" | sha256sum -c - && \
+    echo "$config_guess_sha256  /tmp/config.guess" | sha256sum -c - && \
+    for dir in /usr/share/automake-* /usr/share/libtool/config; do \
+      if [ -f "$dir/config.sub" ]; then install -m 755 /tmp/config.sub /tmp/config.guess "$dir/"; fi; \
+    done && \
+    rm -f /tmp/config.sub /tmp/config.guess && \
+    for dir in /usr/share/automake-*; do "$dir/config.sub" riscv64-linux-gnu; done
+
+# - ninja-build: BoringSSL
+# - patchelf: drops the DT_NEEDED on ld-linux-<arch>.so from the quic library, see codec-native-quic/pom.xml
+# EPEL is enabled here rather than next to the dependency list above so that it cannot change what those packages
+# resolve to. The version calls fail the image build if EPEL ever stops resolving.
+RUN yum -y install epel-release && \
+    yum -y install ninja-build patchelf && \
+    ninja-build --version && \
+    patchelf --version
+
+COPY --from=nasm /tmp/nasm/nasm /usr/local/bin/nasm
+RUN nasm -v
+
+# CMake >= 3.21, as docker/cross-compile/build.sh passes the toolchain with the CMAKE_TOOLCHAIN_FILE environment variable
+RUN curl -fsSL -o /tmp/cmake.tar.gz "https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz" && \
+    tar -xzf /tmp/cmake.tar.gz -C /opt && \
+    rm -f /tmp/cmake.tar.gz
+ENV PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH
+
+# libclang for bindgen, which boring-sys uses to generate the BoringSSL bindings for quiche. Prebuilt for CentOS 7.
+ARG clang_sha256=b3616996a772e0ef17db021b2259b7f179adafe2ba188509f168ecf8e93b92a3
+ENV CLANG_SHA256=$clang_sha256
+RUN curl -fsSL -o /tmp/clang.tar.xz "https://github.com/netty/netty/releases/download/netty-clang-bin/centos-7-clang-$CLANG_VERSION-bin.tar.xz" && \
+    echo "$CLANG_SHA256  /tmp/clang.tar.xz" | sha256sum -c - && \
+    tar -xJf /tmp/clang.tar.xz -C /opt && \
+    rm -f /tmp/clang.tar.xz
+ENV LIBCLANG_PATH=/opt/clang-$CLANG_VERSION/lib
+
+ARG zig_version=0.17.1
+# From https://ziglang.org/download/index.json
+ARG zig_sha256=3581863e3cbcfd0fce0efc682ce7e9e93da96668a977791d356a26d2a7e9b17a
+ENV ZIG_VERSION=$zig_version
+ENV ZIG_SHA256=$zig_sha256
+
+RUN curl -fsSL -o /tmp/zig.tar.xz "https://ziglang.org/download/$ZIG_VERSION/zig-x86_64-linux-$ZIG_VERSION.tar.xz" && \
+    echo "$ZIG_SHA256  /tmp/zig.tar.xz" | sha256sum -c - && \
+    mkdir -p /opt/zig && \
+    tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1 && \
+    rm -f /tmp/zig.tar.xz && \
+    /opt/zig/zig version
+ENV PATH=/opt/zig:$PATH
+
+# The Rust toolchain is pinned, so the libraries don't change (or break, which happened more than once while setting
+# this image up) whenever a new version is released.
+ARG rust_version=1.100.0
+ENV RUST_VERSION=$rust_version
+
+ARG rustup_version=1.29.1
+ARG rustup_sha256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+ENV RUSTUP_VERSION=$rustup_version
+ENV RUSTUP_SHA256=$rustup_sha256
+
+# Install rust and the standard libraries of all the targets we cross compile quiche for, see
+# docker/cross-compile/build.sh. (linux-riscv64 does not include codec-native-quic.)
+RUN curl -fsSL -o /tmp/rustup-init "https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/x86_64-unknown-linux-gnu/rustup-init" && \
+    echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - && \
+    chmod +x /tmp/rustup-init && \
+    /tmp/rustup-init -y --profile minimal --default-toolchain "$RUST_VERSION" && \
+    rm -f /tmp/rustup-init && \
+    /root/.cargo/bin/rustup target add \
+      aarch64-unknown-linux-gnu \
+      x86_64-apple-darwin \
+      aarch64-apple-darwin \
+      x86_64-pc-windows-gnullvm
+ENV PATH=/root/.cargo/bin:$PATH
+
+# Downloading and installing SDKMAN!
+ARG sdkman_install_sha256=7c2e84cbfdeefd2047ea6d3203cd1b889c67f6530b72f246a38379892be2e817
+ENV SDKMAN_INSTALL_SHA256=$sdkman_install_sha256
+# The installer script is not versioned by SDKMAN!, so the pinned SHA-256 needs to be updated when it changes.
+RUN curl -fsSL -o /tmp/sdkman-install.sh "https://beta.sdkman.io?ci=true" && \
+    echo "$SDKMAN_INSTALL_SHA256  /tmp/sdkman-install.sh" | sha256sum -c - && \
+    bash /tmp/sdkman-install.sh && \
+    rm -f /tmp/sdkman-install.sh
+
+ARG java_version="11.0.30-zulu"
+ENV JAVA_VERSION=$java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+ENV JAVA_HOME=/root/.sdkman/candidates/java/current
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Fail the build if the native libraries require a newer glibc than we support, see
+# .github/scripts/check_native_glibc_versions.sh and the check-native-glibc-versions profile in pom.xml.
+ENV NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true
+
+# Cleanup
+RUN yum clean all && \
+    rm -rf /var/cache/yum

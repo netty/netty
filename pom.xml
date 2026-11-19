@@ -725,10 +725,10 @@
     </profile>
     <profile>
       <!-- Verify that the Linux native libraries do not require a newer glibc than we support
-           (x86_64: 2.14, aarch64: 2.17), see .github/scripts/check_native_glibc_versions.sh.
+           (2.17 for x86_64 and aarch64), see .github/scripts/check_native_glibc_versions.sh.
 
            Only activated by the release / CI docker images (docker/Dockerfile.centos7 and
-           docker/Dockerfile.cross_compile_aarch64), as builds on a workstation are usually done against a newer glibc
+           docker/Dockerfile.cross_compile), as builds on a workstation are usually done against a newer glibc
            and so are expected to require newer symbol versions.
 
            PHASE: process-test-classes, as the native libraries are only copied into the output directory at

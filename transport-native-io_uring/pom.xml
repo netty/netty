@@ -34,8 +34,11 @@
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
-    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
-    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <!-- Without the directories of the unix-common library, which the cross-compile-all profile has once per target -->
+    <nativeCflags>-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden</nativeCflags>
+    <nativeLdflags>-Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</nativeLdflags>
+    <jni.compiler.args.cflags>CFLAGS=${nativeCflags} -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} ${nativeLdflags}</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
     <skipTests>true</skipTests>
@@ -314,6 +317,199 @@
       <properties>
         <skipTests>true</skipTests>
       </properties>
+    </profile>
+    <!-- Builds the native library for all the linux targets we release it for, in one build, with the cross compile
+         toolchain of docker/Dockerfile.cross_compile (see docker/README.md):
+
+           ./mvnw -Pcross-compile-all clean package
+
+         Declared last, so it can replace the executions of the profile of the host. -->
+    <profile>
+      <id>cross-compile-all</id>
+      <properties>
+        <crossCompileScripts>${project.basedir}/../docker/cross-compile</crossCompileScripts>
+        <crossDir>${project.build.directory}/cross</crossDir>
+        <crossLibPlaceholder>netty_native_lib_placeholder</crossLibPlaceholder>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack</id>
+                <phase>none</phase>
+              </execution>
+              <!-- The unix-common static library and include files, for every target -->
+              <execution>
+                <id>unpack-cross</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>${project.groupId}</groupId>
+                      <artifactId>netty-transport-native-unix-common</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>linux-x86_64</classifier>
+                      <outputDirectory>${crossDir}/linux-x86_64/unix-common</outputDirectory>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>${project.groupId}</groupId>
+                      <artifactId>netty-transport-native-unix-common</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>linux-aarch_64</classifier>
+                      <outputDirectory>${crossDir}/linux-aarch_64/unix-common</outputDirectory>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>${project.groupId}</groupId>
+                      <artifactId>netty-transport-native-unix-common</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>linux-riscv64</classifier>
+                      <outputDirectory>${crossDir}/linux-riscv64/unix-common</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                  <includes>META-INF/native/**</includes>
+                  <overWriteSnapshots>true</overWriteSnapshots>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.fusesource.hawtjni</groupId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build-native-lib</id>
+                <phase>none</phase>
+              </execution>
+              <!-- Only the native package, with a placeholder for the name of the library, see build-native-libs-cross -->
+              <execution>
+                <id>generate-native-package-cross</id>
+                <configuration>
+                  <name>${crossLibPlaceholder}</name>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-manifest</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-jar</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-native-lib</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>build-native-libs-cross</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <macrodef name="build-native-lib">
+                      <attribute name="target" />
+                      <attribute name="triple" />
+                      <attribute name="arch" />
+                      <sequential>
+                        <ant antfile="${crossCompileScripts}/cross-compile-all.xml" target="prepare-native-package">
+                          <property name="cross.dir" value="${crossDir}" />
+                          <property name="cross.target" value="@{target}" />
+                          <property name="package.dir" value="${project.build.directory}/generated-sources/hawtjni/native-package" />
+                          <property name="lib.placeholder" value="${crossLibPlaceholder}" />
+                          <property name="lib.name" value="netty_transport_native_io_uring42_@{arch}" />
+                        </ant>
+                        <exec executable="${crossCompileScripts}/env.sh" dir="${crossDir}/@{target}/native-build" failonerror="true">
+                          <arg value="@{target}" />
+                          <arg value="./configure" />
+                          <arg value="--prefix=${crossDir}/@{target}/native-build/target" />
+                          <arg value="--libdir=${crossDir}/@{target}/native-build/target/lib" />
+                          <arg value="--host=@{triple}" />
+                          <arg value="CC=@{triple}-gcc" />
+                          <arg value="LDFLAGS=-L${crossDir}/@{target}/unix-common/META-INF/native/lib ${nativeLdflags}" />
+                          <arg value="CFLAGS=${nativeCflags} -I${crossDir}/@{target}/unix-common/META-INF/native/include" />
+                        </exec>
+                        <exec executable="${crossCompileScripts}/env.sh" dir="${crossDir}/@{target}/native-build" failonerror="true">
+                          <arg value="@{target}" />
+                          <arg value="make" />
+                          <arg value="install" />
+                        </exec>
+                        <ant antfile="${crossCompileScripts}/cross-compile-all.xml" target="check-glibc-versions">
+                          <property name="cross.target" value="@{target}" />
+                          <property name="lib.file" value="${crossDir}/@{target}/native-build/target/lib/libnetty_transport_native_io_uring42_@{arch}.so" />
+                        </ant>
+                      </sequential>
+                    </macrodef>
+                    <build-native-lib target="linux-x86_64" triple="x86_64-linux-gnu" arch="x86_64" />
+                    <build-native-lib target="linux-aarch_64" triple="aarch64-linux-gnu" arch="aarch_64" />
+                    <build-native-lib target="linux-riscv64" triple="riscv64-linux-gnu" arch="riscv64" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- The same as native-manifest and native-jar, for every target -->
+              <execution>
+                <id>native-jars-cross</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <macrodef name="native-jar">
+                      <attribute name="target" />
+                      <attribute name="arch" />
+                      <attribute name="processor" />
+                      <sequential>
+                        <ant antfile="${crossCompileScripts}/cross-compile-all.xml" target="native-jar">
+                          <property name="cross.dir" value="${crossDir}" />
+                          <property name="cross.target" value="@{target}" />
+                          <property name="base.dir" value="${project.build.outputDirectory}" />
+                          <property name="default.jar" value="${project.build.directory}/${project.build.finalName}.jar" />
+                          <property name="lib.file" value="${crossDir}/@{target}/native-build/target/lib/libnetty_transport_native_io_uring42_@{arch}.so" />
+                          <property name="module.name" value="${fallbackModuleName}.linux.@{arch}" />
+                          <property name="manifest.template" value="${project.build.outputDirectory}/META-INF/MANIFEST.MF" />
+                          <property name="bundle.native.code" value="META-INF/native/libnetty_transport_native_io_uring42_@{arch}.so; osname=Linux; processor=@{processor},*" />
+                          <property name="fragment.host" value="io.netty.transport-classes-io_uring" />
+                          <property name="dest.jar" value="${project.build.directory}/${project.build.finalName}-@{target}.jar" />
+                        </ant>
+                        <attachartifact file="${project.build.directory}/${project.build.finalName}-@{target}.jar" classifier="@{target}" type="jar" />
+                      </sequential>
+                    </macrodef>
+                    <native-jar target="linux-x86_64" arch="x86_64" processor="x86_64" />
+                    <native-jar target="linux-aarch_64" arch="aarch_64" processor="aarch64" />
+                    <native-jar target="linux-riscv64" arch="riscv64" processor="riscv64" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

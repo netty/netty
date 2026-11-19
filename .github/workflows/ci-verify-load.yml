@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright 2021 The Netty Project
+# Copyright 2025 The Netty Project
 #
 # The Netty Project licenses this file to you under the Apache License,
 # version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,22 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
+# The native libraries of all targets are cross compiled on linux x86_64 (docker/Dockerfile.cross_compile), so
+# nothing in that build runs them. These jobs load them on every target, with all native jars on the classpath, like
+# an application that depends on all of them would.
 name: Verify native library loading
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "4.2" ]
 
   pull_request:
-    branches: [ main ]
+    branches: [ "4.2" ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+permissions: read-all
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
@@ -35,22 +40,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  install-jars-linux-aarch64:
+  build-jars:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write  # to push the docker build cache to ghcr.io; no-op (ignored) for fork PRs
     env:
       # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
-      # entries in docker/docker-compose.centos-7.cross.yaml are actually honored.
+      # entries in the docker-compose*.yaml files are actually honored.
       COMPOSE_BAKE: "true"
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
-      # Caching of maven dependencies
       # Pinned to v5.1.0
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Cache local Maven repository
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -59,8 +64,11 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
+      - name: Delete old netty artifacts in local maven repository
+        run: rm -rf ~/.m2/repository/io/netty/*
+
       # The default "docker" buildx driver can't export cache to a registry; switch to the
-      # docker-container driver so cache_to: type=registry in the compose file actually works.
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
       # Pinned to v4.4.1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
@@ -77,56 +85,94 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
-        run: docker compose -f docker/docker-compose.centos-7.cross.yaml build
+        run: docker compose -f docker/docker-compose.cross.yaml build
 
-      - name: Build project and install jars
-        run: docker compose -f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-install
+      - name: Build the native jars of all targets
+        run: docker compose -f docker/docker-compose.cross.yaml run cross-compile-all-install-native
 
       # Pinned to v6.0.0
-      - name: Upload the maven repository
+      - name: Upload the netty jars
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: maven-repository
-          # We only need the netty jars.
+          name: netty-jars
           path: ~/.m2/repository/io/netty/
           if-no-files-found: error
 
-  load-native-linux-aarch64:
-    # The host should always be Linux
-    runs-on: ubuntu-22.04
-    needs: [ install-jars-linux-aarch64 ]
+  load-native:
+    needs: build-jars
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x86_64
+            os: ubuntu-24.04
+            checks: epoll io_uring quic
+          - target: linux-aarch_64
+            os: ubuntu-24.04-arm
+            checks: epoll io_uring quic
+          - target: osx-x86_64
+            os: macos-15-intel
+            checks: kqueue dns-macos quic
+          - target: osx-aarch_64
+            os: macos-15
+            checks: kqueue dns-macos quic
+          - target: windows-x86_64
+            os: windows-2022
+            checks: quic
+    runs-on: ${{ matrix.os }}
+    name: load-native-${{ matrix.target }}
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Pinned to v7.0.0
-      - name: Download the maven repository
+      - name: Download the netty jars
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
-          name:  maven-repository
+          name: netty-jars
+          path: ${{ runner.temp }}/jars
+
+      # Pinned to v5.7.0
+      - name: Set up JDK 11
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Load the native libraries
+        shell: bash
+        run: .github/scripts/check_load_natives.sh "${{ runner.temp }}/jars" ${{ matrix.checks }}
+
+  # There are no riscv64 runners, so run it in QEMU, like ci-build-riscv64.yml. The glibc of ubuntu 20.04 (2.31) is
+  # also the oldest one we support on riscv64.
+  load-native-linux-riscv64:
+    needs: build-jars
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # for uraimo/run-on-arch-action to cache docker images
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # Pinned to v7.0.0
+      - name: Download the netty jars
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: netty-jars
           path: /home/runner/jars
 
       - uses: uraimo/run-on-arch-action@v3
-        name: Check native loading
-        id: runcmd
+        name: Load the native libraries
         with:
-          arch: aarch64
+          arch: riscv64
           distro: ubuntu20.04
-
-          # Not required, but speeds up builds by storing container images in
-          # a GitHub package registry.
           githubToken: ${{ github.token }}
-
-          # Mount the .m2/repository
           dockerRunArgs: |
             --volume "/home/runner/jars:/root/jars"
-
-          # Install dependencies
           install: |
             apt-get update -q -y
-            apt-get install -q -y openjdk-11-jdk
+            apt-get install -q -y openjdk-11-jdk-headless
             apt-get clean -q -y
-
-          # Check if we can load the native code on aarch64
           run: |
-            .github/scripts/check_load_native.sh /root/jars io.netty.handler.codec.quic.Quic ensureAvailability
+            .github/scripts/check_load_natives.sh /root/jars epoll io_uring
