@@ -30,6 +30,8 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaderValues.UPGRADE;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZERO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,6 +59,31 @@ public class ReadOnlyHttpHeadersTest {
         assertEquals(-1, headers.getInt(CONTENT_LENGTH, -1));
         assertNull(headers.getShort(CONTENT_LENGTH));
         assertEquals((short) -1, headers.getShort(CONTENT_LENGTH, (short) -1));
+    }
+
+    @Test
+    public void containsValueMatchesCommaSeparatedToken() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(true,
+                CONNECTION, "keep-alive, upgrade");
+        assertTrue(headers.containsValue(CONNECTION, KEEP_ALIVE, true));
+        assertTrue(headers.containsValue(CONNECTION, UPGRADE, true));
+        assertFalse(headers.containsValue(CONNECTION, CLOSE, true));
+    }
+
+    @Test
+    public void containsValueRespectsCase() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(true,
+                CONNECTION, "Keep-Alive, Upgrade");
+        assertTrue(headers.containsValue(CONNECTION, KEEP_ALIVE, true));
+        assertFalse(headers.containsValue(CONNECTION, KEEP_ALIVE, false));
+    }
+
+    @Test
+    public void containsDoesNotSplitOnComma() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(true,
+                CONNECTION, "keep-alive, upgrade");
+        assertFalse(headers.contains(CONNECTION.toString(), KEEP_ALIVE.toString(), true));
+        assertTrue(headers.contains(CONNECTION.toString(), "keep-alive, upgrade", true));
     }
 
     @Test
