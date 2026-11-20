@@ -804,17 +804,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                                 throw new ErrorDataDecoderException(e);
                             }
                             currentFieldAttributes.put(HttpHeaderValues.CHARSET, attribute);
-                        } else if (contents[i].contains("=")) {
-                            String name = StringUtil.substringBefore(contents[i], '=');
-                            String values = StringUtil.substringAfter(contents[i], '=');
-                            Attribute attribute;
-                            try {
-                                attribute = factory.createAttribute(request, cleanString(name), values);
-                            } catch (NullPointerException | IllegalArgumentException e) {
-                                throw new ErrorDataDecoderException(e);
-                            }
-                            currentFieldAttributes.put(name, attribute);
-                        } else {
+                        } else if (!contents[i].contains("=")) {
+                            // The value without '=' is the media type. Other parameters of the Content-Type are
+                            // not used by the decoder and are ignored, so that they can not replace the name or
+                            // filename given in the Content-Disposition header.
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
