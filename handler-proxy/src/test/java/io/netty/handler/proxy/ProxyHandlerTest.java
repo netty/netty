@@ -17,12 +17,14 @@
 package io.netty.handler.proxy;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -35,6 +37,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
@@ -575,6 +578,64 @@ public class ProxyHandlerTest {
         assertThat(handler.connectFuture().isDone()).isTrue();
         assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class);
         assertThat(ch.finishAndReleaseAll()).isFalse();
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("proxyTypes")
+    public void testChannelInactiveWhenProxyDisconnectsDuringHandshake(String type) throws Exception {
+        Channel server = new ServerBootstrap().group(group).channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) {
+                        ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                            @Override
+                            protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                                // Disconnect after receiving the initial handshake message, without responding.
+                                ctx.close();
+                            }
+                        });
+                    }
+                }).bind(NetUtil.LOCALHOST, 0).sync().channel();
+        final ProxyHandler handler = newProxyHandler(type, server.localAddress());
+        handler.setConnectTimeoutMillis(0);
+        final Queue<Object> events = new LinkedBlockingQueue<Object>();
+        final CountDownLatch unregistered = new CountDownLatch(1);
+        Channel ch = null;
+        try {
+            ch = new Bootstrap().group(group).channel(NioSocketChannel.class)
+                    .resolver(NoopAddressResolverGroup.INSTANCE)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel ch) {
+                            ch.pipeline().addLast(handler, new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    events.add(cause);
+                                }
+
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) {
+                                    events.add("channelInactive");
+                                }
+
+                                @Override
+                                public void channelUnregistered(ChannelHandlerContext ctx) {
+                                    unregistered.countDown();
+                                }
+                            });
+                        }
+                    }).connect(DESTINATION).sync().channel();
+
+            assertThat(unregistered.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class)
+                    .hasMessageContaining("disconnected");
+            assertThat(events).containsExactly(handler.connectFuture().cause(), "channelInactive");
+        } finally {
+            if (ch != null) {
+                ch.close().sync();
+            }
+            server.close().sync();
+        }
     }
 
     @AfterEach
