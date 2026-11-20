@@ -1955,8 +1955,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(keyManager, null)
                                 .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
-                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
-                new ChannelInboundHandlerAdapter());
+                TestQuicTokenHandler.INSTANCE, new TestHandler(),
+                new TestHandler());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
@@ -1965,8 +1965,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             Future<QuicChannel> connectFuture = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .handler(new TestHandler())
+                    .streamHandler(new TestHandler())
                     .remoteAddress(address)
                     .connect().await();
             assertFalse(connectFuture.isSuccess());
