@@ -20,7 +20,7 @@ import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
@@ -41,6 +41,7 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -81,13 +82,13 @@ public class DnsResolveAllCancelLeakTest {
                             ch.pipeline().addLast(new DatagramDnsQueryDecoder(), new DatagramDnsResponseEncoder(),
                                     new CnameAnsweringHandler(followUpArrived, answerFollowUp));
                         }
-                    }).bind(new InetSocketAddress("127.0.0.1", 0)).sync().channel();
+                    }).bind(new InetSocketAddress("127.0.0.1", 0)).sync().getNow();
 
             EventLoop loop = group.next();
             final TrackingAllocator allocator = new TrackingAllocator();
             DnsNameResolver resolver = new DnsNameResolverBuilder(loop)
-                    .datagramChannelFactory(() -> {
-                        NioDatagramChannel ch = new NioDatagramChannel();
+                    .datagramChannelFactory((ChannelFactory<DatagramChannel>) eventLoop -> {
+                        NioDatagramChannel ch = new NioDatagramChannel(eventLoop);
                         ch.config().setAllocator(allocator);
                         return ch;
                     })
@@ -180,7 +181,7 @@ public class DnsResolveAllCancelLeakTest {
         }
 
         @Override
-        public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
+        public void queryWritten(InetSocketAddress dnsServerAddress, Future<Void> future) {
         }
 
         @Override
