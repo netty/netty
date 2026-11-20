@@ -226,8 +226,10 @@ public class IoUringIoHandlerTest {
             handler.initialize();
             runOnceWithoutBlocking(handler);
             assertTrue(handler.isEventFdReadPending());
-            // Close the wakeup gate with an event written but its completion not yet processed. destroy() must wait
-            // for the read to complete, as the kernel may still be copying into the read buffer.
+            handler.prepareToDestroy();
+            // Another thread can still call wakeup() between prepareToDestroy() and destroy(). That leaves an event
+            // written whose completion has not been processed. destroy() must wait for the read to complete, as the
+            // kernel may still be copying into the read buffer.
             handler.wakeup();
             handler.destroy();
             assertFalse(handler.isEventFdReadPending());
