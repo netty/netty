@@ -25,6 +25,7 @@ module io.netty5.common {
     requires static org.apache.commons.logging;
     requires static org.apache.log4j;
     requires static org.apache.logging.log4j;
+    requires static org.apache.logging.log4j.core;
     requires static org.jetbrains.annotations;
     requires static org.slf4j;
     requires static org.graalvm.nativeimage;

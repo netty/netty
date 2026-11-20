@@ -1657,6 +1657,7 @@
 -                       the classpath.
 -                     -->
                       <exclude>META-INF/native/*.*</exclude>
+                      <exclude>module-info.class</exclude>
                     </excludes>
                     <includes>
                       <!-- Include everything else -->
