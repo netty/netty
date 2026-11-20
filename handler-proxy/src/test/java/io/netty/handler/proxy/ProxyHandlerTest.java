@@ -24,7 +24,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -595,7 +595,7 @@ public class ProxyHandlerTest {
                             }
                         });
                     }
-                }).bind(NetUtil.LOCALHOST, 0).sync().channel();
+                }).bind(NetUtil.LOCALHOST, 0).get();
         final ProxyHandler handler = newProxyHandler(type, server.localAddress());
         handler.setConnectTimeoutMillis(0);
         final Queue<Object> events = new LinkedBlockingQueue<Object>();
@@ -607,7 +607,7 @@ public class ProxyHandlerTest {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(handler, new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(handler, new ChannelInboundHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     events.add(cause);
@@ -624,7 +624,7 @@ public class ProxyHandlerTest {
                                 }
                             });
                         }
-                    }).connect(DESTINATION).sync().channel();
+                    }).connect(DESTINATION).get();
 
             assertThat(unregistered.await(10, TimeUnit.SECONDS)).isTrue();
             assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class)
