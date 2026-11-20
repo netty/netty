@@ -15,9 +15,30 @@
  */
 package io.netty.handler.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 import javax.net.ssl.SSLEngine;
 
 /**
  * An {@link SSLEngine} that can be used for QUIC.
  */
-public abstract class QuicSslEngine extends SSLEngine { }
+public abstract class QuicSslEngine extends SSLEngine {
+
+    /**
+     * Returns the server name indicated by the peer, if it was captured for this connection.
+     * <p>
+     * On the server side, SNI is captured when the {@link QuicSslContext} was configured with an SNI mapping,
+     * or when it uses a dynamic {@link BoringSSLKeylessManagerFactory}. The hostname is available during
+     * {@link javax.net.ssl.X509ExtendedKeyManager#chooseEngineServerAlias(String, java.security.Principal[],
+     * javax.net.ssl.SSLEngine)} and remains available after the handshake. A {@code null} result does not
+     * necessarily mean the peer sent no SNI extension: the context may not have enabled SNI capture.
+     * <p>
+     * This method returns {@code null} for client engines.
+     *
+     * @return the captured SNI hostname, or {@code null} if it is unavailable.
+     */
+    @Nullable
+    public String getRequestedSniHostname() {
+        return null;
+    }
+}
