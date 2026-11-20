@@ -102,6 +102,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Boolean validateRequiredPseudoHeaders;
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headerSensitivityDetector;
+    private Http2HeadersEncoder headersEncoder;
     private Boolean encoderEnforceMaxConcurrentStreams;
     private Boolean encoderIgnoreMaxHeaderListSize;
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
@@ -264,6 +265,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("codec", "validateHeaders", validateHeaders);
         enforceConstraint("codec", "validateRequiredPseudoHeaders", validateRequiredPseudoHeaders);
         enforceConstraint("codec", "headerSensitivityDetector", headerSensitivityDetector);
+        enforceConstraint("codec", "headersEncoder", headersEncoder);
         enforceConstraint("codec", "encoderEnforceMaxConcurrentStreams", encoderEnforceMaxConcurrentStreams);
 
         checkNotNull(decoder, "decoder");
@@ -388,7 +390,21 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B headerSensitivityDetector(SensitivityDetector headerSensitivityDetector) {
         enforceNonCodecConstraints("headerSensitivityDetector");
+        enforceConstraint("headerSensitivityDetector", "headersEncoder", headersEncoder);
         this.headerSensitivityDetector = checkNotNull(headerSensitivityDetector, "headerSensitivityDetector");
+        return self();
+    }
+
+    /**
+     * Sets the encoder used for outbound header blocks. The encoder is owned by the handler built from this builder
+     * and must not be shared with another connection. It will be closed with the handler if it implements
+     * {@link java.io.Closeable}.
+     */
+    protected B headersEncoder(Http2HeadersEncoder headersEncoder) {
+        enforceNonCodecConstraints("headersEncoder");
+        enforceConstraint("headersEncoder", "headerSensitivityDetector", headerSensitivityDetector);
+        enforceConstraint("headersEncoder", "encoderIgnoreMaxHeaderListSize", encoderIgnoreMaxHeaderListSize);
+        this.headersEncoder = checkNotNull(headersEncoder, "headersEncoder");
         return self();
     }
 
@@ -401,6 +417,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
         enforceNonCodecConstraints("encoderIgnoreMaxHeaderListSize");
+        enforceConstraint("encoderIgnoreMaxHeaderListSize", "headersEncoder", headersEncoder);
         encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         return self();
     }
@@ -622,9 +639,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
                 maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
                 /* initialHuffmanDecodeCapacity= */ -1), maxSmallContinuationFrames);
-        Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
-                new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
-                new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
+        Http2FrameWriter writer = headersEncoder != null ? new DefaultHttp2FrameWriter(headersEncoder) :
+                encoderIgnoreMaxHeaderListSize == null ?
+                        new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
+                        new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
 
         if (frameLogger != null) {
             reader = new Http2InboundFrameLogger(reader, frameLogger);
