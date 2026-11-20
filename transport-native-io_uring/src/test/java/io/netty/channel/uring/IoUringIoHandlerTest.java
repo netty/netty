@@ -17,12 +17,16 @@ package io.netty.channel.uring;
 
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIf;
+
+import java.util.concurrent.TimeUnit;
 
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -160,6 +164,7 @@ public class IoUringIoHandlerTest {
 
     // See https://github.com/netty/netty/issues/18483
     @Test
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void testDestroyWaitsForEventFdRead() throws Exception {
         // Use a tiny ring and only a few iterations: the kernel releases the memory of a closed ring asynchronously, so
         // creating many rings in a row can hit the memlock / memory limits of CI runners (ENOMEM in io_uring_setup).
@@ -189,6 +194,10 @@ public class IoUringIoHandlerTest {
                     // Noop
                 }
             });
+            // The eventfd read is only submitted from run(), so run once to make sure a read is actually in flight.
+            // Without this the test would not exercise the eventfd handling in prepareToDestroy() / destroy() at all.
+            runOnceWithoutBlocking(handler);
+            assertTrue(handler.isEventFdReadPending());
             // SingleThreadIoEventLoop may call prepareToDestroy() several times in a row before destroy(). Each call
             // writes to the eventfd and re-arms the eventfd read behind an IOSQE_IO_DRAIN request, so the read can
             // end up executing in an io-wq worker that still copies into eventfdReadBuf after destroy() returned.
@@ -197,6 +206,56 @@ public class IoUringIoHandlerTest {
             handler.destroy();
             assertFalse(handler.isEventFdReadPending());
         }
+    }
+
+    // See https://github.com/netty/netty/issues/18483
+    @Test
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    public void testDestroyWaitsForEventFdReadWithPendingWakeup() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            IoUringIoHandler handler = (IoUringIoHandler) IoUringIoHandler.newFactory().newHandler(
+                    new ThreadAwareExecutor() {
+                        @Override
+                        public boolean isExecutorThread(Thread thread) {
+                            // Not the executor thread, so wakeup() writes to the eventfd.
+                            return false;
+                        }
+
+                        @Override
+                        public void execute(Runnable command) {
+                            command.run();
+                        }
+                    });
+            handler.initialize();
+            runOnceWithoutBlocking(handler);
+            assertTrue(handler.isEventFdReadPending());
+            // Close the wakeup gate with an event written but its completion not yet processed. destroy() must wait
+            // for the read to complete, as the kernel may still be copying into the read buffer.
+            handler.wakeup();
+            handler.destroy();
+            assertFalse(handler.isEventFdReadPending());
+        }
+    }
+
+    // Runs the handler once so that it submits its eventfd read. The context pretends to be allowed to block but has
+    // an already expired deadline, so run() returns immediately and the eventfd read stays pending.
+    private static void runOnceWithoutBlocking(IoUringIoHandler handler) {
+        handler.run(new IoHandlerContext() {
+            @Override
+            public boolean canBlock() {
+                return true;
+            }
+
+            @Override
+            public long delayNanos(long currentTimeNanos) {
+                return 0;
+            }
+
+            @Override
+            public long deadlineNanos() {
+                return 0;
+            }
+        });
     }
 
     private static boolean setUpCQSizeUnavailable() {
