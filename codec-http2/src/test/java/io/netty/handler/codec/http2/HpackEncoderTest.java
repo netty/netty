@@ -18,16 +18,20 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderValidationUtil;
+import io.netty.util.AsciiString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -296,6 +300,125 @@ public class HpackEncoderTest {
         verifyHeaderValueSanitization(encoderWithoutHuffmanEncoding, actualHeaderValue, expectedHeaderValue);
     }
 
+    @Test
+    public void testLiteralWithoutIndexingNewName() throws Http2Exception {
+        Http2Headers headers = new DefaultHttp2Headers().add("k", "x");
+
+        // k -> x encoded as a literal header field without indexing with a literal name:
+        // 0x00 (no indexing, new name), name length 1, 'k', value length 1, 'x'.
+        verifyEncoding(headers, notIndexed("k"), 0, 1, 107, 1, 120);
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackEncoder.size()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+
+        // Not added to the dynamic table, so it is encoded literally again.
+        verifyEncoding(headers, notIndexed("k"), 0, 1, 107, 1, 120);
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+    }
+
+    @Test
+    public void testLiteralWithoutIndexingStaticTableName() throws Http2Exception {
+        Http2Headers headers = new DefaultHttp2Headers().add("accept-language", "fr");
+
+        // accept-language is index 17 in the static table, which does not fit in the 4-bit prefix:
+        // 0x0F, 17 - 15 = 2, value length 2, 'f', 'r'.
+        verifyEncoding(headers, notIndexed("accept-language"), 15, 2, 2, 102, 114);
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+    }
+
+    @Test
+    public void testLiteralWithoutIndexingDynamicTableName() throws Http2Exception {
+        // k -> x is added to the dynamic table at index 62.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), 64, 1, 107, 1, 120);
+        assertThat(hpackEncoder.length()).isOne();
+
+        // k -> y references the name at index 62 and is not added to the dynamic table:
+        // 0x0F, 62 - 15 = 47, value length 1, 'y'.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "y"), notIndexed("k"), 15, 47, 1, 121);
+        assertThat(hpackEncoder.length()).isOne();
+        assertThat(hpackDecoder.length()).isOne();
+
+        // k -> x is still found in the dynamic table and encoded by reference.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), notIndexed("k"), -66);
+        assertThat(hpackEncoder.length()).isOne();
+    }
+
+    @Test
+    public void testLiteralWithoutIndexingOnlyAffectsSelectedHeaders() throws Http2Exception {
+        Http2Headers headers = new DefaultHttp2Headers()
+          .add("k", "x")
+          .add("request-id", "1");
+
+        // k -> x is added to the dynamic table, request-id -> 1 is encoded without indexing.
+        verifyEncoding(headers, notIndexed("request-id"),
+          64, 1, 107, 1, 120, 0, 10, 114, 101, 113, 117, 101, 115, 116, 45, 105, 100, 1, 49);
+        assertThat(hpackEncoder.length()).isOne();
+        assertThat(hpackDecoder.length()).isOne();
+
+        // k -> x is encoded by reference, request-id -> 2 literally.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x").add("request-id", "2"), notIndexed("request-id"),
+          -66, 0, 10, 114, 101, 113, 117, 101, 115, 116, 45, 105, 100, 1, 50);
+        assertThat(hpackEncoder.length()).isOne();
+        assertThat(hpackDecoder.length()).isOne();
+    }
+
+    @Test
+    public void testSensitiveTakesPrecedenceOverIndexing() throws Http2Exception {
+        final List<CharSequence> consulted = new ArrayList<CharSequence>();
+        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.IndexingSensitivityDetector() {
+            @Override
+            public boolean isSensitive(CharSequence name, CharSequence value) {
+                return true;
+            }
+
+            @Override
+            public boolean shouldIndex(CharSequence name, CharSequence value) {
+                consulted.add(name);
+                return true;
+            }
+        };
+
+        // k -> x encoded as a literal header field never indexed: 0x10, name length 1, 'k', value length 1, 'x'.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), detector, 16, 1, 107, 1, 120);
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(consulted).isEmpty();
+    }
+
+    @Test
+    public void testShouldIndexTrueKeepsIncrementalIndexing() throws Http2Exception {
+        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.IndexingSensitivityDetector() {
+            @Override
+            public boolean isSensitive(CharSequence name, CharSequence value) {
+                return false;
+            }
+
+            @Override
+            public boolean shouldIndex(CharSequence name, CharSequence value) {
+                return true;
+            }
+        };
+
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), detector, 64, 1, 107, 1, 120);
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), detector, -66);
+        assertThat(hpackEncoder.length()).isOne();
+    }
+
+    private static Http2HeadersEncoder.SensitivityDetector notIndexed(final String headerName) {
+        return new Http2HeadersEncoder.IndexingSensitivityDetector() {
+            @Override
+            public boolean isSensitive(CharSequence name, CharSequence value) {
+                return false;
+            }
+
+            @Override
+            public boolean shouldIndex(CharSequence name, CharSequence value) {
+                return !AsciiString.contentEqualsIgnoreCase(headerName, name);
+            }
+        };
+    }
+
     private void verifyHeaderValueSanitization(
             HpackEncoder encoder,
             String actualHeaderValue,
@@ -318,13 +441,23 @@ public class HpackEncoderTest {
     }
 
     private void verifyEncoding(Http2Headers encodedHeaders, int... encoding) throws Http2Exception {
-        verifyRoundTrip(encodedHeaders);
+        verifyEncoding(encodedHeaders, Http2HeadersEncoder.NEVER_SENSITIVE, encoding);
+    }
+
+    private void verifyEncoding(Http2Headers encodedHeaders, Http2HeadersEncoder.SensitivityDetector detector,
+                                int... encoding) throws Http2Exception {
+        verifyRoundTrip(encodedHeaders, detector);
         verifyEncodedBytes(encoding);
         buf.clear();
     }
 
     private void verifyRoundTrip(Http2Headers encodedHeaders) throws Http2Exception {
-        hpackEncoder.encodeHeaders(0, buf, encodedHeaders, Http2HeadersEncoder.NEVER_SENSITIVE);
+        verifyRoundTrip(encodedHeaders, Http2HeadersEncoder.NEVER_SENSITIVE);
+    }
+
+    private void verifyRoundTrip(Http2Headers encodedHeaders, Http2HeadersEncoder.SensitivityDetector detector)
+            throws Http2Exception {
+        hpackEncoder.encodeHeaders(0, buf, encodedHeaders, detector);
         DefaultHttp2Headers decodedHeaders = new DefaultHttp2Headers();
         hpackDecoder.decode(0, buf, decodedHeaders, true);
         assertEquals(encodedHeaders, decodedHeaders);

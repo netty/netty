@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,6 +74,37 @@ public class DefaultHttp2HeadersEncoderTest {
                 }
             }
         });
+    }
+
+    @Test
+    public void indexingSensitivityDetectorShouldBeUsed() throws Http2Exception {
+        DefaultHttp2HeadersEncoder encoder = new DefaultHttp2HeadersEncoder(
+                new Http2HeadersEncoder.IndexingSensitivityDetector() {
+                    @Override
+                    public boolean isSensitive(CharSequence name, CharSequence value) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean shouldIndex(CharSequence name, CharSequence value) {
+                        return false;
+                    }
+                });
+        Http2Headers headers = new DefaultHttp2Headers().add(new AsciiString("k"), new AsciiString("x"));
+        ByteBuf buf = Unpooled.buffer();
+        try {
+            encoder.encodeHeaders(3 /* randomly chosen */, headers, buf);
+            // Literal Header Field without Indexing, new name.
+            assertThat(ByteBufUtil.getBytes(buf)).containsExactly(0, 1, 'k', 1, 'x');
+            buf.clear();
+
+            // Nothing was added to the dynamic table, so the same bytes are written again.
+            encoder.encodeHeaders(3 /* randomly chosen */, headers, buf);
+            assertThat(ByteBufUtil.getBytes(buf)).containsExactly(0, 1, 'k', 1, 'x');
+        } finally {
+            buf.release();
+            encoder.close();
+        }
     }
 
     private static Http2Headers headers() {
