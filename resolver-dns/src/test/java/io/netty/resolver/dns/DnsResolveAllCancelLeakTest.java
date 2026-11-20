@@ -41,6 +41,7 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.concurrent.CancellableDefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -101,7 +102,8 @@ public class DnsResolveAllCancelLeakTest {
                             question -> new FollowUpCancelledObserver(question, followUpCancelled))
                     .build();
             try {
-                final Promise<List<DnsRecord>> promise = loop.newPromise();
+                // The promises of EventExecutor.newPromise() can not be cancelled.
+                final Promise<List<DnsRecord>> promise = new CancellableDefaultPromise<List<DnsRecord>>(loop);
                 loop.submit(() -> resolver.resolveAll(new DefaultDnsQuestion("example.com.", DnsRecordType.TXT),
                         Collections.<DnsRecord>emptyList(), promise)).sync();
 
