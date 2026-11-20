@@ -139,7 +139,7 @@ public class DefaultPromiseTest {
 
         Promise<Void> promise = new DefaultPromise<Void>(executor) {
             @Override
-            boolean isCancellationSupported() {
+            protected boolean isCancellationSupported() {
                 return true;
             }
         };
@@ -171,7 +171,7 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsThrownWhenBlockingGet() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
             @Override
-            boolean isCancellationSupported() {
+            protected boolean isCancellationSupported() {
                 return true;
             }
         };
@@ -188,7 +188,7 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
             @Override
-            boolean isCancellationSupported() {
+            protected boolean isCancellationSupported() {
                 return true;
             }
         };

@@ -41,7 +41,8 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
-import io.netty.util.concurrent.CancellableDefaultPromise;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -256,6 +257,17 @@ public class DnsResolveAllCancelLeakTest {
                 }
             }
             return live;
+        }
+    }
+
+    static final class CancellableDefaultPromise<V> extends DefaultPromise<V> {
+        CancellableDefaultPromise(EventExecutor executor) {
+            super(executor);
+        }
+
+        @Override
+        protected boolean isCancellationSupported() {
+            return true;
         }
     }
 }
