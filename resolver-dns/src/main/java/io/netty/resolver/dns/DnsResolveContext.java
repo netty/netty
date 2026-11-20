@@ -484,6 +484,12 @@ abstract class DnsResolveContext<T> {
                 if (result != null) {
                     result.release();
                 }
+                if (promise.isDone() && queriesInProgress.isEmpty()) {
+                    // This was the last query in progress of a resolution whose promise was completed elsewhere,
+                    // for example cancelled by the user. finishResolve(...) will not be called anymore, so release
+                    // what we collected so far.
+                    releaseFinalResult();
+                }
                 return;
             }
 
@@ -1112,9 +1118,10 @@ abstract class DnsResolveContext<T> {
                     }
                 }
             } else {
-                // This should always be the case as we replaced the list once notify the promise with an empty one
-                // and never add to it again.
-                assert finalResult.isEmpty();
+                // The promise was completed elsewhere, for example cancelled by the user, after we collected
+                // results. Nobody else will release them. If we notified the promise ourselves the list was replaced
+                // with an empty one and this does nothing.
+                releaseFinalResult();
             }
             return;
         }
@@ -1145,6 +1152,16 @@ abstract class DnsResolveContext<T> {
             unknownHostException.initCause(cause);
         }
         promise.tryFailure(unknownHostException);
+    }
+
+    private void releaseFinalResult() {
+        List<T> result = finalResult;
+        if (result != null && !result.isEmpty()) {
+            finalResult = Collections.emptyList();
+            for (T item : result) {
+                ReferenceCountUtil.safeRelease(item);
+            }
+        }
     }
 
     static String decodeDomainName(ByteBuf in) {
