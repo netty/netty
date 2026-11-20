@@ -44,12 +44,6 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- sun.misc.Unsafe stubs -->
-    <dependency>
-      <groupId>org.jboss</groupId>
-      <artifactId>jdk-misc</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
