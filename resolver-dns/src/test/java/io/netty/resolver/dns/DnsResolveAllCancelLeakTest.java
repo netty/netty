@@ -20,14 +20,14 @@ import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
@@ -70,8 +70,8 @@ public class DnsResolveAllCancelLeakTest {
         final CountDownLatch followUpArrived = new CountDownLatch(1);
         final CountDownLatch answerFollowUp = new CountDownLatch(1);
         final CountDownLatch followUpCancelled = new CountDownLatch(1);
-        EventLoopGroup serverGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoopGroup serverGroup = new NioEventLoopGroup(1);
+        EventLoopGroup group = new NioEventLoopGroup(1);
         try {
             Channel server = new Bootstrap().group(serverGroup)
                     .channel(NioDatagramChannel.class)
@@ -83,26 +83,38 @@ public class DnsResolveAllCancelLeakTest {
                         }
                     }).bind(new InetSocketAddress("127.0.0.1", 0)).sync().channel();
 
-            EventLoop loop = group.next();
+            final EventLoop loop = group.next();
             final TrackingAllocator allocator = new TrackingAllocator();
-            DnsNameResolver resolver = new DnsNameResolverBuilder(loop)
-                    .datagramChannelFactory(() -> {
-                        NioDatagramChannel ch = new NioDatagramChannel();
-                        ch.config().setAllocator(allocator);
-                        return ch;
+            final DnsNameResolver resolver = new DnsNameResolverBuilder(loop)
+                    .datagramChannelFactory(new ChannelFactory<DatagramChannel>() {
+                        @Override
+                        public DatagramChannel newChannel() {
+                            NioDatagramChannel ch = new NioDatagramChannel();
+                            ch.config().setAllocator(allocator);
+                            return ch;
+                        }
                     })
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
                             (InetSocketAddress) server.localAddress()))
                     .searchDomains(Collections.<String>emptyList())
                     .optResourceEnabled(false)
                     .queryTimeoutMillis(10000)
-                    .dnsQueryLifecycleObserverFactory(
-                            question -> new FollowUpCancelledObserver(question, followUpCancelled))
+                    .dnsQueryLifecycleObserverFactory(new DnsQueryLifecycleObserverFactory() {
+                        @Override
+                        public DnsQueryLifecycleObserver newDnsQueryLifecycleObserver(DnsQuestion question) {
+                            return new FollowUpCancelledObserver(question, followUpCancelled);
+                        }
+                    })
                     .build();
             try {
                 final Promise<List<DnsRecord>> promise = loop.newPromise();
-                loop.submit(() -> resolver.resolveAll(new DefaultDnsQuestion("example.com.", DnsRecordType.TXT),
-                        Collections.<DnsRecord>emptyList(), promise)).sync();
+                loop.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        resolver.resolveAll(new DefaultDnsQuestion("example.com.", DnsRecordType.TXT),
+                                Collections.<DnsRecord>emptyList(), promise);
+                    }
+                }).sync();
 
                 // The TXT record of the first response was collected and the CNAME follow-up query is in flight.
                 assertThat(followUpArrived.await(10, TimeUnit.SECONDS)).isTrue();
@@ -112,7 +124,11 @@ public class DnsResolveAllCancelLeakTest {
                 // The follow-up response arrives after the cancellation and its listener returns early.
                 assertThat(followUpCancelled.await(10, TimeUnit.SECONDS)).isTrue();
                 // Make sure the listener has returned.
-                loop.submit(() -> { }).sync();
+                loop.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                }).sync();
                 assertThat(allocator.stillReferenced()).as("DNS response buffers still referenced").isZero();
             } finally {
                 resolver.close();
