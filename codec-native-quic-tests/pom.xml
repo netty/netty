@@ -161,6 +161,12 @@
     </dependency>
     <!-- Also include bouncycastle so we can use SelfSignedCertificate even on more recent JDKs during testing -->
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-pkitesting</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>

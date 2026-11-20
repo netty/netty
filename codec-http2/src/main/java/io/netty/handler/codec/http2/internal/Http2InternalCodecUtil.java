@@ -25,8 +25,8 @@ public final class Http2InternalCodecUtil {
     private Http2InternalCodecUtil() {
     }
 
-    public static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
-                                         Http2Flags flags, int streamId) {
+    public static void writeFrameHeaderInternal(
+            ByteBuf out, int payloadLength, short type, Http2Flags flags, int streamId) {
         out.writeMedium(payloadLength);
         out.writeByte(type);
         out.writeByte(flags.value());

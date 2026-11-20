@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.protobuf.internal.ProtobufVarint32;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -212,7 +213,7 @@ public class ProtobufVarint32FrameDecoderTest {
         };
         for (byte[] bytes : incomplete) {
             ByteBuf buf = wrappedBuffer(bytes);
-            ProtobufVarint32FrameDecoder.readRawVarint32(buf);
+            ProtobufVarint32.readRawVarint32(buf);
             assertEquals(0, buf.readerIndex(), "readerIndex must not move for " + bytes.length + " incomplete bytes");
             buf.release();
         }
@@ -221,7 +222,7 @@ public class ProtobufVarint32FrameDecoderTest {
     @Test
     public void testReadRawVarint32RejectsSixByteVarint() {
         ByteBuf buf = wrappedBuffer(new byte[] { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80 });
-        assertThrows(CorruptedFrameException.class, () -> ProtobufVarint32FrameDecoder.readRawVarint32(buf));
+        assertThrows(CorruptedFrameException.class, () -> ProtobufVarint32.readRawVarint32(buf));
         buf.release();
     }
 }

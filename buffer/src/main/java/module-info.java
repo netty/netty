@@ -14,6 +14,7 @@
  */
 module io.netty5.buffer {
     requires io.netty5.common;
+    requires static org.jetbrains.annotations;
     requires static jdk.jfr;
 
     // For tests:

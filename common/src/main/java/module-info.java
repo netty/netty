@@ -20,6 +20,7 @@ module io.netty5.common {
     requires jdk.unsupported;
     requires java.logging;
     requires org.jctools.core;
+    requires org.jctools.core.jdk11;
     requires jdk.jfr;
     requires static org.apache.commons.logging;
     requires static org.apache.log4j;

@@ -22,6 +22,7 @@ module io.netty5.handler.ssl.ocsp {
     requires org.bouncycastle.pkix;
     requires org.bouncycastle.provider;
     requires io.netty5.handler;
+    requires io.netty5.codec;
 
     exports io.netty.handler.ssl.ocsp;
 }

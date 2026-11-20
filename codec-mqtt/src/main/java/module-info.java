@@ -18,5 +18,7 @@ module io.netty5.codec.mqtt {
     requires io.netty5.transport;
     requires io.netty5.codec;
 
+    requires static jdk.management;
+
     exports io.netty.handler.codec.mqtt;
 }

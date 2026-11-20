@@ -21,6 +21,7 @@ module io.netty5.resolver.dns {
     requires io.netty5.codec;
     requires io.netty5.transport;
     requires java.naming;
+    requires org.jetbrains.annotations;
 
     exports io.netty.resolver.dns;
 }
