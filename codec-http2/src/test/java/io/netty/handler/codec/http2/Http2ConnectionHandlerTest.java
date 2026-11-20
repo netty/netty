@@ -736,10 +736,46 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstOnNonExistantStreamShouldSucceed() throws Exception {
         handler = newHandler();
+        when(local.isValidStreamId(NON_EXISTANT_STREAM_ID)).thenReturn(true);
+        when(local.mayHaveCreatedStream(NON_EXISTANT_STREAM_ID)).thenReturn(true);
         when(frameWriter.writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID),
                                         eq(STREAM_CLOSED.code()), eq(promise))).thenReturn(future);
         handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(STREAM_CLOSED.code()), eq(promise));
+    }
+
+    @Test
+    public void writeRstOnIdleStreamIdShouldNotWriteButSucceed() throws Exception {
+        handler = newHandler();
+        when(local.isValidStreamId(NON_EXISTANT_STREAM_ID)).thenReturn(true);
+        when(local.mayHaveCreatedStream(NON_EXISTANT_STREAM_ID)).thenReturn(false);
+        handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ChannelPromise.class));
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void writeRstOnIdleStreamIdWithVoidPromiseReturnsListenableFuture() throws Exception {
+        handler = newHandler();
+        when(local.isValidStreamId(NON_EXISTANT_STREAM_ID)).thenReturn(true);
+        when(local.mayHaveCreatedStream(NON_EXISTANT_STREAM_ID)).thenReturn(false);
+        ChannelFuture future = handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(),
+                newVoidPromise(channel));
+        future.addListener(f -> { });
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ChannelPromise.class));
+        assertTrue(future.isSuccess());
+    }
+
+    @Test
+    public void writeRstOnInvalidStreamIdShouldStillGoThroughFrameWriter() throws Exception {
+        handler = newHandler();
+        when(frameWriter.writeRstStream(eq(ctx), eq(-1),
+                                        eq(STREAM_CLOSED.code()), any(ChannelPromise.class))).thenReturn(future);
+        handler.resetStream(ctx, -1, STREAM_CLOSED.code(), promise);
+        verify(frameWriter).writeRstStream(eq(ctx), eq(-1), eq(STREAM_CLOSED.code()),
+                any(ChannelPromise.class));
     }
 
     @Test
@@ -1199,6 +1235,8 @@ public class Http2ConnectionHandlerTest {
     private void writeRstStreamUsingVoidPromise(int streamId) throws Exception {
         handler = newHandler();
         when(stream.id()).thenReturn(STREAM_ID);
+        when(local.isValidStreamId(streamId)).thenReturn(true);
+        when(local.mayHaveCreatedStream(streamId)).thenReturn(true);
         when(frameWriter.writeRstStream(eq(ctx), eq(streamId), anyLong(), any(ChannelPromise.class)))
                 .then(new Answer<ChannelFuture>() {
                     @Override
