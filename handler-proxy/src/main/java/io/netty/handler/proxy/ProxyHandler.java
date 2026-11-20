@@ -243,12 +243,11 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
 
     @Override
     public final void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (finished) {
-            ctx.fireChannelInactive();
-        } else {
+        if (!finished) {
             // Disconnected before connected to the destination.
             setConnectFailure(new ProxyConnectException(exceptionMessage("disconnected")));
         }
+        ctx.fireChannelInactive();
     }
 
     @Override
