@@ -127,6 +127,20 @@ public final class ClientCookieDecoder extends CookieDecoder {
                 valueEnd--;
             }
 
+            // Remove the whitespace around the name and the value, see
+            // https://www.rfc-editor.org/rfc/rfc6265#section-5.2
+            while (nameEnd > nameBegin && isWsp(header.charAt(nameEnd - 1))) {
+                nameEnd--;
+            }
+            if (valueBegin < valueEnd) {
+                while (valueBegin < valueEnd && isWsp(header.charAt(valueBegin))) {
+                    valueBegin++;
+                }
+                while (valueEnd > valueBegin && isWsp(header.charAt(valueEnd - 1))) {
+                    valueEnd--;
+                }
+            }
+
             if (cookieBuilder == null) {
                 // cookie name-value pair
                 DefaultCookie cookie = initCookie(header, nameBegin, nameEnd, valueBegin, valueEnd);
@@ -142,6 +156,10 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
         return cookieBuilder != null ? cookieBuilder.cookie() : null;
+    }
+
+    private static boolean isWsp(char c) {
+        return c == ' ' || c == '\t';
     }
 
     private static class CookieBuilder {
