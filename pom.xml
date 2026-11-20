@@ -558,7 +558,6 @@
     <module>transport-native-kqueue</module>
     <module>transport-native-kqueue-tests</module>
     <module>transport-sctp</module>
-    <module>nativeimage-metadata-gen</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>handler-ssl-ocsp</module>
