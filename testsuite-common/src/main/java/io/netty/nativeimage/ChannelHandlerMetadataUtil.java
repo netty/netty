@@ -76,7 +76,7 @@ public final class ChannelHandlerMetadataUtil {
         }
 
         String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + projectGroupId + "/" +
-                projectArtifactId + "/generated/handlers/reflect-config.json";
+            projectArtifactId + "/generated/handlers/reflect-config.json";
         File existingMetadataFile = new File(projectRelativeResourcePath);
         String existingMetadataPath = existingMetadataFile.getAbsolutePath();
         if (!existingMetadataFile.exists()) {
@@ -85,11 +85,11 @@ public final class ChannelHandlerMetadataUtil {
             }
 
             String message = "Native Image reflection metadata is required for handlers in this project. " +
-                    "This metadata was not found under " +
-                    existingMetadataPath +
-                    "\nPlease create this file with the following content: \n" +
-                    getMetadataJsonString(handlerMetadata) +
-                    "\n";
+                "This metadata was not found under " +
+                existingMetadataPath +
+                "\nPlease create this file with the following content: \n" +
+                getMetadataJsonString(handlerMetadata) +
+                "\n";
             Assertions.fail(message);
         }
 
@@ -110,23 +110,23 @@ public final class ChannelHandlerMetadataUtil {
         if (!newMetadata.isEmpty() || !removedMetadata.isEmpty()) {
             StringBuilder builder = new StringBuilder();
             builder.append("In the native-image handler metadata file at ")
-                    .append(existingMetadataPath)
-                    .append("\n");
+                .append(existingMetadataPath)
+                .append("\n");
 
             if (!newMetadata.isEmpty()) {
                 builder.append("The following new metadata must be added:\n\n")
-                        .append(getMetadataJsonString(newMetadata))
-                        .append("\n\n");
+                    .append(getMetadataJsonString(newMetadata))
+                    .append("\n\n");
             }
             if (!removedMetadata.isEmpty()) {
                 builder.append("The following metadata must be removed:\n\n")
-                        .append(getMetadataJsonString(removedMetadata))
-                        .append("\n\n");
+                    .append(getMetadataJsonString(removedMetadata))
+                    .append("\n\n");
             }
 
             builder.append("Expected metadata file contents:\n\n")
-                    .append(getMetadataJsonString(handlerMetadata))
-                    .append("\n");
+                .append(getMetadataJsonString(handlerMetadata))
+                .append("\n");
             Assertions.fail(builder.toString());
         }
     }
@@ -137,15 +137,15 @@ public final class ChannelHandlerMetadataUtil {
             return (Class<Object>) Class.forName(CHANNEL_HANDLER_CLASS_NAME);
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(CHANNEL_HANDLER_CLASS_NAME + " not found; " +
-                    "netty-transport must be on the test classpath", e);
+                "netty-transport must be on the test classpath", e);
         }
     }
 
     private static Set<Class<?>> findChannelHandlerSubclasses(Class<Object> channelHandlerClass,
                                                               String... packageNames) {
         Reflections reflections = new Reflections(
-                new ConfigurationBuilder()
-                        .forPackages(packageNames));
+            new ConfigurationBuilder()
+                .forPackages(packageNames));
 
         Set<Class<?>> allSubtypes = new HashSet<Class<?>>(reflections.getSubTypesOf(channelHandlerClass));
         Set<Class<?>> targetSubtypes = new HashSet<Class<?>>();
@@ -248,8 +248,8 @@ public final class ChannelHandlerMetadataUtil {
 
             HandlerMetadata that = (HandlerMetadata) o;
             return queryAllPublicMethods == that.queryAllPublicMethods
-                    && (name != null && name.equals(that.name))
-                    && (condition != null && condition.equals(that.condition));
+                && (name != null && name.equals(that.name))
+                && (condition != null && condition.equals(that.condition));
         }
 
         @Override

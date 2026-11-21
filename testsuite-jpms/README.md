@@ -12,72 +12,81 @@ Netty can be used in modular JDK9+ applications as a collection of automatic mod
 Starting 4.2 Netty provides explicit modules, instead of named automatic modules previously.
 
 The module names follow the reverse-DNS style, and are derived from subproject names rather than root packages due to
-historical reasons. They are listed below:
+historical reasons. The Netty 5 modules are listed below:
 
-* `io.netty.buffer`
-* `io.netty.codec`
-* `io.netty.codec.dns`
-* `io.netty.codec.haproxy`
-* `io.netty.codec.http`
-* `io.netty.codec.http2`
-* `io.netty.codec.http3`
-* `io.netty.codec.memcache`
-* `io.netty.codec.mqtt`
-* `io.netty.codec.redis`
-* `io.netty.codec.smtp`
-* `io.netty.codec.socks`
-* `io.netty.codec.stomp`
-* `io.netty.codec.xml`
-* `io.netty.codec.compression`
-* `io.netty.codec.marshalling`
-* `io.netty.codec.protobuf`
-* `io.netty.codec.quic.${os.name}.${os.arch}`
-* `io.netty.codec.classes.quic`
-* `io.netty.common`
-* `io.netty.handler`
-* `io.netty.handler.proxy`
-* `io.netty.handler.ssl.ocsp`
-* `io.netty.internal.tcnative.openssl.${os.name}.${os.arch}`
-* `io.netty.resolver`
-* `io.netty.resolver.dns`
-* `io.netty.resolver.dns.classes.macos`
+* `io.netty5.buffer`
+* `io.netty5.codec`
+* `io.netty5.codec.compression`
+* `io.netty5.codec.dns`
+* `io.netty5.codec.haproxy`
+* `io.netty5.codec.http`
+* `io.netty5.codec.http2`
+* `io.netty5.codec.http3`
+* `io.netty5.codec.memcache`
+* `io.netty5.codec.mqtt`
+* `io.netty5.codec.protobuf`
+* `io.netty5.codec.redis`
+* `io.netty5.codec.smtp`
+* `io.netty5.codec.socks`
+* `io.netty5.codec.stomp`
+* `io.netty5.codec.xml`
+* `io.netty5.codec.quic.${os.name}.${os.arch}`
+* `io.netty5.codec.classes.quic`
+* `io.netty5.common`
+* `io.netty5.handler`
+* `io.netty5.handler.proxy`
+* `io.netty5.handler.ssl.ocsp`
+* `io.netty5.pkitesting`
+* `io.netty5.resolver`
+* `io.netty5.resolver.dns`
+* `io.netty5.resolver.dns.macos`
+* `io.netty5.resolver.dns.macos.${os.name}.${os.arch}`
+* `io.netty5.transport`
+* `io.netty5.transport.classes.${transport}` (`native` omitted - reserved keyword in Java)
+* `io.netty5.transport.${transport}` (`native` omitted - reserved keyword in Java)
+* `io.netty5.transport.${transport}.${os.name}.${os.arch}` (`native` omitted - reserved keyword in Java)
+* `io.netty5.transport.unix.common` (`native` omitted - reserved keyword in Java)
 * `io.netty.tcnative.classes.openssl`
-* `io.netty.transport`
-* `io.netty.transport.classes.${transport}` (`native` omitted - reserved keyword in Java)
-* `io.netty.transport.${transport}` (`native` omitted - reserved keyword in Java)
-* `io.netty.transport.${transport}.${os.name}.${os.arch}` (`native` omitted - reserved keyword in Java)
-* `io.netty.transport.unix.common` (`native` omitted - reserved keyword in Java)
+* `io.netty.internal.tcnative.openssl.${os.name}.${os.arch}`
 
 Where `transport` can be `epoll`,`kqueue` or `io_uring`.
 
-As it stands, Netty does not use strong encapsulation, therefore all Java packages are exported.
-
-A few Maven module do not anymore support JPMS (`netty-transport-rxtx`, `netty-transport-sctp`, `netty-transport-udt`).
+A few Maven module do not anymore support JPMS (`netty-transport-sctp`).
 
 A few module require dependencies on third-party libraries with variable degree of JPMS support, some of them
 are optional, here is a recap:
 
-| Module                       | Dependency                   | Status    | Optional |
-|------------------------------|------------------------------|-----------|----------|
-| `io.netty.common`            | `org.apache.commons.logging` | explicit  | yes      |
-| `io.netty.common`            | `org.apache.log4j`           | explicit  | yes      |
-| `io.netty.common`            | `org.apache.logging.log4j`   | explicit  | yes      |
-| `io.netty.common`            | `org.slf4j`                  | explicit  | yes      |
-| `io.netty.codec.protobuf`    | `com.google.protobuf`        | automatic | no       |
-| `io.netty.codec.protobuf`    | `protobuf.nano`              | automatic | no       |
-| `io.netty.codec.marshalling` | `jboss.marshalling`          | automatic | no       |
-| `io.netty.codec.compression` | `com.aayushatharva.brotli4j` | explicit  | yes      |
-| `io.netty.codec.compression` | `com.github.luben.zstd_jni`  | explicit  | yes      |
-| `io.netty.codec.compression` | `compress.lzf`               | explicit  | yes      |
-| `io.netty.codec.compression` | `jzlib`                      | automatic | yes      |
-| `io.netty.codec.compression` | `lz4`                        | automatic | yes      |
-| `io.netty.codec.compression` | `lzma.java`                  | automatic | yes      |
-| `io.netty.codec.xml`         | `com.fasterxml.aalto`        | explicit  | no       |
-| `io.netty.handler`           | `org.bouncycastle.pkix`      | explicit  | yes      |
-| `io.netty.handler`           | `org.bouncycastle.provider`  | explicit  | yes      |
-| `io.netty.handler`           | `org.conscrypt`              | automatic | yes      |
+| Module                        | Dependency                   | Status    | Optional |
+|-------------------------------|------------------------------|-----------|----------|
+| `io.netty5.common`            | `org.apache.commons.logging` | explicit  | yes      |
+| `io.netty5.common`            | `org.apache.log4j`           | explicit  | yes      |
+| `io.netty5.common`            | `org.apache.logging.log4j`   | explicit  | yes      |
+| `io.netty5.common`            | `org.slf4j`                  | explicit  | yes      |
+| `io.netty5.codec.protobuf`    | `com.google.protobuf`        | automatic | no       |
+| `io.netty5.codec.compression` | `com.aayushatharva.brotli4j` | explicit  | yes      |
+| `io.netty5.codec.compression` | `com.github.luben.zstd_jni`  | explicit  | yes      |
+| `io.netty5.codec.compression` | `compress.lzf`               | explicit  | yes      |
+| `io.netty5.codec.compression` | `lz4`                        | automatic | yes      |
+| `io.netty5.codec.xml`         | `com.fasterxml.aalto`        | explicit  | no       |
+| `io.netty5.handler`           | `org.bouncycastle.pkix`      | explicit  | yes      |
+| `io.netty5.handler`           | `org.bouncycastle.provider`  | explicit  | yes      |
+| `io.netty5.handler`           | `org.conscrypt`              | automatic | yes      |
 
 ### The case of io.netty.codec
+
+#### Netty 5
+
+Netty 5 introduces a few changes to the codec module structure, compared to Netty 4.2.
+
+In Netty 5, the `netty-codec` subproject is removed.
+This subproject was occupying the `io.netty.codec.unused` module name, and was pulling in dependencies on compression, protobuf and marshalling codecs. 
+
+The `netty-codec-base` subproject is instead renamed to `netty5-codec`, and occupies the `io.netty5.codec` module name.
+The `netty5-codec` subproject _does not_ depend on any other codecs, and you now need to pull these dependencies explicitly.
+
+The `netty-codec-marshalling` subproject - and its `io.netty.handler.codec.marshalling` module - have been removed.
+
+#### Netty 4.2
 
 The `io-netty-codec` Maven module is split into 4 modules in Netty 4.2:
 
@@ -167,25 +176,25 @@ The server does provide info about the loaded modules as well as more server det
 Hello World
 Transport: io.netty.channel.socket.nio.NioSocketChannel
 Boot layer:
-- io.netty.testsuite_jpms.main 
+- io.netty5.testsuite_jpms.main 
 - java.base 
-- io.netty.buffer 
-- io.netty.codec.http 
+- io.netty5.buffer 
+- io.netty5.codec.http 
 - java.logging 
-- io.netty.codec
-- io.netty.transport 
-- io.netty.handler 
-- io.netty.common 
-- io.netty.transport.classes.io_uring 
+- io.netty5.codec
+- io.netty5.transport 
+- io.netty5.handler 
+- io.netty5.common 
+- io.netty5.transport.classes.io_uring 
 - jdk.unsupported 
-- io.netty.resolver 
-- io.netty.transport.unix.common 
-- io.netty.transport.classes.epoll 
-- io.netty.transport.classes.kqueue 
+- io.netty5.resolver 
+- io.netty5.transport.unix.common 
+- io.netty5.transport.classes.epoll 
+- io.netty5.transport.classes.kqueue 
 - io.netty.tcnative.classes.openssl 
 ```
 
-You can run this image with `./target/maven-jlink/default/bin/java -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer`
+You can run this image with `./target/maven-jlink/default/bin/java -m io.netty5.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer`
 
 ```
 julien@juliens-MBP-2 testsuite-jpms % ./target/maven-jlink/default/bin/http --help
@@ -208,11 +217,10 @@ usage: [options]
 This section aims to guide Netty developer who are not familiar with the Java Platform Module System (JPMS) and help
 them contribute to Netty while paying attention to the requirements imposed by modules. For the record here
 is the GitHub [issue](https://github.com/netty/netty/issues/14176) that contains the history of the required changes
-so Netty 4.2 complies to JPMS.
+so Netty 5 complies to JPMS.
 
-Netty 4.2 provides explicit module declarations replacing the named automatic module found in Netty 4.1. Since
-4.2 is based on Java 8, the [module-info](https://github.com/dmlloyd/module-info) Maven plugin creates `module-info.class`
-files from a `module-info.yml` source file. The YML file is the equivalent of the `module-info.java` file.
+Netty 5.0 provides explicit module declarations replacing the named automatic module found in Netty 4.1.
+These module declarations are made with explicit `module-info.java` files, replacing the YML files and Maven plugin used in Netty 4.2.
 
 You should be familiar with the basics of JPMS.
 
@@ -222,23 +230,20 @@ Creating a new Java package in a jar should not create a split package, it means
 anywhere in another Netty module. Unfortunately there is (so far) no tool for achieving that so we rely on the developer to avoid
 creating such split packages. The implementation of Netty modules for 4.2 had eliminated a few remaining split packages
 that where still standing in the project.
+Since Netty 5 compiles its `module-info.java` files with `javac`, 
 
 ### Adding an external dependency
 
 Adding a new module dependency should do best effort to use dependencies (transitively) that also support _explicit_ module,
 an explicit module is a jar that contains a `module-info.class` descriptor at the root of the jar or in `META-INF/versions/*/`
-for multi release jars (likewise Netty does).
+for multi release jars.
 
-Whenever that is not possible, named automatic module (that is a jar with an `Automatic-Module-Name` entry in `META-INF/MANIFEST.MF`)
-can be tolerated at the cost of decoupling this dependency:
-
-- using an optional dependency (`requires static`), for instance the `io.netty.codec.compression` provides the optional `jzlib` compression algorithm
-- introducing a new maven module
+Adding dependencies that rely on automatic module names (that is a jar with an `Automatic-Module-Name` entry in `META-INF/MANIFEST.MF`) should be avoided.
 
 ### META-INF services
 
 Netty does not interact much with them, the `ChannelInitializerExtension` is so far the only usage in the project,
-therefore this extension is declared in the `module-info.yml` descriptor.
+therefore this extension is declared in the `module-info.java` descriptor.
 
 ### Testing for JPMS
 
@@ -263,6 +268,6 @@ since they will be loaded from the local snapshot repository.
 
 ### Native library loading
 
-Netty native library resources are located outside their package structure, e.g. `META-INF/native/libnetty_quiche42_osx_aarch_64.jnilib`.
+Netty native library resources are located outside their package structure, e.g. `META-INF/native/libnetty5_quiche42_osx_aarch_64.jnilib`.
 As consequence native library modules do not need exports and can be loaded by any other module. These modules do not need
 to be present at compilation time and need only need to be present at runtime.

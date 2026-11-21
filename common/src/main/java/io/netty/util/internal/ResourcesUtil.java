@@ -15,8 +15,9 @@
 package io.netty.util.internal;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A utility class that provides various common operations and constants
@@ -25,18 +26,22 @@ import java.net.URLDecoder;
 public final class ResourcesUtil {
 
     /**
-     * Returns a {@link File} named {@code fileName} associated with {@link Class} {@code resourceClass} .
+     * Returns a {@link File} for the given resource {@link URL}.
+     * <p>
+     * The {@link URL} should be obtained by the caller, e.g. via {@code getClass().getResource("name")}.
+     * Resource lookups are caller-sensitive when running on the module path, so looking the resource up here,
+     * on behalf of a class in another module, would not find resources in packages that are not open to this module.
      *
-     * @param resourceClass The associated class
-     * @param fileName The file name
-     * @return The file named {@code fileName} associated with {@link Class} {@code resourceClass} .
+     * @param resourceUrl The resource {@link URL}, as returned by {@link Class#getResource(String)}.
+     * @return The {@link File} that the {@code resourceUrl} points to.
+     * @throws NullPointerException if {@code resourceUrl} is {@code null}, which is what
+     * {@link Class#getResource(String)} returns if the resource was not found.
      */
-    public static File getFile(Class resourceClass, String fileName) {
-        try {
-            return new File(URLDecoder.decode(resourceClass.getResource(fileName).getFile(), "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            return new File(resourceClass.getResource(fileName).getFile());
+    public static File getFile(URL resourceUrl) {
+        if (resourceUrl == null) {
+            throw new NullPointerException("resourceUrl (resource not found, or not visible to the caller)");
         }
+        return new File(URLDecoder.decode(resourceUrl.getFile(), StandardCharsets.UTF_8));
     }
 
     private ResourcesUtil() { }

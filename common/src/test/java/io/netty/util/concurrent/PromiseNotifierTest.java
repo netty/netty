@@ -99,13 +99,13 @@ public class PromiseNotifierTest {
     public void testCancelPropagationWhenFusedFromFuture() {
         Promise<Void> p1 = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE) {
             @Override
-            boolean isCancellationSupported() {
+            protected boolean isCancellationSupported() {
                 return true;
             }
         };
         Promise<Void> p2 = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE) {
             @Override
-            boolean isCancellationSupported() {
+            protected boolean isCancellationSupported() {
                 return true;
             }
         };

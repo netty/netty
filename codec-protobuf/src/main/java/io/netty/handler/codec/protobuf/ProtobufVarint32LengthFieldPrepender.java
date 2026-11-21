@@ -16,7 +16,6 @@
 package io.netty.handler.codec.protobuf;
 
 import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.nano.CodedOutputByteBufferNano;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -34,7 +33,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * </pre> *
  *
  * @see CodedOutputStream
- * @see CodedOutputByteBufferNano
  */
 public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 

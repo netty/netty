@@ -395,8 +395,8 @@ public class ParameterizedSslHandlerTest {
 
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .keyManager(ResourcesUtil.getFile(getClass(),  "test.crt"),
-                        ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
+                .keyManager(ResourcesUtil.getFile(getClass().getResource("test.crt")),
+                        ResourcesUtil.getFile(getClass().getResource("test_unencrypted.pem")))
                 .sslProvider(clientProvider).build();
 
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());

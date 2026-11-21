@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import java.io.Closeable;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.internal.HpackEncoder;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;

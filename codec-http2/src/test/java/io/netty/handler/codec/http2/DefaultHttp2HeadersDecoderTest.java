@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http2.internal.HpackEncoder;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeEach;

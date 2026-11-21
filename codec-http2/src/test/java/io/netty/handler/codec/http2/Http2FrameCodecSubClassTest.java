@@ -16,7 +16,6 @@
 
 package io.netty.handler.codec.http2;
 
-
 import org.junit.jupiter.api.Test;
 
 public class Http2FrameCodecSubClassTest {

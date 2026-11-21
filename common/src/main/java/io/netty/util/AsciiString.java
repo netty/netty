@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.AsciiStringUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectUtil;

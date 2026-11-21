@@ -21,6 +21,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.internal.InternalHttpConversionUtil;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -190,7 +191,7 @@ public class HttpConversionUtilTest {
     public void setHttp2AuthorityWithoutUserInfo() {
         Http2Headers headers = new DefaultHttp2Headers();
 
-        HttpConversionUtil.setHttp2Authority("foo", headers);
+        InternalHttpConversionUtil.setHttp2Authority("foo", headers);
         assertEquals(new AsciiString("foo"), headers.authority());
     }
 
@@ -198,10 +199,10 @@ public class HttpConversionUtilTest {
     public void setHttp2AuthorityWithUserInfo() {
         Http2Headers headers = new DefaultHttp2Headers();
 
-        HttpConversionUtil.setHttp2Authority("info@foo", headers);
+        InternalHttpConversionUtil.setHttp2Authority("info@foo", headers);
         assertEquals(new AsciiString("foo"), headers.authority());
 
-        HttpConversionUtil.setHttp2Authority("@foo.bar", headers);
+        InternalHttpConversionUtil.setHttp2Authority("@foo.bar", headers);
         assertEquals(new AsciiString("foo.bar"), headers.authority());
     }
 
@@ -209,7 +210,7 @@ public class HttpConversionUtilTest {
     public void setHttp2AuthorityNullOrEmpty() {
         Http2Headers headers = new DefaultHttp2Headers();
 
-        HttpConversionUtil.setHttp2Authority(null, headers);
+        InternalHttpConversionUtil.setHttp2Authority(null, headers);
         assertNull(headers.authority());
 
         // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
@@ -223,7 +224,7 @@ public class HttpConversionUtilTest {
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() {
-                HttpConversionUtil.setHttp2Authority("", new DefaultHttp2Headers());
+                InternalHttpConversionUtil.setHttp2Authority("", new DefaultHttp2Headers());
             }
         });
     }
@@ -233,7 +234,7 @@ public class HttpConversionUtilTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
-                HttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
+                InternalHttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
             }
         });
     }

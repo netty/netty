@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.handler.codec.http2.internal.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
 

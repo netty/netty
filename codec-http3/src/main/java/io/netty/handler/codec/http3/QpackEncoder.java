@@ -21,8 +21,8 @@ import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map;

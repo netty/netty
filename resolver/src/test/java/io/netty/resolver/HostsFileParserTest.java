@@ -75,7 +75,7 @@ public class HostsFileParserTest {
             return;
         }
         testParseFile(HostsFileParser.parse(
-                ResourcesUtil.getFile(getClass(),  "hosts-unicode"), unicodeCharset));
+                ResourcesUtil.getFile(getClass().getResource("hosts-unicode")), unicodeCharset));
     }
 
     @Test
@@ -86,7 +86,7 @@ public class HostsFileParserTest {
         } catch (UnsupportedCharsetException e) {
             return;
         }
-        testParseFile(HostsFileParser.parse(ResourcesUtil.getFile(getClass(),  "hosts-unicode"),
+        testParseFile(HostsFileParser.parse(ResourcesUtil.getFile(getClass().getResource("hosts-unicode")),
                                             CharsetUtil.UTF_8, CharsetUtil.ISO_8859_1, unicodeCharset));
     }
 

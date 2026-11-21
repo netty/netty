@@ -19,6 +19,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -131,7 +132,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return setFailure0(cause);
     }
 
-    boolean isCancellationSupported() {
+    @UnstableApi
+    protected boolean isCancellationSupported() {
         return false;
     }
 

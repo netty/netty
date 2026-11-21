@@ -221,7 +221,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     @Override
-    boolean isCancellationSupported() {
+    protected boolean isCancellationSupported() {
         return true;
     }
 }

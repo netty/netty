@@ -33,10 +33,7 @@
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <maven.javadoc.skip>true</maven.javadoc.skip>
-    <javaModuleName>io.netty.testsuite_jpms</javaModuleName>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <maven.compiler.release>11</maven.compiler.release>
+    <javaModuleName>io.netty5.testsuite_jpms</javaModuleName>
     <useTestModulePath>true</useTestModulePath>
     <packaging.type>pom</packaging.type>
   </properties>
@@ -49,7 +46,12 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-base</artifactId>
+      <artifactId>netty5-codec</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-codec-compression</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -106,12 +108,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty5-codec-xml</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-compression</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -349,10 +345,10 @@
                 <addModules>
                   <addModule>jdk.jdwp.agent</addModule>
                   <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
-                  <addModule>io.netty.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
+                  <addModule>io.netty5.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
                 </addModules>
                 <ignoreSigningInformation>true</ignoreSigningInformation>
-                <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
+                <launcher>http=io.netty5.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
               </configuration>
             </plugin>
             <plugin>

@@ -17,7 +17,5 @@
 /**
  * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP/3</a> implementation.
  */
-
-@NotNullByDefault
+@org.jetbrains.annotations.NotNullByDefault
 package io.netty.handler.codec.http3;
-

@@ -418,7 +418,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <javaModuleName>io.netty.resolver.dns.macos.${javaModuleNameClassifier}</javaModuleName>
+    <javaModuleName>io.netty5.resolver.dns.macos.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <unix.common.lib.name>netty5-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
@@ -485,6 +485,9 @@
         <executions>
           <execution>
             <id>module-info</id>
+            <configuration>
+              <moduleName>${javaModuleName}</moduleName>
+            </configuration>
           </execution>
         </executions>
       </plugin>

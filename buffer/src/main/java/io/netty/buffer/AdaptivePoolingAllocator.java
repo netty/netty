@@ -33,6 +33,7 @@ import io.netty.util.internal.RefCnt;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,7 +83,7 @@ import java.util.function.IntConsumer;
  * magazine to be shared with other magazines.
  */
 @UnstableApi
-final class AdaptivePoolingAllocator {
+public final class AdaptivePoolingAllocator {
     private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
     private static final boolean IS_LOW_MEM = SystemPropertyUtil.getBoolean(
             "io.netty.allocator.lowMemory",
@@ -220,7 +221,8 @@ final class AdaptivePoolingAllocator {
     private final MagazineGroup largeBufferMagazineGroup;
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
-    AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
+    @VisibleForTesting
+    public AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
         if (PlatformDependent.isJfrEnabled()) {
             JfrEventRegistration.init();
         }
@@ -262,7 +264,8 @@ final class AdaptivePoolingAllocator {
         return groups;
     }
 
-    ByteBuf allocate(int size, int maxCapacity) {
+    @VisibleForTesting
+    public ByteBuf allocate(int size, int maxCapacity) {
         return allocate(size, maxCapacity, Thread.currentThread(), null);
     }
 
@@ -2700,7 +2703,8 @@ final class AdaptivePoolingAllocator {
     /**
      * The strategy for how {@link AdaptivePoolingAllocator} should allocate chunk buffers.
      */
-    interface ChunkAllocator {
+    @UnstableApi
+    public interface ChunkAllocator {
         /**
          * Allocate a buffer for a chunk. This can be any kind of {@link AbstractByteBuf} implementation.
          *

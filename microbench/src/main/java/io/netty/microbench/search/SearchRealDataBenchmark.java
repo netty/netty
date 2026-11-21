@@ -99,7 +99,7 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
 
     @Setup
     public void setup() throws IOException {
-        File haystackFile = ResourcesUtil.getFile(SearchRealDataBenchmark.class, "netty-io-news.html");
+        File haystackFile = ResourcesUtil.getFile(SearchRealDataBenchmark.class.getResource("netty-io-news.html"));
         byte[] haystackBytes = Files.readAllBytes(haystackFile.toPath());
         haystack = bufferType.newBuffer(haystackBytes);
 

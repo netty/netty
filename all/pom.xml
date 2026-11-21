@@ -29,7 +29,7 @@
   <name>Netty/All-in-One</name>
 
   <properties>
-    <javaModuleName>io.netty.all</javaModuleName>
+    <javaModuleName>io.netty5.all</javaModuleName>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
     <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
   </properties>
@@ -321,11 +321,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty5-buffer</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-base</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

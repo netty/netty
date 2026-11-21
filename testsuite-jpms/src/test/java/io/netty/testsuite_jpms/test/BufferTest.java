@@ -32,7 +32,7 @@ public class BufferTest {
         Class<ByteBuf> clazz = ByteBuf.class;
         Module module = clazz.getModule();
         assertTrue(module.isNamed());
-        assertEquals("io.netty.buffer", module.getName());
+        assertEquals("io.netty5.buffer", module.getName());
         ByteBuf byteBuf = Unpooled.copiedBuffer("some-string", StandardCharsets.UTF_8);
     }
 

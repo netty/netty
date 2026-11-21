@@ -22,7 +22,6 @@ import io.netty.buffer.ByteBufAllocator;
  * Super-class for SPDY header-block encoders.
  *
  * @see SpdyHeaderBlockZlibEncoder
- * @see SpdyHeaderBlockJZlibEncoder
  * @see SpdyHeaderBlockRawEncoder
  */
 public abstract class SpdyHeaderBlockEncoder {
