@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -291,12 +290,26 @@ public class NonStickyEventExecutorGroupTest {
             // Rejects only the first submission, like a bounded executor whose queue is full for a moment.
             final EventExecutor executor = new NonStickyEventExecutorGroup(
                     new RejectFirstExecuteEventExecutor(underlying)).next();
-            assertThatThrownBy(() -> executor.execute(() -> { }))
-                    .isInstanceOf(RejectedExecutionException.class);
+            assertThrows(RejectedExecutionException.class, new Executable() {
+                @Override
+                public void execute() {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            // NOOP
+                        }
+                    });
+                }
+            });
 
             final CountDownLatch latch = new CountDownLatch(10);
             for (int i = 0; i < 10; i++) {
-                executor.execute(latch::countDown);
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        latch.countDown();
+                    }
+                });
             }
             assertThat(latch.await(5, TimeUnit.SECONDS))
                     .as("tasks executed after a rejected submission must run")
