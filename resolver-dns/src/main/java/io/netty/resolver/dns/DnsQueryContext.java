@@ -91,6 +91,9 @@ abstract class DnsQueryContext {
 
     private int id = Integer.MIN_VALUE;
 
+    // Only accessed from the EventLoop of the channel.
+    private boolean tcpRetryStarted;
+
     DnsQueryContext(Channel channel,
                     InetSocketAddress nameServerAddr,
                     DnsQueryContextManager queryContextManager,
@@ -337,6 +340,14 @@ abstract class DnsQueryContext {
      */
     private void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope,
                                boolean truncated, boolean validateCookie) {
+        if (truncated && tcpRetryStarted) {
+            // The query is already retried via TCP, which will complete the promise. This happens if the truncated
+            // response is received more than once, or after the query timed out and was retried.
+            logger.debug("{} Ignoring a truncated DNS response, the query is already retried via TCP: {}",
+                    channel, envelope);
+            envelope.release();
+            return;
+        }
         // Check if the response was not truncated or if a fallback to TCP is possible.
         if (!truncated || !retryWithTcp(envelope)) {
             final DnsResponse res = envelope.content();
@@ -434,6 +445,7 @@ abstract class DnsQueryContext {
         if (socketBootstrap == null) {
             return false;
         }
+        tcpRetryStarted = true;
 
         socketBootstrap.connect(nameServerAddr).addListener((ChannelFutureListener) future -> {
             if (!future.isSuccess()) {
