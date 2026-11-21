@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -874,6 +875,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void pushPromiseReadForUnknownStreamShouldThrow() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -888,6 +890,95 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
                 eq(EmptyHttp2Headers.INSTANCE), eq(0));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, false", "true, true", "false, true" })
+    public void pushPromiseOnResetOrClosedParentShouldStillReserveStream(boolean resetParent, boolean closeParent)
+            throws Exception {
+        Http2Connection client = new DefaultHttp2Connection(false);
+        Http2Stream parent = client.local().createStream(STREAM_ID, false);
+        Http2FrameListener frames = clientDecode(client);
+
+        if (resetParent) {
+            parent.resetSent();
+        }
+        if (closeParent) {
+            parent.close();
+            assertThat(client.stream(STREAM_ID)).isNull();
+        }
+
+        frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        assertThat(client.stream(PUSH_STREAM_ID)).isNotNull();
+        assertThat(client.stream(PUSH_STREAM_ID).state()).isEqualTo(RESERVED_REMOTE);
+        assertThat(client.remote().lastStreamCreated()).isEqualTo(PUSH_STREAM_ID);
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+
+        frames.onHeadersRead(ctx, PUSH_STREAM_ID, new DefaultHttp2Headers().status("200"), 0, false);
+        assertThat(client.stream(PUSH_STREAM_ID).state()).isEqualTo(Http2Stream.State.HALF_CLOSED_LOCAL);
+        client.stream(PUSH_STREAM_ID).close();
+        assertThat(client.stream(PUSH_STREAM_ID)).isNull();
+        assertThat(client.streamMayHaveExisted(PUSH_STREAM_ID)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 3 })
+    public void pushPromiseAfterResetShouldRejectInvalidPromisedId(int promisedId) throws Exception {
+        Http2Connection client = new DefaultHttp2Connection(false);
+        client.local().createStream(STREAM_ID, false).resetSent().close();
+        Http2FrameListener frames = clientDecode(client);
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                frames.onPushPromiseRead(ctx, STREAM_ID, promisedId, EmptyHttp2Headers.INSTANCE, 0));
+
+        assertThat(exception.error()).isEqualTo(PROTOCOL_ERROR);
+        assertThat(Http2Exception.isStreamError(exception)).isFalse();
+        assertThat(client.remote().lastStreamCreated()).isZero();
+    }
+
+    @Test
+    public void pushPromiseAfterResetShouldRejectReusedPromisedId() throws Exception {
+        Http2Connection client = new DefaultHttp2Connection(false);
+        client.local().createStream(STREAM_ID, false).resetSent().close();
+        Http2FrameListener frames = clientDecode(client);
+        frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0));
+
+        assertThat(exception.error()).isEqualTo(PROTOCOL_ERROR);
+        assertThat(Http2Exception.isStreamError(exception)).isFalse();
+    }
+
+    @Test
+    public void pushPromiseAfterResetShouldRespectPushDisabled() throws Exception {
+        Http2Connection client = new DefaultHttp2Connection(false);
+        client.local().createStream(STREAM_ID, false).resetSent().close();
+        client.local().allowPushTo(false);
+        Http2FrameListener frames = clientDecode(client);
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0));
+
+        assertThat(exception.error()).isEqualTo(PROTOCOL_ERROR);
+        assertThat(client.stream(PUSH_STREAM_ID)).isNull();
+    }
+
+    @Test
+    public void pushPromiseAfterResetShouldRespectStreamLimit() throws Exception {
+        Http2Connection client = new DefaultHttp2Connection(false, 1);
+        client.remote().maxActiveStreams(0);
+        client.local().createStream(STREAM_ID, false).resetSent().close();
+        Http2FrameListener frames = clientDecode(client);
+        frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                frames.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID + 2, EmptyHttp2Headers.INSTANCE, 0));
+
+        assertThat(exception.error()).isEqualTo(Http2Error.REFUSED_STREAM);
+        assertThat(client.stream(PUSH_STREAM_ID + 2)).isNull();
+        assertThat(client.remote().lastStreamCreated()).isEqualTo(PUSH_STREAM_ID);
     }
 
     // The promised stream must still be reserved (i.e. its existence tracked by the connection) even when the
@@ -1392,6 +1483,14 @@ public class DefaultHttp2ConnectionDecoderTest {
      */
     private Http2FrameListener decode() throws Exception {
         return decode(decoder);
+    }
+
+    private Http2FrameListener clientDecode(Http2Connection client) throws Exception {
+        Http2ConnectionDecoder clientDecoder = new DefaultHttp2ConnectionDecoder(client, encoder, reader);
+        clientDecoder.lifecycleManager(lifecycleManager);
+        clientDecoder.frameListener(listener);
+        decode(clientDecoder).onSettingsRead(ctx, new Http2Settings());
+        return decode(clientDecoder);
     }
 
     private Http2FrameListener decode(Http2ConnectionDecoder decoder) throws Exception {

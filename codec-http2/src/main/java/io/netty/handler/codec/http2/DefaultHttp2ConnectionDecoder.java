@@ -681,7 +681,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream parentStream = connection.stream(streamId);
 
-            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, false, "PUSH_PROMISE")) {
+            if (streamCreatedAfterGoAwaySent(streamId)) {
+                return;
+            }
+            if (parentStream == null) {
+                verifyStreamMayHaveExisted(streamId, false, "PUSH_PROMISE");
+            }
+            if (parentStream == null || parentStream.isResetSent() || parentStream.state() == CLOSED) {
+                // A PUSH_PROMISE can be in flight when we reset its parent. RFC 9113, 5.1 requires
+                // reserving the promised stream even if the parent has already been removed.
+                connection.remote().reservePushStream(promisedStreamId, parentStream);
                 return;
             }
 
