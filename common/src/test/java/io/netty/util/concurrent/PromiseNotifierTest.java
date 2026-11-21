@@ -17,82 +17,53 @@
 package io.netty.util.concurrent;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
 
 public class PromiseNotifierTest {
 
     @Test
     public void testNullPromisesArray() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                new PromiseNotifier<Void>((Promise<Void>[]) null);
-            }
-        });
+        assertThrows(NullPointerException.class,
+                () -> new PromiseNotifier<>((Promise<Void>[]) null));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testNullPromiseInArray() {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() {
-                new PromiseNotifier<Void>((Promise<Void>) null);
-            }
-        });
+        assertThrows(IllegalArgumentException.class,
+                () -> new PromiseNotifier<>((Promise<Void>) null));
     }
 
     @Test
     public void testListenerSuccess() throws Exception {
-        @SuppressWarnings("unchecked")
-        Promise<Void> p1 = mock(Promise.class);
-        @SuppressWarnings("unchecked")
-        Promise<Void> p2 = mock(Promise.class);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        @SuppressWarnings("unchecked")
         PromiseNotifier<Void> notifier =
-                new PromiseNotifier<>(p1, p2);
+            new PromiseNotifier<>(p1, p2);
 
-        @SuppressWarnings("unchecked")
-        Future<Void> future = mock(Future.class);
-        when(future.isSuccess()).thenReturn(true);
-        when(future.get()).thenReturn(null);
-        when(p1.trySuccess(null)).thenReturn(true);
-        when(p2.trySuccess(null)).thenReturn(true);
+        Future<Void> future = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
 
         notifier.operationComplete(future);
-        verify(p1).trySuccess(null);
-        verify(p2).trySuccess(null);
+        verifySuccess(p1);
+        verifySuccess(p2);
     }
 
     @Test
     public void testListenerFailure() throws Exception {
-        @SuppressWarnings("unchecked")
-        Promise<Void> p1 = mock(Promise.class);
-        @SuppressWarnings("unchecked")
-        Promise<Void> p2 = mock(Promise.class);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        @SuppressWarnings("unchecked")
         PromiseNotifier<Void> notifier =
-                new PromiseNotifier<>(p1, p2);
+            new PromiseNotifier<>(p1, p2);
 
-        @SuppressWarnings("unchecked")
-        Future<Void> future = mock(Future.class);
-        Throwable t = mock(Throwable.class);
-        when(future.isSuccess()).thenReturn(false);
-        when(future.isCancelled()).thenReturn(false);
-        when(future.cause()).thenReturn(t);
-        when(p1.tryFailure(t)).thenReturn(true);
-        when(p2.tryFailure(t)).thenReturn(true);
+        Throwable t = new RuntimeException("fake exception");
+        Future<Void> future = ImmediateEventExecutor.INSTANCE.newFailedFuture(t);
 
         notifier.operationComplete(future);
-        verify(p1).tryFailure(t);
-        verify(p2).tryFailure(t);
+        verifyFail(p1, t);
+        verifyFail(p2, t);
     }
 
     @Test
@@ -111,10 +82,22 @@ public class PromiseNotifierTest {
         };
 
         Future<Void> returned = PromiseNotifier.cascade(p1, p2);
-        assertSame(p1, returned);
+        assertThat(returned).isSameAs(p1);
 
-        assertTrue(returned.cancel(false));
-        assertTrue(returned.isCancelled());
-        assertTrue(p2.isCancelled());
+        assertThat(returned.cancel(false)).isTrue();
+        assertThat(returned.isCancelled()).isTrue();
+        assertThat(p2.isCancelled()).isTrue();
+    }
+
+    private static void verifyFail(Promise<Void> p, Throwable cause) {
+        assertThat(p.isDone()).isTrue();
+        assertThat(p.isSuccess()).isFalse();
+        assertThat(p.cause()).isSameAs(cause);
+    }
+
+    private static void verifySuccess(Promise<Void> p) {
+        assertThat(p.isDone()).isTrue();
+        assertThat(p.isSuccess()).isTrue();
+        assertThat(p.getNow()).isNull();
     }
 }

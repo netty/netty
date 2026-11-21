@@ -15,212 +15,168 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.logging.RecordingSlf4JLogger.LoggedEvent;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import java.util.EnumSet;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class Slf4JLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testName() {
+        InternalLogger logger = new Slf4JLogger(new RecordingSlf4JLogger("foo"));
+        assertThat(logger.name()).isEqualTo("foo");
+    }
+
+    @Test
     public void testIsTraceEnabled() {
-        Logger mockLogger = mock(Logger.class);
-
-        when(mockLogger.getName()).thenReturn("foo");
-        when(mockLogger.isTraceEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
-        assertTrue(logger.isTraceEnabled());
-
-        verify(mockLogger).getName();
-        verify(mockLogger).isTraceEnabled();
+        assertThat(loggerWithOnly(Level.TRACE).isTraceEnabled()).isTrue();
+        assertThat(loggerWithAllBut(Level.TRACE).isTraceEnabled()).isFalse();
     }
 
     @Test
     public void testIsDebugEnabled() {
-        Logger mockLogger = mock(Logger.class);
-
-        when(mockLogger.getName()).thenReturn("foo");
-        when(mockLogger.isDebugEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
-        assertTrue(logger.isDebugEnabled());
-
-        verify(mockLogger).getName();
-        verify(mockLogger).isDebugEnabled();
+        assertThat(loggerWithOnly(Level.DEBUG).isDebugEnabled()).isTrue();
+        assertThat(loggerWithAllBut(Level.DEBUG).isDebugEnabled()).isFalse();
     }
 
     @Test
     public void testIsInfoEnabled() {
-        Logger mockLogger = mock(Logger.class);
-
-        when(mockLogger.getName()).thenReturn("foo");
-        when(mockLogger.isInfoEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
-        assertTrue(logger.isInfoEnabled());
-
-        verify(mockLogger).getName();
-        verify(mockLogger).isInfoEnabled();
+        assertThat(loggerWithOnly(Level.INFO).isInfoEnabled()).isTrue();
+        assertThat(loggerWithAllBut(Level.INFO).isInfoEnabled()).isFalse();
     }
 
     @Test
     public void testIsWarnEnabled() {
-        Logger mockLogger = mock(Logger.class);
-
-        when(mockLogger.getName()).thenReturn("foo");
-        when(mockLogger.isWarnEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
-        assertTrue(logger.isWarnEnabled());
-
-        verify(mockLogger).getName();
-        verify(mockLogger).isWarnEnabled();
+        assertThat(loggerWithOnly(Level.WARN).isWarnEnabled()).isTrue();
+        assertThat(loggerWithAllBut(Level.WARN).isWarnEnabled()).isFalse();
     }
 
     @Test
     public void testIsErrorEnabled() {
-        Logger mockLogger = mock(Logger.class);
+        assertThat(loggerWithOnly(Level.ERROR).isErrorEnabled()).isTrue();
+        assertThat(loggerWithAllBut(Level.ERROR).isErrorEnabled()).isFalse();
+    }
 
-        when(mockLogger.getName()).thenReturn("foo");
-        when(mockLogger.isErrorEnabled()).thenReturn(true);
+    private static InternalLogger loggerWithOnly(Level level) {
+        return new Slf4JLogger(new RecordingSlf4JLogger("foo", EnumSet.of(level)));
+    }
 
-        InternalLogger logger = new Slf4JLogger(mockLogger);
-        assertTrue(logger.isErrorEnabled());
-
-        verify(mockLogger).getName();
-        verify(mockLogger).isErrorEnabled();
+    private static InternalLogger loggerWithAllBut(Level level) {
+        return new Slf4JLogger(new RecordingSlf4JLogger("foo", EnumSet.complementOf(EnumSet.of(level))));
     }
 
     @Test
     public void testTrace() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.TRACE));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.trace("a");
 
-        verify(mockLogger).getName();
-        verify(mockLogger).trace("a");
+        verifyLogged(recorder, Level.TRACE, null);
     }
 
     @Test
     public void testTraceWithException() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.TRACE));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.trace("a", e);
 
-        verify(mockLogger).getName();
-        verify(mockLogger).trace("a", e);
+        verifyLogged(recorder, Level.TRACE, e);
     }
 
     @Test
     public void testDebug() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.DEBUG));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.debug("a");
 
-        verify(mockLogger).getName();
-        verify(mockLogger).debug("a");
+        verifyLogged(recorder, Level.DEBUG, null);
     }
 
     @Test
     public void testDebugWithException() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.DEBUG));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.debug("a", e);
 
-        verify(mockLogger).getName();
-        verify(mockLogger).debug("a", e);
+        verifyLogged(recorder, Level.DEBUG, e);
     }
 
     @Test
     public void testInfo() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.INFO));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.info("a");
 
-        verify(mockLogger).getName();
-        verify(mockLogger).info("a");
+        verifyLogged(recorder, Level.INFO, null);
     }
 
     @Test
     public void testInfoWithException() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.INFO));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.info("a", e);
 
-        verify(mockLogger).getName();
-        verify(mockLogger).info("a", e);
+        verifyLogged(recorder, Level.INFO, e);
     }
 
     @Test
     public void testWarn() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.WARN));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.warn("a");
 
-        verify(mockLogger).getName();
-        verify(mockLogger).warn("a");
+        verifyLogged(recorder, Level.WARN, null);
     }
 
     @Test
     public void testWarnWithException() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.WARN));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.warn("a", e);
 
-        verify(mockLogger).getName();
-        verify(mockLogger).warn("a", e);
+        verifyLogged(recorder, Level.WARN, e);
     }
 
     @Test
     public void testError() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.ERROR));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.error("a");
 
-        verify(mockLogger).getName();
-        verify(mockLogger).error("a");
+        verifyLogged(recorder, Level.ERROR, null);
     }
 
     @Test
     public void testErrorWithException() {
-        Logger mockLogger = mock(Logger.class);
+        RecordingSlf4JLogger recorder = new RecordingSlf4JLogger("foo", EnumSet.of(Level.ERROR));
 
-        when(mockLogger.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Slf4JLogger(mockLogger);
+        InternalLogger logger = new Slf4JLogger(recorder);
         logger.error("a", e);
 
-        verify(mockLogger).getName();
-        verify(mockLogger).error("a", e);
+        verifyLogged(recorder, Level.ERROR, e);
+    }
+
+    private static void verifyLogged(RecordingSlf4JLogger recorder, Level level, Throwable cause) {
+        assertThat(recorder.events()).hasSize(1);
+        LoggedEvent event = recorder.events().get(0);
+        assertThat(event.level).isEqualTo(level);
+        assertThat(event.marker).isNull();
+        assertThat(event.message).isEqualTo("a");
+        assertThat(event.arguments).isNull();
+        assertThat(event.throwable).isSameAs(cause);
     }
 }

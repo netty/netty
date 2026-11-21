@@ -17,133 +17,95 @@
 package io.netty.util.concurrent;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
 
+@SuppressWarnings("deprecation")
 public class PromiseAggregatorTest {
 
     @Test
     public void testNullAggregatePromise() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @SuppressWarnings("deprecation")
-            @Override
-            public void execute() {
-                new PromiseAggregator<Void>(null);
-            }
-        });
+        assertThrows(NullPointerException.class, () -> new PromiseAggregator<Void>(null));
     }
 
     @Test
     public void testAddNullFuture() {
-        @SuppressWarnings("unchecked")
-        Promise<Void> p = mock(Promise.class);
-        @SuppressWarnings("deprecation")
-        final PromiseAggregator<Void> a =
-                new PromiseAggregator<>(p);
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                a.add((Promise<Void>[]) null);
-            }
-        });
+        Promise<Void> p = ImmediateEventExecutor.INSTANCE.newPromise();
+        PromiseAggregator<Void> a = new PromiseAggregator<>(p);
+        assertThrows(NullPointerException.class, () -> a.add((Promise<Void>[]) null));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testSuccessfulNoPending() throws Exception {
-        Promise<Void> p = mock(Promise.class);
-        @SuppressWarnings("deprecation")
-        PromiseAggregator<Void> a =
-                new PromiseAggregator<>(p);
+        Promise<Void> p = ImmediateEventExecutor.INSTANCE.newPromise();
+        PromiseAggregator<Void> a = new PromiseAggregator<>(p);
 
-        Future<Void> future = mock(Future.class);
-        when(p.setSuccess(null)).thenReturn(p);
+        Future<Void> future = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
 
         a.add();
         a.operationComplete(future);
-        verifyNoMoreInteractions(future);
-        verify(p).setSuccess(null);
+        verifySuccess(p);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void testSuccessfulPending() throws Exception {
-        Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void> a =
-                new PromiseAggregator<>(p);
-        Promise<Void> p1 = mock(Promise.class);
-        Promise<Void> p2 = mock(Promise.class);
+    public void testSuccessfulPending() {
+        Promise<Void> p = ImmediateEventExecutor.INSTANCE.newPromise();
+        PromiseAggregator<Void> a = new PromiseAggregator<>(p);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        when(p1.addListener(a)).thenReturn(p1);
-        when(p2.addListener(a)).thenReturn(p2);
-        when(p1.isSuccess()).thenReturn(true);
-        when(p2.isSuccess()).thenReturn(true);
-        when(p.setSuccess(null)).thenReturn(p);
+        assertThat(a.add(p1, null, p2)).isSameAs(a);
 
-        assertEquals(a, a.add(p1, null, p2));
-        a.operationComplete(p1);
-        a.operationComplete(p2);
-
-        verify(p1).addListener(a);
-        verify(p2).addListener(a);
-        verify(p1).isSuccess();
-        verify(p2).isSuccess();
-        verify(p).setSuccess(null);
+        p1.setSuccess(null);
+        verifyNotCompleted(p);
+        p2.setSuccess(null);
+        verifySuccess(p);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void testFailedFutureFailPending() throws Exception {
-        Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void> a =
-                new PromiseAggregator<>(p);
-        Promise<Void> p1 = mock(Promise.class);
-        Promise<Void> p2 = mock(Promise.class);
-        Throwable t = mock(Throwable.class);
-
-        when(p1.addListener(a)).thenReturn(p1);
-        when(p2.addListener(a)).thenReturn(p2);
-        when(p1.isSuccess()).thenReturn(false);
-        when(p1.cause()).thenReturn(t);
-        when(p.setFailure(t)).thenReturn(p);
-        when(p2.setFailure(t)).thenReturn(p2);
+    public void testFailedFutureFailPending() {
+        Promise<Void> p = ImmediateEventExecutor.INSTANCE.newPromise();
+        PromiseAggregator<Void> a = new PromiseAggregator<>(p);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Throwable t = new RuntimeException("fake exception");
 
         a.add(p1, p2);
-        a.operationComplete(p1);
+        p1.setFailure(t);
 
-        verify(p1).addListener(a);
-        verify(p2).addListener(a);
-        verify(p1).cause();
-        verify(p).setFailure(t);
-        verify(p2).setFailure(t);
+        verifyFail(p, t);
+        verifyFail(p2, t);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void testFailedFutureNoFailPending() throws Exception {
-        Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void> a =
-                new PromiseAggregator<>(p, false);
-        Promise<Void> p1 = mock(Promise.class);
-        Promise<Void> p2 = mock(Promise.class);
-        Throwable t = mock(Throwable.class);
-
-        when(p1.addListener(a)).thenReturn(p1);
-        when(p2.addListener(a)).thenReturn(p2);
-        when(p1.isSuccess()).thenReturn(false);
-        when(p1.cause()).thenReturn(t);
-        when(p.setFailure(t)).thenReturn(p);
+    public void testFailedFutureNoFailPending() {
+        Promise<Void> p = ImmediateEventExecutor.INSTANCE.newPromise();
+        PromiseAggregator<Void> a = new PromiseAggregator<>(p, false);
+        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Throwable t = new RuntimeException("fake exception");
 
         a.add(p1, p2);
-        a.operationComplete(p1);
+        p1.setFailure(t);
 
-        verify(p1).addListener(a);
-        verify(p2).addListener(a);
-        verify(p1).isSuccess();
-        verify(p1).cause();
-        verify(p).setFailure(t);
+        verifyFail(p, t);
+        verifyNotCompleted(p2);
+    }
+
+    private static void verifyFail(Promise<Void> p, Throwable cause) {
+        assertThat(p.isDone()).isTrue();
+        assertThat(p.isSuccess()).isFalse();
+        assertThat(p.cause()).isSameAs(cause);
+    }
+
+    private static void verifySuccess(Promise<Void> p) {
+        assertThat(p.isDone()).isTrue();
+        assertThat(p.isSuccess()).isTrue();
+        assertThat(p.getNow()).isNull();
+    }
+
+    private static void verifyNotCompleted(Promise<Void> p) {
+        assertThat(p.isDone()).isFalse();
     }
 }
