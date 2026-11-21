@@ -161,6 +161,34 @@ public class ApplicationProtocolNegotiationHandlerTest {
         }
     }
 
+    @Test
+    public void removesItselfWhenSslHandlerOnlyFollows() throws Exception {
+        SSLEngine afterEngine = SSLContext.getDefault().createSSLEngine();
+        afterEngine.setUseClientMode(true);
+        SslHandler after = new SslHandler(afterEngine);
+        ApplicationProtocolNegotiationHandler negotiationHandler =
+                new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+                    @Override
+                    protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                        fail("No preceding SslHandler should configure the pipeline");
+                    }
+                };
+        EmbeddedChannel channel = new EmbeddedChannel(negotiationHandler, after);
+        try {
+            assertThat(channel.writeInbound("first")).isTrue();
+            assertThat(channel.pipeline().context(negotiationHandler)).isNull();
+            assertThat(channel.pipeline().context(after)).isNotNull();
+            assertThat(after.handshakeFuture().isDone()).isFalse();
+            assertThat(channel.writeInbound("second")).isTrue();
+            assertThat(channel.<String>readInbound()).isEqualTo("first");
+            assertThat(channel.<String>readInbound()).isEqualTo("second");
+            assertThat(channel.<Object>readInbound()).isNull();
+        } finally {
+            channel.pipeline().remove(after);
+            channel.finishAndReleaseAll();
+        }
+    }
+
     private static ApplicationProtocolConfig alpn(String protocol) {
         return new ApplicationProtocolConfig(ApplicationProtocolConfig.Protocol.ALPN,
                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
