@@ -59,6 +59,7 @@ import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 
 import java.net.InetAddress;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -117,6 +118,8 @@ final class OcspClient {
             @Override
             public void run() {
                 try {
+                    validateIssuer(x509Certificate, issuer);
+
                     DigestCalculatorProvider digestCalculatorProvider = new JcaDigestCalculatorProviderBuilder()
                             .build();
 
@@ -251,6 +254,25 @@ final class OcspClient {
         }
 
         return responsePromise;
+    }
+
+    /**
+     * The issuer is usually taken from the certificate chain sent by the peer, which does not need to be in order
+     * to pass certificate path validation. As the issuer key is trusted to sign the OCSP response, make sure that
+     * the issuer really issued the certificate.
+     */
+    private static void validateIssuer(X509Certificate x509Certificate, X509Certificate issuer)
+            throws CertificateException {
+        if (!x509Certificate.getIssuerX500Principal().equals(issuer.getSubjectX500Principal())) {
+            throw new CertificateException("Certificate was not issued by " + issuer.getSubjectX500Principal() +
+                    " but by " + x509Certificate.getIssuerX500Principal());
+        }
+        try {
+            x509Certificate.verify(issuer.getPublicKey());
+        } catch (GeneralSecurityException e) {
+            throw new CertificateException("Certificate was not signed by the key of " +
+                    issuer.getSubjectX500Principal(), e);
+        }
     }
 
     private static void validateResponse(
