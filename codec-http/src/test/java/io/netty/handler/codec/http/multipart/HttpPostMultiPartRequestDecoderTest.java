@@ -548,4 +548,50 @@ public class HttpPostMultiPartRequestDecoderTest {
         commonTestFileDelimiterLFLastChunk(factory, false);
     }
 
+    @Test
+    public void testContentTypeParametersDoNotOverrideContentDispositionName() throws IOException {
+        String content = "--861fbeab-cd20-470c-9609-d40a0f704466\r\n" +
+                "content-disposition: form-data; name=\"comment\"\r\n" +
+                "content-type: text/plain; name=role\r\n" +
+                "\r\n" +
+                "admin\r\n--861fbeab-cd20-470c-9609-d40a0f704466--\r\n";
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+        req.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        req.headers().set("content-length", content.length());
+
+        HttpPostMultipartRequestDecoder test = new HttpPostMultipartRequestDecoder(req);
+        try {
+            assertNull(test.getBodyHttpData("role"));
+            InterfaceHttpData data = test.getBodyHttpData("comment");
+            assertNotNull(data);
+            assertEquals(InterfaceHttpData.HttpDataType.Attribute, data.getHttpDataType());
+            assertEquals("admin", ((Attribute) data).getValue());
+        } finally {
+            test.destroy();
+        }
+    }
+
+    @Test
+    public void testContentTypeFilenameParameterDoesNotCreateFileUpload() throws IOException {
+        String content = "--861fbeab-cd20-470c-9609-d40a0f704466\r\n" +
+                "content-disposition: form-data; name=\"comment\"\r\n" +
+                "content-type: text/plain; filename=\"evil.sh\"\r\n" +
+                "\r\n" +
+                "admin\r\n--861fbeab-cd20-470c-9609-d40a0f704466--\r\n";
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+        req.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        req.headers().set("content-length", content.length());
+
+        HttpPostMultipartRequestDecoder test = new HttpPostMultipartRequestDecoder(req);
+        try {
+            InterfaceHttpData data = test.getBodyHttpData("comment");
+            assertNotNull(data);
+            assertEquals(InterfaceHttpData.HttpDataType.Attribute, data.getHttpDataType());
+            assertEquals("admin", ((Attribute) data).getValue());
+        } finally {
+            test.destroy();
+        }
+    }
 }
