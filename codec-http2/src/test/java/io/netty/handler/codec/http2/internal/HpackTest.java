@@ -45,7 +45,7 @@ public class HpackTest {
             + "/testdata/";
 
     public static File[] files() {
-        File[] files = ResourcesUtil.getFile(HpackTest.class, TEST_DIR).listFiles();
+        File[] files = ResourcesUtil.getFile(HpackTest.class.getResource(TEST_DIR)).listFiles();
         ObjectUtil.checkNotNull(files, "files");
         return files;
     }

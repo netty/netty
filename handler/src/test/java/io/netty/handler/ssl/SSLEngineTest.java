@@ -554,8 +554,8 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMutualAuthSameCerts(SSLEngineTestParam param) throws Throwable {
-        mySetupMutualAuth(param, ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"),
-                ResourcesUtil.getFile(getClass(), "test.crt"),
+        mySetupMutualAuth(param, ResourcesUtil.getFile(getClass().getResource("test_unencrypted.pem")),
+                ResourcesUtil.getFile(getClass().getResource("test.crt")),
                 null);
         runTest(null);
         assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
@@ -652,11 +652,11 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMutualAuthDiffCerts(SSLEngineTestParam param) throws Exception {
-        File serverKeyFile =  ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
-        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        File serverKeyFile =  ResourcesUtil.getFile(getClass().getResource("test_encrypted.pem"));
+        File serverCrtFile = ResourcesUtil.getFile(getClass().getResource("test.crt"));
         String serverKeyPassword = "12345";
-        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
-        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
+        File clientKeyFile = ResourcesUtil.getFile(getClass().getResource("test2_encrypted.pem"));
+        File clientCrtFile = ResourcesUtil.getFile(getClass().getResource("test2.crt"));
         String clientKeyPassword = "12345";
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
@@ -667,11 +667,11 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMutualAuthDiffCertsServerFailure(SSLEngineTestParam param) throws Exception {
-        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
-        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        File serverKeyFile = ResourcesUtil.getFile(getClass().getResource("test_encrypted.pem"));
+        File serverCrtFile = ResourcesUtil.getFile(getClass().getResource("test.crt"));
         String serverKeyPassword = "12345";
-        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
-        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
+        File clientKeyFile = ResourcesUtil.getFile(getClass().getResource("test2_encrypted.pem"));
+        File clientCrtFile = ResourcesUtil.getFile(getClass().getResource("test2.crt"));
         String clientKeyPassword = "12345";
         // Client trusts server but server only trusts itself
         mySetupMutualAuth(param, serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
@@ -683,11 +683,11 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMutualAuthDiffCertsClientFailure(SSLEngineTestParam param) throws Exception {
-        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
-        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        File serverKeyFile = ResourcesUtil.getFile(getClass().getResource("test_unencrypted.pem"));
+        File serverCrtFile = ResourcesUtil.getFile(getClass().getResource("test.crt"));
         String serverKeyPassword = null;
-        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem");
-        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
+        File clientKeyFile = ResourcesUtil.getFile(getClass().getResource("test2_unencrypted.pem"));
+        File clientCrtFile = ResourcesUtil.getFile(getClass().getResource("test2.crt"));
         String clientKeyPassword = null;
         // Server trusts client but client only trusts itself
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
@@ -747,7 +747,7 @@ public abstract class SSLEngineTest {
         final KeyManagerFactory clientKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
-        File commonCertChain = ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem");
+        File commonCertChain = ResourcesUtil.getFile(getClass().getResource("mutual_auth_ca.pem"));
 
         mySetupMutualAuth(param, serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
                 auth, false, false);
@@ -779,7 +779,7 @@ public abstract class SSLEngineTest {
         final KeyManagerFactory clientKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
-        File commonCertChain = ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem");
+        File commonCertChain = ResourcesUtil.getFile(getClass().getResource("mutual_auth_ca.pem"));
 
         mySetupMutualAuth(param, serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
                           auth, true, serverInitEngine);
@@ -954,9 +954,9 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testClientHostnameValidationSuccess(SSLEngineTestParam param) throws Exception {
-        mySetupClientHostnameValidation(param, ResourcesUtil.getFile(getClass(),  "localhost_server.pem"),
-                                        ResourcesUtil.getFile(getClass(), "localhost_server.key"),
-                                        ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"),
+        mySetupClientHostnameValidation(param, ResourcesUtil.getFile(getClass().getResource("localhost_server.pem")),
+                                        ResourcesUtil.getFile(getClass().getResource("localhost_server.key")),
+                                        ResourcesUtil.getFile(getClass().getResource("mutual_auth_ca.pem")),
                                         false);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
 
@@ -969,9 +969,10 @@ public abstract class SSLEngineTest {
     @ParameterizedTest
     public void testClientHostnameValidationFail(SSLEngineTestParam param) throws Exception {
         Future<Void> clientWriteFuture =
-            mySetupClientHostnameValidation(param, ResourcesUtil.getFile(getClass(),  "notlocalhost_server.pem"),
-                                            ResourcesUtil.getFile(getClass(), "notlocalhost_server.key"),
-                                            ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"),
+            mySetupClientHostnameValidation(param,
+                                            ResourcesUtil.getFile(getClass().getResource("notlocalhost_server.pem")),
+                                            ResourcesUtil.getFile(getClass().getResource("notlocalhost_server.key")),
+                                            ResourcesUtil.getFile(getClass().getResource("mutual_auth_ca.pem")),
                                             true);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
         assertTrue(mySetupMutualAuthServerIsValidClientException(clientException),
@@ -1648,8 +1649,8 @@ public abstract class SSLEngineTest {
                                                             String[] protocols1, String[] protocols2) throws Exception {
         SSLEngine sslEngine = null;
         try {
-            File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
-            File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+            File serverKeyFile = ResourcesUtil.getFile(getClass().getResource("test_unencrypted.pem"));
+            File serverCrtFile = ResourcesUtil.getFile(getClass().getResource("test.crt"));
             serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
                                             .sslProvider(sslServerProvider())
                                             .sslContextProvider(serverSslContextProvider())
@@ -4689,7 +4690,7 @@ public abstract class SSLEngineTest {
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
 
-        File commonChain = ResourcesUtil.getFile(getClass(), "rsapss-ca-cert.cert");
+        File commonChain = ResourcesUtil.getFile(getClass().getResource("rsapss-ca-cert.cert"));
         ClientAuth auth = ClientAuth.REQUIRE;
 
         mySetupMutualAuth(param, serverKeyManagerFactory, commonChain, clientKeyManagerFactory, commonChain,

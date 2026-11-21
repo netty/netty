@@ -252,8 +252,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Test
     public void testEnabledProtocolsAreNotSharedBetweenEngines() throws Exception {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
-        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        File serverKeyFile = ResourcesUtil.getFile(getClass().getResource("test_unencrypted.pem"));
+        File serverCrtFile = ResourcesUtil.getFile(getClass().getResource("test.crt"));
         SslContext context = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
                 .sslProvider(sslServerProvider())
                 .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)

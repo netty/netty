@@ -491,11 +491,11 @@ public class NettyBlockHoundIntegrationTest {
                 .protocols(tlsVersion)
                 .endpointIdentificationAlgorithm(null)
                 .trustManager(ResourcesUtil.getFile(
-                        NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
+                        NettyBlockHoundIntegrationTest.class.getResource("mutual_auth_ca.pem")))
                 .build();
 
-        File cert = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class, "localhost_server.pem");
-        File key = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class, "localhost_server.key");
+        File cert = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class.getResource("localhost_server.pem"));
+        File key = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class.getResource("localhost_server.key"));
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert, key, null)
                 .sslProvider(provider)
                 .protocols(tlsVersion)

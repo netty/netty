@@ -113,8 +113,8 @@ public class SniHandlerTest {
             assumeAlpnSupported(provider);
         }
 
-        File keyFile = ResourcesUtil.getFile(SniHandlerTest.class, "test_encrypted.pem");
-        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
+        File keyFile = ResourcesUtil.getFile(SniHandlerTest.class.getResource("test_encrypted.pem"));
+        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class.getResource("test.crt"));
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forServer(crtFile, keyFile, "12345")
                 .sslProvider(provider);
@@ -129,7 +129,7 @@ public class SniHandlerTest {
             assumeAlpnSupported(provider);
         }
 
-        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
+        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class.getResource("test.crt"));
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient()
                 .trustManager(crtFile)
