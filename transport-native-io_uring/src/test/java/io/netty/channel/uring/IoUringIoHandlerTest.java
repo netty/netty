@@ -158,6 +158,44 @@ public class IoUringIoHandlerTest {
                         (short) 0, -1, 0, 0, 0, 0, (short) 0, (short) 0, (short) 0, 0, 0)));
     }
 
+    // See https://github.com/netty/netty/issues/18483
+    @Test
+    public void testDestroyWaitsForEventFdRead() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            IoUringIoHandler handler = (IoUringIoHandler) IoUringIoHandler.newFactory().newHandler(
+                    new ThreadAwareExecutor() {
+                        @Override
+                        public boolean isExecutorThread(Thread thread) {
+                            return true;
+                        }
+
+                        @Override
+                        public void execute(Runnable command) {
+                            command.run();
+                        }
+                    });
+            handler.initialize();
+            handler.register(new IoUringIoHandle() {
+                @Override
+                public void handle(IoRegistration registration, IoEvent ioEvent) {
+                    // Noop
+                }
+
+                @Override
+                public void close() {
+                    // Noop
+                }
+            });
+            // SingleThreadIoEventLoop may call prepareToDestroy() several times in a row before destroy(). Each call
+            // writes to the eventfd and re-arms the eventfd read behind an IOSQE_IO_DRAIN request, so the read can
+            // end up executing in an io-wq worker that still copies into eventfdReadBuf after destroy() returned.
+            handler.prepareToDestroy();
+            handler.prepareToDestroy();
+            handler.destroy();
+            assertFalse(handler.isEventFdReadPending());
+        }
+    }
+
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
     }
