@@ -103,6 +103,14 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
         return PooledDuplicatedByteBuf.newInstance(unwrap(), this, readerIndex(), writerIndex());
     }
 
+    private AbstractByteBuf checkedUnwrap(int index, int fieldLength) {
+        AbstractByteBuf buf = unwrap();
+        // The wrapped buffer is always the root of a pooled buffer hierarchy and so never a CompositeByteBuf, which
+        // means no special-casing as done by UnpooledSlicedByteBuf is needed here.
+        buf.checkIndex0(index, fieldLength);
+        return buf;
+    }
+
     @Override
     public byte getByte(int index) {
         return unwrap().getByte(index);
@@ -110,7 +118,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected byte _getByte(int index) {
-        return unwrap()._getByte(index);
+        return checkedUnwrap(index, 1)._getByte(index);
     }
 
     @Override
@@ -120,7 +128,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        return unwrap()._getShort(index);
+        return checkedUnwrap(index, 2)._getShort(index);
     }
 
     @Override
@@ -130,7 +138,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected short _getShortLE(int index) {
-        return unwrap()._getShortLE(index);
+        return checkedUnwrap(index, 2)._getShortLE(index);
     }
 
     @Override
@@ -140,7 +148,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return unwrap()._getUnsignedMedium(index);
+        return checkedUnwrap(index, 3)._getUnsignedMedium(index);
     }
 
     @Override
@@ -150,7 +158,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected int _getUnsignedMediumLE(int index) {
-        return unwrap()._getUnsignedMediumLE(index);
+        return checkedUnwrap(index, 3)._getUnsignedMediumLE(index);
     }
 
     @Override
@@ -160,7 +168,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        return unwrap()._getInt(index);
+        return checkedUnwrap(index, 4)._getInt(index);
     }
 
     @Override
@@ -170,7 +178,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected int _getIntLE(int index) {
-        return unwrap()._getIntLE(index);
+        return checkedUnwrap(index, 4)._getIntLE(index);
     }
 
     @Override
@@ -180,7 +188,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        return unwrap()._getLong(index);
+        return checkedUnwrap(index, 8)._getLong(index);
     }
 
     @Override
@@ -190,7 +198,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected long _getLongLE(int index) {
-        return unwrap()._getLongLE(index);
+        return checkedUnwrap(index, 8)._getLongLE(index);
     }
 
     @Override
@@ -219,7 +227,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setByte(int index, int value) {
-        unwrap()._setByte(index, value);
+        checkedUnwrap(index, 1)._setByte(index, value);
     }
 
     @Override
@@ -230,7 +238,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        unwrap()._setShort(index, value);
+        checkedUnwrap(index, 2)._setShort(index, value);
     }
 
     @Override
@@ -241,7 +249,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setShortLE(int index, int value) {
-        unwrap()._setShortLE(index, value);
+        checkedUnwrap(index, 2)._setShortLE(index, value);
     }
 
     @Override
@@ -252,7 +260,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setMedium(int index, int value) {
-        unwrap()._setMedium(index, value);
+        checkedUnwrap(index, 3)._setMedium(index, value);
     }
 
     @Override
@@ -263,7 +271,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setMediumLE(int index, int value) {
-        unwrap()._setMediumLE(index, value);
+        checkedUnwrap(index, 3)._setMediumLE(index, value);
     }
 
     @Override
@@ -274,7 +282,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        unwrap()._setInt(index, value);
+        checkedUnwrap(index, 4)._setInt(index, value);
     }
 
     @Override
@@ -285,7 +293,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setIntLE(int index, int value) {
-        unwrap()._setIntLE(index, value);
+        checkedUnwrap(index, 4)._setIntLE(index, value);
     }
 
     @Override
@@ -296,7 +304,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        unwrap()._setLong(index, value);
+        checkedUnwrap(index, 8)._setLong(index, value);
     }
 
     @Override
@@ -307,7 +315,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setLongLE(int index, long value) {
-        unwrap().setLongLE(index, value);
+        checkedUnwrap(index, 8)._setLongLE(index, value);
     }
 
     @Override

@@ -1427,6 +1427,19 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
+    /**
+     * Same as {@link #checkIndex0(int, int)}, but checking against the given {@code limit} instead of this buffer's
+     * capacity. This lets derived buffers cover their own fixed bounds and the bounds of their wrapped buffer with
+     * a single check per access: checking the original index against {@code Math.min(own bounds, whatever bounds
+     * the wrapped buffer currently provides)} only depends on the original index and field length, and so keeps
+     * the sign / overflow parts of the check constant-foldable like in any other buffer.
+     */
+    final void checkIndex0(int index, int fieldLength, int limit) {
+        if (checkBounds) {
+            checkRangeBoundsTrustedCapacity("index", index, fieldLength, limit);
+        }
+    }
+
     protected final void checkSrcIndex(int index, int length, int srcIndex, int srcCapacity) {
         checkIndex(index, length);
         if (checkBounds) {
