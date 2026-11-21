@@ -20,8 +20,10 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -30,9 +32,11 @@ import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
@@ -41,6 +45,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -49,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker13.WEBSOCKET_13_ACCEPT_GUID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -72,6 +78,124 @@ public abstract class WebSocketClientHandshakerTest {
     protected abstract CharSequence getProtocolHeaderName();
 
     protected abstract CharSequence[] getHandshakeRequiredHeaderNames();
+
+    @Test
+    public void testFailedWebSocketDecoderInstallationPreservesHttpClientCodec() {
+        testFailedWebSocketDecoderInstallation(true);
+    }
+
+    @Test
+    public void testFailedWebSocketDecoderInstallationPreservesSeparateHttpCodecs() {
+        testFailedWebSocketDecoderInstallation(false);
+    }
+
+    @Test
+    public void testMissingHttpDecoderDoesNotCommitHandshake() {
+        URI uri = URI.create("ws://localhost:9999/chat");
+        WebSocketClientHandshaker handshaker = newHandshakerSkippingVerification(uri, "chat");
+        HttpContentDecompressor decompressor = new HttpContentDecompressor(0);
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(8192);
+        EmbeddedChannel channel = new EmbeddedChannel(decompressor, aggregator);
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat");
+        try {
+            ChannelFuture future = handshaker.processHandshake(channel, response);
+
+            assertThat(future.isDone()).isTrue();
+            assertThat(future.isSuccess()).isFalse();
+            assertThat(future.cause()).isInstanceOf(IllegalStateException.class);
+            assertThat(handshaker.isHandshakeComplete()).isFalse();
+            assertThat(handshaker.actualSubprotocol()).isNull();
+            assertThat(channel.pipeline().get(WebSocketFrameDecoder.class)).isNull();
+            assertThat(channel.pipeline().get(HttpContentDecompressor.class)).isSameAs(decompressor);
+            assertThat(channel.pipeline().get(HttpObjectAggregator.class)).isSameAs(aggregator);
+        } finally {
+            response.release();
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    private void testFailedWebSocketDecoderInstallation(boolean useHttpClientCodec) {
+        URI uri = URI.create("ws://localhost:9999/chat");
+        WebSocketClientHandshaker handshaker = newHandshakerSkippingVerification(uri, "chat");
+
+        HttpClientCodec clientCodec = useHttpClientCodec ? new HttpClientCodec() : null;
+        HttpRequestEncoder requestEncoder = useHttpClientCodec ? null : new HttpRequestEncoder();
+        HttpResponseDecoder responseDecoder = useHttpClientCodec ? null : new HttpResponseDecoder();
+        HttpContentDecompressor decompressor = new HttpContentDecompressor(0);
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(8192);
+        EmbeddedChannel channel;
+        if (useHttpClientCodec) {
+            channel = new EmbeddedChannel(clientCodec, decompressor, aggregator);
+        } else {
+            channel = new EmbeddedChannel(requestEncoder, responseDecoder, decompressor, aggregator);
+        }
+        ChannelInboundHandlerAdapter nameCollision = new ChannelInboundHandlerAdapter();
+        channel.pipeline().addLast("ws-decoder", nameCollision);
+
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat");
+        try {
+            ChannelFuture future = handshaker.processHandshake(channel, response);
+
+            assertThat(future.isDone()).isTrue();
+            assertThat(future.isSuccess()).isFalse();
+            assertThat(future.cause()).isInstanceOf(IllegalArgumentException.class);
+            assertThat(handshaker.isHandshakeComplete()).isFalse();
+            assertThat(handshaker.actualSubprotocol()).isNull();
+            assertThat(channel.pipeline().get("ws-decoder")).isSameAs(nameCollision);
+            assertThat(channel.pipeline().get(WebSocketFrameDecoder.class)).isNull();
+            assertThat(channel.pipeline().get(HttpContentDecompressor.class)).isSameAs(decompressor);
+            assertThat(channel.pipeline().get(HttpObjectAggregator.class)).isSameAs(aggregator);
+            if (useHttpClientCodec) {
+                assertThat(channel.pipeline().get(HttpClientCodec.class)).isSameAs(clientCodec);
+            } else {
+                assertThat(channel.pipeline().get(HttpRequestEncoder.class)).isSameAs(requestEncoder);
+                assertThat(channel.pipeline().get(HttpResponseDecoder.class)).isSameAs(responseDecoder);
+            }
+
+            FullHttpRequest request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/after-failure");
+            assertThat(channel.writeOutbound(request)).isTrue();
+            Object outbound = channel.readOutbound();
+            try {
+                assertThat(outbound).isInstanceOf(ByteBuf.class);
+            } finally {
+                ReferenceCountUtil.release(outbound);
+            }
+        } finally {
+            response.release();
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    private WebSocketClientHandshaker newHandshakerSkippingVerification(URI uri, String subprotocol) {
+        final WebSocketClientHandshaker delegate = newHandshaker(uri, subprotocol, null, false, true);
+        return new WebSocketClientHandshaker(
+                uri, delegate.version(), subprotocol, EmptyHttpHeaders.INSTANCE, 1024, -1) {
+            @Override
+            protected FullHttpRequest newHandshakeRequest() {
+                return delegate.newHandshakeRequest();
+            }
+
+            @Override
+            protected void verify(FullHttpResponse response) {
+                // This test isolates the pipeline transition after response validation.
+            }
+
+            @Override
+            protected WebSocketFrameDecoder newWebsocketDecoder() {
+                return delegate.newWebsocketDecoder();
+            }
+
+            @Override
+            protected WebSocketFrameEncoder newWebSocketEncoder() {
+                return delegate.newWebSocketEncoder();
+            }
+        };
+    }
 
     @Test
     public void hostHeaderWs() {
