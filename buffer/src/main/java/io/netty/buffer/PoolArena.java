@@ -248,7 +248,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return;
             }
 
-            freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, false);
+            freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer);
         }
     }
 
@@ -256,24 +256,23 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return isSubpage(handle) ? SizeClass.Small : SizeClass.Normal;
     }
 
-    void freeChunk(PoolChunk<T> chunk, long handle, int normCapacity, SizeClass sizeClass, ByteBuffer nioBuffer,
-                   boolean finalizer) {
+    void freeChunk(PoolChunk<T> chunk, long handle, int normCapacity, SizeClass sizeClass, ByteBuffer nioBuffer) {
         final boolean destroyChunk;
         lock();
         try {
-            // We only call this if freeChunk is not called because of the PoolThreadCache finalizer as otherwise this
-            // may fail due lazy class-loading in for example tomcat.
-            if (!finalizer) {
-                switch (sizeClass) {
-                    case Normal:
-                        ++deallocationsNormal;
-                        break;
-                    case Small:
-                        ++deallocationsSmall;
-                        break;
-                    default:
-                        throw new Error("Unexpected size class: " + sizeClass);
-                }
+            // Count the deallocation even when freeChunk is called from the PoolThreadCache finalizer.
+            // The buffer is returned to the chunk in both cases, so skipping the counter here leaves
+            // numDeallocations (and numActiveAllocations) wrong. Incrementing a plain long can not
+            // trigger lazy class-loading, which is what the finalizer path guards against.
+            switch (sizeClass) {
+                case Normal:
+                    ++deallocationsNormal;
+                    break;
+                case Small:
+                    ++deallocationsSmall;
+                    break;
+                default:
+                    throw new Error("Unexpected size class: " + sizeClass);
             }
             destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer);
             if (destroyChunk) {
