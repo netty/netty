@@ -143,6 +143,31 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void testAccumulatedActiveTimeCollectedConcurrently() {
+        final SingleThreadEventExecutor executor =
+                new SuspendingSingleThreadEventExecutor(Executors.defaultThreadFactory());
+        final int reports = 1000000;
+        final AtomicBoolean done = new AtomicBoolean();
+        try {
+            executor.execute(() -> {
+                for (int i = 0; i < reports; i++) {
+                    executor.reportActiveIoTime(1);
+                }
+                done.set(true);
+            });
+            long collected = 0;
+            while (!done.get()) {
+                collected += executor.getAndResetAccumulatedActiveTimeNanos();
+            }
+            collected += executor.getAndResetAccumulatedActiveTimeNanos();
+            assertEquals(reports, collected);
+        } finally {
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        }
+    }
+
+    @Test
     void testSuspensionWhenExecutorIsNotStarted() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
         final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
