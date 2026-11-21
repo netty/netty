@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -278,6 +279,101 @@ public class NonStickyEventExecutorGroupTest {
         } finally {
             nonStickyGroup.shutdownGracefully();
             underlying.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testExecuteAfterRejectedSubmission() throws Exception {
+        final UnorderedThreadPoolEventExecutor underlying = new UnorderedThreadPoolEventExecutor(1);
+        try {
+            // Rejects only the first submission, like a bounded executor whose queue is full for a moment.
+            final EventExecutor executor = new NonStickyEventExecutorGroup(
+                    new RejectFirstExecuteEventExecutor(underlying)).next();
+            assertThrows(RejectedExecutionException.class, new Executable() {
+                @Override
+                public void execute() {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            // NOOP
+                        }
+                    });
+                }
+            });
+
+            final CountDownLatch latch = new CountDownLatch(10);
+            for (int i = 0; i < 10; i++) {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        latch.countDown();
+                    }
+                });
+            }
+            assertThat(latch.await(5, TimeUnit.SECONDS))
+                    .as("tasks executed after a rejected submission must run")
+                    .isTrue();
+        } finally {
+            underlying.shutdownGracefully(0, 1, TimeUnit.SECONDS).syncUninterruptibly();
+        }
+    }
+
+    private static final class RejectFirstExecuteEventExecutor extends AbstractEventExecutor {
+        private final EventExecutor delegate;
+        private final AtomicInteger executeCount = new AtomicInteger();
+
+        RejectFirstExecuteEventExecutor(EventExecutor delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            if (executeCount.incrementAndGet() == 1) {
+                throw new RejectedExecutionException("Simulated queue full");
+            }
+            delegate.execute(command);
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return delegate.inEventLoop(thread);
+        }
+
+        @Override
+        public boolean isShuttingDown() {
+            return delegate.isShuttingDown();
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            return delegate.shutdownGracefully(quietPeriod, timeout, unit);
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            return delegate.terminationFuture();
+        }
+
+        @Override
+        @Deprecated
+        public void shutdown() {
+            delegate.shutdown();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return delegate.isShutdown();
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return delegate.isTerminated();
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return delegate.awaitTermination(timeout, unit);
         }
     }
 
