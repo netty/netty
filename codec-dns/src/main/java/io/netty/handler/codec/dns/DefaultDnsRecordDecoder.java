@@ -138,6 +138,34 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
         }
 
+        // Empty RDATA is used by DNS UPDATE prerequisites (RFC 2136, section 2.4.1).
+        if (type == DnsRecordType.SOA && length != 0) {
+            // SOA RDATA: MNAME, RNAME, followed by five 32-bit integers (RFC 1035, section 3.3.13).
+            if (length < 22) {
+                throw new CorruptedFrameException("SOA record RDATA is too short: " + length);
+            }
+            ByteBuf data = in.duplicate().setIndex(offset, offset + length);
+            String mname = decodeName(data);
+            int rnameOffset = data.readerIndex();
+            String rname = decodeName(data);
+            if (data.readableBytes() != 20) {
+                throw new CorruptedFrameException("SOA record RDATA must end with five 32-bit integers");
+            }
+            ByteBuf out = in.alloc().buffer(mname.length() + rname.length() + 22);
+            try {
+                writeDecompressedName(data, offset, out);
+                writeDecompressedName(data, rnameOffset, out);
+                out.writeBytes(data, 20);
+                DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+                out = null;
+                return record;
+            } finally {
+                if (out != null) {
+                    out.release();
+                }
+            }
+        }
+
         ByteBuf content = in.retainedDuplicate();
         try {
             content.setIndex(offset, offset + length);
@@ -149,6 +177,24 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                 content.release();
             }
         }
+    }
+
+    // The names have already been validated. Copy wire labels to preserve dots inside SOA mailbox labels.
+    private static void writeDecompressedName(ByteBuf in, int offset, ByteBuf out) {
+        while (offset < in.writerIndex()) {
+            int length = in.getUnsignedByte(offset++);
+            if ((length & 0xc0) == 0xc0) {
+                offset = (length & 0x3f) << 8 | in.getUnsignedByte(offset);
+            } else {
+                out.writeByte(length);
+                if (length == 0) {
+                    return;
+                }
+                out.writeBytes(in, offset, length);
+                offset += length;
+            }
+        }
+        out.writeByte(0);
     }
 
     /**

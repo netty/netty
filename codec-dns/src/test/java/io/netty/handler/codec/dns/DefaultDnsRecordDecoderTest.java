@@ -18,12 +18,154 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.CorruptedFrameException;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DefaultDnsRecordDecoderTest {
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testDecodeSoaRecord(boolean compressed) throws Exception {
+        ByteBuf packet = Unpooled.buffer();
+        ByteBuf encoded = Unpooled.buffer();
+        DnsRawRecord record = null;
+        DnsRawRecord decoded = null;
+        try {
+            // The original message contains a name that both SOA fields refer to.
+            DnsCodecUtil.encodeDomainName("example.org.", packet);
+            int recordOffset = packet.writerIndex();
+            DnsCodecUtil.encodeDomainName("netty.io.", packet);
+            packet.writeShort(DnsRecordType.SOA.intValue()).writeShort(DnsRecord.CLASS_IN).writeInt(60);
+            int lengthOffset = packet.writerIndex();
+            packet.writeShort(0);
+            if (compressed) {
+                packet.writeByte(2).writeByte('n').writeByte('s').writeShort(0xc000);
+                packet.writeByte(10).writeBytes(new byte[] { 'h', 'o', 's', 't', 'm', 'a', 's', 't', 'e', 'r' });
+                packet.writeShort(0xc000);
+            } else {
+                DnsCodecUtil.encodeDomainName("ns.example.org.", packet);
+                DnsCodecUtil.encodeDomainName("hostmaster.example.org.", packet);
+            }
+            packet.writeInt(-1).writeInt(3600).writeInt(600).writeInt(86400).writeInt(60);
+            packet.setShort(lengthOffset, packet.writerIndex() - lengthOffset - 2);
+            packet.readerIndex(recordOffset);
+            record = DnsRecordDecoder.DEFAULT.decodeRecord(packet);
+            assertThat(record.name()).isEqualTo("netty.io.");
+            assertThat(record.type()).isEqualTo(DnsRecordType.SOA);
+            assertThat(record.dnsClass()).isEqualTo(DnsRecord.CLASS_IN);
+            assertThat(record.timeToLive()).isEqualTo(60);
+            assertThat(packet.isReadable()).isFalse();
+
+            // Re-encoding the record at a different offset must not retain pointers into the old message.
+            DnsRecordEncoder.DEFAULT.encodeRecord(record, encoded);
+            decoded = DnsRecordDecoder.DEFAULT.decodeRecord(encoded);
+            ByteBuf data = decoded.content().copy();
+            try {
+                assertThat(DnsCodecUtil.decodeDomainName(data)).isEqualTo("ns.example.org.");
+                assertThat(DnsCodecUtil.decodeDomainName(data)).isEqualTo("hostmaster.example.org.");
+                assertThat(data.readUnsignedInt()).isEqualTo(0xffffffffL);
+                assertThat(data.readUnsignedInt()).isEqualTo(3600);
+                assertThat(data.readUnsignedInt()).isEqualTo(600);
+                assertThat(data.readUnsignedInt()).isEqualTo(86400);
+                assertThat(data.readUnsignedInt()).isEqualTo(60);
+                assertThat(data.isReadable()).isFalse();
+            } finally {
+                data.release();
+            }
+        } finally {
+            if (decoded != null) {
+                decoded.release();
+            }
+            if (record != null) {
+                record.release();
+            }
+            encoded.release();
+            packet.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 21, 23 })
+    public void testDecodeSoaRecordWithInvalidIntegerFields(final int length) {
+        final ByteBuf packet = Unpooled.buffer().writeZero(length);
+        try {
+            assertThatThrownBy(new ThrowingCallable() {
+                @Override
+                public void call() throws Throwable {
+                    DnsRawRecord record = (DnsRawRecord) new DefaultDnsRecordDecoder().decodeRecord(
+                            "netty.io.", DnsRecordType.SOA, DnsRecord.CLASS_IN, 60, packet, 0, length);
+                    record.release();
+                }
+            }).isInstanceOf(CorruptedFrameException.class);
+            assertThat(packet.readerIndex()).isZero();
+            assertThat(packet.writerIndex()).isEqualTo(length);
+            assertThat(packet.refCnt()).isEqualTo(1);
+        } finally {
+            packet.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 22 })
+    public void testDecodeSoaRecordWithEmptyDataOrRootNames(int length) throws Exception {
+        ByteBuf packet = Unpooled.buffer().writeZero(length);
+        DnsRawRecord record = null;
+        try {
+            record = (DnsRawRecord) new DefaultDnsRecordDecoder().decodeRecord(
+                    "netty.io.", DnsRecordType.SOA, length == 0 ? DnsRecord.CLASS_ANY : DnsRecord.CLASS_IN,
+                    0, packet, 0, length);
+            assertThat(ByteBufUtil.hexDump(record.content())).isEqualTo(ByteBufUtil.hexDump(packet));
+            assertThat(packet.readerIndex()).isZero();
+            assertThat(packet.writerIndex()).isEqualTo(length);
+        } finally {
+            if (record != null) {
+                record.release();
+            }
+            packet.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testDecodeSoaRecordPreservesMailboxLabel(boolean compressed) throws Exception {
+        ByteBuf packet = Unpooled.buffer();
+        ByteBuf expected = Unpooled.buffer();
+        DnsRawRecord record = null;
+        try {
+            DnsCodecUtil.encodeDomainName("example.org.", packet);
+            int offset = packet.writerIndex();
+            packet.writeByte(0);
+            packet.writeByte(10).writeBytes(new byte[] { 'J', 'o', 'h', 'n', '.', 'S', 'm', 'i', 't', 'h' });
+            if (compressed) {
+                packet.writeShort(0xc000);
+            } else {
+                DnsCodecUtil.encodeDomainName("example.org.", packet);
+            }
+            packet.writeZero(20);
+            expected.writeByte(0);
+            expected.writeByte(10).writeBytes(new byte[] { 'J', 'o', 'h', 'n', '.', 'S', 'm', 'i', 't', 'h' });
+            DnsCodecUtil.encodeDomainName("example.org.", expected);
+            expected.writeZero(20);
+            record = (DnsRawRecord) new DefaultDnsRecordDecoder().decodeRecord(
+                    "netty.io.", DnsRecordType.SOA, DnsRecord.CLASS_IN, 60,
+                    packet, offset, packet.writerIndex() - offset);
+            assertThat(ByteBufUtil.hexDump(record.content())).isEqualTo(ByteBufUtil.hexDump(expected));
+        } finally {
+            if (record != null) {
+                record.release();
+            }
+            expected.release();
+            packet.release();
+        }
+    }
 
     @Test
     public void testDecodeName() {
