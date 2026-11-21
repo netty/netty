@@ -211,18 +211,20 @@ public final class PlatformDependent {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
                 if (CleanerJava9.isSupported()) {
                     LEGACY_CLEANER = new CleanerJava9();
-                } else if (CleanerJava24Linker.isSupported()) {
+                } else if (maxDirectMemory != 0 && CleanerJava24Linker.isSupported()) {
                     // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
                     // but we cannot use "shared" arenas due to JDK bugs.
                     // If the "linker" implementation is supported, then we have native access permissions
                     // in the "io.netty.common" module, and we can link directly to the process' malloc() and free().
                     LEGACY_CLEANER = new CleanerJava24Linker();
-                } else if (CleanerJava25.isSupported()) {
+                } else if (maxDirectMemory != 0 && CleanerJava25.isSupported()) {
                     // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
                     // We don't have native access permissions to link malloc() and free() directly, but we can
                     // use shared memory segment instances.
                     LEGACY_CLEANER = new CleanerJava25();
                 } else {
+                    // FFM allocations bypass the JDK's direct memory limit. When maxDirectMemory is zero,
+                    // allocate with ByteBuffer.allocateDirect() so the JDK accounts for the memory.
                     LEGACY_CLEANER = NOOP;
                 }
             } else {
