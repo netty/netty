@@ -28,6 +28,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
@@ -446,6 +447,23 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
+                captor.capture(), eq(promise));
+        assertEquals(0, captor.getValue().refCnt());
+    }
+
+    @Test
+    public void serverInputShutdownWithIncompleteSettingsFrameShouldHandleException() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+        // The SETTINGS frame header announces a payload, but the input is shut down before it arrives.
+        handler.channelRead(ctx, addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf())));
+        verify(frameWriter, never()).writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class), any(ChannelPromise.class));
+
+        handler.userEventTriggered(ctx, ChannelInputShutdownEvent.INSTANCE);
+
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));

@@ -609,6 +609,56 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void incompleteSettingsFramePayloadOnCloseIsProtocolError() throws Exception {
+        // SETTINGS frame header announcing a 6 byte payload, followed by only 3 bytes of it.
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
+                0, 0, 6, Http2FrameTypes.SETTINGS, 0, 0, 0, 0, 0,
+                0, 4, 0 }));
+        inboundHandler.checkException();
+
+        channel.close();
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
+    }
+
+    @Test
+    public void incompleteSettingsFrameWithoutPayloadOnCloseIsProtocolError() throws Exception {
+        // Only the SETTINGS frame header arrives, none of its 6 byte payload.
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
+                0, 0, 6, Http2FrameTypes.SETTINGS, 0, 0, 0, 0, 0 }));
+        inboundHandler.checkException();
+
+        channel.close();
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(Http2Error.PROTOCOL_ERROR, e.error());
+    }
+
+    @Test
+    public void incompleteDataFrameOnCloseIsNotReported() throws Exception {
+        frameInboundWriter.writeInboundHeaders(3, request, 31, false);
+        // DATA frame header announcing a 10 byte payload, followed by only 2 bytes of it.
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
+                0, 0, 10, Http2FrameTypes.DATA, 0, 0, 0, 0, 3,
+                'h', 'i' }));
+
+        channel.close();
+
+        inboundHandler.checkException();
+    }
+
+    @Test
     public void streamErrorShouldNotFireExceptionForOutbound() throws Exception {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
