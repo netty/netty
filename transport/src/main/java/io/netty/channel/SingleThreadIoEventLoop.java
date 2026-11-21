@@ -223,7 +223,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                     taskQuantumNs = quantum;
                 }
             }
-            if (isShuttingDown()) {
+            if (!preparedToDestroy && isShuttingDown()) {
+                // Only call this once: confirmShutdown() keeps returning false for the whole quiet period, so we
+                // would otherwise call it on every iteration. Registrations after this point are rejected in
+                // registerForIo0, so a second call has nothing left to close.
                 ioHandler.prepareToDestroy();
                 preparedToDestroy = true;
             }

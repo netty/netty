@@ -131,7 +131,35 @@ public class SingleThreadIoEventLoopTest {
         assertThat(prepareToDestroyCalls).hasValue(1);
     }
 
-    private static final class CountingTestIoHandler extends TestIoHandler {
+    // https://github.com/netty/netty/issues/18483
+    @Test
+    void testPrepareToDestroyCalledOnceWhenLoopIteratesDuringQuietPeriod() throws Exception {
+        AtomicInteger prepareToDestroyCalls = new AtomicInteger();
+        // Counts down for every IO loop iteration that runs after prepareToDestroy() was called.
+        CountDownLatch iterationsAfterPrepare = new CountDownLatch(3);
+        SingleThreadIoEventLoop loop = new SingleThreadIoEventLoop(null, Executors.defaultThreadFactory(),
+                executor -> new CountingTestIoHandler(executor, prepareToDestroyCalls) {
+                    @Override
+                    public int run(IoHandlerContext context) {
+                        if (prepareToDestroyCalls.get() > 0) {
+                            // Do not block so the loop keeps iterating while the quiet period has not elapsed.
+                            iterationsAfterPrepare.countDown();
+                            return 0;
+                        }
+                        return super.run(context);
+                    }
+                });
+        // Start the event loop thread and let it go back to waiting for IO.
+        loop.submit(() -> { }).sync();
+
+        // The quiet period keeps confirmShutdown() returning false, so the loop iterates multiple times.
+        loop.shutdownGracefully(1, 30, TimeUnit.SECONDS).sync();
+
+        assertThat(iterationsAfterPrepare.getCount()).isZero();
+        assertThat(prepareToDestroyCalls).hasValue(1);
+    }
+
+    private static class CountingTestIoHandler extends TestIoHandler {
         private final AtomicInteger prepareToDestroyCalls;
 
         CountingTestIoHandler(ThreadAwareExecutor executor, AtomicInteger prepareToDestroyCalls) {
