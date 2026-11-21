@@ -33,6 +33,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
+import io.netty.handler.codec.http2.Http2HeadersEncoder.IndexingSensitivityDetector;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -161,11 +162,13 @@ final class HpackEncoder {
             this.pendingMinHeaderTableSize = Long.MAX_VALUE;
             encodeInteger(out, 0x20, 5, this.maxHeaderTableSize);
         }
+        IndexingSensitivityDetector indexingDetector = sensitivityDetector instanceof IndexingSensitivityDetector ?
+                (IndexingSensitivityDetector) sensitivityDetector : null;
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-              HpackHeaderField.sizeOf(name, value));
+              HpackHeaderField.sizeOf(name, value), indexingDetector);
         }
     }
 
@@ -174,7 +177,8 @@ final class HpackEncoder {
      * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
+    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize,
+                              IndexingSensitivityDetector indexingDetector) {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
@@ -212,6 +216,9 @@ final class HpackEncoder {
             if (staticTableIndex != HpackStaticTable.NOT_FOUND) {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
+            } else if (indexingDetector != null && !indexingDetector.shouldIndex(name, value)) {
+                // Section 6.2.2. Literal Header Field without Indexing
+                encodeLiteral(out, name, value, IndexType.NONE, getNameIndex(name));
             } else {
                 ensureCapacity(headerSize);
                 encodeAndAddEntries(out, name, nameHash, value, valueHash);
