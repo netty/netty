@@ -919,9 +919,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
                     allocHandle.reset(config());
                     boolean continueReading = false;
+                    // Frames queued after the end of the stream are read within the same limits as the ones before
+                    // it. The channel stays open until the last of them has been read; see closeIfReadEOSAndDrained().
                     do {
                         doRead0((Http2Frame) message, allocHandle);
-                    } while ((readEOS || (continueReading = allocHandle.continueReading()))
+                    } while ((continueReading = allocHandle.continueReading())
                             && (message = pollQueuedMessage()) != null);
 
                     if (continueReading && isParentReadInProgress() && !readEOS) {
