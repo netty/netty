@@ -303,4 +303,22 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
             }
         });
     }
+
+    @Test
+    public void testServerMaxWindowBitsWithoutValueKeepsConfiguredWindow() {
+        // server_max_window_bits with no value is not a window size. Keep the configured one.
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
+                        false, false, 12, 8, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, null);
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNotNull(extension);
+        WebSocketExtensionData data = extension.newReponseData();
+        assertEquals("12", data.parameters().get(SERVER_MAX_WINDOW));
+    }
 }
