@@ -367,14 +367,14 @@ public class HpackEncoderTest {
     @Test
     public void testSensitiveTakesPrecedenceOverIndexing() throws Http2Exception {
         final List<CharSequence> consulted = new ArrayList<CharSequence>();
-        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.IndexingSensitivityDetector() {
+        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.SensitivityDetector() {
             @Override
             public boolean isSensitive(CharSequence name, CharSequence value) {
                 return true;
             }
 
             @Override
-            public boolean shouldIndex(CharSequence name, CharSequence value) {
+            public boolean skipIndexing(CharSequence name, CharSequence value) {
                 consulted.add(name);
                 return true;
             }
@@ -387,16 +387,16 @@ public class HpackEncoderTest {
     }
 
     @Test
-    public void testShouldIndexTrueKeepsIncrementalIndexing() throws Http2Exception {
-        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.IndexingSensitivityDetector() {
+    public void testSkipIndexingFalseKeepsIncrementalIndexing() throws Http2Exception {
+        Http2HeadersEncoder.SensitivityDetector detector = new Http2HeadersEncoder.SensitivityDetector() {
             @Override
             public boolean isSensitive(CharSequence name, CharSequence value) {
                 return false;
             }
 
             @Override
-            public boolean shouldIndex(CharSequence name, CharSequence value) {
-                return true;
+            public boolean skipIndexing(CharSequence name, CharSequence value) {
+                return false;
             }
         };
 
@@ -406,15 +406,15 @@ public class HpackEncoderTest {
     }
 
     private static Http2HeadersEncoder.SensitivityDetector notIndexed(final String headerName) {
-        return new Http2HeadersEncoder.IndexingSensitivityDetector() {
+        return new Http2HeadersEncoder.SensitivityDetector() {
             @Override
             public boolean isSensitive(CharSequence name, CharSequence value) {
                 return false;
             }
 
             @Override
-            public boolean shouldIndex(CharSequence name, CharSequence value) {
-                return !AsciiString.contentEqualsIgnoreCase(headerName, name);
+            public boolean skipIndexing(CharSequence name, CharSequence value) {
+                return AsciiString.contentEqualsIgnoreCase(headerName, name);
             }
         };
     }

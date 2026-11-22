@@ -77,17 +77,17 @@ public class DefaultHttp2HeadersEncoderTest {
     }
 
     @Test
-    public void indexingSensitivityDetectorShouldBeUsed() throws Http2Exception {
+    public void skipIndexingShouldBeUsed() throws Http2Exception {
         DefaultHttp2HeadersEncoder encoder = new DefaultHttp2HeadersEncoder(
-                new Http2HeadersEncoder.IndexingSensitivityDetector() {
+                new Http2HeadersEncoder.SensitivityDetector() {
                     @Override
                     public boolean isSensitive(CharSequence name, CharSequence value) {
                         return false;
                     }
 
                     @Override
-                    public boolean shouldIndex(CharSequence name, CharSequence value) {
-                        return false;
+                    public boolean skipIndexing(CharSequence name, CharSequence value) {
+                        return true;
                     }
                 });
         Http2Headers headers = new DefaultHttp2Headers().add(new AsciiString("k"), new AsciiString("x"));
