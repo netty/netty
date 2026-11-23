@@ -2,6 +2,9 @@
 #
 # The OpenSSL based SslEngine respects jdk.tls.disabledAlgorithms (just like the JDK implementation), but a lot of
 # our tests intentionally exercise legacy protocols and cipher suites (TLSv1, TLSv1.1, RC4, 3DES, ...) that are
-# disabled by default. Clear the property so these tests keep working. Tests that care about the property set it
+# disabled by default. Relax the property so these tests keep working. Tests that care about the property set it
 # explicitly, see OpenSslDisabledAlgorithmsTest.
-jdk.tls.disabledAlgorithms=
+#
+# SSLv3 must stay disabled: the JDK engine is used in the same JVM and tests (for example
+# SslHandlerTest.testHandshakeFailedByWriteBeforeChannelActive) rely on SSLv3 handshakes failing.
+jdk.tls.disabledAlgorithms=SSLv3
