@@ -212,8 +212,10 @@ public class IoUringIoHandlerTest {
     @Test
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void testDestroyWaitsForEventFdReadWithPendingWakeup() throws Exception {
-        for (int i = 0; i < 100; i++) {
-            IoUringIoHandler handler = (IoUringIoHandler) IoUringIoHandler.newFactory().newHandler(
+        // Use a tiny ring and only a few iterations, see testDestroyWaitsForEventFdRead.
+        IoHandlerFactory factory = IoUringIoHandler.newFactory(4);
+        for (int i = 0; i < 10; i++) {
+            IoUringIoHandler handler = (IoUringIoHandler) factory.newHandler(
                     new ThreadAwareExecutor() {
                         @Override
                         public boolean isExecutorThread(Thread thread) {
