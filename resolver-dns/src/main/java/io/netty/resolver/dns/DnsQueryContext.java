@@ -340,14 +340,6 @@ abstract class DnsQueryContext {
      */
     private void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope,
                                boolean truncated, boolean validateCookie) {
-        if (truncated && tcpRetryStarted) {
-            // The query is already retried via TCP, which will complete the promise. This happens if the truncated
-            // response is received more than once, or after the query timed out and was retried.
-            logger.debug("{} Ignoring a truncated DNS response, the query is already retried via TCP: {}",
-                    channel, envelope);
-            envelope.release();
-            return;
-        }
         // Check if the response was not truncated or if a fallback to TCP is possible.
         if (!truncated || !retryWithTcp(envelope)) {
             final DnsResponse res = envelope.content();
@@ -444,6 +436,15 @@ abstract class DnsQueryContext {
     private boolean retryWithTcp(final Object originalResult) {
         if (socketBootstrap == null) {
             return false;
+        }
+        if (tcpRetryStarted) {
+            // The query is already retried via TCP, which will complete the promise. This happens if a truncated
+            // response is received more than once, or if the query times out or a truncated response is received
+            // after the retry was started.
+            logger.debug("{} Ignoring a further TCP retry, the query is already retried via TCP: {}",
+                    channel, originalResult);
+            ReferenceCountUtil.release(originalResult);
+            return true;
         }
         tcpRetryStarted = true;
 

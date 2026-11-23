@@ -187,6 +187,38 @@ public class DnsTruncatedTcpFallbackTest {
         }
     }
 
+    @Test
+    @Timeout(30)
+    public void testTimeoutAfterTruncatedResponseDoesNotFallBackToTcpAgain() throws Exception {
+        CountDownLatch udpResponsesRead = new CountDownLatch(1);
+        DnsNameResolver resolver = newResolver(udpResponsesRead, 2000, true);
+        try {
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future = resolver.query(QUESTION);
+            DatagramDnsQuery udpQuery = udpQueries.poll(10, TimeUnit.SECONDS);
+            assertThat(udpQuery).isNotNull();
+            try {
+                udpServer.writeAndFlush(truncated(udpQuery));
+            } finally {
+                udpQuery.release();
+            }
+            assertThat(udpResponsesRead.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // Never answer the TCP query. The timeout of the UDP query is scheduled before the timeout of the TCP
+            // query, so it already fired once the future completes because of the TCP timeout.
+            TcpQuery tcpQuery = tcpQueries.poll(10, TimeUnit.SECONDS);
+            assertThat(tcpQuery).isNotNull();
+            tcpQuery.query.release();
+            future.awaitUninterruptibly();
+            if (future.isSuccess()) {
+                // The TCP fallback failed, so the truncated response is used.
+                future.getNow().release();
+            }
+            assertThat(tcpConnections.get()).isEqualTo(1);
+        } finally {
+            resolver.close();
+        }
+    }
+
     private DnsNameResolver newResolver(final CountDownLatch udpResponsesRead, long queryTimeoutMillis,
                                         boolean retryOnTimeout) {
         return new DnsNameResolverBuilder(group.next())
