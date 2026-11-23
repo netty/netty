@@ -20,13 +20,13 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -80,8 +80,8 @@ public class DnsTruncatedTcpFallbackTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        serverGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        serverGroup = new NioEventLoopGroup(1);
+        group = new NioEventLoopGroup(1);
         udpServer = new Bootstrap().group(serverGroup)
                 .channel(NioDatagramChannel.class)
                 .handler(new ChannelInitializer<Channel>() {
@@ -222,21 +222,27 @@ public class DnsTruncatedTcpFallbackTest {
     private DnsNameResolver newResolver(final CountDownLatch udpResponsesRead, long queryTimeoutMillis,
                                         boolean retryOnTimeout) {
         return new DnsNameResolverBuilder(group.next())
-                .datagramChannelFactory(() -> {
-                    NioDatagramChannel ch = new NioDatagramChannel();
-                    // Counts the responses once the resolver has processed them.
-                    ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            ctx.fireChannelRead(msg);
-                            udpResponsesRead.countDown();
-                        }
-                    });
-                    return ch;
+                .datagramChannelFactory(new ChannelFactory<NioDatagramChannel>() {
+                    @Override
+                    public NioDatagramChannel newChannel() {
+                        NioDatagramChannel ch = new NioDatagramChannel();
+                        // Counts the responses once the resolver has processed them.
+                        ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ctx.fireChannelRead(msg);
+                                udpResponsesRead.countDown();
+                            }
+                        });
+                        return ch;
+                    }
                 })
-                .socketChannelFactory(() -> {
-                    tcpConnections.incrementAndGet();
-                    return new NioSocketChannel();
+                .socketChannelFactory(new ChannelFactory<NioSocketChannel>() {
+                    @Override
+                    public NioSocketChannel newChannel() {
+                        tcpConnections.incrementAndGet();
+                        return new NioSocketChannel();
+                    }
                 }, retryOnTimeout)
                 .queryTimeoutMillis(queryTimeoutMillis)
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
