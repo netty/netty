@@ -161,8 +161,11 @@ public class IoUringIoHandlerTest {
     // See https://github.com/netty/netty/issues/18483
     @Test
     public void testDestroyWaitsForEventFdRead() throws Exception {
-        for (int i = 0; i < 100; i++) {
-            IoUringIoHandler handler = (IoUringIoHandler) IoUringIoHandler.newFactory().newHandler(
+        // Use a tiny ring and only a few iterations: the kernel releases the memory of a closed ring asynchronously, so
+        // creating many rings in a row can hit the memlock / memory limits of CI runners (ENOMEM in io_uring_setup).
+        IoHandlerFactory factory = IoUringIoHandler.newFactory(4);
+        for (int i = 0; i < 10; i++) {
+            IoUringIoHandler handler = (IoUringIoHandler) factory.newHandler(
                     new ThreadAwareExecutor() {
                         @Override
                         public boolean isExecutorThread(Thread thread) {
