@@ -405,6 +405,61 @@ public class HpackEncoderTest {
         assertThat(hpackEncoder.length()).isOne();
     }
 
+    @Test
+    public void testSkipIndexingNotConsultedForStaticTableMatch() throws Http2Exception {
+        List<CharSequence> consulted = new ArrayList<CharSequence>();
+
+        // :method GET is index 2 in the static table, so it is always encoded as an indexed header field.
+        verifyEncoding(new DefaultHttp2Headers().method("GET"), skipIndexingRecorder(consulted), -126);
+        assertThat(consulted).isEmpty();
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+    }
+
+    @Test
+    public void testSkipIndexingNotConsultedWhenDynamicTableIsDisabled() throws Http2Exception {
+        List<CharSequence> consulted = new ArrayList<CharSequence>();
+        setMaxTableSize(0);
+
+        // 0x20 is the dynamic table size update to 0, followed by k -> x as a literal header field without indexing.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), skipIndexingRecorder(consulted),
+          32, 0, 1, 107, 1, 120);
+        assertThat(consulted).isEmpty();
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+    }
+
+    @Test
+    public void testSkipIndexingNotConsultedWhenHeaderDoesNotFitInDynamicTable() throws Http2Exception {
+        List<CharSequence> consulted = new ArrayList<CharSequence>();
+        // k -> x needs 2 + HEADER_ENTRY_OVERHEAD bytes, which is more than the table can hold.
+        setMaxTableSize(HpackHeaderField.HEADER_ENTRY_OVERHEAD);
+
+        // The dynamic table size update (0x3F, 0x01 for 32) is followed by k -> x as a literal header field
+        // without indexing.
+        verifyEncoding(new DefaultHttp2Headers().add("k", "x"), skipIndexingRecorder(consulted),
+          63, 1, 0, 1, 107, 1, 120);
+        assertThat(consulted).isEmpty();
+        assertThat(hpackEncoder.length()).isZero();
+        assertThat(hpackDecoder.length()).isZero();
+    }
+
+    private static Http2HeadersEncoder.SensitivityDetector skipIndexingRecorder(
+            final List<CharSequence> consulted) {
+        return new Http2HeadersEncoder.SensitivityDetector() {
+            @Override
+            public boolean isSensitive(CharSequence name, CharSequence value) {
+                return false;
+            }
+
+            @Override
+            public boolean skipIndexing(CharSequence name, CharSequence value) {
+                consulted.add(name);
+                return true;
+            }
+        };
+    }
+
     private static Http2HeadersEncoder.SensitivityDetector notIndexed(final String headerName) {
         return new Http2HeadersEncoder.SensitivityDetector() {
             @Override
