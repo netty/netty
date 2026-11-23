@@ -305,8 +305,8 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
     }
 
     @Test
-    public void testServerMaxWindowBitsWithoutValueKeepsConfiguredWindow() {
-        // server_max_window_bits with no value is not a window size. Keep the configured one.
+    public void testServerMaxWindowBitsWithoutValueIsDeclined() {
+        // RFC 7692 §7.1.2.1: server_max_window_bits in an offer must have a value.
         PerMessageDeflateServerExtensionHandshaker handshaker =
                 new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
                         false, false, 12, 8, 0);
@@ -317,8 +317,6 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         WebSocketServerExtension extension = handshaker.handshakeExtension(
                 new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
 
-        assertNotNull(extension);
-        WebSocketExtensionData data = extension.newReponseData();
-        assertEquals("12", data.parameters().get(SERVER_MAX_WINDOW));
+        assertNull(extension);
     }
 }

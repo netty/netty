@@ -325,21 +325,21 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                     clientWindowSize = preferredClientWindowSize;
                 }
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                // use provided windowSize if it is allowed
-                if (allowServerWindowSize) {
-                    // A missing value is not a window size. Keep the configured server window.
-                    String value = parameter.getValue();
-                    if (value != null) {
-                        // Let NumberFormatException bubble up if value is invalid
-                        int clientOfferedServerWindowSize = Integer.parseInt(value);
-                        if (clientOfferedServerWindowSize > MAX_WINDOW_SIZE
-                                || clientOfferedServerWindowSize < MIN_WINDOW_SIZE) {
-                            deflateEnabled = false;
-                        } else {
-                            // RFC 7692 §7.1.2.1: server accepts with the same or smaller value than the offer.
-                            // Cap at the configured serverWindowSize so the server's memory bound is respected.
-                            negotiatedServerWindowSize = Math.min(clientOfferedServerWindowSize, this.serverWindowSize);
-                        }
+                // RFC 7692 §7.1.2.1: server_max_window_bits in an offer MUST have a value.
+                // A valueless parameter is not a window size and the offer is declined.
+                String value = parameter.getValue();
+                if (value == null) {
+                    deflateEnabled = false;
+                } else if (allowServerWindowSize) {
+                    // Let NumberFormatException bubble up if value is invalid
+                    int clientOfferedServerWindowSize = Integer.parseInt(value);
+                    if (clientOfferedServerWindowSize > MAX_WINDOW_SIZE
+                            || clientOfferedServerWindowSize < MIN_WINDOW_SIZE) {
+                        deflateEnabled = false;
+                    } else {
+                        // RFC 7692 §7.1.2.1: server accepts with the same or smaller value than the offer.
+                        // Cap at the configured serverWindowSize so the server's memory bound is respected.
+                        negotiatedServerWindowSize = Math.min(clientOfferedServerWindowSize, this.serverWindowSize);
                     }
                 } else {
                     deflateEnabled = false;
