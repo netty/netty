@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -95,9 +95,9 @@ public class DnsTruncatedTcpFallbackTest {
                                     }
                                 });
                     }
-                }).bind(NetUtil.LOCALHOST4, 0).sync().channel();
+                }).bind(NetUtil.LOCALHOST4, 0).sync().getNow();
         // TCP listens on the same port as UDP, like a real nameserver.
-        tcpServer = new ServerBootstrap().group(serverGroup)
+        Future<Channel> tcpServerFuture = new ServerBootstrap().group(serverGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
@@ -110,8 +110,9 @@ public class DnsTruncatedTcpFallbackTest {
                                     }
                                 });
                     }
-                }).bind(udpServer.localAddress()).awaitUninterruptibly().channel();
-        Assumptions.assumeTrue(tcpServer.isActive(), "Unable to bind TCP to " + udpServer.localAddress());
+                }).bind(udpServer.localAddress()).awaitUninterruptibly();
+        Assumptions.assumeTrue(tcpServerFuture.isSuccess(), "Unable to bind TCP to " + udpServer.localAddress());
+        tcpServer = tcpServerFuture.getNow();
     }
 
     @AfterEach
@@ -222,10 +223,10 @@ public class DnsTruncatedTcpFallbackTest {
     private DnsNameResolver newResolver(final CountDownLatch udpResponsesRead, long queryTimeoutMillis,
                                         boolean retryOnTimeout) {
         return new DnsNameResolverBuilder(group.next())
-                .datagramChannelFactory(() -> {
-                    NioDatagramChannel ch = new NioDatagramChannel();
+                .datagramChannelFactory(eventLoop -> {
+                    NioDatagramChannel ch = new NioDatagramChannel(eventLoop);
                     // Counts the responses once the resolver has processed them.
-                    ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addFirst(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ctx.fireChannelRead(msg);
@@ -234,9 +235,9 @@ public class DnsTruncatedTcpFallbackTest {
                     });
                     return ch;
                 })
-                .socketChannelFactory(() -> {
+                .socketChannelFactory(eventLoop -> {
                     tcpConnections.incrementAndGet();
-                    return new NioSocketChannel();
+                    return new NioSocketChannel(eventLoop);
                 }, retryOnTimeout)
                 .queryTimeoutMillis(queryTimeoutMillis)
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
