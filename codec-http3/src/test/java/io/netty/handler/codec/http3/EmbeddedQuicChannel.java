@@ -63,7 +63,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final ConcurrentLinkedQueue<Integer> closeErrorCodes = new ConcurrentLinkedQueue<>();
     private QuicChannelConfig config;
-    
+
     /**
      * QUIC stream IDs are 62-bit integers, with the two least-significant bits
      * identifying the initiator (client/server) and stream direction (bi/uni).
