@@ -214,6 +214,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private boolean outboundClosed;
 
     final boolean jdkCompatibilityMode;
+    // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
+    private final JdkDisabledAlgorithms disabledAlgorithms;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
     private final OpenSslEngineMap engines;
@@ -251,6 +253,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         enableOcsp = context.enableOcsp;
         groups = context.groups.clone();
         this.jdkCompatibilityMode = jdkCompatibilityMode;
+        this.disabledAlgorithms = context.disabledAlgorithms;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
@@ -1867,18 +1870,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final void setEnabledProtocols(String[] protocols) {
         checkNotNullWithIAE(protocols, "protocols");
         synchronized (this) {
-            enabledProtocols = toEnabledProtocols(protocols);
+            enabledProtocols = toEnabledProtocols(protocols, disabledAlgorithms);
 
             setEnabledProtocols0(protocols, !hasTLSv13Cipher);
         }
     }
 
-    static String[] toEnabledProtocols(String[] protocols) {
+    static String[] toEnabledProtocols(String[] protocols, JdkDisabledAlgorithms disabledAlgorithms) {
         Set<String> enabledProtocols = new LinkedHashSet<String>();
         // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
         enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
 
-        Collections.addAll(enabledProtocols, protocols);
+        for (String protocol : protocols) {
+            if (!disabledAlgorithms.isProtocolDisabled(protocol)) {
+                enabledProtocols.add(protocol);
+            }
+        }
         return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
@@ -1890,6 +1897,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         for (String protocol : protocols) {
             if (!OpenSsl.isProtocolSupported(protocol)) {
                 throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
+            }
+            if (disabledAlgorithms.isProtocolDisabled(protocol)) {
+                // Disabled via the jdk.tls.disabledAlgorithms security property.
+                continue;
             }
 
             int index;

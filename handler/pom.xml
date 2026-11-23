@@ -30,6 +30,8 @@
     <javaModuleName>io.netty.handler</javaModuleName>
     <!-- Needed for SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
+    <!-- Tests use legacy protocols / cipher suites that are disabled via jdk.tls.disabledAlgorithms by default. -->
+    <argLine.javaProperties>-Djava.security.properties=${project.basedir}/src/test/resources/io/netty/handler/ssl/legacy-algorithms.java.security</argLine.javaProperties>
   </properties>
 
   <name>Netty/Handler</name>

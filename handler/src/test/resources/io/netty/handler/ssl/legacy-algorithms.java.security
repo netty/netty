@@ -1,0 +1,7 @@
+# Used via -Djava.security.properties (see handler/pom.xml, argLine.javaProperties) when running the handler tests.
+#
+# The OpenSSL based SslEngine respects jdk.tls.disabledAlgorithms (just like the JDK implementation), but a lot of
+# our tests intentionally exercise legacy protocols and cipher suites (TLSv1, TLSv1.1, RC4, 3DES, ...) that are
+# disabled by default. Clear the property so these tests keep working. Tests that care about the property set it
+# explicitly, see OpenSslDisabledAlgorithmsTest.
+jdk.tls.disabledAlgorithms=
