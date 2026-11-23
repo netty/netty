@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.buffer;
@@ -1906,6 +1907,63 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         } finally {
             composite.release();
         }
+    }
+
+    @Test
+    public void testCapacityGrowConsolidatesWhenMaxComponentsReached() {
+        CompositeByteBuf buf = compositeBuffer(3);          // max 3 boxes
+        buf.addComponent(true, wrappedBuffer(new byte[]{1, 2}));
+        buf.addComponent(true, wrappedBuffer(new byte[]{3, 4}));
+        buf.addComponent(true, wrappedBuffer(new byte[]{5, 6}));
+        assertEquals(3, buf.numComponents());
+        assertEquals(6, buf.capacity());
+
+        buf.capacity(10);                                    // need 4 empty bytes
+
+        assertEquals(10, buf.capacity());
+        assertEquals(1, buf.numComponents());                // merged into one box
+        assertEquals(6, buf.writerIndex());                  // writer index untouched
+        for (int i = 0; i < 6; i++) {                        // old data preserved
+            assertEquals(i + 1, buf.getByte(i));
+        }
+        buf.release();
+    }
+
+    @Test
+    public void testCapacityGrowDoesNotAllocatePaddingWhenConsolidating() {
+        final AtomicInteger allocations = new AtomicInteger();
+        ByteBufAllocator countingAlloc = new AbstractByteBufAllocator(false) {
+            @Override
+            protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+                allocations.incrementAndGet();
+                return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            }
+
+            @Override
+            protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+                allocations.incrementAndGet();
+                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+            }
+
+            @Override
+            public boolean isDirectBufferPooled() {
+                return false;
+            }
+        };
+
+        CompositeByteBuf buf = new CompositeByteBuf(countingAlloc, false, 3);
+        buf.addComponent(true, wrappedBuffer(new byte[]{1, 2}));
+        buf.addComponent(true, wrappedBuffer(new byte[]{3, 4}));
+        buf.addComponent(true, wrappedBuffer(new byte[]{5, 6}));
+        allocations.set(0);
+
+        buf.capacity(10);
+
+        assertEquals(10, buf.capacity());
+        assertEquals(1, buf.numComponents());
+        // Only the final merged buffer should be allocated, not a throw-away padding buffer first.
+        assertEquals(1, allocations.get());
+        buf.release();
     }
 
 }
