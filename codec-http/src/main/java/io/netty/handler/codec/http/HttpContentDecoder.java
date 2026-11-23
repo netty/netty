@@ -22,6 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
@@ -84,7 +85,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         }
 
         if (msg instanceof HttpMessage) {
-            cleanup();
+            try {
+                cleanup();
+            } catch (DecompressionException ignore) {
+                // The previous message was not complete when this one started, so its compressed body ended
+                // too early. That is not a failure of this message, don't let it prevent that it is decoded.
+            }
             final HttpMessage message = (HttpMessage) msg;
             final HttpHeaders headers = message.headers();
 
@@ -173,18 +179,23 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 decoder.writeInbound(c.content().retain());
 
                 if (c instanceof LastHttpContent) {
-                    boolean notEmpty = decoder.finish();
+                    EmbeddedChannel finishedDecoder = decoder;
+                    // Don't keep the decoder if finish() throws, it is closed afterwards and can't be used again.
                     decoder = null;
+                    boolean notEmpty = finishedDecoder.finish();
                     assert !notEmpty;
                     LastHttpContent last = (LastHttpContent) c;
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
                     HttpHeaders headers = last.trailingHeaders();
+                    // Keep the decoder result, so that a failure of the last content (for example a malformed
+                    // chunk) still reaches the next handlers.
+                    DecoderResult lastDecoderResult = last.decoderResult();
                     needRead = false;
-                    if (headers.isEmpty()) {
+                    if (headers.isEmpty() && lastDecoderResult.isSuccess()) {
                         ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
                     } else {
-                        ctx.fireChannelRead(new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
+                        ctx.fireChannelRead(new ComposedLastHttpContent(headers, lastDecoderResult));
                     }
                 }
             }
@@ -249,10 +260,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     private void cleanup() {
-        if (decoder != null) {
-            // Clean-up the previous decoder if not cleaned up correctly.
-            boolean nonEmpty = decoder.finishAndReleaseAll();
-            decoder = null;
+        EmbeddedChannel previous = this.decoder;
+        if (previous != null) {
+            // Clean-up the previous decoder if not cleaned up correctly. Forget it first, so that it is not used
+            // again if this throws.
+            this.decoder = null;
+            boolean nonEmpty = previous.finishAndReleaseAll();
             assert !nonEmpty;
         }
     }

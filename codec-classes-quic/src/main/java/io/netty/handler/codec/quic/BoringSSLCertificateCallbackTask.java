@@ -51,10 +51,12 @@ final class BoringSSLCertificateCallbackTask extends BoringSSLTask {
                 this.chain = result[1];
                 taskCallback.onResult(ssl, 1);
             }
-        } catch (Exception e) {
-            // Just catch the exception and return 0 to fail the handshake.
+        } catch (Throwable cause) {
+            // Just catch the Throwable and return 0 to fail the handshake.
             // The problem is that rethrowing here is really "useless" as we will process it as part of an openssl
             // c callback which needs to return 0 for an error to abort the handshake.
+            // We also need to catch Errors (for example thrown by a user supplied KeyManager) as otherwise the task
+            // would never complete and the handshake would stall instead of failing.
             taskCallback.onResult(ssl, 0);
         }
     }

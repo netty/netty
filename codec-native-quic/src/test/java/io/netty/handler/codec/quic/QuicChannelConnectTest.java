@@ -93,6 +93,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1900,6 +1901,77 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 assertNull(causeRef.get());
             }
             assertTrue(signCalled.get());
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectFailsIfKeyManagerThrowsError(Executor executor) throws Throwable {
+        AtomicBoolean keyManagerCalled = new AtomicBoolean();
+        X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
+            @Override
+            public String[] getClientAliases(String keyType, Principal[] issuers) {
+                return null;
+            }
+
+            @Override
+            public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                return null;
+            }
+
+            @Override
+            public String[] getServerAliases(String keyType, Principal[] issuers) {
+                return null;
+            }
+
+            @Override
+            public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                return null;
+            }
+
+            @Override
+            public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+                keyManagerCalled.set(true);
+                // An Error (and not an Exception) must also fail the handshake and not stall it.
+                throw new NoClassDefFoundError("expected");
+            }
+
+            @Override
+            public X509Certificate[] getCertificateChain(String alias) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public PrivateKey getPrivateKey(String alias) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(keyManager, null)
+                                .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            Future<QuicChannel> connectFuture = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect().await();
+            assertFalse(connectFuture.isSuccess());
+            assertTrue(keyManagerCalled.get());
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
