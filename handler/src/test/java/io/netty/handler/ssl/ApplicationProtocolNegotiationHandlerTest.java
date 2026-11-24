@@ -42,6 +42,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -276,6 +277,56 @@ public class ApplicationProtocolNegotiationHandlerTest {
             assertSame(cause, failureCause.get());
             assertSame(event, forwardedEvent.get());
             assertFalse(channel.isOpen());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("handshakeFailureCauses")
+    public void nestedTlsOuterHandshakeFailureIsHandled(Throwable cause) throws Exception {
+        SSLEngine outerEngine = SSLContext.getDefault().createSSLEngine();
+        outerEngine.setUseClientMode(true);
+        SSLEngine innerEngine = SSLContext.getDefault().createSSLEngine();
+        innerEngine.setUseClientMode(true);
+        SslHandler outer = new SslHandler(outerEngine);
+        SslHandler inner = new SslHandler(innerEngine);
+        final AtomicReference<Throwable> failureCause = new AtomicReference<Throwable>();
+        final AtomicReference<Object> forwardedEvent = new AtomicReference<Object>();
+        ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
+            @Override
+            protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+                fail("A failed outer handshake must not configure the pipeline");
+            }
+
+            @Override
+            protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                failureCause.set(cause);
+                super.handshakeFailure(ctx, cause);
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(outer, inner, alpnHandler, new ChannelInboundHandler() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                forwardedEvent.set(evt);
+            }
+        });
+
+        SslHandshakeCompletionEvent event = new SslHandshakeCompletionEvent(cause);
+        try {
+            channel.freezeTime();
+            assertThat(inner.handshakeFuture().isDone()).isFalse();
+            channel.pipeline().context(outer).fireUserEventTriggered(event);
+
+            assertThat(failureCause.get()).isSameAs(cause);
+            assertThat(forwardedEvent.get()).isSameAs(event);
+
+            // Each layer may wait for its close_notify to flush before closing the preceding layer.
+            channel.advanceTimeBy(inner.getCloseNotifyFlushTimeoutMillis(), TimeUnit.MILLISECONDS);
+            channel.runPendingTasks();
+            channel.advanceTimeBy(outer.getCloseNotifyFlushTimeoutMillis(), TimeUnit.MILLISECONDS);
+            channel.runPendingTasks();
+            assertThat(channel.isOpen()).isFalse();
         } finally {
             channel.finishAndReleaseAll();
         }
