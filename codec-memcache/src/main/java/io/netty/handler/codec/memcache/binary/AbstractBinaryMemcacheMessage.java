@@ -17,6 +17,7 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.AbstractMemcacheObject;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -54,10 +55,10 @@ public abstract class AbstractBinaryMemcacheMessage
      */
     protected AbstractBinaryMemcacheMessage(ByteBuf key, ByteBuf extras) {
         this.key = key;
-        keyLength = key == null ? 0 : (short) key.readableBytes();
+        keyLength = (short) checkKeyLength(key);
         this.extras = extras;
-        extrasLength = extras == null ? 0 : (byte) extras.readableBytes();
-        totalBodyLength = keyLength + extrasLength;
+        extrasLength = (byte) checkExtrasLength(extras);
+        totalBodyLength = (keyLength & 0xFFFF) + (extrasLength & 0xFF);
     }
 
     @Override
@@ -72,26 +73,37 @@ public abstract class AbstractBinaryMemcacheMessage
 
     @Override
     public BinaryMemcacheMessage setKey(ByteBuf key) {
+        int newKeyLength = checkKeyLength(key);
         if (this.key != null) {
             this.key.release();
         }
         this.key = key;
-        short oldKeyLength = keyLength;
-        keyLength = key == null ? 0 : (short) key.readableBytes();
-        totalBodyLength = totalBodyLength + keyLength - oldKeyLength;
+        int oldKeyLength = keyLength & 0xFFFF;
+        keyLength = (short) newKeyLength;
+        totalBodyLength = totalBodyLength + newKeyLength - oldKeyLength;
         return this;
     }
 
     @Override
     public BinaryMemcacheMessage setExtras(ByteBuf extras) {
+        int newExtrasLength = checkExtrasLength(extras);
         if (this.extras != null) {
             this.extras.release();
         }
         this.extras = extras;
-        short oldExtrasLength = extrasLength;
-        extrasLength = extras == null ? 0 : (byte) extras.readableBytes();
-        totalBodyLength = totalBodyLength + extrasLength - oldExtrasLength;
+        int oldExtrasLength = extrasLength & 0xFF;
+        extrasLength = (byte) newExtrasLength;
+        totalBodyLength = totalBodyLength + newExtrasLength - oldExtrasLength;
         return this;
+    }
+
+    // The key length and extras length are unsigned 16 and 8 bit fields in the header.
+    private static int checkKeyLength(ByteBuf key) {
+        return key == null ? 0 : ObjectUtil.checkInRange(key.readableBytes(), 0, 0xFFFF, "key length");
+    }
+
+    private static int checkExtrasLength(ByteBuf extras) {
+        return extras == null ? 0 : ObjectUtil.checkInRange(extras.readableBytes(), 0, 0xFF, "extras length");
     }
 
     @Override

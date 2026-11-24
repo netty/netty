@@ -237,6 +237,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (serverConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
+                if (closeIfCloseSent(ctx)) {
+                    // We already sent our own close frame, so this is either the peer's response to it or a
+                    // simultaneous close. As per RFC 6455 we must not send another close frame, just close the
+                    // connection once our own close frame was written.
+                    return;
+                }
                 frame.retain();
                 ChannelPromise promise = ctx.newPromise();
                 closeSent(promise);

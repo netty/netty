@@ -115,7 +115,7 @@ public class IpSubnetFilterTest {
         IpFilterRule filter0 = new IpFilterRule() {
             @Override
             public boolean matches(InetSocketAddress remoteAddress) {
-                return "192.168.57.1".equals(remoteAddress.getHostName());
+                return "192.168.57.1".equals(remoteAddress.getHostString());
             }
 
             @Override
@@ -131,7 +131,7 @@ public class IpSubnetFilterTest {
             protected ChannelFuture channelRejected(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
                 assertTrue(ctx.channel().isActive());
                 assertTrue(ctx.channel().isWritable());
-                assertEquals("192.168.57.1", remoteAddress.getHostName());
+                assertEquals("192.168.57.1", remoteAddress.getHostString());
 
                 return ctx.writeAndFlush(Unpooled.wrappedBuffer(message));
             }

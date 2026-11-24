@@ -144,9 +144,9 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
                 long localFlushedAmount = doWriteOrSendBytes(
                         initialData, (InetSocketAddress) remote, true);
                 if (localFlushedAmount > 0) {
-                    // We had a cookie and our fast-open proceeded. Remove written data
-                    // then continue with normal TCP operation.
-                    outbound.removeBytes(localFlushedAmount);
+                    // We had a cookie and our fast-open proceeded. The written data is removed once the connect
+                    // is complete, then we continue with normal TCP operation.
+                    fastOpenDataSent(outbound, initialData, localFlushedAmount);
                     return true;
                 }
             }
@@ -157,6 +157,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
         @Override
         protected Executor prepareToClose() {
+            // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when closing.
+            removeFastOpenData();
             try {
                 // Check isOpen() first as otherwise it will throw a RuntimeException
                 // when call getSoLinger() as the fd is not valid anymore.

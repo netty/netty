@@ -326,6 +326,42 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     /**
+     * Validates that pseudo-headers are defined and are used in the correct
+     * endpoint direction (RFC 9113, Sections 8.1.1 and 8.3).
+     *
+     * @param isServer true if processing an inbound request on the server
+     * @param streamId the target HTTP/2 stream ID
+     * @param headers  the HTTP/2 headers container
+     * @throws Http2Exception if a pseudo-header is undefined or used in the
+     *                        wrong endpoint direction
+     */
+    private static void validatePseudoHeadersDirection(boolean isServer, int streamId, Http2Headers headers)
+            throws Http2Exception {
+        for (Entry<CharSequence, CharSequence> entry : headers) {
+            CharSequence name = entry.getKey();
+            if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+                PseudoHeaderName pseudo = PseudoHeaderName.getPseudoHeader(name);
+                if (pseudo == null) {
+                    // Undefined pseudo header
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Undefined pseudo-header '%s' received.", name);
+                }
+                if (isServer && !pseudo.isRequestOnly()) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Response-only pseudo-header '%s' received in request.", name);
+                }
+                if (!isServer && pseudo.isRequestOnly()) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "Request-only pseudo-header '%s' received in response.", name);
+                }
+            } else {
+                //Pseudo-headers MUST precede regular headers, so we can stop checking
+                break;
+            }
+        }
+    }
+
+    /**
      * Handles all inbound frames from the network.
      */
     private final class FrameReadListener implements Http2FrameListener {
@@ -373,7 +409,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         stream.id(), stream.state());
                     break;
                 default:
-                    error = streamError(stream.id(), PROTOCOL_ERROR,
+                    // IDLE, RESERVED_LOCAL or RESERVED_REMOTE: this must be treated as a connection error
+                    // (RFC 9113, section 5.1).
+                    error = connectionError(PROTOCOL_ERROR,
                         "Stream %d in unexpected state: %s", stream.id(), stream.state());
                     break;
             }
@@ -472,6 +510,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 if (validateRequiredPseudoHeaders && !isInformational) {
                     // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
+                }
+                if (validateHeaders) {
+                    //Enforce RFC 9113 section 8.3: Reject wrong direction pseudo-headers
+                    //https://github.com/netty/netty/issues/17449
+                    validatePseudoHeadersDirection(connection.isServer(), streamId, headers);
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);

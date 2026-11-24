@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -27,11 +28,15 @@ import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import javax.net.ssl.SSLException;
 
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
- * {@link SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
+ * the nearest preceding {@link SslHandler}. With nested TLS, negotiation waits for that handler's handshake,
+ * rather than the handshake of an earlier TLS layer. For example, you could configure your HTTP pipeline
+ * depending on the result of ALPN:
  * <pre>
  * public class MyInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     private final {@link SslContext} sslCtx;
@@ -73,6 +78,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
     private ChannelHandlerContext ctx;
     private boolean sslHandlerChecked;
+    private boolean handshakeFailed;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -103,7 +109,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         bufferedMessages.add(msg);
         if (!sslHandlerChecked) {
             sslHandlerChecked = true;
-            if (ctx.pipeline().get(SslHandler.class) == null) {
+            if (findSslHandler(ctx) == null) {
                 // Just remove ourself if there is no SslHandler in the pipeline and so we would otherwise
                 // buffer forever.
                 removeSelfIfPresent(ctx);
@@ -128,9 +134,15 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
+            SslHandler sslHandler = handshakeEvent.isSuccess() ? findSslHandler(ctx) : null;
+            if (sslHandler != null && !sslHandler.handshakeFuture().isSuccess()) {
+                // A preceding TLS layer may finish before the layer whose application protocol we need.
+                // Its event must still propagate, but must not configure the pipeline or remove this handler.
+                ctx.fireUserEventTriggered(evt);
+                return;
+            }
             try {
                 if (handshakeEvent.isSuccess()) {
-                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                     if (sslHandler == null) {
                         throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
                                 + "application-level protocol negotiation)");
@@ -138,16 +150,24 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     String protocol = sslHandler.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
-                    // if the event is not produced because of an successful handshake we will receive the same
-                    // exception in exceptionCaught(...) and handle it there. This will allow us more fine-grained
-                    // control over which exception we propagate down the ChannelPipeline.
-                    //
-                    // See https://github.com/netty/netty/issues/10342
+                    // timeouts and early closes may not produce a decoder exception
+                    // preserve the existing exception and close handling for other TLS failures
+                    Throwable cause = handshakeEvent.cause();
+                    if (cause instanceof SslHandshakeTimeoutException || cause instanceof ClosedChannelException) {
+                        try {
+                            super.userEventTriggered(ctx, evt);
+                        } finally {
+                            notifyHandshakeFailure(ctx, cause);
+                        }
+
+                        return;
+                    }
                 }
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
-                // Handshake failures are handled in exceptionCaught(...).
+                // keep the handler after failure to consume later SSL decoder exceptions
+                // see https://github.com/netty/netty/issues/10342
                 if (handshakeEvent.isSuccess()) {
                     removeSelfIfPresent(ctx);
                 }
@@ -165,6 +185,19 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         fireBufferedMessages();
         super.channelInactive(ctx);
+    }
+
+    private static SslHandler findSslHandler(ChannelHandlerContext ctx) {
+        SslHandler sslHandler = null;
+        for (Map.Entry<String, ChannelHandler> entry : ctx.pipeline()) {
+            if (entry.getKey().equals(ctx.name())) {
+                break;
+            }
+            if (entry.getValue() instanceof SslHandler) {
+                sslHandler = (SslHandler) entry.getValue();
+            }
+        }
+        return sslHandler;
     }
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
@@ -192,12 +225,24 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
         ctx.close();
     }
 
+    private void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if (!handshakeFailed) {
+            handshakeFailed = true;
+
+            try {
+                handshakeFailure(ctx, cause);
+            } catch (Throwable innerCause) {
+                exceptionCaught(ctx, innerCause);
+            }
+        }
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Throwable wrapped;
         if (cause instanceof DecoderException && ((wrapped = cause.getCause()) instanceof SSLException)) {
             try {
-                handshakeFailure(ctx, wrapped);
+                notifyHandshakeFailure(ctx, wrapped);
                 return;
             } finally {
                 removeSelfIfPresent(ctx);

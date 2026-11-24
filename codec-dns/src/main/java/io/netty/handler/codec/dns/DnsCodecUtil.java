@@ -29,6 +29,10 @@ final class DnsCodecUtil {
     // See https://datatracker.ietf.org/doc/html/rfc1035#section-2.3.4
     static final int MAX_DOMAIN_NAME_LENGTH = 255;
 
+    // The length of a message that is sent over TCP is encoded in two bytes.
+    // See https://tools.ietf.org/html/rfc7766#section-8
+    static final int MAX_TCP_MESSAGE_LENGTH = 0xFFFF;
+
     // A decoded name is at most 255 characters and every label contributes at least 2 ("x."), so a valid name has
     // at most 127 labels and therefore never needs to follow more compression pointers than that. Bounding the hops
     // per name keeps the decoding cost of each name constant instead of proportional to the message size.
@@ -42,6 +46,21 @@ final class DnsCodecUtil {
 
     private DnsCodecUtil() {
         // Util class
+    }
+
+    /**
+     * Writes the length of the message into the first two bytes of the given {@link ByteBuf} which were reserved for
+     * it, as defined by <a href="https://tools.ietf.org/html/rfc7766#section-8">RFC 7766</a>.
+     *
+     * @throws IllegalArgumentException if the message is too large for the length to fit into two bytes.
+     */
+    static void setTcpMessageLength(ByteBuf buf) {
+        int length = buf.readableBytes() - 2;
+        if (length > MAX_TCP_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("DNS message length " + length + " exceeds the maximum of " +
+                    MAX_TCP_MESSAGE_LENGTH + " bytes that can be sent over TCP");
+        }
+        buf.setShort(0, length);
     }
 
     static void encodeDomainName(String name, ByteBuf buf) {

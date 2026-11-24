@@ -15,20 +15,17 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.logging.RecordingSlf4JLogger.LoggedEvent;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
-import org.slf4j.Logger;
-import org.slf4j.Marker;
-import org.slf4j.spi.LocationAwareLogger;
+import org.slf4j.event.Level;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
 
 public class Slf4JLoggerFactoryTest {
 
@@ -41,32 +38,22 @@ public class Slf4JLoggerFactoryTest {
 
     @Test
     public void testCreationLogger() {
-        Logger logger = mock(Logger.class);
-        when(logger.getName()).thenReturn("testlogger");
-        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
+        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(new RecordingSlf4JLogger("testlogger"));
         assertInstanceOf(Slf4JLogger.class, internalLogger);
         assertEquals("testlogger", internalLogger.name());
     }
 
     @Test
     public void testCreationLocationAwareLogger() {
-        Logger logger = mock(LocationAwareLogger.class);
-        when(logger.getName()).thenReturn("testlogger");
-        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
+        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(
+                new RecordingSlf4JLogger.LocationAware("testlogger"));
         assertInstanceOf(LocationAwareSlf4JLogger.class, internalLogger);
         assertEquals("testlogger", internalLogger.name());
     }
 
     @Test
     public void testFormatMessage() {
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        LocationAwareLogger logger = mock(LocationAwareLogger.class);
-        when(logger.isDebugEnabled()).thenReturn(true);
-        when(logger.isErrorEnabled()).thenReturn(true);
-        when(logger.isInfoEnabled()).thenReturn(true);
-        when(logger.isTraceEnabled()).thenReturn(true);
-        when(logger.isWarnEnabled()).thenReturn(true);
-        when(logger.getName()).thenReturn("testlogger");
+        RecordingSlf4JLogger.LocationAware logger = new RecordingSlf4JLogger.LocationAware("testlogger");
 
         InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
         internalLogger.debug("{}", "debug");
@@ -89,38 +76,28 @@ public class Slf4JLoggerFactoryTest {
         internalLogger.warn("{} {}", "warn1", "warn2");
         internalLogger.warn("{} {} {}", "warn1", "warn2", "warn3");
 
-        verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.DEBUG_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.ERROR_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.INFO_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.TRACE_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.WARN_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
-                ArgumentMatchers.<Throwable>isNull());
+        List<Level> levels = new ArrayList<>();
+        List<String> messages = new ArrayList<>();
+        for (LoggedEvent event : logger.events()) {
+            assertThat(event.marker).isNull();
+            assertThat(event.fqcn).isEqualTo(LocationAwareSlf4JLogger.FQCN);
+            assertThat(event.arguments).isNull();
+            assertThat(event.throwable).isNull();
+            levels.add(event.level);
+            messages.add(event.message);
+        }
 
-        Iterator<String> logMessages = captor.getAllValues().iterator();
-        assertEquals("debug", logMessages.next());
-        assertEquals("debug1 debug2", logMessages.next());
-        assertEquals("debug1 debug2 debug3", logMessages.next());
-        assertEquals("error", logMessages.next());
-        assertEquals("error1 error2", logMessages.next());
-        assertEquals("error1 error2 error3", logMessages.next());
-        assertEquals("info", logMessages.next());
-        assertEquals("info1 info2", logMessages.next());
-        assertEquals("info1 info2 info3", logMessages.next());
-        assertEquals("trace", logMessages.next());
-        assertEquals("trace1 trace2", logMessages.next());
-        assertEquals("trace1 trace2 trace3", logMessages.next());
-        assertEquals("warn", logMessages.next());
-        assertEquals("warn1 warn2", logMessages.next());
-        assertEquals("warn1 warn2 warn3", logMessages.next());
-        assertFalse(logMessages.hasNext());
+        assertThat(levels).containsExactly(
+                Level.DEBUG, Level.DEBUG, Level.DEBUG,
+                Level.ERROR, Level.ERROR, Level.ERROR,
+                Level.INFO, Level.INFO, Level.INFO,
+                Level.TRACE, Level.TRACE, Level.TRACE,
+                Level.WARN, Level.WARN, Level.WARN);
+        assertThat(messages).containsExactly(
+                "debug", "debug1 debug2", "debug1 debug2 debug3",
+                "error", "error1 error2", "error1 error2 error3",
+                "info", "info1 info2", "info1 info2 info3",
+                "trace", "trace1 trace2", "trace1 trace2 trace3",
+                "warn", "warn1 warn2", "warn1 warn2 warn3");
     }
 }

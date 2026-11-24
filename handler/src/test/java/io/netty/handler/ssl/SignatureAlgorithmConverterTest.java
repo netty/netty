@@ -63,6 +63,60 @@ public class SignatureAlgorithmConverterTest {
     }
 
     @Test
+    public void testOpenSslEd25519() {
+        assertEquals("Ed25519", SignatureAlgorithmConverter.toJavaName("ED25519"));
+    }
+
+    @Test
+    public void testOpenSslEd448() {
+        assertEquals("Ed448", SignatureAlgorithmConverter.toJavaName("ED448"));
+    }
+
+    @Test
+    public void testEdDsaIgnoresCase() {
+        for (String name : new String[] { "ed25519", "ED25519", "Ed25519", "eD25519" }) {
+            assertEquals("Ed25519", SignatureAlgorithmConverter.toJavaName(name), name);
+        }
+        for (String name : new String[] { "ed448", "ED448", "Ed448", "eD448" }) {
+            assertEquals("Ed448", SignatureAlgorithmConverter.toJavaName(name), name);
+        }
+    }
+
+    @Test
+    public void testNamesWithoutJavaName() {
+        assertNull(SignatureAlgorithmConverter.toJavaName("rsassaPss"));
+        assertNull(SignatureAlgorithmConverter.toJavaName("dsaEncryption"));
+        assertNull(SignatureAlgorithmConverter.toJavaName("undefined"));
+    }
+
+    @Test
+    public void testKnownNamesMatchPattern() {
+        String[] knownNames = {
+                // BoringSSL / AWS-LC
+                "ecdsa_sha1", "ecdsa_sha256", "ecdsa_sha384", "ecdsa_sha512",
+                "rsa_pkcs1_sha1", "rsa_pkcs1_sha256", "rsa_pkcs1_sha384", "rsa_pkcs1_sha512",
+                "rsa_pss_rsae_sha256", "rsa_pss_rsae_sha384", "rsa_pss_rsae_sha512",
+                // OpenSSL
+                "ecdsa-with-SHA1", "ecdsa-with-SHA224", "ecdsa-with-SHA256", "ecdsa-with-SHA384",
+                "ecdsa-with-SHA512",
+                "sha1WithRSAEncryption", "sha224WithRSAEncryption", "sha256WithRSAEncryption",
+                "sha384WithRSAEncryption", "sha512WithRSAEncryption",
+                "dsa_with_SHA256",
+                "rsassaPss", "dsaEncryption", "undefined"
+        };
+        for (String name : knownNames) {
+            assertEquals(SignatureAlgorithmConverter.toJavaNameWithPattern(name),
+                    SignatureAlgorithmConverter.toJavaName(name), name);
+        }
+    }
+
+    @Test
+    public void testUnlistedNameUsesPattern() {
+        assertEquals("SHA224withDSA", SignatureAlgorithmConverter.toJavaName("dsa_with_SHA224"));
+        assertEquals("SHA3-256withECDSA", SignatureAlgorithmConverter.toJavaName("ecdsa_with_SHA3-256"));
+    }
+
+    @Test
     public void testInvalid() {
         assertNull(SignatureAlgorithmConverter.toJavaName("ThisIsSomethingInvalid"));
     }

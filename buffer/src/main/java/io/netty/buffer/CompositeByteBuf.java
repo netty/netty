@@ -846,13 +846,21 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         final int size = componentCount, oldCapacity = capacity();
         if (newCapacity > oldCapacity) {
-            final int paddingLength = newCapacity - oldCapacity;
-            ByteBuf padding = allocBuffer(paddingLength).setIndex(0, paddingLength);
-            addComponent0(false, size, padding);
-            if (componentCount >= maxNumComponents) {
-                // FIXME: No need to create a padding buffer and consolidate.
-                // Just create a big single buffer and put the current content there.
-                consolidateIfNeeded();
+            if (size > 0 && size >= maxNumComponents) {
+                // Adding a padding component would exceed maxNumComponents and trigger a consolidation anyway,
+                // so directly create one buffer of the new capacity and copy the existing content into it.
+                final ByteBuf consolidated = allocBuffer(newCapacity);
+                for (int i = 0; i < size; i++) {
+                    components[i].transferTo(consolidated);
+                }
+                consolidated.writerIndex(newCapacity);
+                lastAccessed = null;
+                removeCompRange(1, size);
+                components[0] = newComponent(consolidated, 0);
+            } else {
+                final int paddingLength = newCapacity - oldCapacity;
+                ByteBuf padding = allocBuffer(paddingLength).setIndex(0, paddingLength);
+                addComponent0(false, size, padding);
             }
         } else if (newCapacity < oldCapacity) {
             lastAccessed = null;

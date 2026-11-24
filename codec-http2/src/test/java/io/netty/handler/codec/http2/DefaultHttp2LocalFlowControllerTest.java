@@ -191,6 +191,24 @@ public class DefaultHttp2LocalFlowControllerTest {
     }
 
     @Test
+    public void dataFrameOnReservedStreamShouldOnlyApplyConnectionFlowControl() throws Http2Exception {
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
+        Http2Stream reserved = connection.remote().reservePushStream(2, stream(STREAM_ID));
+        assertEquals(State.RESERVED_REMOTE, reserved.state());
+
+        receiveFlowControlledFrame(reserved, dataSize, 0, true);
+        // The bytes are consumed immediately for the connection window.
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
+        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+        assertEquals(0, controller.unconsumedBytes(connection.connectionStream()));
+
+        // Returning the bytes for the reserved stream must not return them to the connection window a second time.
+        assertFalse(controller.consumeBytes(reserved, dataSize));
+        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+        verifyWindowUpdateNotSent(2);
+    }
+
+    @Test
     public void windowUpdateShouldBeWrittenWhenStreamIsClosedAndFlushed() throws Http2Exception {
         int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
 

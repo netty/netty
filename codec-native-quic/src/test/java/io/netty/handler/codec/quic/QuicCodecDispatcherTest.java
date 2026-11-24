@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicCodecDispatcherTest {
 
@@ -86,6 +88,33 @@ public class QuicCodecDispatcherTest {
         }
         assertEquals(0, numPackets);
         assertEquals(channels.length, initChannelCalled.get());
+    }
+
+    @Test
+    public void testPacketIsForwardedIfIndexCanNotBeDecoded() {
+        short localConnectionIdLength = 16;
+
+        QuicCodecDispatcher dispatcher = new QuicCodecDispatcher(localConnectionIdLength) {
+            @Override
+            protected void initChannel(Channel channel, int localConnectionIdLength,
+                                       QuicConnectionIdGenerator idGenerator) {
+                // NOOP
+            }
+
+            @Override
+            protected int decodeIndex(ByteBuf connectionId) {
+                return -1;
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(dispatcher);
+
+        // Use a packet with a short header so we try to decode the index.
+        DatagramPacket packet = createQuicPacket(0, true, localConnectionIdLength);
+        assertTrue(channel.writeInbound(packet));
+        DatagramPacket forwarded = channel.readInbound();
+        assertSame(packet, forwarded);
+        forwarded.release();
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     private static void writePacket(EmbeddedChannel[] channels, boolean shortHeader, short localConnectionIdLength) {

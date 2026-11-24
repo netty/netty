@@ -13,15 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
+package java.lang.foreign;
 
-import io.netty.channel.AbstractIoHandlerEventCountTest;
-import io.netty.channel.IoHandlerFactory;
-
-public class NioIoHandlerEventCountTest extends AbstractIoHandlerEventCountTest {
-
-    @Override
-    protected IoHandlerFactory newIoHandlerFactory() {
-        return NioIoHandler.newFactory();
-    }
+public interface SegmentAllocator {
+    MemorySegment allocate(long byteSize);
 }

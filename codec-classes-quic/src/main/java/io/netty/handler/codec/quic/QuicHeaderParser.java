@@ -160,11 +160,13 @@ public final class QuicHeaderParser implements AutoCloseable {
                 // See
                 checkReadable(offset, readable, Byte.BYTES);
                 int numBytes = numBytesForVariableLengthInteger(packet.getByte(offset));
-                int len = (int) getVariableLengthInteger(packet, offset, numBytes);
+                // The token length is a variable length integer that can be up to 62 bits, so we must not narrow it
+                // to an int before we validated it against the readable bytes.
+                long len = getVariableLengthInteger(packet, offset, numBytes);
                 offset += numBytes;
 
                 checkReadable(offset, readable, len);
-                return packet.slice(offset, len);
+                return packet.slice(offset, (int) len);
             case RETRY:
                 // Exclude the integrity tag from the token.
                 // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2.5
@@ -185,7 +187,7 @@ public final class QuicHeaderParser implements AutoCloseable {
         return buffer.slice(offset, len);
     }
 
-    private static void checkReadable(int offset, int readable, int needed) throws QuicException {
+    private static void checkReadable(int offset, int readable, long needed) throws QuicException {
         int r = readable - offset;
         if (r < needed) {
             throw newProtocolViolationException("Not enough bytes to read, " + r + " < " + needed);

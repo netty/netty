@@ -88,12 +88,12 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     @Override
     public boolean isLoopbackModeDisabled() {
-        return getOption0(StandardSocketOptions.IP_MULTICAST_LOOP);
+        return !getOption0(StandardSocketOptions.IP_MULTICAST_LOOP);
     }
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        setOption0(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
+        setOption0(StandardSocketOptions.IP_MULTICAST_LOOP, !loopbackModeDisabled);
         return this;
     }
 

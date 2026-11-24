@@ -152,6 +152,9 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                 .eventLoop(ioTransport.eventLoop())
                 .datagramChannelFactory(ioTransport.datagramChannel())
                 .socketChannelFactory(ioTransport.socketChannel())
+                // The result of the resolution is security sensitive, so make it harder to spoof the responses.
+                .caseRandomizationEnabled(true)
+                .dnsCookiesEnabled(true)
                 .build();
     }
 

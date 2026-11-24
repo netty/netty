@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.20.Final-SNAPSHOT</version>
+    <version>4.2.22.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -62,7 +62,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>be47c5011215b9f13bad06bd7627d3ae49888a19</quicheCommitSha>
+    <quicheCommitSha>7ccccc7b7f4bd4ec6bc70219fdbe491024f5cb0b</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -77,6 +77,9 @@
     <macosxDeploymentTarget />
     <bundleNativeCode />
     <crossCompile />
+    <!-- The native library links quiche, BoringSSL and the Rust standard library, whose glibc symbol versions we don't
+         control, so it is exempt from the check-native-glibc-versions profile in the parent pom. -->
+    <skipNativeGlibcVersionsCheck>true</skipNativeGlibcVersionsCheck>
   </properties>
 
   <profiles>
@@ -1397,6 +1400,12 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-pkitesting</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

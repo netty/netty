@@ -222,6 +222,11 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
+static jint netty_io_uring_duplicateFd(JNIEnv* env, jclass clazz, jint fd) {
+    int duplicate = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+    return duplicate < 0 ? -errno : duplicate;
+}
+
 static jint netty_io_uring_close(JNIEnv* env, jclass clazz, jint fd) {
     if (close(fd) < 0) {
         // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and
@@ -435,11 +440,15 @@ static jint netty_io_uring_register_iowq_max_workers(JNIEnv *env, jclass clazz, 
      int values[2];
      values[0] = maxBoundedValue;
      values[1] = maxUnboundedValue;
-     return sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     // syscall(...) returns -1 and sets errno, so we need to return -errno to be able to report the real error.
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_enable_rings(JNIEnv *env, jclass clazz, jint ringFd) {
-     return sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     // syscall(...) returns -1 and sets errno, so we need to return -errno to be able to report the real error.
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint ringFd) {
@@ -912,6 +921,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
+    {"duplicateFd", "(I)I", (void *) netty_io_uring_duplicateFd },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
     {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }

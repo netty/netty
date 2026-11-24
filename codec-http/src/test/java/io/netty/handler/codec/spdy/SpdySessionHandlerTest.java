@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -352,6 +354,25 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
 
         assertTrue(sessionHandler.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testDataFrameExceedingSessionWindowIsReleased() {
+        EmbeddedChannel sessionHandler = new EmbeddedChannel(new SpdySessionHandler(SpdyVersion.SPDY_3_1, true));
+        sessionHandler.writeInbound(new DefaultSpdySynStreamFrame(1, 0, (byte) 0));
+
+        // A DATA frame larger than the initial 64 KiB session window is a session error.
+        ByteBuf content = Unpooled.buffer(70000).writeZero(70000);
+        sessionHandler.writeInbound(new DefaultSpdyDataFrame(1, content));
+
+        assertEquals(0, content.refCnt());
+        Object frame;
+        boolean goAway = false;
+        while ((frame = sessionHandler.readOutbound()) != null) {
+            goAway |= frame instanceof SpdyGoAwayFrame;
+        }
+        assertTrue(goAway);
+        sessionHandler.finishAndReleaseAll();
     }
 
     @Test

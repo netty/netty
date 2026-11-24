@@ -33,6 +33,7 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
@@ -49,6 +50,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -182,6 +184,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "bidiStreamsLeft");
     private volatile long bidiStreamsLeft;
 
+    // Whether the cached stream credits were refreshed from quiche at least once. Only updated
+    // and accessed from the event loop thread, so it needs no synchronization. Before the
+    // first refresh the caches are 0 even though the peer may have announced credits, so the
+    // fail-fast check in connectStream(...) must not fire yet; a rejected implicit open in
+    // that window is instead handled by rolling back the allocated stream id.
+    private boolean streamCreditsInitialized;
+
     private QuicheQuicChannel(Channel parent, boolean server, @Nullable ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
@@ -272,12 +281,44 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         switch (connection.engine().getHandshakeStatus()) {
             case NOT_HANDSHAKING:
             case FINISHED:
+                SSLHandshakeException rejection = rejectIfClientCertificateRequiredButMissing(connection.engine());
+                if (rejection != null) {
+                    handshakeCompletionNotified = true;
+                    pipeline().fireUserEventTriggered(new SslHandshakeCompletionEvent(rejection));
+                    // Terminate the connection with the "certificate_required" TLS alert (RFC 8446, Section 6.2)
+                    // mapped to a QUIC CRYPTO_ERROR (RFC 9000, Section 4.8): 0x100 + alert code.
+                    close(false, 0x100 + 116, Unpooled.EMPTY_BUFFER, newPromise());
+                    return;
+                }
                 handshakeCompletionNotified = true;
                 pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
                 break;
             default:
                 break;
         }
+    }
+
+    /**
+     * Defense in depth for https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc : a client
+     * certificate is not re-requested when a session is resumed (e.g. via a session ticket), so a session which
+     * was established without a client certificate under a more lenient {@link ClientAuth} configuration must
+     * never be allowed to satisfy {@link ClientAuth#REQUIRE} here, even if the underlying native library would
+     * otherwise consider the (abbreviated) handshake successful.
+     */
+    @Nullable
+    private static SSLHandshakeException rejectIfClientCertificateRequiredButMissing(QuicheQuicSslEngine engine) {
+        if (engine.getUseClientMode() || engine.ctx.clientAuth != ClientAuth.REQUIRE) {
+            return null;
+        }
+        try {
+            if (engine.getSession().getPeerCertificates().length > 0) {
+                return null;
+            }
+        } catch (SSLPeerUnverifiedException e) {
+            // Fall through, no client certificate was presented.
+        }
+        return new SSLHandshakeException(
+                "client did not present a certificate, but is required to under ClientAuth.REQUIRE");
     }
 
     @Override
@@ -857,6 +898,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     void streamClosed(long streamId) {
         streams.remove(streamId);
+    }
+
+    // Package-private for testing.
+    boolean hasStream(long streamId) {
+        assert eventLoop().inEventLoop();
+        return streams.containsKey(streamId);
     }
 
     boolean isStreamLocalCreated(long streamId) {
@@ -1540,6 +1587,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (!promise.setUncancellable()) {
                 return;
             }
+            // Fail fast without consuming a stream id when all credits are used. Otherwise a
+            // failed createStream(...) permanently consumes the id: quiche rejects the implicit
+            // open by stream id position and never returns it, so once ids are allocated past
+            // the peer's limit every future createStream(...) fails with STREAM_LIMIT_ERROR,
+            // even after MAX_STREAMS restored the limit, while peerAllowedStreams(...) keeps
+            // reporting capacity. Only trusted once the caches were refreshed from quiche;
+            // before that they are 0 even though the peer may have announced credits, so we
+            // fall through to quiche and let the rollback below handle a rejection.
+            if (streamCreditsInitialized && peerAllowedStreams(type) <= 0) {
+                promise.setFailure(Quiche.convertToException(Quiche.QUICHE_ERR_STREAM_LIMIT));
+                return;
+            }
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
 
             try {
@@ -1548,6 +1607,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     throw Quiche.convertToException(res);
                 }
             } catch (Exception e) {
+                // quiche rejected the implicit open before creating any state for the stream,
+                // so the id can safely be given back and must be, to not permanently consume
+                // it (only done for STREAM_LIMIT as other errors might have left state behind).
+                if (e instanceof QuicException &&
+                        ((QuicException) e).error() == QuicTransportError.STREAM_LIMIT_ERROR) {
+                    idGenerator.rollbackStreamId(streamId, type == QuicStreamType.BIDIRECTIONAL);
+                }
                 promise.setFailure(e);
                 return;
             }
@@ -1750,12 +1816,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     Quiche.quiche_conn_is_in_early_data(connAddr)) {
                 long uniLeftOld = uniStreamsLeft;
                 long bidiLeftOld = bidiStreamsLeft;
-                // Only fetch new stream info when we used all our credits
-                if (uniLeftOld == 0 || bidiLeftOld == 0) {
+                // Only fetch new stream info when we used all our credits. Also cover negative
+                // values: MAX_STREAMS can raise the peer's limit while the cached credits are
+                // still non-zero (this refresh only triggers once a direction hit 0), so the
+                // cache may lag behind quiche's real credits. createStream(...) then keeps
+                // succeeding on quiche's real credits while the cached count is decremented
+                // past zero, after which a == 0 check would never match again and the cached
+                // credits would be frozen below zero forever. The fail-fast check in
+                // connectStream(...) makes crossing zero impossible, so covering negatives
+                // here is a safety net that also recovers an already-negative cached value
+                // on the next received packet.
+                if (uniLeftOld <= 0 || bidiLeftOld <= 0) {
                     long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
                     long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
                     uniStreamsLeft = uniLeft;
                     bidiStreamsLeft = bidiLeft;
+                    streamCreditsInitialized = true;
                     if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
                         pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
                     }

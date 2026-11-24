@@ -46,6 +46,7 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -169,6 +170,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    // What a new engine reports as its enabled protocols. Computed once as it is the same for every engine.
+    final String[] enabledProtocols;
     final String endpointIdentificationAlgorithm;
     final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
@@ -306,6 +309,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.serverNames = serverNames;
         this.enableOcsp = enableOcsp;
@@ -970,6 +974,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     }
                 }
                 wrapped = wrapped.getCause();
+            }
+            if (cause instanceof CertificateException) {
+                // The certificate was rejected (for example by the TrustManager), use X509_V_ERR_CERT_UNTRUSTED so a
+                // bad_certificate alert is sent. X509_V_ERR_UNSPECIFIED would result in an internal_error alert which
+                // should only be used for errors that are not related to the remote peer.
+                return CertificateVerifier.X509_V_ERR_CERT_UNTRUSTED;
             }
             return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
         }

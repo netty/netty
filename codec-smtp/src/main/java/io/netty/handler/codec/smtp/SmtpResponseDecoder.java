@@ -86,6 +86,10 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
                 throw newDecoderException(buffer, readerIndex, readable);
             }
             final int code = parseCode(frame);
+            if (code < 0) {
+                reset();
+                throw newDecoderException(buffer, readerIndex, readable);
+            }
             final int separator = frame.readByte();
             final CharSequence detail = frame.isReadable() ? frame.toString(CharsetUtil.US_ASCII) : null;
 
@@ -145,12 +149,17 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
 
     /**
      * Parses the io.netty.handler.codec.smtp code without any allocation, which is three digits.
+     *
+     * @return the code, or {@code -1} if one of the three bytes is not a digit.
      */
     private static int parseCode(ByteBuf buffer) {
-        final int first = parseNumber(buffer.readByte()) * 100;
-        final int second = parseNumber(buffer.readByte()) * 10;
+        final int first = parseNumber(buffer.readByte());
+        final int second = parseNumber(buffer.readByte());
         final int third = parseNumber(buffer.readByte());
-        return first + second + third;
+        if (first < 0 || second < 0 || third < 0) {
+            return -1;
+        }
+        return first * 100 + second * 10 + third;
     }
 
     private static int parseNumber(byte b) {

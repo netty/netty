@@ -75,6 +75,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -124,6 +125,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * Depends upon tcnative ... only use if tcnative is available!
      */
     static final int MAX_RECORD_SIZE = SSL.SSL_MAX_RECORD_LENGTH;
+
+    /**
+     * Marks that {@code SSL_pending} was not queried yet. {@code SSL_pending} itself never returns a negative value.
+     */
+    private static final int SSL_PENDING_UNKNOWN = -1;
 
     private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
@@ -190,7 +196,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     };
 
-    private final Set<String> enabledProtocols = new LinkedHashSet<String>();
+    // Never modified once assigned, so an engine can share the array of its context until the user changes it.
+    private volatile String[] enabledProtocols;
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
@@ -219,6 +226,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private int maxWrapOverhead;
     private int maxWrapBufferSize;
     private Throwable pendingException;
+    // The number of bytes that could be written into the destination buffer of the current wrap(...) call when it was
+    // installed as the write sink of the network BIO, or -1 if we are not in wrap(...).
+    private int wrapSinkLength = -1;
 
     /**
      * Create a new instance.
@@ -347,7 +357,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     assert context.protocols != null;
                     hasTLSv13Cipher = context.hasTLSv13Cipher;
 
-                    setEnabledProtocols(context.protocols);
+                    enabledProtocols = context.enabledProtocols;
+                    setEnabledProtocols0(context.protocols, !hasTLSv13Cipher);
 
                     // Use SNI if peerHost was specified and a valid hostname
                     // See https://github.com/netty/netty/issues/4746
@@ -767,6 +778,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 
+    /**
+     * Calculates the max number of encrypted bytes to write into the BIO for the given plaintextLength, which is at
+     * least {@link #maxEncryptedPacketLength()}.
+     * <p>
+     * This method is intentionally not synchronized, it is only called while the engine lock is held by unwrap.
+     */
+    private int calculateMaxLengthForUnwrap(long plaintextLength) {
+        long records = (plaintextLength + MAX_PLAINTEXT_LENGTH - 1) / MAX_PLAINTEXT_LENGTH;
+        return (int) min(MAX_VALUE, max(maxEncryptedPacketLength(), plaintextLength + records * maxWrapOverhead));
+    }
+
     final synchronized int sslPending() {
         return sslPending0();
     }
@@ -832,6 +854,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
 
                 int bioLengthBefore = SSL.bioLengthByteBuffer(networkBIO);
+                wrapSinkLength = bioLengthBefore;
 
                 // Explicitly use outboundClosed as we want to drain any bytes that are still present.
                 if (outboundClosed) {
@@ -889,10 +912,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         if (bytesProduced > 0) {
                             return newResult(NEED_WRAP, 0, bytesProduced);
                         }
-                        // Nothing was produced see if there is a handshakeException that needs to be propagated
-                        // to the caller by calling handshakeException() which will return the right HandshakeStatus
-                        // if it can "recover" from the exception for now.
-                        return newResult(handshakeException(), 0, 0);
+                        // Nothing was produced. Fall through to handshake() which will call SSL_do_handshake() again
+                        // so OpenSSL has a chance to produce the alert (for example when the handshake was suspended
+                        // because of a task). The handshakeException will be propagated to the caller once there is
+                        // nothing left to produce.
                     }
 
                     status = handshake();
@@ -903,6 +926,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     if (status == NEED_TASK) {
                         return newResult(status, 0, bytesProduced);
+                    }
+
+                    if (pendingException != null && bytesProduced > 0) {
+                        // The handshake failed but there is something that needs to be sent to the remote peer
+                        // first (most likely an alert). The handshakeException will be propagated by the next
+                        // wrap(...) call.
+                        return newResult(NEED_WRAP, 0, bytesProduced);
                     }
 
                     if (bytesProduced > 0) {
@@ -1078,6 +1108,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
             } finally {
+                wrapSinkLength = -1;
                 SSL.bioClearByteBuffer(networkBIO);
                 if (bioReadCopyBuf == null) {
                     dst.position(dst.position() + bytesProduced);
@@ -1224,7 +1255,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            int sslPending = sslPending0();
+            // SSL_pending is only needed when there is nothing to feed into the BIO or a destination buffer was
+            // filled, so it is fetched on demand to keep the JNI call out of the common path.
+            int sslPending = SSL_PENDING_UNKNOWN;
             int packetLength;
             // The JDK implies that only a single SSL packet should be processed per unwrap call [1]. If we are in
             // JDK compatibility mode then we should honor this, but if not we just wrap as much as possible. If there
@@ -1248,8 +1281,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                 final int packetLengthDataOnly = packetLength - SSL_RECORD_HEADER_LENGTH;
                 if (packetLengthDataOnly > capacity) {
-                    // Not enough space in the destination buffer so signal the caller that the buffer needs to be
-                    // increased.
                     if (packetLengthDataOnly > MAX_RECORD_SIZE) {
                         // The packet length MUST NOT exceed 2^14 [1]. However we do accommodate more data to support
                         // legacy use cases which may violate this condition (e.g. OpenJDK's SslEngineImpl). If the max
@@ -1258,10 +1289,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // [1] https://tools.ietf.org/html/rfc5246#section-6.2.1
                         throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
                                                 session.getApplicationBufferSize());
-                    } else {
-                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
                     }
-                    return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    // The plaintext is never longer than MAX_PLAINTEXT_LENGTH, so we never need more space than that.
+                    if (min(packetLengthDataOnly, MAX_PLAINTEXT_LENGTH) > capacity) {
+                        // Not enough space in the destination buffer so signal the caller that the buffer needs to be
+                        // increased.
+                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
+                        return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
+                    }
                 }
 
                 if (len < packetLength) {
@@ -1269,7 +1304,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // packet.
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
-            } else if (len == 0 && sslPending <= 0) {
+            } else if (len == 0 && (sslPending = sslPending0()) <= 0) {
                 return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             } else if (capacity == 0) {
                 return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
@@ -1294,6 +1329,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     final ByteBuf bioWriteCopyBuf;
                     int pendingEncryptedBytes;
                     if (remaining == 0) {
+                        if (sslPending == SSL_PENDING_UNKNOWN) {
+                            sslPending = sslPending0();
+                        }
                         if (sslPending <= 0) {
                             // We must skip empty buffers as BIO_write will return 0 if asked to write something
                             // with length 0.
@@ -1305,10 +1343,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             bioWriteCopyBuf = null;
                             pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                         }
+                    } else if (!src.isDirect() && sslPending0() >= capacity - bytesProduced) {
+                        // Already decrypted data fills the destination buffers, so there is no need to copy src.
+                        bioWriteCopyBuf = null;
+                        pendingEncryptedBytes = SSL.bioLengthByteBuffer(networkBIO);
                     } else {
                         // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                         // stated in the SSLEngine javadocs.
                         pendingEncryptedBytes = min(packetLength, remaining);
+                        if (!src.isDirect()) {
+                            // Only copy what can be decrypted into the destination buffers.
+                            pendingEncryptedBytes = min(pendingEncryptedBytes,
+                                    calculateMaxLengthForUnwrap(capacity - bytesProduced));
+                        }
                         try {
                             bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
                         } catch (SSLException e) {
@@ -1385,6 +1432,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             }
                         }
 
+                        if (bioWriteCopyBuf != null && pendingEncryptedBytes == 0 && packetLength > 0 &&
+                                src.hasRemaining()) {
+                            // Only part of src was copied, so copy the rest before moving to the next buffer.
+                            continue;
+                        }
                         if (++srcsOffset >= srcsEndOffset) {
                             break;
                         }
@@ -1413,7 +1465,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
         // See https://github.com/netty/netty/issues/3900
-        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+        if (hasPendingNetworkData()) {
             // we seem to have data left that needs to be transferred and so the user needs
             // call wrap(...). Store the error so we can pick it up later.
             if (pendingException == null) {
@@ -1464,8 +1516,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
         // Avoid NPE: SSL.getHandshakeCount(ssl) must not be called if destroyed.
+        // Implementations without renegotiation support (BoringSSL, AWS-LC) never accept one as a server: the
+        // post-handshake record fails the read with SSL_R_NO_RENEGOTIATION inside the library, so there is
+        // nothing left to detect here.
         // TLS 1.3 forbids renegotiation by spec.
         if (destroyed || handshakeState != HandshakeState.FINISHED
+                || !clientMode && !OpenSsl.isRenegotiationSupported()
                 || SslProtocols.TLS_v1_3.equals(session.getProtocol())) {
             return;
         }
@@ -1753,7 +1809,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(enabledProtocols);
+                    Set<String> protocols = new HashSet<String>();
+                    Collections.addAll(protocols, enabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
@@ -1788,7 +1845,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledProtocols() {
-        return enabledProtocols.toArray(EMPTY_STRINGS);
+        return enabledProtocols.clone();
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1810,14 +1867,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final void setEnabledProtocols(String[] protocols) {
         checkNotNullWithIAE(protocols, "protocols");
         synchronized (this) {
-            enabledProtocols.clear();
-            // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
-            enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
-
-            Collections.addAll(enabledProtocols, protocols);
+            enabledProtocols = toEnabledProtocols(protocols);
 
             setEnabledProtocols0(protocols, !hasTLSv13Cipher);
         }
+    }
+
+    static String[] toEnabledProtocols(String[] protocols) {
+        Set<String> enabledProtocols = new LinkedHashSet<String>();
+        // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
+        enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
+
+        Collections.addAll(enabledProtocols, protocols);
+        return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
     private void setEnabledProtocols0(String[] protocols, boolean explicitDisableTLSv13) {
@@ -1939,8 +2001,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return cert == null || cert.length == 0;
     }
 
+    /**
+     * Returns {@code true} if OpenSSL produced data that still needs to be sent to the remote peer. This is either data
+     * that is queued in the non-application buffer of the network BIO or data that was already written into the
+     * destination buffer of the current {@link #wrap(ByteBuffer[], int, int, ByteBuffer)} call.
+     */
+    private boolean hasPendingNetworkData() {
+        return SSL.bioLengthNonApplication(networkBIO) > 0 ||
+                wrapSinkLength > 0 && SSL.bioLengthByteBuffer(networkBIO) < wrapSinkLength;
+    }
+
     private SSLEngineResult.HandshakeStatus handshakeException() throws SSLException {
-        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+        if (hasPendingNetworkData()) {
             // There is something pending, we need to consume it first via a WRAP so we don't loose anything.
             return NEED_WRAP;
         }
@@ -2031,8 +2103,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return NEED_WRAP;
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
+        byte[] peerCertificate = SSL.getPeerCertificate(ssl);
+        if (!clientMode && clientAuth == ClientAuth.REQUIRE && isEmpty(peerCertificate)) {
+            // Defense in depth: a client certificate is not re-requested when a session is resumed (e.g. via a
+            // session ticket), so a session which was established without a client certificate under a more
+            // lenient ClientAuth configuration must never be allowed to satisfy ClientAuth.REQUIRE here, even if
+            // the native library would otherwise consider the (abbreviated) handshake successful.
+            // See https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc
+            shutdown();
+            throw new SSLHandshakeException(
+                    "client did not present a certificate, but is required to under ClientAuth.REQUIRE");
+        }
         session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), SSL.getVersion(ssl),
-                SSL.getPeerCertificate(ssl), SSL.getPeerCertChain(ssl),
+                peerCertificate, SSL.getPeerCertChain(ssl),
                 SSL.getTime(ssl) * 1000L, parentContext.sessionTimeout() * 1000L);
         selectApplicationProtocol();
         return FINISHED;
@@ -2422,6 +2505,46 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw new SSLException("Failed to get selected credential", e);
             }
         }
+    }
+
+    /**
+     * Returns whether the given credential was selected for this SSL connection. The credential must be added to this
+     * engine or its context. The result remains available after the handshake completes until this engine is shut down.
+     *
+     * @throws SSLException if an error occurs querying the selected credential.
+     */
+    public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
+        checkNotNull(credential, "credential");
+
+        if (destroyed || !(credential instanceof OpenSslCredentialPointer) || !containsCredential(credential)) {
+            return false;
+        }
+
+        try {
+            long selectedCredentialAddress = SSL.getSelectedCredential(ssl);
+            return selectedCredentialAddress != 0 &&
+                    ((OpenSslCredentialPointer) credential).credentialAddress() == selectedCredentialAddress;
+        } catch (Exception e) {
+            throw new SSLException("Failed to get selected credential", e);
+        }
+    }
+
+    private boolean containsCredential(OpenSslCredential credential) {
+        if (engineCredentials != null) {
+            for (OpenSslCredential configuredCredential : engineCredentials) {
+                if (configuredCredential == credential) {
+                    return true;
+                }
+            }
+        }
+
+        for (OpenSslCredential configuredCredential : parentContext.credentials) {
+            if (configuredCredential == credential) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static long bufferAddress(ByteBuffer b) {

@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
@@ -400,6 +401,36 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         });
         data.release();
+    }
+
+    @Test
+    public void dataReadForReservedRemoteStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_REMOTE);
+    }
+
+    @Test
+    public void dataReadForReservedLocalStreamShouldThrowConnectionError() throws Exception {
+        dataReadForReservedStreamShouldThrowConnectionError(RESERVED_LOCAL);
+    }
+
+    private void dataReadForReservedStreamShouldThrowConnectionError(Http2Stream.State state) throws Exception {
+        when(stream.state()).thenReturn(state);
+        final ByteBuf data = dummyData();
+        try {
+            Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decode().onDataRead(ctx, STREAM_ID, data, 10, true);
+                }
+            });
+            assertThat(ex).isNotInstanceOf(Http2Exception.StreamException.class);
+            assertEquals(PROTOCOL_ERROR, ex.error());
+            verify(localFlow).receiveFlowControlledFrame(eq(stream), eq(data), eq(10), eq(true));
+            verify(localFlow).consumeBytes(eq(stream), eq(data.readableBytes() + 10));
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+        } finally {
+            data.release();
+        }
     }
 
     @Test
@@ -1290,6 +1321,65 @@ public class DefaultHttp2ConnectionDecoderTest {
             verify(listener, never()).onHeadersRead(eq(ctx), anyInt(),
                     any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
         }
+    }
+
+    @Test
+    public void serverRejectsResponsePseudoHeaderInRequestContext() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+        Http2Exception exception =
+                assertThrows(Http2Exception.class, () -> decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true));
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(),
+                                                anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void clientRejectsRequestPseudoHeadersInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        Http2Headers headers = request();
+        Http2Exception exception =
+                assertThrows(Http2Exception.class, () -> decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true));
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(),
+                                                anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void clientRejectsSingleRequestPseudoHeaderInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        //response containing valid :status along with an illegal :method
+        Http2Headers headers = new DefaultHttp2Headers().status("200").method("GET");
+        Http2Exception exception =
+                assertThrows(Http2Exception.class, () -> decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true));
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        assertTrue(Http2Exception.isStreamError(exception));
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(),
+                                                anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void clientRejectsProtocolPseudoHeaderInResponseContext() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        // RFC 8441 :protocol is request-only
+        Http2Headers headers = new DefaultHttp2Headers().status("200").set(":protocol", "websocket");
+        Http2Exception exception =
+                assertThrows(Http2Exception.class, () -> decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true));
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        assertTrue(Http2Exception.isStreamError(exception));
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(),
+                                                anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    public void clientAcceptsValidResponsePseudoHeaders() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                                       eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
     private static ByteBuf dummyData() {

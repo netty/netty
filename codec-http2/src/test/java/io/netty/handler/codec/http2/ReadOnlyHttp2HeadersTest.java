@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -215,6 +216,31 @@ public class ReadOnlyHttp2HeadersTest {
     }
 
     @Test
+    public void testContainsFloat() {
+        Http2Headers headers = ReadOnlyHttp2Headers.trailers(true,
+                AsciiString.cached("float"), AsciiString.cached("1.5"),
+                AsciiString.cached("float"), AsciiString.cached("0.1"));
+
+        assertThat(headers.containsFloat("float", 1.5f)).isTrue();
+        assertThat(headers.containsFloat("float", 0.1f)).isTrue();
+        assertThat(headers.containsFloat("float", 2.0f)).isFalse();
+        assertThat(headers.containsFloat("missing", 1.5f)).isFalse();
+    }
+
+    @Test
+    public void testContainsTimeMillis() {
+        long millis = 784111777000L;
+        Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(true, AsciiString.cached("200"),
+                AsciiString.cached("date"), AsciiString.cached("Sun, 06 Nov 1994 08:49:37 GMT"),
+                AsciiString.cached("x-epoch-millis"), AsciiString.cached(Long.toString(millis)));
+
+        assertThat(headers.getTimeMillis("date")).isEqualTo(millis);
+        assertThat(headers.containsTimeMillis("date", millis)).isTrue();
+        assertThat(headers.containsTimeMillis("date", millis + 1000)).isFalse();
+        assertThat(headers.containsTimeMillis("x-epoch-millis", millis)).isFalse();
+    }
+
+    @Test
     public void testGet() {
         Http2Headers headers = newClientHeaders();
         assertTrue(AsciiString.contentEqualsIgnoreCase("value1", headers.get("Name1")));
@@ -264,6 +290,27 @@ public class ReadOnlyHttp2HeadersTest {
         assertTrue(itr.hasNext());
         assertTrue(AsciiString.contentEqualsIgnoreCase("value3", itr.next()));
         assertFalse(itr.hasNext());
+    }
+
+    @Test
+    public void testGetNotConvertible() {
+        Http2Headers headers = ReadOnlyHttp2Headers.trailers(false,
+                new AsciiString("not-a-number"), new AsciiString("not a number"),
+                new AsciiString("empty"), AsciiString.EMPTY_STRING);
+        assertNull(headers.getByte("not-a-number"));
+        assertEquals((byte) -1, headers.getByte("not-a-number", (byte) -1));
+        assertNull(headers.getChar("empty"));
+        assertEquals('x', headers.getChar("empty", 'x'));
+        assertNull(headers.getShort("not-a-number"));
+        assertEquals((short) -1, headers.getShort("not-a-number", (short) -1));
+        assertNull(headers.getInt("not-a-number"));
+        assertEquals(-1, headers.getInt("not-a-number", -1));
+        assertNull(headers.getLong("not-a-number"));
+        assertEquals(-1L, headers.getLong("not-a-number", -1));
+        assertNull(headers.getFloat("not-a-number"));
+        assertEquals(-1f, headers.getFloat("not-a-number", -1), 0);
+        assertNull(headers.getDouble("not-a-number"));
+        assertEquals(-1d, headers.getDouble("not-a-number", -1), 0);
     }
 
     private static void testValueIteratorSingleValue(Http2Headers headers, CharSequence name, CharSequence value) {

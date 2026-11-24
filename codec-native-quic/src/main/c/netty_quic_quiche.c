@@ -701,9 +701,10 @@ static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, j
         return -1;
     }
 
+    // Needs to be declared outside of the if block as seq may point to it when calling quiche_conn_new_scid(...).
+    uint64_t tmp;
     uint64_t* seq;
     if (sequenceAddr < 0) {
-        uint64_t tmp;
         seq = &tmp;
     } else {
         seq = (uint64_t *) sequenceAddr;
@@ -1329,6 +1330,8 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
 
     jclass quiche_logger_class = NULL;
     char* name = NULL;
+    // Must be initialized before the first goto done as it is used in the done block.
+    JNINativeMethod* dynamicMethods = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -1340,7 +1343,7 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     }
     staticallyRegistered = 1;
 
-    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
         goto done;
     }

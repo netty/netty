@@ -41,3 +41,17 @@ docker/update-sdkman-sha.sh
 ```
 
 Use `docker/update-sdkman-sha.sh --check` to only verify whether the pinned hashes are still current.
+
+## Minimum glibc version of the native libraries
+
+`Dockerfile.centos7` and `Dockerfile.cross_compile_aarch64` set `NETTY_CHECK_NATIVE_GLIBC_VERSIONS=true`, which activates the `check-native-glibc-versions` profile in `pom.xml`.
+It fails the build if a Linux native library requires a glibc symbol version newer than `GLIBC_2.14` (x86_64) or `GLIBC_2.17` (aarch64).
+Version needs marked as `WEAK` are only reported, as they do not prevent loading the library.
+Modules can opt out by setting the `skipNativeGlibcVersionsCheck` property to `true`, which `codec-native-quic` does.
+The check is done by `.github/scripts/check_native_glibc_versions.sh`, which can also be run by hand:
+
+```
+bash .github/scripts/check_native_glibc_versions.sh transport-native-epoll/target/classes/META-INF/native
+```
+
+Builds outside of these images are not checked, as they are usually done against a newer glibc.

@@ -1452,22 +1452,29 @@ public final class PlatformDependent {
         if (javaVersion() >= 10) {
             PlatformDependent0.splittableRandomNextBytes(rng, data);
         } else {
-            int i = 0;
-            int len = data.length;
-            int longs = len >>> 3;
-            while (longs-- > 0) {
-                long val = rng.nextLong();
-                for (int j = 0; j < Long.BYTES; j++) {
-                    data[i++] = (byte) val;
-                    val = val >>> Byte.SIZE;
-                }
+            splittableRandomNextBytesFallback(rng, data);
+        }
+    }
+
+    /**
+     * Fills {@code data} the way {@code SplittableRandom.nextBytes(byte[])} (Java 10+) does.
+     */
+    static void splittableRandomNextBytesFallback(SplittableRandom rng, byte[] data) {
+        int i = 0;
+        int len = data.length;
+        int longs = len >>> 3;
+        while (longs-- > 0) {
+            long val = rng.nextLong();
+            for (int j = 0; j < Long.BYTES; j++) {
+                data[i++] = (byte) val;
+                val = val >>> Byte.SIZE;
             }
-            if (i < len) {
-                long val = rng.nextLong();
-                for (; i < len; i++) {
-                    data[i++] = (byte) val;
-                    val = val >>> Byte.SIZE;
-                }
+        }
+        if (i < len) {
+            long val = rng.nextLong();
+            for (; i < len; i++) {
+                data[i] = (byte) val;
+                val = val >>> Byte.SIZE;
             }
         }
     }

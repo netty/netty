@@ -17,15 +17,46 @@ package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import static io.netty.channel.unix.Limits.IOV_MAX;
 
 public final class UnixChannelUtil {
 
+    // File type bits of st_mode, see sys/stat.h. These values are the same on Linux and the BSDs (including macOS).
+    private static final int S_IFMT = 0170000;
+    private static final int S_IFSOCK = 0140000;
+
+    private static final Class<?> FILE_CHANNEL_IMPL_CLASS;
+
+    static {
+        Class<?> fileChannelImplClass;
+        try {
+            fileChannelImplClass = Class.forName("sun.nio.ch.FileChannelImpl", false, null);
+        } catch (Throwable ignore) {
+            fileChannelImplClass = null;
+        }
+        FILE_CHANNEL_IMPL_CLASS = fileChannelImplClass;
+    }
+
     private UnixChannelUtil() {
+    }
+
+    /**
+     * Returns whether the given channel is an instance of {@code sun.nio.ch.FileChannelImpl}.
+     */
+    public static boolean isFileChannelImpl(FileChannel channel) {
+        return FILE_CHANNEL_IMPL_CLASS != null && FILE_CHANNEL_IMPL_CLASS.isInstance(channel);
     }
 
     /**
@@ -38,6 +69,43 @@ public final class UnixChannelUtil {
 
     static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf, int iovMax) {
         return !byteBuf.hasMemoryAddress() && (!byteBuf.isDirect() || byteBuf.nioBufferCount() > iovMax);
+    }
+
+    /**
+     * Delete the file at {@code path} but only if it is a socket inode (as left behind by a bound domain socket).
+     * Any other kind of file (regular file, directory, symbolic link, FIFO, device, ...) is left alone. Symbolic links
+     * are never followed.
+     *
+     * @return {@code true} if the file was deleted.
+     */
+    public static boolean deleteDomainSocketFile(String path) {
+        try {
+            Path file = Paths.get(path);
+            if (!isSocket(file)) {
+                return false;
+            }
+            Files.delete(file);
+            return true;
+        } catch (IOException ignore) {
+            return false;
+        } catch (InvalidPathException ignore) {
+            // For example abstract namespace addresses, which have no file system presence.
+            return false;
+        }
+    }
+
+    private static boolean isSocket(Path file) throws IOException {
+        try {
+            Object mode = Files.getAttribute(file, "unix:mode", LinkOption.NOFOLLOW_LINKS);
+            if (mode instanceof Integer) {
+                return ((Integer) mode & S_IFMT) == S_IFSOCK;
+            }
+        } catch (UnsupportedOperationException ignore) {
+            // The "unix" attribute view is not supported, fall back to the less precise check below.
+        } catch (IllegalArgumentException ignore) {
+            // The "mode" attribute is not supported, fall back to the less precise check below.
+        }
+        return Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).isOther();
     }
 
     public static InetSocketAddress computeRemoteAddr(InetSocketAddress remoteAddr, InetSocketAddress osRemoteAddr) {

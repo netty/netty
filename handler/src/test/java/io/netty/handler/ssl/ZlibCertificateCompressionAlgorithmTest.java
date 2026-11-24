@@ -18,8 +18,16 @@ package io.netty.handler.ssl;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,6 +49,73 @@ class ZlibCertificateCompressionAlgorithmTest {
 
         assertArrayEquals(certificate, algorithm.decompress(null, certificate.length, compressed));
         assertEquals(1, algorithm.algorithmId());
+    }
+
+    @Test
+    void repeatedCompressionReturnsTheSameResult() throws Exception {
+        byte[] certificate = "certificate-chain-compressed-twice".getBytes(StandardCharsets.US_ASCII);
+
+        byte[] first = algorithm.compress(null, certificate);
+        byte[] second = algorithm.compress(null, certificate.clone());
+
+        assertArrayEquals(first, second);
+        assertArrayEquals(certificate, algorithm.decompress(null, certificate.length, second));
+    }
+
+    @Test
+    void manyDistinctCertificatesRoundTrip() throws Exception {
+        for (int round = 0; round < 2; round++) {
+            for (int i = 0; i < 200; i++) {
+                byte[] certificate = ("certificate-chain-" + i).getBytes(StandardCharsets.US_ASCII);
+                byte[] compressed = algorithm.compress(null, certificate);
+                assertArrayEquals(certificate, algorithm.decompress(null, certificate.length, compressed));
+            }
+        }
+    }
+
+    @Test
+    void concurrentCompressionOfMoreCertificatesThanCachedRoundTrips() throws Exception {
+        final int threads = 8;
+        final int certificates = 40;
+        final CyclicBarrier start = new CyclicBarrier(threads);
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        try {
+            List<Future<Void>> results = new ArrayList<Future<Void>>();
+            for (int t = 0; t < threads; t++) {
+                final int offset = t;
+                results.add(executor.submit(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        start.await();
+                        for (int i = 0; i < 2000; i++) {
+                            byte[] certificate = ("concurrent-certificate-chain-" + (i + offset) % certificates)
+                                    .getBytes(StandardCharsets.US_ASCII);
+                            byte[] compressed = algorithm.compress(null, certificate);
+                            assertArrayEquals(certificate,
+                                    algorithm.decompress(null, certificate.length, compressed));
+                        }
+                        return null;
+                    }
+                }));
+            }
+            for (Future<Void> result : results) {
+                result.get();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void certificateLargerThanCacheLimitRoundTrips() throws Exception {
+        byte[] certificate = new byte[64 * 1024];
+        for (int i = 0; i < certificate.length; i++) {
+            certificate[i] = (byte) (i * 31);
+        }
+
+        assertArrayEquals(algorithm.compress(null, certificate), algorithm.compress(null, certificate));
+        assertArrayEquals(certificate,
+                algorithm.decompress(null, certificate.length, algorithm.compress(null, certificate)));
     }
 
     @Test
@@ -76,6 +151,26 @@ class ZlibCertificateCompressionAlgorithmTest {
     void rejectsMalformedInput() {
         assertThrows(DataFormatException.class,
                 () -> algorithm.decompress(null, 16, new byte[] { 1, 2, 3, 4 }));
+    }
+
+    @Test
+    void rejectsPresetDictionary() {
+        byte[] certificate = "certificate-chain".getBytes(StandardCharsets.US_ASCII);
+        Deflater deflater = new Deflater();
+        byte[] buffer = new byte[certificate.length + 64];
+        int length;
+        try {
+            deflater.setDictionary("dictionary".getBytes(StandardCharsets.US_ASCII));
+            deflater.setInput(certificate);
+            deflater.finish();
+            length = deflater.deflate(buffer);
+        } finally {
+            deflater.end();
+        }
+        byte[] compressed = Arrays.copyOf(buffer, length);
+
+        assertThrows(DataFormatException.class,
+                () -> algorithm.decompress(null, certificate.length, compressed));
     }
 
     @Test

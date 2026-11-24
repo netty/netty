@@ -309,7 +309,8 @@ public class ResourceLeakDetector<T> {
     }
 
     private void reportLeak() {
-        if (!needReport()) {
+        boolean report = needReport();
+        if (!report && leakListener == null) {
             clearRefQueue();
             return;
         }
@@ -326,17 +327,17 @@ public class ResourceLeakDetector<T> {
             }
 
             String records = ref.getReportAndClearRecords();
-            if (reportedLeaks.add(records)) {
+            if (report && reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
                 } else {
                     reportTracedLeak(resourceType, records);
                 }
+            }
 
-                LeakListener listener = leakListener;
-                if (listener != null) {
-                    listener.onLeak(resourceType, records);
-                }
+            LeakListener listener = leakListener;
+            if (listener != null) {
+                listener.onLeak(resourceType, records);
             }
         }
     }
@@ -391,7 +392,7 @@ public class ResourceLeakDetector<T> {
     public interface LeakListener {
 
         /**
-         * Will be called once a leak is detected.
+         * Will be called for every detected leak, including leaks with reports deduplicated in the log.
          */
         void onLeak(String resourceType, String records);
     }

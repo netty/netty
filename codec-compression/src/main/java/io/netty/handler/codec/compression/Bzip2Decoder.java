@@ -56,7 +56,8 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
         RECEIVE_SELECTORS,
         RECEIVE_HUFFMAN_LENGTH,
         DECODE_HUFFMAN_DATA,
-        EOF
+        EOF,
+        CORRUPTED
     }
     private State currentState = State.INIT;
 
@@ -96,6 +97,18 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
             return;
         }
 
+        try {
+            decodeStateMachine(ctx, in, out);
+        } catch (Exception e) {
+            // The state is inconsistent after an error, so skip all further input.
+            currentState = State.CORRUPTED;
+            blockDecompressor = null;
+            huffmanStageDecoder = null;
+            throw e;
+        }
+    }
+
+    private void decodeStateMachine(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         final Bzip2BitReader reader = this.reader;
         reader.setByteBuf(in);
 
@@ -334,6 +347,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 // released as soon as possible.
                 return;
             case EOF:
+            case CORRUPTED:
                 in.skipBytes(in.readableBytes());
                 return;
             default:

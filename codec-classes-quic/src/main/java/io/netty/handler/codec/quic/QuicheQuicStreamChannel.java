@@ -68,6 +68,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private boolean inWriteQueued;
     private boolean finReceived;
     private boolean finSent;
+    private boolean inputReset;
 
     private volatile boolean registered;
     private volatile boolean writable = true;
@@ -281,14 +282,18 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
     }
 
+    private boolean isInputTerminated() {
+        return finReceived || inputReset;
+    }
+
     private void closeIfDone() {
-        if (finSent && (finReceived || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
+        if (finSent && (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
             unsafe().close(unsafe().voidPromise());
         }
     }
 
     private void removeStreamFromParent() {
-        if (!active && finReceived) {
+        if (!active && isInputTerminated()) {
             parent().streamClosed(streamId());
             inputShutdown = true;
             outputShutdown = true;
@@ -684,7 +689,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             // from the remote peer. If its an bidirectional channel we should only close the channel if we
             // also received the fin from the remote peer.
             if (!wasFinSent && QuicheQuicStreamChannel.this.finSent
-                    && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
+                    && (type() == QuicStreamType.UNIDIRECTIONAL || isInputTerminated())) {
                 // close the channel now
                 close(voidPromise());
             }
@@ -994,7 +999,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     boolean readCompleteNeeded = false;
                     boolean continueReading = true;
                     try {
-                        while (!finReceived && continueReading) {
+                        while (!isInputTerminated() && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
                             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                             handleRecvResult(parent.streamRecv(streamId(), byteBuf));
@@ -1030,13 +1035,22 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         if (readCompleteNeeded) {
                             readComplete(allocHandle, pipeline);
                         }
-                        if (finReceived) {
+                        if (isInputTerminated()) {
                             readable = false;
-                            closeOnRead(pipeline, readFrames);
+                            if (finReceived) {
+                                closeOnRead(pipeline, readFrames);
+                            }
                         }
                     } catch (Throwable cause) {
                         readable = false;
+                        if (cause instanceof QuicStreamResetException) {
+                            inputReset = true;
+                            inputShutdown = true;
+                        }
                         handleReadException(pipeline, byteBuf, cause, allocHandle, readFrames);
+                        if (inputReset) {
+                            closeIfDone();
+                        }
                     }
                 }
                 if (!active) {
@@ -1077,7 +1091,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         private void discardInput(DirectIoByteBufAllocator allocator,
                                   @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle) {
             QuicheQuicChannel parent = parent();
-            while (readable && !finReceived) {
+            while (readable && !isInputTerminated()) {
                 allocHandle.reset(config());
                 ByteBuf byteBuf = allocHandle.allocate(allocator);
                 try {
@@ -1086,7 +1100,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     // The stream was reset by the remote peer or the connection was closed, there is nothing left
                     // to read.
                     readable = false;
-                    finReceived = true;
+                    if (cause instanceof QuicStreamResetException) {
+                        inputReset = true;
+                    } else {
+                        finReceived = true;
+                    }
                     inputShutdown = true;
                     // A ClosedChannelException means the connection was closed or freed already. This is expected
                     // when the streams are closed as part of closing the connection, and the user is notified about

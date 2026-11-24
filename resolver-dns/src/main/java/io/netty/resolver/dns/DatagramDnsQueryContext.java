@@ -39,9 +39,11 @@ final class DatagramDnsQueryContext extends DnsQueryContext {
                             long queryTimeoutMillis,
                             DnsQuestion question, DnsRecord[] additionals,
                             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise,
-                            Bootstrap socketBootstrap, boolean retryWithTcpOnTimeout) {
+                            Bootstrap socketBootstrap, boolean retryWithTcpOnTimeout,
+                            DnsQueryProtection protection) {
         super(channel, nameServerAddr, queryContextManager, queryLifecycleObserver, maxPayLoadSize, recursionDesired,
-                queryTimeoutMillis, question, additionals, promise, socketBootstrap, retryWithTcpOnTimeout);
+                queryTimeoutMillis, question, null, additionals, promise, socketBootstrap, retryWithTcpOnTimeout,
+                protection);
     }
 
     @Override

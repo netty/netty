@@ -33,7 +33,7 @@ SDKMAN_INSTALL_URL="https://beta.sdkman.io?ci=true"
 DOCKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CHECK_ONLY=false
-case "$1" in
+case "${1:-}" in
   "") ;;
   --check) CHECK_ONLY=true ;;
   *) echo "Usage: $0 [--check]" >&2; exit 2 ;;

@@ -2323,6 +2323,32 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testReadUsAsciiCharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testReadUtf8CharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.UTF_8);
+    }
+
+    private void testReadCharSequenceOutOfBounds(final Charset charset) {
+        final ByteBuf buf = newBuffer(16);
+        try {
+            buf.clear().writeBytes(new byte[] { 'a', 'b' });
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readCharSequence(3, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readString(3, charset));
+            assertEquals(0, buf.readerIndex());
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(0, buf.capacity() + 1, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(-1, 1, charset));
+            assertThrows(IndexOutOfBoundsException.class,
+                    () -> buf.getCharSequence(0, buf.capacity() + 1, charset));
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
     @Timeout(30)
     public void testToStringMultipleThreads() throws Throwable {
         buffer.clear();
@@ -3239,6 +3265,86 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testGetShortOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getShort(buffer.capacity() - 1);
+            }
+        });
+    }
+
+    @Test
+    public void testGetShortLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getShortLE(buffer.capacity() - 1);
+            }
+        });
+    }
+
+    @Test
+    public void testGetUnsignedMediumOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getUnsignedMedium(buffer.capacity() - 2);
+            }
+        });
+    }
+
+    @Test
+    public void testGetUnsignedMediumLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getUnsignedMediumLE(buffer.capacity() - 2);
+            }
+        });
+    }
+
+    @Test
+    public void testGetIntOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getInt(buffer.capacity() - 3);
+            }
+        });
+    }
+
+    @Test
+    public void testGetIntLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getIntLE(buffer.capacity() - 3);
+            }
+        });
+    }
+
+    @Test
+    public void testGetLongOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getLong(buffer.capacity() - 7);
+            }
+        });
+    }
+
+    @Test
+    public void testGetLongLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getLongLE(buffer.capacity() - 7);
+            }
+        });
+    }
+
+    @Test
     public void testGetShortAfterRelease() {
         assertThrows(IllegalReferenceCountException.class, new Executable() {
             @Override
@@ -3539,6 +3645,86 @@ public abstract class AbstractByteBufTest {
             @Override
             public void execute() {
                 releasedBuffer().setShort(0, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetShortOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setShort(buffer.capacity() - 1, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetShortLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setShortLE(buffer.capacity() - 1, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetMediumOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setMedium(buffer.capacity() - 2, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetMediumLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setMediumLE(buffer.capacity() - 2, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetIntOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setInt(buffer.capacity() - 3, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetIntLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setIntLE(buffer.capacity() - 3, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetLongOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setLong(buffer.capacity() - 7, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetLongLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setLongLE(buffer.capacity() - 7, 1);
             }
         });
     }
