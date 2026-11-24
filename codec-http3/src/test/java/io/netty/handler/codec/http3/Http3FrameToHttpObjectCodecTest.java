@@ -59,6 +59,7 @@ import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicSslContextBuilder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamResetException;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
@@ -87,10 +88,38 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Http3FrameToHttpObjectCodecTest {
+
+    @Test
+    public void testStreamResetIsPassedOn() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        assertTrue(ch.writeInbound(new DefaultHttp3HeadersFrame(
+                new DefaultHttp3Headers().method("POST").path("/").authority("example.com").scheme("https"))));
+        HttpRequest request = ch.readInbound();
+        assertNotNull(request);
+
+        // The request does not go on, which the handlers after the codec must learn.
+        QuicStreamResetException reset = new QuicStreamResetException("reset",
+                Http3ErrorCode.H3_REQUEST_CANCELLED.code());
+        ch.pipeline().fireExceptionCaught(reset);
+        assertSame(reset, assertThrows(QuicStreamResetException.class, ch::checkException));
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testHttp3ExceptionIsPassedOn() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_MESSAGE_ERROR, "malformed");
+        ch.pipeline().fireExceptionCaught(exception);
+        assertSame(exception, assertThrows(Http3Exception.class, ch::checkException));
+
+        assertFalse(ch.finish());
+    }
 
     @Test
     public void testUpgradeEmptyFullResponse() {
@@ -357,9 +386,8 @@ public class Http3FrameToHttpObjectCodecTest {
         headers.authority("public.example.com");
         headers.add(HttpHeaderNames.HOST, "internal-admin.local");
 
-        // Http3RequestStreamInboundHandler#exceptionCaught consumes the Http3Exception, so the frame is
-        // dropped rather than rethrown here.
-        assertFalse(ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
+        // The frame is dropped, and the Http3Exception is passed on to the next handler.
+        assertThrows(Http3Exception.class, () -> ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
 
         assertThat(ch.readInbound(), is(nullValue()));
         assertFalse(ch.finish());
@@ -1135,6 +1163,110 @@ data.release();
             LastHttpContent last = (LastHttpContent) received.poll(20, TimeUnit.SECONDS);
             assertThat(last, notNullValue());
             last.release();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testStreamResetByPeerIsPassedOn() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        try {
+            Bootstrap bootstrap = new Bootstrap()
+                    .channel(NioDatagramChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            // initialized below
+                        }
+                    })
+                    .group(group);
+
+            SelfSignedCertificate cert = new SelfSignedCertificate();
+
+            // What the handler after the codec of the server receives.
+            BlockingQueue<Object> received = new LinkedBlockingQueue<>();
+            Channel server = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            server.pipeline().addLast(Http3.newQuicServerCodecBuilder()
+                    .initialMaxData(10000000)
+                    .initialMaxStreamDataBidirectionalLocal(1000000)
+                    .initialMaxStreamDataBidirectionalRemote(1000000)
+                    .initialMaxStreamsBidirectional(100)
+                    .sslContext(QuicSslContextBuilder.forServer(cert.key(), null, cert.cert())
+                            .applicationProtocols(Http3.supportedApplicationProtocols()).build())
+                    .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(new Http3ServerConnectionHandler(
+                                    new ChannelInitializer<QuicStreamChannel>() {
+                                        @Override
+                                        protected void initChannel(QuicStreamChannel ch) {
+                                            ch.pipeline()
+                                                    .addLast(new Http3FrameToHttpObjectCodec(true))
+                                                    .addLast(new ChannelInboundHandlerAdapter() {
+                                                        @Override
+                                                        public void channelRead(ChannelHandlerContext ctx,
+                                                                                Object msg) {
+                                                            received.add(msg);
+                                                        }
+
+                                                        @Override
+                                                        public void exceptionCaught(ChannelHandlerContext ctx,
+                                                                                    Throwable cause) {
+                                                            received.add(cause);
+                                                        }
+                                                    });
+                                        }
+                                    }));
+                        }
+                    })
+                    .build());
+
+            Channel client = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            client.config().setAutoRead(true);
+            client.pipeline().addLast(Http3.newQuicClientCodecBuilder()
+                    .initialMaxData(10000000)
+                    .initialMaxStreamDataBidirectionalLocal(1000000)
+                    .sslContext(QuicSslContextBuilder.forClient()
+                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                            .applicationProtocols(Http3.supportedApplicationProtocols())
+                            .build())
+                    .build());
+
+            QuicChannel quicChannel = QuicChannel.newBootstrap(client)
+                    .handler(new ChannelInitializer<QuicChannel>() {
+                        @Override
+                        protected void initChannel(QuicChannel ch) throws Exception {
+                            ch.pipeline().addLast(new Http3ClientConnectionHandler());
+                        }
+                    })
+                    .remoteAddress(server.localAddress())
+                    .localAddress(client.localAddress())
+                    .connect().get();
+
+            QuicStreamChannel stream = Http3.newRequestStream(quicChannel, new Http3RequestStreamInitializer() {
+                @Override
+                protected void initRequestStream(QuicStreamChannel ch) {
+                    ch.pipeline().addLast(new Http3FrameToHttpObjectCodec(false));
+                }
+            }).get();
+            // The request is not ended, so the server waits for its body.
+            DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+            request.headers().add(HttpHeaderNames.HOST, "localhost");
+            stream.writeAndFlush(request).sync();
+            assertThat(received.poll(20, TimeUnit.SECONDS), instanceOf(HttpRequest.class));
+
+            // The client cancels the request.
+            stream.shutdownOutput((int) Http3ErrorCode.H3_REQUEST_CANCELLED.code()).sync();
+            Object reset = received.poll(20, TimeUnit.SECONDS);
+            assertThat(reset, instanceOf(QuicStreamResetException.class));
+            assertEquals(Http3ErrorCode.H3_REQUEST_CANCELLED.code(),
+                    ((QuicStreamResetException) reset).applicationProtocolCode());
+            // The request was not completed.
+            assertThat(received.poll(100, TimeUnit.MILLISECONDS), is(nullValue()));
+
+            quicChannel.close().sync();
         } finally {
             group.shutdownGracefully();
         }
