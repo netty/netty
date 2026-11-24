@@ -77,6 +77,12 @@ jobs:
                     `${context.payload.pull_request.body || ''}`
             });
             console.log(`Created auto-port PR: ${pr.html_url}`);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['autoport']
+            });
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
