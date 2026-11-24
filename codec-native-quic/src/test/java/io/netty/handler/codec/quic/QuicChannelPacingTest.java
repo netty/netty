@@ -82,6 +82,14 @@ public class QuicChannelPacingTest extends AbstractQuicTest {
     public void testEchoWithPacing(Transport transport) throws Throwable {
         assumeTrue(transport == Transport.NIO || Epoll.isAvailable());
 
+        // Prepare the data up front and only use bulk operations on the buffers, as with paranoid leak detection
+        // each operation on a buffer records a stack trace. Doing this byte by byte would take long enough for the
+        // connection to hit its idle timeout.
+        byte[] data = new byte[TRANSFER_SIZE];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) i;
+        }
+
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, transport == Transport.NIO ?
                 NioIoHandler.newFactory() : EpollIoHandler.newFactory());
         SegmentedDatagramPacketAllocator allocator = transport == Transport.EPOLL_SEGMENTED ?
@@ -147,19 +155,21 @@ public class QuicChannelPacingTest extends AbstractQuicTest {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ByteBuf buffer = (ByteBuf) msg;
-                            try {
-                                while (buffer.isReadable()) {
-                                    byte expected = (byte) received++;
-                                    byte actual = buffer.readByte();
-                                    if (actual != expected) {
-                                        receivedAllPromise.tryFailure(new AssertionError(
-                                                "Unexpected byte at index " + (received - 1) + ": " + actual +
-                                                        " != " + expected));
-                                        return;
-                                    }
+                            byte[] bytes = new byte[buffer.readableBytes()];
+                            buffer.readBytes(bytes);
+                            buffer.release();
+                            if (received + bytes.length > data.length) {
+                                receivedAllPromise.tryFailure(new AssertionError(
+                                        "Received more than expected: " + (received + bytes.length)));
+                                return;
+                            }
+                            for (int i = 0; i < bytes.length; i++, received++) {
+                                if (bytes[i] != data[received]) {
+                                    receivedAllPromise.tryFailure(new AssertionError(
+                                            "Unexpected byte at index " + received + ": " + bytes[i] + " != " +
+                                                    data[received]));
+                                    return;
                                 }
-                            } finally {
-                                buffer.release();
                             }
                             if (received == TRANSFER_SIZE) {
                                 receivedAllPromise.trySuccess(null);
@@ -173,11 +183,7 @@ public class QuicChannelPacingTest extends AbstractQuicTest {
                         }
                     }).get();
 
-            ByteBuf data = stream.alloc().directBuffer(TRANSFER_SIZE);
-            for (int i = 0; i < TRANSFER_SIZE; i++) {
-                data.writeByte((byte) i);
-            }
-            stream.writeAndFlush(data).sync();
+            stream.writeAndFlush(stream.alloc().directBuffer(TRANSFER_SIZE).writeBytes(data)).sync();
             receivedAllPromise.sync();
 
             stream.close().sync();
