@@ -409,7 +409,25 @@ public final class DateFormatter {
             // invalid value
             return false;
         }
-        return true;
+
+        // RFC 6265, section 5.1.1: fail to parse if no such date exists, e.g. 31 Feb.
+        return dayOfMonth <= daysInMonth(month, year);
+    }
+
+    // Not GregorianCalendar.getActualMaximum(), which clones the calendar on every call.
+    // year is at least 1601 here, so the Gregorian leap year rule applies.
+    private static int daysInMonth(int month, int year) {
+        switch (month) {
+            case Calendar.FEBRUARY:
+                return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 ? 29 : 28;
+            case Calendar.APRIL:
+            case Calendar.JUNE:
+            case Calendar.SEPTEMBER:
+            case Calendar.NOVEMBER:
+                return 30;
+            default:
+                return 31;
+        }
     }
 
     private Date computeDate() {
