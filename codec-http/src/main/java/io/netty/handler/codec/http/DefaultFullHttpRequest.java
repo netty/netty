@@ -174,7 +174,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public FullHttpRequest copy() {
-        return replace(content().copy());
+        return replaceAndReleaseOnFailure(content().copy());
     }
 
     @Override
@@ -184,7 +184,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public FullHttpRequest retainedDuplicate() {
-        return replace(content().retainedDuplicate());
+        return replaceAndReleaseOnFailure(content().retainedDuplicate());
     }
 
     @Override
@@ -193,6 +193,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
                 headers().copy(), trailingHeaders().copy());
         request.setDecoderResult(decoderResult());
         return request;
+    }
+
+    private FullHttpRequest replaceAndReleaseOnFailure(ByteBuf content) {
+        try {
+            return replace(content);
+        } catch (Throwable cause) {
+            content.release();
+            throw cause;
+        }
     }
 
     @Override
