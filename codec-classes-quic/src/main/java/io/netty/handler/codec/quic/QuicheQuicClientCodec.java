@@ -62,7 +62,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                                       int localConnIdLength, QuicheConfig config, ChannelPromise promise) {
         try {
             channel.connectNow(sslEngineProvider, sslTaskExecutor, freeTask, config.nativeAddress(),
-                    localConnIdLength, config.isDatagramSupported(),
+                    localConnIdLength, config.isDatagramSupported(), config.isPacingEnabled(),
                     senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity()),
                     recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity()));
         } catch (Throwable cause) {

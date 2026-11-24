@@ -232,7 +232,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             key = ByteBuffer.wrap(bytes);
         }
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), key, recipient, sender, config.isDatagramSupported(),
+                ctx.channel(), key, recipient, sender, config.isDatagramSupported(), config.isPacingEnabled(),
                 streamHandler, streamOptionsArray, streamAttrsArray, freeTask, sslTaskExecutor,
                 connectionIdAddressGenerator, resetTokenGenerator);
 

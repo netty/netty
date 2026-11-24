@@ -723,6 +723,26 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.enable_pacing">
+     *     quiche_config_enable_pacing</a>.
+     */
+    static native void quiche_config_enable_pacing(long configAddr, boolean value);
+
+    /**
+     * See
+     * <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.set_max_pacing_rate">
+     *     quiche_config_set_max_pacing_rate</a>.
+     */
+    static native void quiche_config_set_max_pacing_rate(long configAddr, long value);
+
+    /**
+     * Returns the current time, in nanoseconds, of the clock that quiche uses for the {@code at} field of
+     * {@code quiche_send_info}, or {@code 0} if there is no such clock on this platform.
+     */
+    static native long send_time_now_nanos();
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L187">
      *     quiche_config_enable_dgram</a>.
      */

@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 final class QuicheConfig {
     private final boolean isDatagramSupported;
+    private final boolean isPacingEnabled;
     private long config = -1;
 
     QuicheConfig(int version,
@@ -39,6 +40,8 @@ final class QuicheConfig {
                  @Nullable Boolean discoverPmtu,
                  @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  @Nullable Integer initialCongestionWindowPackets,
+                 @Nullable Boolean enablePacing,
+                 @Nullable Long maxPacingRate,
                  @Nullable Integer recvQueueLen,
                  @Nullable Integer sendQueueLen,
                  @Nullable Long activeConnectionIdLimit,
@@ -114,6 +117,14 @@ final class QuicheConfig {
             if (initialCongestionWindowPackets != null) {
                 Quiche.quiche_config_set_initial_congestion_window_packets(config, initialCongestionWindowPackets);
             }
+            if (enablePacing != null) {
+                Quiche.quiche_config_enable_pacing(config, enablePacing);
+            }
+            // Only honor the send times that quiche computes if pacing was explicitly enabled.
+            isPacingEnabled = Boolean.TRUE.equals(enablePacing);
+            if (maxPacingRate != null) {
+                Quiche.quiche_config_set_max_pacing_rate(config, maxPacingRate);
+            }
             if (recvQueueLen != null && sendQueueLen != null) {
                 isDatagramSupported = true;
                 Quiche.quiche_config_enable_dgram(config, true, recvQueueLen, sendQueueLen);
@@ -135,6 +146,10 @@ final class QuicheConfig {
 
     boolean isDatagramSupported() {
         return isDatagramSupported;
+    }
+
+    boolean isPacingEnabled() {
+        return isPacingEnabled;
     }
 
     long nativeAddress() {

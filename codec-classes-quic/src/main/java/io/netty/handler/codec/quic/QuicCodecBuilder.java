@@ -50,6 +50,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean discoverPmtu;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private Integer initialCongestionWindowPackets;
+    private Boolean pacing;
+    private Long maxPacingRate;
     private int localConnIdLength;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
@@ -90,6 +92,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.discoverPmtu = builder.discoverPmtu;
         this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
         this.initialCongestionWindowPackets = builder.initialCongestionWindowPackets;
+        this.pacing = builder.pacing;
+        this.maxPacingRate = builder.maxPacingRate;
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
         this.flushStrategy = builder.flushStrategy;
@@ -146,6 +150,54 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final B initialCongestionWindowPackets(int numPackets) {
         this.initialCongestionWindowPackets = numPackets;
+        return self();
+    }
+
+    /**
+     * Sets if outgoing packets should be paced, as described in
+     * <a href="https://www.rfc-editor.org/rfc/rfc9002#section-7.7">RFC 9002, Section 7.7</a>.
+     * <p>
+     * When enabled, the send time that the congestion controller computes for each packet is respected: if the next
+     * packet should only be sent more than one millisecond from now, the {@link QuicChannel} stops producing packets
+     * and continues once that time is reached. This avoids sending the whole congestion window as a single burst.
+     * Packets that should be sent within the next millisecond are sent right away, so short bursts are still
+     * possible.
+     * <p>
+     * Only {@link QuicCongestionControlAlgorithm#BBR} computes send times in the future, so this has no effect with
+     * other algorithms. Also, the underlying QUIC implementation currently only provides send times on Linux and
+     * Android, so this has no effect on other platforms.
+     * <p>
+     * See <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.enable_pacing">
+     *     enable_pacing</a>.
+     * <p>
+     * The default value is {@code false}.
+     *
+     * @param enable    {@code true} if outgoing packets should be paced, {@code false} otherwise.
+     * @return          the instance itself.
+     */
+    public final B pacing(boolean enable) {
+        this.pacing = enable;
+        return self();
+    }
+
+    /**
+     * Sets the maximum rate, in megabits per second, at which outgoing packets are paced. This only has an effect if
+     * {@link #pacing(boolean)} is enabled and {@link QuicCongestionControlAlgorithm#BBR} is used.
+     * <p>
+     * Be aware that this also limits the congestion window to 1.25 times the amount of data that can be sent at this
+     * rate within the smoothed RTT. On paths with a very low RTT, a low rate can limit the congestion window to less
+     * than a single packet and so stall the connection.
+     * <p>
+     * See <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.set_max_pacing_rate">
+     *     set_max_pacing_rate</a>.
+     * <p>
+     * By default the pacing rate is not limited.
+     *
+     * @param mbitsPerSecond    the maximum pacing rate, in megabits per second.
+     * @return                  the instance itself.
+     */
+    public final B maxPacingRate(long mbitsPerSecond) {
+        this.maxPacingRate = checkPositive(mbitsPerSecond, "mbitsPerSecond");
         return self();
     }
 
@@ -487,8 +539,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart, discoverPmtu,
-                congestionControlAlgorithm, initialCongestionWindowPackets, recvQueueLen, sendQueueLen,
-                activeConnectionIdLimit, statelessResetToken);
+                congestionControlAlgorithm, initialCongestionWindowPackets, pacing, maxPacingRate,
+                recvQueueLen, sendQueueLen, activeConnectionIdLimit, statelessResetToken);
     }
 
     /**
