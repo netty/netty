@@ -28,8 +28,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -360,6 +363,58 @@ public class HashedWheelTimerTest {
         Thread.sleep(2000);
         assertEquals(0, timer.pendingTimeouts());
         timer.stop();
+    }
+
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 60, unit = TimeUnit.SECONDS)
+    public void testNewTimeoutRacingStopOnUnstartedTimerDoesNotHang() throws Exception {
+        // start() reads WORKER_STATE_INIT, stop() then moves the state to WORKER_STATE_SHUTDOWN, the CAS in start()
+        // fails, and start() used to wait forever for a worker thread that is never started.
+        final AtomicReference<HashedWheelTimer> timerRef = new AtomicReference<HashedWheelTimer>();
+        final AtomicInteger round = new AtomicInteger();
+        final AtomicInteger newTimeoutDone = new AtomicInteger();
+        final AtomicBoolean done = new AtomicBoolean();
+        Thread newTimeoutThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 1; ; i++) {
+                    while (round.get() < i) {
+                        if (done.get()) {
+                            return;
+                        }
+                        Thread.yield();
+                    }
+                    try {
+                        timerRef.get().newTimeout(createNoOpTimerTask(), 1, TimeUnit.HOURS);
+                    } catch (IllegalStateException expected) {
+                        // stop() won the race.
+                    }
+                    newTimeoutDone.set(i);
+                }
+            }
+        });
+        newTimeoutThread.setDaemon(true);
+        newTimeoutThread.start();
+        try {
+            long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            for (int i = 1; i <= 2000 && System.nanoTime() < end; i++) {
+                HashedWheelTimer timer = new HashedWheelTimer(
+                        Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 8);
+                timerRef.set(timer);
+                round.set(i);
+                timer.stop();
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+                while (newTimeoutDone.get() < i) {
+                    assertThat(System.nanoTime() - deadline)
+                            .as("newTimeout() racing stop() did not return in round %d", i)
+                            .isNegative();
+                    Thread.yield();
+                }
+            }
+        } finally {
+            done.set(true);
+        }
+        newTimeoutThread.join();
     }
 
     private static TimerTask createNoOpTimerTask() {
