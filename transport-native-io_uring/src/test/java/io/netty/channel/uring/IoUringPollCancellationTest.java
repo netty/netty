@@ -23,6 +23,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.unix.Errors;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,6 +58,7 @@ public class IoUringPollCancellationTest {
     private static final int POLL_IN_SCHEDULED = 1;
     private static final int POLL_OUT_SCHEDULED = 1 << 2;
     private static final int POLL_RDHUP_SCHEDULED = 1 << 3;
+    private static final int READ_SCHEDULED = 1 << 5;
     // From poll.h, the same on all Linux architectures. Native has no constants for them.
     private static final int POLLERR = 0x008;
     private static final int POLLHUP = 0x010;
@@ -121,6 +123,34 @@ public class IoUringPollCancellationTest {
         try (Socket accepted = server.accept()) {
             assertThat(channel.closeFuture().await(10, SECONDS)).isTrue();
             assertThat(pollInArmed.get()).as("a POLLIN poll armed on a channel whose close was pending").isFalse();
+            assertEof(accepted);
+        }
+    }
+
+    // The channel arms POLLOUT for a connect in progress or after a short write, and POLLRDHUP once it is active.
+    // Those paths cannot be timed against a pending close, so the polls are scheduled directly here, in the same task
+    // as the close, before any completion is handled.
+    @Test
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    public void pollsScheduledDuringDelayedCloseAreNotArmed() throws Exception {
+        Channel channel = connect(false);
+        try (Socket accepted = server.accept()) {
+            awaitArmed(channel, POLL_RDHUP_SCHEDULED);
+            // The POLLRDHUP poll keeps its bit until its completion, and only one can be armed at a time.
+            cancel(channel, "pollRdhupId", POLL_RDHUP_SCHEDULED);
+
+            int state = onEventLoop(channel, () -> {
+                // The write in flight delays the close.
+                channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {1}));
+                channel.close();
+                assertThat(field("delayedClose").get(channel)).as("the pending close").isNotNull();
+                schedulePollOut(channel);
+                ((AbstractIoUringChannel) channel).schedulePollRdHup();
+                return ioState(channel);
+            });
+            assertThat(state & (POLL_OUT_SCHEDULED | POLL_RDHUP_SCHEDULED)).as("polls armed").isZero();
+
+            assertThat(channel.closeFuture().await(10, SECONDS)).isTrue();
             assertEof(accepted);
         }
     }
@@ -244,6 +274,30 @@ public class IoUringPollCancellationTest {
         }
     }
 
+    // Only a positive result of the POLLRDHUP poll is a mask of events. Any error ends the poll, but does not mean that
+    // the peer shut down its output. The completion is made up, so the real poll is cancelled afterwards.
+    @Test
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    public void pollRdHupEndingWithAnErrorIsNoHalfClose() throws Exception {
+        Channel channel = connect(false);
+        try (Socket accepted = server.accept()) {
+            awaitArmed(channel, POLL_RDHUP_SCHEDULED);
+            long pollRdhupId = onEventLoop(channel, () -> field("pollRdhupId").getLong(channel));
+
+            int state = onEventLoop(channel, () -> {
+                complete(channel, pollRdhupId, Errors.ERRNO_EBADF_NEGATIVE, 0);
+                return ioState(channel);
+            });
+            assertThat(state & (POLL_RDHUP_SCHEDULED | READ_SCHEDULED)).as("POLLRDHUP armed or read scheduled")
+                    .isZero();
+            assertThat(onEventLoop(channel, () -> rdHupReceived(channel))).as("POLLRDHUP received").isFalse();
+
+            submitCancel(channel, pollRdhupId);
+            assertThat(channel.close().await(10, SECONDS)).isTrue();
+            assertEof(accepted);
+        }
+    }
+
     private Channel newClient(ChannelInboundHandlerAdapter handler, boolean autoRead) throws InterruptedException {
         return new Bootstrap()
                 .group(group)
@@ -284,13 +338,20 @@ public class IoUringPollCancellationTest {
         accepted.setSoTimeout(10_000);
         assertThat(accepted.getInputStream().read()).isNotEqualTo(-1);
         long pollOutId = onEventLoop(channel, () -> {
-            Method schedulePollOut = AbstractIoUringChannel.class.getDeclaredMethod("schedulePollOut");
-            schedulePollOut.setAccessible(true);
-            schedulePollOut.invoke(channel);
+            schedulePollOut(channel);
             return field("pollOutId").getLong(channel);
         });
         assertArmed(channel, POLL_OUT_SCHEDULED);
         return pollOutId;
+    }
+
+    /**
+     * Must be called on the event loop.
+     */
+    private static void schedulePollOut(Channel channel) throws ReflectiveOperationException {
+        Method schedulePollOut = AbstractIoUringChannel.class.getDeclaredMethod("schedulePollOut");
+        schedulePollOut.setAccessible(true);
+        schedulePollOut.invoke(channel);
     }
 
     /**
@@ -353,6 +414,12 @@ public class IoUringPollCancellationTest {
 
     private static int ioState(Channel channel) throws ReflectiveOperationException {
         return field("ioState").getByte(channel) & 0xff;
+    }
+
+    private static boolean rdHupReceived(Channel channel) throws ReflectiveOperationException {
+        Field field = IoUringRecvByteAllocatorHandle.class.getDeclaredField("rdHupReceived");
+        field.setAccessible(true);
+        return field.getBoolean(((AbstractIoUringChannel.AbstractUringUnsafe) channel.unsafe()).recvBufAllocHandle());
     }
 
     private static Field field(String name) throws NoSuchFieldException {
