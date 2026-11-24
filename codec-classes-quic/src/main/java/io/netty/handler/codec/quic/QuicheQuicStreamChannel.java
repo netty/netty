@@ -1108,9 +1108,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     inputShutdown = true;
                     // A ClosedChannelException means the connection was closed or freed already. This is expected
                     // when the streams are closed as part of closing the connection, and the user is notified about
-                    // the closure of the stream and the connection anyway, so there is no need to fire it. Everything
-                    // else is reported as the data that was dropped is lost.
-                    if (!(cause instanceof ClosedChannelException)) {
+                    // the closure of the stream and the connection anyway, so there is no need to fire it. A
+                    // QuicStreamResetException only ends the input, like a FIN, of a stream that the user closed and
+                    // so does not read any more. Everything else is reported.
+                    if (!(cause instanceof ClosedChannelException) && !(cause instanceof QuicStreamResetException)) {
                         pipeline().fireExceptionCaught(cause);
                     }
                 } finally {
