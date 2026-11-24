@@ -1825,12 +1825,13 @@ public class DnsNameResolverTest {
         // listen on the same loopback address.
         final String evilServerIp = "10.0.0.1";
         final String authorityServerIp = "10.0.0.2";
+        final Set<String> names = new HashSet<>(Arrays.asList(hostname, "evil.co.uk"));
 
-        final TestDnsServer authorityServer = new TestDnsServer(Collections.singleton(hostname));
+        final TestDnsServer authorityServer = new TestDnsServer(names);
         authorityServer.start();
 
         // Authoritative for evil.co.uk, but tries to hand us NS records for the parent zone co.uk.
-        final TestDnsServer evilServer = new TestDnsServer(Collections.singleton(hostname)) {
+        final TestDnsServer evilServer = new TestDnsServer(names) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
                 message.getAnswerRecords().clear();
@@ -1843,40 +1844,33 @@ public class DnsNameResolverTest {
         };
         evilServer.start();
 
-        // The server we are configured with, it delegates evil.co.uk to the evil server.
-        final TestDnsServer configuredServer = new TestDnsServer(Collections.singleton(hostname)) {
+        // The server we are configured with, it delegates evil.co.uk to the evil server. For evil.co.uk itself it
+        // answers with a referral to uk., as a root server would.
+        final TestDnsServer configuredServer = new TestDnsServer(names) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {
+                boolean apex = message.getQuestionRecords().get(0).getDomainName().equals("evil.co.uk");
                 message.getAnswerRecords().clear();
                 message.getAuthorityRecords().clear();
                 message.getAdditionalRecords().clear();
-                message.getAuthorityRecords().add(newNsRecord("evil.co.uk", nsName));
-                message.getAdditionalRecords().add(newARecord(nsName, evilServerIp));
+                if (apex) {
+                    message.getAuthorityRecords().add(newNsRecord("uk", "ns.uk"));
+                    message.getAdditionalRecords().add(newARecord("ns.uk", authorityServerIp));
+                } else {
+                    message.getAuthorityRecords().add(newNsRecord("evil.co.uk", nsName));
+                    message.getAdditionalRecords().add(newARecord(nsName, evilServerIp));
+                }
                 return message;
             }
         };
         configuredServer.start();
 
         final Set<String> cachedZones = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-        final AuthoritativeDnsServerCache authoritativeDnsServerCache = new AuthoritativeDnsServerCache() {
-            @Override
-            public DnsServerAddressStream get(String hostname) {
-                return null;
-            }
-
+        final AuthoritativeDnsServerCache authoritativeDnsServerCache = new DefaultAuthoritativeDnsServerCache() {
             @Override
             public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
                 cachedZones.add(hostname);
-            }
-
-            @Override
-            public void clear() {
-                // NOOP
-            }
-
-            @Override
-            public boolean clear(String hostname) {
-                return false;
+                super.cache(hostname, address, originalTtl, loop);
             }
         };
 
@@ -1917,6 +1911,11 @@ public class DnsNameResolverTest {
             // for any of the parent zones.
             assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
             assertFalse(cachedZones.contains("uk."), "cached: " + cachedZones);
+
+            // The referral to uk. is followed with the servers cached for evil.co.uk., which must still only be
+            // trusted for evil.co.uk.
+            resolver.resolveAll("evil.co.uk").await();
+            assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
         } finally {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);

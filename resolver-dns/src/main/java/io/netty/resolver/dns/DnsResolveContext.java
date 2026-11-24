@@ -720,12 +720,21 @@ abstract class DnsResolveContext<T> {
 
                 List<InetSocketAddress> addresses = serverNames.addressList();
 
+                String redirectZone = serverNames.zone();
+                DnsServerAddressStream cached = authoritativeDnsServerCache.get(question.name());
+                if (cached != null && cached.size() != 0) {
+                    // By default newRedirectDnsServerStream(...) will not use the servers of the referral but the
+                    // ones we have cached for the question name. These are only authoritative for the question name
+                    // itself, so we must not trust them for the (possibly wider) zone of the referral.
+                    redirectZone = question.name().toLowerCase(Locale.US);
+                }
+
                 // Give the user the chance to sort or filter the used servers for the query.
                 DnsServerAddressStream serverStream = parent.newRedirectDnsServerStream(
                         question.name(), addresses);
 
                 if (serverStream != null) {
-                    query(serverStream, serverNames.zone(), 0, question,
+                    query(serverStream, redirectZone, 0, question,
                           queryLifecycleObserver.queryRedirected(new DnsAddressStreamList(serverStream)),
                           true, promise, null);
                     return true;
