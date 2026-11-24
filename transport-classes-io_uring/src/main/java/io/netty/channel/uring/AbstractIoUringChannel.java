@@ -92,6 +92,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private long pollInId;
     private long pollOutId;
     private long pollRdhupId;
+    // The ops id of each poll, which its completions carry. cancelOps(...) resets the ids above once it asked for a
+    // cancellation, while the poll is still to complete, so these are kept until the next poll of the same kind.
+    // See nextPollOpsId().
+    private short pollInOpsId;
+    private short pollOutOpsId;
+    private short pollRdhupOpsId;
     private long connectId;
 
     // A byte is enough for now.
@@ -465,21 +471,43 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void schedulePollOut() {
-        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT, false);
+        pollOutOpsId = nextPollOpsId();
+        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT, false, pollOutOpsId);
     }
 
     final void schedulePollRdHup() {
-        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false);
+        pollRdhupOpsId = nextPollOpsId();
+        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false, pollRdhupOpsId);
     }
 
     protected abstract boolean isStreamSocket();
 
-    private long schedulePollAdd(int ioMask, int mask, boolean multishot) {
+    /**
+     * Returns the ops id for a new poll. Ops ids wrap around, while a poll can stay armed for as long as the channel
+     * is open, so an id that another armed poll still carries is skipped: its completions and its cancellation, which
+     * matches on the user_data, could not be told apart from the new poll's.
+     */
+    private short nextPollOpsId() {
+        for (;;) {
+            short id = nextOpsId();
+            if (!isArmedPollOpsId(id)) {
+                return id;
+            }
+        }
+    }
+
+    private boolean isArmedPollOpsId(short id) {
+        return (ioState & POLL_IN_SCHEDULED) != 0 && id == pollInOpsId ||
+                (ioState & POLL_OUT_SCHEDULED) != 0 && id == pollOutOpsId ||
+                (ioState & POLL_RDHUP_SCHEDULED) != 0 && id == pollRdhupOpsId;
+    }
+
+    private long schedulePollAdd(int ioMask, int mask, boolean multishot, short opsId) {
         assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, nextOpsId());
+                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, opsId);
         long id = registration.submit(ops);
         if (id != 0) {
             ioState |= (byte) ioMask;
@@ -629,14 +657,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         private void pollAddComplete(int res, int flags, short data) {
-            if ((res & Native.POLLOUT) != 0) {
-                pollOut(res);
-            }
-            if ((res & Native.POLLIN) != 0) {
+            // A completion belongs to the poll whose ops id it carries, and only completes that poll. Its result is
+            // not always that poll's own event: it can be an error, such as -ECANCELED, or carry POLLRDHUP, which the
+            // kernel reports with any poll. Read as a mask, it would complete other polls that are still armed, and
+            // those would then never be cancelled.
+            if ((ioState & POLL_IN_SCHEDULED) != 0 && data == pollInOpsId) {
                 pollIn(res, flags, data);
-            }
-            if ((res & Native.POLLRDHUP) != 0) {
+            } else if ((ioState & POLL_OUT_SCHEDULED) != 0 && data == pollOutOpsId) {
+                pollOut(res);
+            } else if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && data == pollRdhupOpsId) {
                 pollRdHup(res);
+                return;
+            } else {
+                // No armed poll carries this id, so there is no state left to update.
+                logger.debug("{} ignoring the result {} of poll {}, which is not armed",
+                        AbstractIoUringChannel.this, res, data);
+                return;
+            }
+            if (res > 0 && (res & Native.POLLRDHUP) != 0) {
+                handleRdHup();
             }
         }
 
@@ -853,7 +892,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (!isActive() || delayedClose != null || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
+            pollInOpsId = nextPollOpsId();
+            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn(), pollInOpsId);
         }
 
         protected final boolean isReadMultishot() {
@@ -955,7 +995,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
+            handleRdHup();
+        }
 
+        /**
+         * Called once a poll reported POLLRDHUP.
+         */
+        private void handleRdHup() {
             // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
             recvBufAllocHandle().rdHupReceived();
 
