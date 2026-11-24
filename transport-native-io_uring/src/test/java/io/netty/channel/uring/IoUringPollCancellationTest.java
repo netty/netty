@@ -173,33 +173,6 @@ public class IoUringPollCancellationTest {
         }
     }
 
-    // A POLLRDHUP poll stays armed while the channel is open, and the ops ids wrap around after 65535 others.
-    @Test
-    @Timeout(value = 1, unit = TimeUnit.MINUTES)
-    public void armedPollsKeepDistinctIdsWhenTheIdsWrapAround() throws Exception {
-        Channel channel = connect(false);
-        try (Socket accepted = server.accept()) {
-            awaitArmed(channel, POLL_RDHUP_SCHEDULED);
-            short pollRdhupOpsId = onEventLoop(channel, () -> {
-                // The ops id is the low 16 bits of the user_data that the submission returned.
-                short id = (short) field("pollRdhupId").getLong(channel);
-                // Make the next ops id the one of the armed POLLRDHUP poll.
-                field("opsId").setShort(channel, id);
-                channel.read();
-                return id;
-            });
-            assertArmed(channel, POLL_IN_SCHEDULED);
-            short pollInOpsId = onEventLoop(channel, () -> (short) field("pollInId").getLong(channel));
-            assertThat(pollInOpsId).as("the POLLIN poll's ops id").isNotEqualTo(pollRdhupOpsId);
-
-            cancel(channel, "pollRdhupId", POLL_RDHUP_SCHEDULED);
-            assertArmed(channel, POLL_IN_SCHEDULED);
-
-            assertThat(channel.close().await(10, SECONDS)).isTrue();
-            assertEof(accepted);
-        }
-    }
-
     // The kernel reports POLLRDHUP with any poll. A POLLIN poll reporting it does not complete the POLLRDHUP poll,
     // which stays armed until its own completion. The POLLIN poll's completion is made up here: a real one would come
     // with the POLLRDHUP poll's completion, which hides the bookkeeping in between.
@@ -339,7 +312,7 @@ public class IoUringPollCancellationTest {
      * Hands the channel a made-up completion of one of its polls. Must be called on the event loop.
      */
     private static void complete(Channel channel, long pollId, int res, int flags) {
-        // The ops id is the low 16 bits of the user_data that the submission returned.
+        // The data of the user_data, its low 16 bits, tells which poll of the channel the completion is of.
         ((IoUringIoHandle) channel.unsafe()).handle(((AbstractIoUringChannel) channel).registration(),
                 new IoUringIoEvent(res, flags, Native.IORING_OP_POLL_ADD, (short) pollId));
     }

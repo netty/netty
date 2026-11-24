@@ -83,6 +83,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int POLL_IN_SCHEDULED = 1;
     private static final int POLL_OUT_SCHEDULED = 1 << 2;
     private static final int POLL_RDHUP_SCHEDULED = 1 << 3;
+
+    // The data of the user_data of each kind of poll. A channel has at most one poll of each kind in flight, and the
+    // user_data also holds the registration id and the opcode, so these tell the polls of a channel apart, in their
+    // completions and in their cancellation.
+    private static final short POLL_IN_DATA = 1;
+    private static final short POLL_OUT_DATA = 2;
+    private static final short POLL_RDHUP_DATA = 3;
     private static final int WRITE_SCHEDULED = 1 << 4;
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
@@ -92,12 +99,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private long pollInId;
     private long pollOutId;
     private long pollRdhupId;
-    // The ops id of each poll, which its completions carry. cancelOps(...) resets the ids above once it asked for a
-    // cancellation, while the poll is still to complete, so these are kept until the next poll of the same kind.
-    // See nextPollOpsId().
-    private short pollInOpsId;
-    private short pollOutOpsId;
-    private short pollRdhupOpsId;
     private long connectId;
 
     // A byte is enough for now.
@@ -471,38 +472,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void schedulePollOut() {
-        pollOutOpsId = nextPollOpsId();
-        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT, false, pollOutOpsId);
+        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT, false, POLL_OUT_DATA);
     }
 
     final void schedulePollRdHup() {
-        pollRdhupOpsId = nextPollOpsId();
-        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false, pollRdhupOpsId);
+        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false, POLL_RDHUP_DATA);
     }
 
     protected abstract boolean isStreamSocket();
 
-    /**
-     * Returns the ops id for a new poll. Ops ids wrap around, while a poll can stay armed for as long as the channel
-     * is open, so an id that another armed poll still carries is skipped: its completions and its cancellation, which
-     * matches on the user_data, could not be told apart from the new poll's.
-     */
-    private short nextPollOpsId() {
-        for (;;) {
-            short id = nextOpsId();
-            if (!isArmedPollOpsId(id)) {
-                return id;
-            }
-        }
-    }
-
-    private boolean isArmedPollOpsId(short id) {
-        return (ioState & POLL_IN_SCHEDULED) != 0 && id == pollInOpsId ||
-                (ioState & POLL_OUT_SCHEDULED) != 0 && id == pollOutOpsId ||
-                (ioState & POLL_RDHUP_SCHEDULED) != 0 && id == pollRdhupOpsId;
-    }
-
-    private long schedulePollAdd(int ioMask, int mask, boolean multishot, short opsId) {
+    private long schedulePollAdd(int ioMask, int mask, boolean multishot, short data) {
         assert (ioState & ioMask) == 0;
         if (delayedClose != null) {
             // A pending close has already cancelled the polls, so nothing would cancel a new one, and it would keep
@@ -512,7 +491,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, opsId);
+                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, data);
         long id = registration.submit(ops);
         if (id != 0) {
             ioState |= (byte) ioMask;
@@ -666,11 +645,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // not always that poll's own event: it can be an error, such as -ECANCELED, or carry POLLRDHUP, which the
             // kernel reports with any poll. Read as a mask, it would complete other polls that are still armed, and
             // those would then never be cancelled.
-            if ((ioState & POLL_IN_SCHEDULED) != 0 && data == pollInOpsId) {
+            if ((ioState & POLL_IN_SCHEDULED) != 0 && data == POLL_IN_DATA) {
                 pollIn(res, flags, data);
-            } else if ((ioState & POLL_OUT_SCHEDULED) != 0 && data == pollOutOpsId) {
+            } else if ((ioState & POLL_OUT_SCHEDULED) != 0 && data == POLL_OUT_DATA) {
                 pollOut(res);
-            } else if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && data == pollRdhupOpsId) {
+            } else if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && data == POLL_RDHUP_DATA) {
                 pollRdHup(res);
                 return;
             } else {
@@ -897,8 +876,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (!isActive() || delayedClose != null || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            pollInOpsId = nextPollOpsId();
-            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn(), pollInOpsId);
+            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn(), POLL_IN_DATA);
         }
 
         protected final boolean isReadMultishot() {
