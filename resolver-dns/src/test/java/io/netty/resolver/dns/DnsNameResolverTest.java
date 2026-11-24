@@ -1830,7 +1830,7 @@ public class DnsNameResolverTest {
         // listen on the same loopback address.
         final String evilServerIp = "10.0.0.1";
         final String authorityServerIp = "10.0.0.2";
-        final Set<String> names = new HashSet<>(Arrays.asList(hostname, "evil.co.uk", "sub.evil.co.uk"));
+        final Set<String> names = new HashSet<String>(Arrays.asList(hostname, "evil.co.uk", "sub.evil.co.uk"));
 
         final TestDnsServer authorityServer = new TestDnsServer(names);
         authorityServer.start();
