@@ -61,14 +61,14 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     private ChannelConfig config;
 
     /**
-     * TWO bits reserved for Variable-Length Integer Encoding
-     * <a href="https://datatracker.ietf.org/doc/html/rfc9000?#name-variable-length-integer-enc">rfc9000</a>
-     * TWO LSB used for distinguish Client/Server initiated stream & Bi/unidirection
-     * these are not reserved but part of it
-     * <a href="https://datatracker.ietf.org/doc/html/rfc9000?#name-stream-types-and-identifier">rfc9000</a>
-     * so we can max stream per stream type (bi/uni) = (2^62-1)/2
+     * QUIC stream IDs are 62-bit integers, with the two least-significant bits
+     * identifying the initiator (client/server) and stream direction (bi/uni).
+     * Therefore, the maximum number of streams per stream type is 2^60.
+     *
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc9000.html#section-2.1">RFC 9000, Section 2.1</a>
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc9000.html#section-4.6">RFC 9000, Section 4.6</a>
      */
-    private static final long MAX_PEER_STREAMS_PER_STREAM_TYPE = ((1L << 62) - 1) / 2;
+    private static final long MAX_PEER_STREAMS_PER_STREAM_TYPE = 1L << 60;
 
     EmbeddedQuicChannel(boolean server) {
         this(server, new ChannelHandler[0]);
