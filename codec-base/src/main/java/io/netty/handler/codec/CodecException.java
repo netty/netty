@@ -48,4 +48,12 @@ public class CodecException extends RuntimeException {
     public CodecException(Throwable cause) {
         super(cause);
     }
+
+    /**
+     * Creates a new instance with the given suppression and stack trace settings, see
+     * {@link RuntimeException#RuntimeException(String, Throwable, boolean, boolean)}.
+     */
+    protected CodecException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+    }
 }

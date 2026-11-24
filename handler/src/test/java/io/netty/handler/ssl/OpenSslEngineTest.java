@@ -33,11 +33,13 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.test.LeakPresenceExtension;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -246,6 +248,48 @@ public class OpenSslEngineTest extends SSLEngineTest {
             }
         }
         return true;
+    }
+
+    @Test
+    public void testEnabledProtocolsAreNotSharedBetweenEngines() throws Exception {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
+        SslContext context = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
+                .sslProvider(sslServerProvider())
+                .protocols(SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)
+                .build();
+        SSLEngine first = null;
+        SSLEngine second = null;
+        try {
+            first = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            second = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            String[] contextProtocols = {
+                    SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_3, SslProtocols.TLS_v1_2
+            };
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            Arrays.fill(first.getEnabledProtocols(), "modified");
+            assertArrayEquals(contextProtocols, first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            first.setEnabledProtocols(new String[] { SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_2 });
+            assertArrayEquals(new String[] { SslProtocols.SSL_v2_HELLO, SslProtocols.TLS_v1_2 },
+                    first.getEnabledProtocols());
+            assertArrayEquals(contextProtocols, second.getEnabledProtocols());
+
+            SSLEngine third = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                assertArrayEquals(contextProtocols, third.getEnabledProtocols());
+            } finally {
+                ReferenceCountUtil.release(third);
+            }
+        } finally {
+            ReferenceCountUtil.release(first);
+            ReferenceCountUtil.release(second);
+            ReferenceCountUtil.release(context);
+        }
     }
 
     @MethodSource("newTestParams")
@@ -1195,6 +1239,66 @@ public class OpenSslEngineTest extends SSLEngineTest {
             assertEquals(ByteBuffer.wrap(data), received);
             assertThat(alloc.directBytes).isLessThanOrEqualTo(
                     (long) calls * unwrapEngine(server).maxEncryptedPacketLength());
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testUnwrapEmptySourceDrainsPendingPlaintext(SSLEngineTestParam param) throws Exception {
+        SSLEngine[] engines = newEnginesWithNonJdkCompatibilityModeServer(param, UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = engines[0];
+        SSLEngine server = engines[1];
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+
+            byte[] data = new byte[MAX_PLAINTEXT_LENGTH];
+            int chunk = (data.length - 200) / 2;
+            ThreadLocalRandom.current().nextBytes(data);
+            ByteBuffer enc = wrapFullRecord(param, client, data);
+            int recordLength = enc.remaining();
+            ByteBuffer received = ByteBuffer.allocate(data.length);
+
+            // The record is consumed at once, but only a part of its plaintext fits.
+            ByteBuffer plain = allocateBuffer(param.type(), chunk);
+            SSLEngineResult result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(recordLength, result.bytesConsumed());
+            assertEquals(chunk, result.bytesProduced());
+            assertFalse(enc.hasRemaining());
+            plain.flip();
+            received.put(plain);
+
+            // A single empty source must still hand out the plaintext that is left inside the engine.
+            plain.clear();
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(chunk, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+
+            // The same must hold when the empty source is one of multiple sources.
+            plain.clear();
+            ByteBuffer empty = allocateBuffer(param.type(), 0);
+            result = unwrapEngine(server).unwrap(new ByteBuffer[] { empty, enc }, new ByteBuffer[] { plain });
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(data.length - 2 * chunk, result.bytesProduced());
+            plain.flip();
+            received.put(plain);
+
+            received.flip();
+            assertEquals(ByteBuffer.wrap(data), received);
+
+            // Nothing is left, neither to feed nor to drain.
+            plain.clear();
+            result = server.unwrap(enc, plain);
+            assertEquals(SSLEngineResult.Status.BUFFER_UNDERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
@@ -2771,6 +2875,146 @@ public class OpenSslEngineTest extends SSLEngineTest {
             }
             ReferenceCountUtil.safeRelease(rsaCredential);
             ReferenceCountUtil.safeRelease(ecdsaCredential);
+        }
+    }
+
+    @Test
+    public void testIsSelectedClientCredentialAfterTls13Handshake() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL_REFCNT));
+
+        OpenSslCredential clientCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+        try {
+            clientSslCtx = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL_REFCNT)
+                    .addCredentials(clientCredential)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
+            serverSslCtx = SslContextBuilder
+                    .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL_REFCNT)
+                    .clientAuth(ClientAuth.REQUIRE)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(SslProtocols.TLS_v1_3)
+                    .build();
+
+            ReferenceCountedOpenSslEngine clientEngine =
+                    (ReferenceCountedOpenSslEngine) clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            SSLEngine serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                handshake(BufferType.Direct, false, clientEngine, serverEngine);
+
+                assertThat(serverEngine.getSession().getPeerCertificates()[0])
+                        .isEqualTo(ecdsaCert.getCertificate());
+                assertThat(clientEngine.isSelectedCredential(clientCredential)).isTrue();
+            } finally {
+                cleanupClientSslEngine(clientEngine);
+                cleanupServerSslEngine(serverEngine);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(clientCredential);
+        }
+    }
+
+    @CsvSource({
+            "TLSv1.2, false",
+            "TLSv1.2, true",
+            "TLSv1.3, false",
+            "TLSv1.3, true"
+    })
+    @ParameterizedTest
+    public void testIsSelectedCredentialAfterHandshake(String protocol, boolean addToEngine) throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        boolean tls13 = "TLSv1.3".equals(protocol);
+        assumeTrue(!tls13 || JRE.currentJre().version() >= JRE.JAVA_19.version());
+        assumeTrue(!tls13 || SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+
+        OpenSslCredential rsaCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+        OpenSslCredential uninstalledCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+
+        SslContext serverSslContext = null;
+        SslContext clientSslContext = null;
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            SslContextBuilder serverSslContextBuilder = SslContextBuilder
+                    .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .protocols(protocol);
+
+            if (!addToEngine) {
+                serverSslContextBuilder.addCredentials(rsaCredential, ecdsaCredential);
+            }
+
+            serverSslContext = serverSslContextBuilder.build();
+
+            SslContextBuilder clientSslContextBuilder = SslContextBuilder.forClient()
+                    .sslProvider(tls13 ? SslProvider.JDK : SslProvider.OPENSSL)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(protocol);
+
+            if (!tls13) {
+                clientSslContextBuilder.ciphers(Arrays.asList("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"));
+            }
+
+            clientSslContext = clientSslContextBuilder.build();
+
+            clientEngine = clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+            if (tls13) {
+                SSLParameters clientParameters = clientEngine.getSSLParameters();
+                SSLParameters.class.getMethod("setSignatureSchemes", String[].class)
+                        .invoke(clientParameters, (Object) new String[] {"ecdsa_secp256r1_sha256"});
+                clientEngine.setSSLParameters(clientParameters);
+            }
+
+            serverEngine = serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            ReferenceCountedOpenSslEngine openSslServerEngine = (ReferenceCountedOpenSslEngine) serverEngine;
+
+            if (addToEngine) {
+                openSslServerEngine.addCredential(rsaCredential);
+                openSslServerEngine.addCredential(ecdsaCredential);
+            }
+
+            assertFalse(openSslServerEngine.isSelectedCredential(ecdsaCredential));
+            assertFalse(openSslServerEngine.isSelectedCredential(uninstalledCredential));
+
+            handshake(BufferType.Direct, false, clientEngine, serverEngine);
+
+            X509Certificate served =
+                    (X509Certificate) clientEngine.getSession().getPeerCertificates()[0];
+            assertEquals("EC", served.getPublicKey().getAlgorithm());
+            assertTrue(openSslServerEngine.isSelectedCredential(ecdsaCredential));
+            assertFalse(openSslServerEngine.isSelectedCredential(rsaCredential));
+            assertFalse(openSslServerEngine.isSelectedCredential(uninstalledCredential));
+            openSslServerEngine.shutdown();
+            assertFalse(openSslServerEngine.isSelectedCredential(ecdsaCredential));
+        } finally {
+            if (clientEngine != null) {
+                cleanupClientSslEngine(clientEngine);
+            }
+            if (serverEngine != null) {
+                cleanupServerSslEngine(serverEngine);
+            }
+            if (clientSslContext != null) {
+                cleanupClientSslContext(clientSslContext);
+            }
+            if (serverSslContext != null) {
+                cleanupServerSslContext(serverSslContext);
+            }
+            ReferenceCountUtil.safeRelease(rsaCredential);
+            ReferenceCountUtil.safeRelease(ecdsaCredential);
+            ReferenceCountUtil.safeRelease(uninstalledCredential);
         }
     }
 }

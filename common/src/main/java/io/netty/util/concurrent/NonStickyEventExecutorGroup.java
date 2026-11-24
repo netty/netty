@@ -341,7 +341,18 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (state.compareAndSet(NONE, SUBMITTED)) {
                 // Actually it could happen that the runnable was picked up in between but we not care to much and just
                 // execute ourself. At worst this will be a NOOP when run() is called.
-                executor.execute(this);
+                boolean submitted = false;
+                try {
+                    executor.execute(this);
+                    submitted = true;
+                } finally {
+                    if (!submitted) {
+                        // run() will not be called, so it will not reset the state either. Reset it here, otherwise
+                        // every later execute(...) would only add its task to the queue and no task would ever run
+                        // again. The task stays in the queue and runs once this executor is submitted again.
+                        state.set(NONE);
+                    }
+                }
             }
         }
     }

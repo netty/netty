@@ -22,6 +22,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ZstdDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -87,6 +90,40 @@ public class ZstdDecompressorTest extends AbstractDecompressorTest {
         byte[] truncated = Arrays.copyOf(compressed, compressed.length - 1);
 
         assertThrows(DecompressionException.class, () -> decompress(truncated, 20));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    public void testDecompressWithNonPositiveDefaultMaxForwardBytes(int defaultMaxForwardBytes)
+            throws DecompressionException {
+        byte[] payload = new byte[1024 * 1024];
+        new Random(12345L).nextBytes(payload);
+        byte[] compressed = Zstd.compress(payload);
+
+        ByteBuf output = Unpooled.buffer();
+        try (Decompressor decompressor = new DefensiveDecompressor(new ZstdDecompressor(
+                ZstdDecompressor.builder(), ByteBufAllocator.DEFAULT, defaultMaxForwardBytes))) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(compressed));
+            // The body takes 16 outputs of 64 KiB, so the bound only stops a decompressor that makes no progress.
+            for (int i = 0; i < 1024 && decompressor.status() == Decompressor.Status.NEED_OUTPUT; i++) {
+                ByteBuf b = decompressor.takeOutput();
+                try {
+                    assertTrue(b.readableBytes() <= ZstdDecoder.DEFAULT_OUTPUT_BUFFER_SIZE);
+                    output.writeBytes(b);
+                } finally {
+                    b.release();
+                }
+            }
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.endOfInput();
+            assertEquals(Decompressor.Status.COMPLETE, decompressor.status());
+            byte[] actual = new byte[output.readableBytes()];
+            output.readBytes(actual);
+            assertArrayEquals(payload, actual);
+        } finally {
+            output.release();
+        }
     }
 
     private static byte[] decompress(byte[] compressed, int maxWindowLog) throws DecompressionException {

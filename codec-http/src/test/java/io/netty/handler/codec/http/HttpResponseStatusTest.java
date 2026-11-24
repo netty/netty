@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -111,6 +112,43 @@ public class HttpResponseStatusTest {
                 parseLine(new AsciiString("200a foo"));
             }
         });
+    }
+
+    @Test
+    public void constructorMustRejectControlCharactersAndDelInReasonPhrase() {
+        for (char c = 0; c <= 0x1F; c++) {
+            if (c == '\t') {
+                // HTAB is allowed by the RFC 9110 reason-phrase grammar.
+                continue;
+            }
+            String phrase = "OK" + c + "Injected";
+            assertThatThrownBy(() -> new HttpResponseStatus(200, phrase))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("invalid character");
+        }
+        assertThatThrownBy(() -> new HttpResponseStatus(200, "OK\u007FInjected"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid character");
+    }
+
+    @Test
+    public void parseLineMustRejectControlCharactersAndDelInReasonPhrase() {
+        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u0000Injected"));
+        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u000BInjected"));
+        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\fInjected"));
+        assertThrows(IllegalArgumentException.class, () -> parseLine("200 OK\u007FInjected"));
+        assertThrows(IllegalArgumentException.class, () -> parseLine(new AsciiString("200 OK\u0000Injected")));
+        assertThrows(IllegalArgumentException.class, () -> parseLine(new AsciiString("200 OK\u007FInjected")));
+    }
+
+    @Test
+    public void constructorMustAcceptValidReasonPhrases() {
+        assertEquals("OK", new HttpResponseStatus(200, "OK").reasonPhrase());
+        assertEquals("Not Found", new HttpResponseStatus(404, "Not Found").reasonPhrase());
+        // HTAB is allowed by the RFC 9110 reason-phrase grammar.
+        assertEquals("OK\tTabbed", new HttpResponseStatus(200, "OK\tTabbed").reasonPhrase());
+        // obs-text is allowed by the RFC 9110 reason-phrase grammar.
+        assertEquals("OKé", new HttpResponseStatus(200, "OKé").reasonPhrase());
     }
 
     @Test

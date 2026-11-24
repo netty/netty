@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
@@ -236,6 +237,91 @@ public abstract class SocketTest<T extends Socket> {
         } finally {
             regular.delete();
             socketFile.delete();
+        }
+    }
+
+    @Test
+    public void testBindDomainSocketWithTrailingSlashDoesNotRemoveSocket() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File file = new File(address.path());
+        try {
+            Socket first = Socket.newSocketDomain();
+            try {
+                first.bind(address);
+            } finally {
+                first.close();
+            }
+            assertTrue(file.exists());
+
+            // "<socket>/" does not refer to the socket file (lstat fails with ENOTDIR), so it must not be removed.
+            Socket second = Socket.newSocketDomain();
+            try {
+                assertThrows(IOException.class, () -> second.bind(new DomainSocketAddress(address.path() + '/')));
+            } finally {
+                second.close();
+            }
+            assertTrue(file.exists());
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testBindDomainSocketDoesNotRemoveFifo() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File fifo = new File(address.path());
+        try {
+            mkfifo(fifo);
+
+            Socket domainSocket = Socket.newSocketDomain();
+            try {
+                assertThrows(IOException.class, () -> domainSocket.bind(address));
+            } finally {
+                domainSocket.close();
+            }
+            assertTrue(fifo.exists());
+        } finally {
+            fifo.delete();
+        }
+    }
+
+    @Test
+    public void testDeleteDomainSocketFileDoesNotDeleteFifo() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File fifo = new File(address.path());
+        try {
+            mkfifo(fifo);
+
+            assertFalse(UnixChannelUtil.deleteDomainSocketFile(fifo.getPath()));
+            assertTrue(fifo.exists());
+        } finally {
+            fifo.delete();
+        }
+    }
+
+    @Test
+    public void testBindAbstractDomainSocket() throws Exception {
+        // Abstract namespace addresses are only supported on Linux.
+        assumeTrue("linux".equals(PlatformDependent.normalizedOs()));
+        // Abstract namespace addresses have no file system presence, so there is no stale file to remove.
+        DomainSocketAddress address = new DomainSocketAddress("\0" + UnixTestUtils.newDomainSocketAddress().path());
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.bind(address);
+        } finally {
+            domainSocket.close();
+        }
+    }
+
+    private static void mkfifo(File file) throws Exception {
+        int exitCode;
+        try {
+            exitCode = new ProcessBuilder("mkfifo", file.getPath()).inheritIO().start().waitFor();
+        } catch (IOException e) {
+            throw new TestAbortedException("mkfifo not available", e);
+        }
+        if (exitCode != 0) {
+            throw new TestAbortedException("mkfifo failed with exit code " + exitCode);
         }
     }
 

@@ -81,7 +81,6 @@ static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
 
-static jclass fileChannelImplClass = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
@@ -94,7 +93,6 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packageP
     netty_unix_buffer_JNI_OnUnLoad(env, packagePrefix);
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, longArrayClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
 }
 
 void io_uring_setup_ring_pointers(struct io_uring_params *p,
@@ -248,12 +246,6 @@ static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion)
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
-        return -1;
-    }
-    // The field id of FileChannelImpl.fd is only valid for instances of this class. Using it with any other
-    // FileChannel implementation is undefined behaviour.
-    if ((*env)->IsInstanceOf(env, fileChannel, fileChannelImplClass) == JNI_FALSE) {
-        netty_unix_errors_throwRuntimeException(env, "DefaultFileRegion.file is not a sun.nio.ch.FileChannelImpl");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
@@ -448,11 +440,15 @@ static jint netty_io_uring_register_iowq_max_workers(JNIEnv *env, jclass clazz, 
      int values[2];
      values[0] = maxBoundedValue;
      values[1] = maxUnboundedValue;
-     return sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
+     // syscall(...) returns -1 and sets errno, so we need to return -errno to be able to report the real error.
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_enable_rings(JNIEnv *env, jclass clazz, jint ringFd) {
-     return sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     int res = sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+     // syscall(...) returns -1 and sets errno, so we need to return -errno to be able to report the real error.
+     return res < 0 ? -errno : res;
 }
 
 static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint ringFd) {
@@ -941,6 +937,7 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     int linuxsocketOnLoadCalled = 0;
     char* nettyClassName = NULL;
     jclass fileRegionCls = NULL;
+    jclass fileChannelCls = NULL;
     jclass fileDescriptorCls = NULL;
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -976,8 +973,8 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
 
     NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
 
-    NETTY_JNI_UTIL_LOAD_CLASS(env, fileChannelImplClass, "sun/nio/ch/FileChannelImpl", done);
-    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelImplClass, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
 
     NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
     NETTY_JNI_UTIL_TRY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I");
@@ -997,7 +994,6 @@ done:
         if (linuxsocketOnLoadCalled == 1) {
             netty_io_uring_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
         }
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, fileChannelImplClass);
     }
     return ret;
 }

@@ -193,8 +193,15 @@ public class QueryStringEncoder {
                     appendEncoded(WRITE_UTF_UNKNOWN);
                     break;
                 }
+                char c2 = s.charAt(i);
+                if (!Character.isLowSurrogate(c2)) {
+                    appendEncoded(WRITE_UTF_UNKNOWN);
+                    // c has no low surrogate, so encode c2 on its own in the next iteration.
+                    i--;
+                    continue;
+                }
                 // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
-                writeUtf8Surrogate(c, s.charAt(i));
+                writeUtf8Surrogate(c, c2);
             } else {
                 appendEncoded(0xe0 | (c >> 12));
                 appendEncoded(0x80 | ((c >> 6) & 0x3f));
@@ -204,11 +211,6 @@ public class QueryStringEncoder {
     }
 
     private void writeUtf8Surrogate(char c, char c2) {
-        if (!Character.isLowSurrogate(c2)) {
-            appendEncoded(WRITE_UTF_UNKNOWN);
-            appendEncoded(Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
-            return;
-        }
         int codePoint = Character.toCodePoint(c, c2);
         // See https://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
         appendEncoded(0xf0 | (codePoint >> 18));

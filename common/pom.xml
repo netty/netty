@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.21.Final-SNAPSHOT</version>
+    <version>4.2.22.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -98,10 +98,6 @@
       <groupId>io.projectreactor.tools</groupId>
       <artifactId>blockhound</artifactId>
       <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>

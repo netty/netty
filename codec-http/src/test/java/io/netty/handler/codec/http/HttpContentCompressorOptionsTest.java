@@ -53,7 +53,7 @@ class HttpContentCompressorOptionsTest {
                 "br", "br",
                 "compress, br;q=0.5", "br",
                 "br; q=0.5, identity", "br",
-                "br; q=0, deflate", "br",
+                "br; q=0, deflate", "deflate",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
@@ -80,7 +80,7 @@ class HttpContentCompressorOptionsTest {
                 "zstd", "zstd",
                 "compress, zstd;q=0.5", "zstd",
                 "zstd; q=0.5, identity", "zstd",
-                "zstd; q=0, deflate", "zstd",
+                "zstd; q=0, deflate", "deflate",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
@@ -107,7 +107,7 @@ class HttpContentCompressorOptionsTest {
                 "snappy", "snappy",
                 "compress, snappy;q=0.5", "snappy",
                 "snappy; q=0.5, identity", "snappy",
-                "snappy; q=0, deflate", "snappy",
+                "snappy; q=0, deflate", "deflate",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];

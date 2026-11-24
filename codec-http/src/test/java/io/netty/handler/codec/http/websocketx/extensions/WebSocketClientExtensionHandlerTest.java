@@ -15,11 +15,17 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
@@ -273,5 +280,20 @@ public class WebSocketClientExtensionHandlerTest {
 
         verify(mainExtensionMock, atLeastOnce()).rsv();
         verify(fallbackExtensionMock, atLeastOnce()).rsv();
+    }
+
+    @Test
+    public void testRejectExtensionReleasesResponse() {
+        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketClientExtensionHandler(mainHandshakerMock));
+
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, Unpooled.buffer().writeZero(16));
+        response.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
+        response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, "main");
+
+        assertThrows(CodecException.class, () -> ch.writeInbound(response));
+        assertEquals(0, response.refCnt());
+        ch.finishAndReleaseAll();
     }
 }

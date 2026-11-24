@@ -93,6 +93,44 @@ final class Bzip2MalformedStreams {
         return out.toByteArray();
     }
 
+    /**
+     * A stream with a single selector, which covers the first 50 Huffman symbols of the block,
+     * followed by more symbols that never end the block. Decoding the 51st symbol fails because
+     * there is no selector left for it.
+     */
+    static byte[] tooFewSelectors() {
+        BitWriter bits = new BitWriter();
+        bits.writeBit(0);            // randomised = false
+        bits.writeBits(0, 24);       // bwtStartPointer
+        bits.writeBits(0x0001, 16);  // huffmanInUse16: only the range 0xF0-0xFF is in use
+        bits.writeBits(0x8000, 16);  // symbol sub-bitmap: only 0xF0 is used -> alphabet size 3
+        bits.writeBits(2, 3);        // totalTables = 2
+        bits.writeBits(1, 15);       // totalSelectors = 1
+        bits.writeBit(0);            // unary-coded selector index = 0
+        // Huffman code lengths 1, 2, 2 for RUNA, RUNB and the end of block symbol, for both tables.
+        for (int table = 0; table < 2; table++) {
+            bits.writeBits(1, 5);    // start_huffman_length = 1
+            bits.writeBit(0);        // RUNA: length 1
+            bits.writeBits(2, 2);    // increment length to 2
+            bits.writeBit(0);        // RUNB: length 2
+            bits.writeBit(0);        // end of block: length 2
+        }
+        // RUNA symbols (code 0), more than the single selector covers
+        for (int i = 0; i < 400; i++) {
+            bits.writeBit(0);
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        writeMedium(out, MAGIC_NUMBER);
+        out.write('1');              // block size digit
+        writeMedium(out, BLOCK_HEADER_MAGIC_1);
+        writeMedium(out, BLOCK_HEADER_MAGIC_2);
+        writeInt(out, 0);            // block CRC (irrelevant, the fault triggers earlier)
+        byte[] bitBytes = bits.toByteArray();
+        out.write(bitBytes, 0, bitBytes.length);
+        return out.toByteArray();
+    }
+
     private static void writeMedium(ByteArrayOutputStream out, int value) {
         out.write(value >>> 16);
         out.write(value >>> 8);

@@ -15,15 +15,11 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.LongObjectHashMap;
 
 import java.util.Arrays;
-
-import static io.netty.channel.uring.AbstractIoUringStreamChannel.IovBufferCollector.remainingIovs;
 
 /**
  * Retains buffers until their zero-copy notifications arrive.
@@ -114,37 +110,9 @@ final class PendingZeroCopyWrites {
         }
     }
 
-    static final class PendingWrite implements ChannelOutboundBuffer.MessageProcessor {
+    static final class PendingWrite {
         private ReferenceCounted[] references = new ReferenceCounted[1];
         private int count;
-        private int remaining;
-
-        void retain(ChannelOutboundBuffer buffer, int iovCount) {
-            if (iovCount == 0) {
-                return;
-            }
-            ByteBuf first = (ByteBuf) buffer.current();
-            if (buffer.size() == 1 || iovCount == 1 && first.isReadable()) {
-                add(first.retain());
-                return;
-            }
-            remaining = iovCount;
-            try {
-                buffer.forEachFlushedMessage(this);
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
-        }
-
-        @Override
-        public boolean processMessage(Object msg) {
-            ByteBuf buf = (ByteBuf) msg;
-            if (buf.isReadable()) {
-                add(buf.retain());
-                remaining = remainingIovs(buf, remaining);
-            }
-            return remaining != 0;
-        }
 
         void add(ReferenceCounted reference) {
             if (count == references.length) {

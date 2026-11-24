@@ -326,7 +326,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter,
                 apn, sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false, false, KeyStore.getDefaultType(),
-                null, EMPTY_MAP_ENTRY, null);
+                null, SessionIdContextBuilder.randomSessionIdContext(), EMPTY_MAP_ENTRY, null);
     }
 
     OpenSslServerContext(
@@ -335,11 +335,12 @@ public final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            SessionIdContextBuilder sessionIdContextBuilder,
             Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options, null);
+                enableOcsp, keyStore, resumptionController, sessionIdContextBuilder, options, null);
     }
 
     OpenSslServerContext(
@@ -348,12 +349,13 @@ public final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            SessionIdContextBuilder sessionIdContextBuilder,
             Map.Entry<SslContextOption<?>, Object>[] options,
             List<OpenSslCredential> credentials)
             throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options, credentials);
+                enableOcsp, keyStore, resumptionController, sessionIdContextBuilder, options, credentials);
     }
 
     @SuppressWarnings("deprecation")
@@ -363,6 +365,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            SessionIdContextBuilder sessionIdContextBuilder,
             Map.Entry<SslContextOption<?>, Object>[] options,
             List<OpenSslCredential> credentials)
             throws SSLException {
@@ -378,7 +381,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
                                                sessionCacheSize, sessionTimeout, resumptionController,
-                                               fallbackToJdkSignatureProviders);
+                                               sessionIdContextBuilder, fallbackToJdkSignatureProviders);
             success = true;
         } finally {
             if (!success) {

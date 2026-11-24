@@ -184,6 +184,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "bidiStreamsLeft");
     private volatile long bidiStreamsLeft;
 
+    // Whether the cached stream credits were refreshed from quiche at least once. Only updated
+    // and accessed from the event loop thread, so it needs no synchronization. Before the
+    // first refresh the caches are 0 even though the peer may have announced credits, so the
+    // fail-fast check in connectStream(...) must not fire yet; a rejected implicit open in
+    // that window is instead handled by rolling back the allocated stream id.
+    private boolean streamCreditsInitialized;
+
     private QuicheQuicChannel(Channel parent, boolean server, @Nullable ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
@@ -893,6 +900,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         streams.remove(streamId);
     }
 
+    // Package-private for testing.
+    boolean hasStream(long streamId) {
+        assert eventLoop().inEventLoop();
+        return streams.containsKey(streamId);
+    }
+
     boolean isStreamLocalCreated(long streamId) {
         return (streamId & 0x1) == (server ? 1 : 0);
     }
@@ -1574,6 +1587,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (!promise.setUncancellable()) {
                 return;
             }
+            // Fail fast without consuming a stream id when all credits are used. Otherwise a
+            // failed createStream(...) permanently consumes the id: quiche rejects the implicit
+            // open by stream id position and never returns it, so once ids are allocated past
+            // the peer's limit every future createStream(...) fails with STREAM_LIMIT_ERROR,
+            // even after MAX_STREAMS restored the limit, while peerAllowedStreams(...) keeps
+            // reporting capacity. Only trusted once the caches were refreshed from quiche;
+            // before that they are 0 even though the peer may have announced credits, so we
+            // fall through to quiche and let the rollback below handle a rejection.
+            if (streamCreditsInitialized && peerAllowedStreams(type) <= 0) {
+                promise.setFailure(Quiche.convertToException(Quiche.QUICHE_ERR_STREAM_LIMIT));
+                return;
+            }
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
 
             try {
@@ -1582,6 +1607,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     throw Quiche.convertToException(res);
                 }
             } catch (Exception e) {
+                // quiche rejected the implicit open before creating any state for the stream,
+                // so the id can safely be given back and must be, to not permanently consume
+                // it (only done for STREAM_LIMIT as other errors might have left state behind).
+                if (e instanceof QuicException &&
+                        ((QuicException) e).error() == QuicTransportError.STREAM_LIMIT_ERROR) {
+                    idGenerator.rollbackStreamId(streamId, type == QuicStreamType.BIDIRECTIONAL);
+                }
                 promise.setFailure(e);
                 return;
             }
@@ -1784,12 +1816,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     Quiche.quiche_conn_is_in_early_data(connAddr)) {
                 long uniLeftOld = uniStreamsLeft;
                 long bidiLeftOld = bidiStreamsLeft;
-                // Only fetch new stream info when we used all our credits
-                if (uniLeftOld == 0 || bidiLeftOld == 0) {
+                // Only fetch new stream info when we used all our credits. Also cover negative
+                // values: MAX_STREAMS can raise the peer's limit while the cached credits are
+                // still non-zero (this refresh only triggers once a direction hit 0), so the
+                // cache may lag behind quiche's real credits. createStream(...) then keeps
+                // succeeding on quiche's real credits while the cached count is decremented
+                // past zero, after which a == 0 check would never match again and the cached
+                // credits would be frozen below zero forever. The fail-fast check in
+                // connectStream(...) makes crossing zero impossible, so covering negatives
+                // here is a safety net that also recovers an already-negative cached value
+                // on the next received packet.
+                if (uniLeftOld <= 0 || bidiLeftOld <= 0) {
                     long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
                     long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
                     uniStreamsLeft = uniLeft;
                     bidiStreamsLeft = bidiLeft;
+                    streamCreditsInitialized = true;
                     if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
                         pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
                     }

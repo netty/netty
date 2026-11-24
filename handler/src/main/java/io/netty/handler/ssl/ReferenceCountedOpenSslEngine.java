@@ -126,6 +126,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     static final int MAX_RECORD_SIZE = SSL.SSL_MAX_RECORD_LENGTH;
 
+    /**
+     * Marks that {@code SSL_pending} was not queried yet. {@code SSL_pending} itself never returns a negative value.
+     */
+    private static final int SSL_PENDING_UNKNOWN = -1;
+
     private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
@@ -191,7 +196,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     };
 
-    private final Set<String> enabledProtocols = new LinkedHashSet<String>();
+    // Never modified once assigned, so an engine can share the array of its context until the user changes it.
+    private volatile String[] enabledProtocols;
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
@@ -351,7 +357,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     assert context.protocols != null;
                     hasTLSv13Cipher = context.hasTLSv13Cipher;
 
-                    setEnabledProtocols(context.protocols);
+                    enabledProtocols = context.enabledProtocols;
+                    setEnabledProtocols0(context.protocols, !hasTLSv13Cipher);
 
                     // Use SNI if peerHost was specified and a valid hostname
                     // See https://github.com/netty/netty/issues/4746
@@ -1248,7 +1255,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            int sslPending = sslPending0();
+            // SSL_pending is only needed when there is nothing to feed into the BIO or a destination buffer was
+            // filled, so it is fetched on demand to keep the JNI call out of the common path.
+            int sslPending = SSL_PENDING_UNKNOWN;
             int packetLength;
             // The JDK implies that only a single SSL packet should be processed per unwrap call [1]. If we are in
             // JDK compatibility mode then we should honor this, but if not we just wrap as much as possible. If there
@@ -1295,7 +1304,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // packet.
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
-            } else if (len == 0 && sslPending <= 0) {
+            } else if (len == 0 && (sslPending = sslPending0()) <= 0) {
                 return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             } else if (capacity == 0) {
                 return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
@@ -1320,6 +1329,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     final ByteBuf bioWriteCopyBuf;
                     int pendingEncryptedBytes;
                     if (remaining == 0) {
+                        if (sslPending == SSL_PENDING_UNKNOWN) {
+                            sslPending = sslPending0();
+                        }
                         if (sslPending <= 0) {
                             // We must skip empty buffers as BIO_write will return 0 if asked to write something
                             // with length 0.
@@ -1504,8 +1516,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
         // Avoid NPE: SSL.getHandshakeCount(ssl) must not be called if destroyed.
+        // Implementations without renegotiation support (BoringSSL, AWS-LC) never accept one as a server: the
+        // post-handshake record fails the read with SSL_R_NO_RENEGOTIATION inside the library, so there is
+        // nothing left to detect here.
         // TLS 1.3 forbids renegotiation by spec.
         if (destroyed || handshakeState != HandshakeState.FINISHED
+                || !clientMode && !OpenSsl.isRenegotiationSupported()
                 || SslProtocols.TLS_v1_3.equals(session.getProtocol())) {
             return;
         }
@@ -1793,7 +1809,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(enabledProtocols);
+                    Set<String> protocols = new HashSet<String>();
+                    Collections.addAll(protocols, enabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
@@ -1828,7 +1845,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledProtocols() {
-        return enabledProtocols.toArray(EMPTY_STRINGS);
+        return enabledProtocols.clone();
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1850,14 +1867,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final void setEnabledProtocols(String[] protocols) {
         checkNotNullWithIAE(protocols, "protocols");
         synchronized (this) {
-            enabledProtocols.clear();
-            // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
-            enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
-
-            Collections.addAll(enabledProtocols, protocols);
+            enabledProtocols = toEnabledProtocols(protocols);
 
             setEnabledProtocols0(protocols, !hasTLSv13Cipher);
         }
+    }
+
+    static String[] toEnabledProtocols(String[] protocols) {
+        Set<String> enabledProtocols = new LinkedHashSet<String>();
+        // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
+        enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
+
+        Collections.addAll(enabledProtocols, protocols);
+        return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
     private void setEnabledProtocols0(String[] protocols, boolean explicitDisableTLSv13) {
@@ -2483,6 +2505,46 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw new SSLException("Failed to get selected credential", e);
             }
         }
+    }
+
+    /**
+     * Returns whether the given credential was selected for this SSL connection. The credential must be added to this
+     * engine or its context. The result remains available after the handshake completes until this engine is shut down.
+     *
+     * @throws SSLException if an error occurs querying the selected credential.
+     */
+    public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
+        checkNotNull(credential, "credential");
+
+        if (destroyed || !(credential instanceof OpenSslCredentialPointer) || !containsCredential(credential)) {
+            return false;
+        }
+
+        try {
+            long selectedCredentialAddress = SSL.getSelectedCredential(ssl);
+            return selectedCredentialAddress != 0 &&
+                    ((OpenSslCredentialPointer) credential).credentialAddress() == selectedCredentialAddress;
+        } catch (Exception e) {
+            throw new SSLException("Failed to get selected credential", e);
+        }
+    }
+
+    private boolean containsCredential(OpenSslCredential credential) {
+        if (engineCredentials != null) {
+            for (OpenSslCredential configuredCredential : engineCredentials) {
+                if (configuredCredential == credential) {
+                    return true;
+                }
+            }
+        }
+
+        for (OpenSslCredential configuredCredential : parentContext.credentials) {
+            if (configuredCredential == credential) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static long bufferAddress(ByteBuffer b) {

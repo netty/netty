@@ -15,46 +15,43 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.logging.RecordingSlf4JLogger.LoggedEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+import org.slf4j.event.Level;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
 
 public class InternalLoggerFactoryTest {
     private static final Exception e = new Exception();
     private InternalLoggerFactory oldLoggerFactory;
-    private InternalLogger mockLogger;
+    private RecordingSlf4JLogger recorder;
+    private InternalLogger testLogger;
 
     @BeforeEach
     public void init() {
         oldLoggerFactory = InternalLoggerFactory.getDefaultFactory();
 
-        final InternalLoggerFactory mockFactory = mock(InternalLoggerFactory.class);
-        mockLogger = mock(InternalLogger.class);
-        when(mockFactory.newInstance("mock")).thenReturn(mockLogger);
-        InternalLoggerFactory.setDefaultFactory(mockFactory);
+        recorder = new RecordingSlf4JLogger("mock");
+        testLogger = new Slf4JLogger(recorder);
+        InternalLoggerFactory.setDefaultFactory(new InternalLoggerFactory() {
+            @Override
+            protected InternalLogger newInstance(String name) {
+                return "mock".equals(name) ? testLogger : null;
+            }
+        });
     }
 
     @AfterEach
     public void destroy() {
-        reset(mockLogger);
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
     }
 
     @Test
     public void shouldNotAllowNullDefaultFactory() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                InternalLoggerFactory.setDefaultFactory(null);
-            }
-        });
+        assertThrows(NullPointerException.class, () -> InternalLoggerFactory.setDefaultFactory(null));
     }
 
     @Test
@@ -66,123 +63,121 @@ public class InternalLoggerFactoryTest {
         InternalLogger one = InternalLoggerFactory.getInstance("helloWorld");
         InternalLogger two = InternalLoggerFactory.getInstance(helloWorld.getClass());
 
-        assertNotNull(one);
-        assertNotNull(two);
-        assertNotSame(one, two);
+        assertThat(one).isNotNull();
+        assertThat(two).isNotNull();
+        assertThat(one).isNotSameAs(two);
+    }
+
+    @Test
+    public void shouldGetInstanceFromDefaultFactory() {
+        assertThat(InternalLoggerFactory.getInstance("mock")).isSameAs(testLogger);
     }
 
     @Test
     public void testIsTraceEnabled() {
-        when(mockLogger.isTraceEnabled()).thenReturn(true);
-
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
-        assertTrue(logger.isTraceEnabled());
-        verify(mockLogger).isTraceEnabled();
+        assertThat(logger.isTraceEnabled()).isTrue();
     }
 
     @Test
     public void testIsDebugEnabled() {
-        when(mockLogger.isDebugEnabled()).thenReturn(true);
-
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
-        assertTrue(logger.isDebugEnabled());
-        verify(mockLogger).isDebugEnabled();
+        assertThat(logger.isDebugEnabled()).isTrue();
     }
 
     @Test
     public void testIsInfoEnabled() {
-        when(mockLogger.isInfoEnabled()).thenReturn(true);
-
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
-        assertTrue(logger.isInfoEnabled());
-        verify(mockLogger).isInfoEnabled();
+        assertThat(logger.isInfoEnabled()).isTrue();
     }
 
     @Test
     public void testIsWarnEnabled() {
-        when(mockLogger.isWarnEnabled()).thenReturn(true);
-
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
-        assertTrue(logger.isWarnEnabled());
-        verify(mockLogger).isWarnEnabled();
+        assertThat(logger.isWarnEnabled()).isTrue();
     }
 
     @Test
     public void testIsErrorEnabled() {
-        when(mockLogger.isErrorEnabled()).thenReturn(true);
-
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
-        assertTrue(logger.isErrorEnabled());
-        verify(mockLogger).isErrorEnabled();
+        assertThat(logger.isErrorEnabled()).isTrue();
     }
 
     @Test
     public void testTrace() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.trace("a");
-        verify(mockLogger).trace("a");
+        verifyLogged(Level.TRACE, null);
     }
 
     @Test
     public void testTraceWithException() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.trace("a", e);
-        verify(mockLogger).trace("a", e);
+        verifyLogged(Level.TRACE, e);
     }
 
     @Test
     public void testDebug() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.debug("a");
-        verify(mockLogger).debug("a");
+        verifyLogged(Level.DEBUG, null);
     }
 
     @Test
     public void testDebugWithException() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.debug("a", e);
-        verify(mockLogger).debug("a", e);
+        verifyLogged(Level.DEBUG, e);
     }
 
     @Test
     public void testInfo() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.info("a");
-        verify(mockLogger).info("a");
+        verifyLogged(Level.INFO, null);
     }
 
     @Test
     public void testInfoWithException() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.info("a", e);
-        verify(mockLogger).info("a", e);
+        verifyLogged(Level.INFO, e);
     }
 
     @Test
     public void testWarn() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.warn("a");
-        verify(mockLogger).warn("a");
+        verifyLogged(Level.WARN, null);
     }
 
     @Test
     public void testWarnWithException() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.warn("a", e);
-        verify(mockLogger).warn("a", e);
+        verifyLogged(Level.WARN, e);
     }
 
     @Test
     public void testError() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.error("a");
-        verify(mockLogger).error("a");
+        verifyLogged(Level.ERROR, null);
     }
 
     @Test
     public void testErrorWithException() {
         final InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.error("a", e);
-        verify(mockLogger).error("a", e);
+        verifyLogged(Level.ERROR, e);
+    }
+
+    private void verifyLogged(Level level, Throwable cause) {
+        assertThat(recorder.events()).hasSize(1);
+        LoggedEvent event = recorder.events().get(0);
+        assertThat(event.level).isEqualTo(level);
+        assertThat(event.message).isEqualTo("a");
+        assertThat(event.throwable).isSameAs(cause);
     }
 }

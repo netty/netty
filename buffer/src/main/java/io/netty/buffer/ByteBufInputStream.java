@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.ReferenceCounted;
@@ -174,6 +175,13 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
+        ObjectUtil.checkNotNull(b, "b");
+        if (isOutOfBounds(off, len, b.length)) {
+            throw new IndexOutOfBoundsException();
+        }
+        if (len == 0) {
+            return 0;
+        }
         int available = available();
         if (available == 0) {
             return -1;

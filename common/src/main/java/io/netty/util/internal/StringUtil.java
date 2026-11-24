@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -38,10 +37,6 @@ public final class StringUtil {
     public static final char TAB = '\t';
     public static final char SPACE = 0x20;
 
-    private static final String[] BYTE2HEX_PAD = new String[256];
-    private static final String[] BYTE2HEX_NOPAD = new String[256];
-    private static final byte[] HEX2B;
-
     /**
      * 2 - Quote character at beginning and end.
      * 5 - Extra allowance for anticipated escape characters that may be added.
@@ -49,40 +44,61 @@ public final class StringUtil {
     private static final int CSV_NUMBER_ESCAPE_CHARACTERS = 2 + 5;
     private static final char PACKAGE_SEPARATOR_CHAR = '.';
 
-    static {
-        // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
-        for (int i = 0; i < BYTE2HEX_PAD.length; i++) {
-            String str = Integer.toHexString(i);
-            BYTE2HEX_PAD[i] = i > 0xf ? str : ('0' + str);
-            BYTE2HEX_NOPAD[i] = str;
+    /**
+     * Lazily initialized byte to hexadecimal string tables. {@link StringUtil} is loaded very early by most Netty
+     * applications, through {@link #simpleClassName(Class)} and friends, while these tables are only needed for hex
+     * dumps, so they are kept in a holder to not pay for the 512 strings at startup.
+     */
+    private static final class Byte2Hex {
+        static final String[] PAD = new String[256];
+        static final String[] NOPAD = new String[256];
+
+        static {
+            // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
+            for (int i = 0; i < PAD.length; i++) {
+                String str = Integer.toHexString(i);
+                PAD[i] = i > 0xf ? str : ('0' + str);
+                NOPAD[i] = str;
+            }
         }
-        // Generate the lookup table that converts an hex char into its decimal value:
+    }
+
+    /**
+     * Lazily initialized hexadecimal digit to value table, kept separate from {@link Byte2Hex} so that decoding
+     * (used for instance to parse the machine id) does not pay for the byte to string tables.
+     * <p>
+     * The table stores {@code value + 1}: a zero entry means "not a hex digit", so the zero-filled array needs no
+     * {@code Arrays.fill} pass over its 64 KiB, which is costly when run by the interpreter at startup.
+     */
+    private static final class Hex2B {
         // the size of the table is such that the JVM is capable of save any bounds-check
         // if a char type is used as an index.
-        HEX2B = new byte[Character.MAX_VALUE + 1];
-        Arrays.fill(HEX2B, (byte) -1);
-        HEX2B['0'] = 0;
-        HEX2B['1'] = 1;
-        HEX2B['2'] = 2;
-        HEX2B['3'] = 3;
-        HEX2B['4'] = 4;
-        HEX2B['5'] = 5;
-        HEX2B['6'] = 6;
-        HEX2B['7'] = 7;
-        HEX2B['8'] = 8;
-        HEX2B['9'] = 9;
-        HEX2B['A'] = 10;
-        HEX2B['B'] = 11;
-        HEX2B['C'] = 12;
-        HEX2B['D'] = 13;
-        HEX2B['E'] = 14;
-        HEX2B['F'] = 15;
-        HEX2B['a'] = 10;
-        HEX2B['b'] = 11;
-        HEX2B['c'] = 12;
-        HEX2B['d'] = 13;
-        HEX2B['e'] = 14;
-        HEX2B['f'] = 15;
+        static final byte[] TABLE = new byte[Character.MAX_VALUE + 1];
+
+        static {
+            TABLE['0'] = 1;
+            TABLE['1'] = 2;
+            TABLE['2'] = 3;
+            TABLE['3'] = 4;
+            TABLE['4'] = 5;
+            TABLE['5'] = 6;
+            TABLE['6'] = 7;
+            TABLE['7'] = 8;
+            TABLE['8'] = 9;
+            TABLE['9'] = 10;
+            TABLE['A'] = 11;
+            TABLE['B'] = 12;
+            TABLE['C'] = 13;
+            TABLE['D'] = 14;
+            TABLE['E'] = 15;
+            TABLE['F'] = 16;
+            TABLE['a'] = 11;
+            TABLE['b'] = 12;
+            TABLE['c'] = 13;
+            TABLE['d'] = 14;
+            TABLE['e'] = 15;
+            TABLE['f'] = 16;
+        }
     }
 
     private StringUtil() {
@@ -131,7 +147,7 @@ public final class StringUtil {
      * Converts the specified byte value into a 2-digit hexadecimal integer.
      */
     public static String byteToHexStringPadded(int value) {
-        return BYTE2HEX_PAD[value & 0xff];
+        return Byte2Hex.PAD[value & 0xff];
     }
 
     /**
@@ -182,7 +198,7 @@ public final class StringUtil {
      * Converts the specified byte value into a hexadecimal integer.
      */
     public static String byteToHexString(int value) {
-        return BYTE2HEX_NOPAD[value & 0xff];
+        return Byte2Hex.NOPAD[value & 0xff];
     }
 
     /**
@@ -255,7 +271,7 @@ public final class StringUtil {
     public static int decodeHexNibble(final char c) {
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        return HEX2B[c];
+        return Hex2B.TABLE[c] - 1;
     }
 
     /**
@@ -268,7 +284,7 @@ public final class StringUtil {
     public static int decodeHexNibble(final byte b) {
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        return HEX2B[b & 0xFF];
+        return Hex2B.TABLE[b & 0xFF] - 1;
     }
 
     /**

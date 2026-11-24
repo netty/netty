@@ -27,6 +27,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.BouncyCastleUtil;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.SecureObjectIdentityHash;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -34,35 +35,6 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.security.AlgorithmParameters;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyException;
-import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.Provider;
-import java.security.SecureRandom;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executor;
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.NoSuchPaddingException;
@@ -78,6 +50,31 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.AlgorithmParameters;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyException;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
@@ -119,11 +116,6 @@ public abstract class SslContext {
      */
     protected static final String defaultEndpointVerificationAlgorithm;
 
-    // Used to derive the session_id_context of server contexts, see deriveSessionIdContext(...).
-    private static final SecureRandom SESSION_ID_CONTEXT_SALT_GENERATOR = new SecureRandom();
-    private static final String SESSION_ID_CONTEXT_DOMAIN_SEPARATOR = "netty-server-session-id-context-v1";
-    // Needs to be at most SSL_MAX_SID_CTX_LENGTH (32) bytes, which is exactly the size of a SHA-256 digest.
-    private static final int SESSION_ID_CONTEXT_SALT_LENGTH = 32;
     static final String ALIAS = "key";
 
     static final CertificateFactory X509_CERT_FACTORY;
@@ -398,7 +390,8 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(provider, null, null, certChainFile, keyFile, keyPassword, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType(),
+                SessionIdContextBuilder.randomSessionIdContext());
     }
 
     /**
@@ -443,7 +436,8 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(provider, trustCertCollectionFile, trustManagerFactory, keyCertChainFile,
                 keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType(),
+                SessionIdContextBuilder.randomSessionIdContext());
     }
 
     /**
@@ -484,14 +478,15 @@ public abstract class SslContext {
             File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, String keyStore,
+            SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         try {
             return newServerContextInternal(provider, null, toX509Certificates(trustCertCollectionFile),
                                             trustManagerFactory, toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
                                             sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
-                                            false, false, null, keyStore, null, null);
+                                            false, false, null, keyStore, null, null, sessionIdContextBuilder);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -509,7 +504,7 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, SecureRandom secureRandom, String keyStoreType,
             Map.Entry<SslContextOption<?>, Object>[] ctxOptions,
-            List<OpenSslCredential> credentials)
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder)
             throws SSLException {
 
         if (provider == null) {
@@ -537,15 +532,15 @@ public abstract class SslContext {
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
-                    credentials);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController,
+                    sessionIdContextBuilder, ctxOptions, credentials);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
-                    credentials);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController,
+                    sessionIdContextBuilder, ctxOptions, credentials);
         default:
             throw new Error("Unexpected provider: " + provider);
         }
@@ -864,7 +859,8 @@ public abstract class SslContext {
                                             apn, null, sessionCacheSize, sessionTimeout, false,
                                             null, KeyStore.getDefaultType(),
                                             defaultEndpointVerificationAlgorithm,
-                                            Collections.emptyList(), null, null);
+                                            Collections.emptyList(), null, null,
+                                            SessionIdContextBuilder.randomSessionIdContext());
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -883,11 +879,11 @@ public abstract class SslContext {
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>[] options,
-            List<OpenSslCredential> credentials) throws SSLException {
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         return newClientContextInternal(provider, sslContextProvider, trustCert, trustManagerFactory, keyCertChain, key,
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                 false, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm, serverNames, options,
-                credentials);
+                credentials, sessionIdContextBuilder);
     }
 
     static SslContext newClientContextInternal(
@@ -900,7 +896,7 @@ public abstract class SslContext {
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>[] options,
-            List<OpenSslCredential> credentials) throws SSLException {
+            List<OpenSslCredential> credentials, SessionIdContextBuilder sessionIdContextBuilder) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -1478,51 +1474,19 @@ public abstract class SslContext {
      *                           contexts behave the same, a random salt is mixed in so the result is unique to the
      *                           context.
      * @return                   at most 32 bytes that are suitable to be used as {@code session_id_context}.
+     * @deprecated               Deprecated in favor of the {@link SessionIdContextBuilder}.
      */
+    @Deprecated
     @UnstableApi
     protected static byte[] deriveSessionIdContext(ClientAuth clientAuth, X509Certificate[] keyCertChain,
                                                    X509Certificate[] trustCertCollection, boolean opaque) {
-        final MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            // Every Java implementation is required to support SHA-256.
-            throw new IllegalStateException(e);
+        if (opaque) {
+            return SessionIdContextBuilder.randomSessionIdContext().build();
         }
-        updateDigest(digest, SESSION_ID_CONTEXT_DOMAIN_SEPARATOR.getBytes(StandardCharsets.US_ASCII));
-        updateDigest(digest, clientAuth.name().getBytes(StandardCharsets.US_ASCII));
-        boolean salted = opaque;
-        try {
-            updateDigest(digest, keyCertChain);
-            updateDigest(digest, trustCertCollection);
-        } catch (CertificateEncodingException e) {
-            salted = true;
-        }
-        if (salted) {
-            byte[] salt = new byte[SESSION_ID_CONTEXT_SALT_LENGTH];
-            SESSION_ID_CONTEXT_SALT_GENERATOR.nextBytes(salt);
-            updateDigest(digest, salt);
-        } else {
-            updateDigest(digest, EmptyArrays.EMPTY_BYTES);
-        }
-        return digest.digest();
-    }
-
-    private static void updateDigest(MessageDigest digest, X509Certificate[] certificates)
-            throws CertificateEncodingException {
-        if (certificates == null) {
-            digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(-1).array());
-            return;
-        }
-        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(certificates.length).array());
-        for (X509Certificate certificate : certificates) {
-            updateDigest(digest, certificate.getEncoded());
-        }
-    }
-
-    // Every field is prefixed with its length so different inputs can never produce the same byte sequence.
-    private static void updateDigest(MessageDigest digest, byte[] bytes) {
-        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array());
-        digest.update(bytes);
+        return new SessionIdContextBuilder(new SecureObjectIdentityHash())
+            .setClientAuth(clientAuth)
+            .setKeyCertificateChain(keyCertChain)
+            .setTrustedCertificates(trustCertCollection)
+            .build();
     }
 }

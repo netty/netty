@@ -57,7 +57,7 @@ public class DefaultHttp2HeadersEncoder implements
      * for testing but violate the RFC if used outside the scope of testing.
      */
     DefaultHttp2HeadersEncoder(SensitivityDetector sensitivityDetector, HpackEncoder hpackEncoder) {
-        this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitiveDetector");
+        this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitivityDetector");
         this.hpackEncoder = checkNotNull(hpackEncoder, "hpackEncoder");
     }
 

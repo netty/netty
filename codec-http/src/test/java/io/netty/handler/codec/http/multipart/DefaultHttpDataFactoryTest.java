@@ -22,12 +22,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.io.File;
+import java.nio.file.Path;
 
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -70,6 +77,29 @@ public class DefaultHttpDataFactoryTest {
         assertEquals(dir, DiskFileUpload.class.cast(fu).getBaseDirectory());
         assertTrue(DiskAttribute.class.cast(attr).deleteOnExit());
         assertTrue(DiskFileUpload.class.cast(fu).deleteOnExit());
+    }
+
+    @ParameterizedTest(name = "withInitialValue={0}")
+    @ValueSource(booleans = { true, false })
+    public void customBaseDirUsedForAttributeFile(boolean withInitialValue, @TempDir Path directory) throws Exception {
+        factory = new DefaultHttpDataFactory(true);
+        factory.setBaseDir(directory.toString());
+        final Attribute attribute;
+        if (withInitialValue) {
+            attribute = factory.createAttribute(req1, "attribute", "value");
+        } else {
+            attribute = factory.createAttribute(req1, "attribute");
+            attribute.setValue("value");
+        }
+
+        final File file = attribute.getFile();
+        assertThat(attribute.getValue()).isEqualTo("value");
+        assertThat(file.toPath().toRealPath().getParent())
+                .as("attribute file must be created in the configured base directory")
+                .isEqualTo(directory.toRealPath());
+
+        factory.cleanRequestHttpData(req1);
+        assertThat(file).doesNotExist();
     }
 
     @Test
