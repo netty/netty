@@ -504,6 +504,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private long schedulePollAdd(int ioMask, int mask, boolean multishot, short opsId) {
         assert (ioState & ioMask) == 0;
+        if (delayedClose != null) {
+            // A pending close has already cancelled the polls, so nothing would cancel a new one, and it would keep
+            // the socket open after its fd is closed.
+            return 0;
+        }
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
@@ -992,7 +997,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private void pollRdHup(int res) {
             ioState &= ~POLL_RDHUP_SCHEDULED;
             pollRdhupId = 0;
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            // Only a positive result is a mask of events. This is the same check as for a POLLRDHUP that another poll
+            // reported, and it skips -ECANCELED and any other error.
+            if (res <= 0) {
                 return;
             }
             handleRdHup();
