@@ -202,6 +202,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop {
     protected void run() {
         assert inEventLoop();
         ioHandler.initialize();
+        boolean preparedToDestroy = false;
         do {
             final int ioRatio = this.ioRatio;
             final long taskQuantumNs;
@@ -222,8 +223,12 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop {
                     taskQuantumNs = quantum;
                 }
             }
-            if (isShuttingDown()) {
+            if (!preparedToDestroy && isShuttingDown()) {
+                // Only call this once: confirmShutdown() keeps returning false for the whole quiet period, so we
+                // would otherwise call it on every iteration. Registrations after this point are rejected in
+                // registerForIo0, so a second call has nothing left to close.
                 ioHandler.prepareToDestroy();
+                preparedToDestroy = true;
             }
             // Now run tasks for the computed amount of time before trying to run IO again.
             runAllTasks(taskQuantumNs);
@@ -231,11 +236,18 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop {
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
 
-        if (isShuttingDown()) {
-            // confirmShutdown() can return true without prepareToDestroy() having run after the last registration,
-            // for example when shutdownGracefully(0, ...) is called while tasks are running. Close everything that is
-            // still registered now. The resulting close callbacks are run by the remaining confirmShutdown() calls of
+        if (isShuttingDown() && !preparedToDestroy) {
+            // confirmShutdown() can return true without prepareToDestroy() having run, for example when
+            // shutdownGracefully(0, ...) is called while tasks are running. Close everything that is still registered
+            // now. The resulting close callbacks are run by the remaining confirmShutdown() calls of
             // SingleThreadEventExecutor. Registrations that run after this point are rejected in registerForIo0.
+            //
+            // Only do this if prepareToDestroy() did not run in the loop above: once it ran, the shutdown had started,
+            // so registerForIo0 rejected every later registration and nothing new can be left to close. Calling it a
+            // second time is not safe for every IoHandler. IoUringIoHandler writes to its eventfd in
+            // prepareToDestroy(), and a second write whose read completion is never reaped lets the kernel copy into
+            // the eventfd read buffer after destroy() freed it.
+            // See https://github.com/netty/netty/issues/18483
             ioHandler.prepareToDestroy();
         }
     }
