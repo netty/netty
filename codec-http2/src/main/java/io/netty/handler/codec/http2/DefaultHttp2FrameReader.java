@@ -441,7 +441,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 // Stream dependencies are deprecated in RFC 9113 but this behavior is defined in
                 // https://datatracker.ietf.org/doc/html/rfc7540#section-5.3.1 which says this must be treated as a
                 // stream error of type PROTOCOL_ERROR. However, because we will not process the payload, a stream
-                // error would result in HPACK corruption. Therefor, it is elevated to a connection error.
+                // error would result in HPACK corruption. Therefore, it is elevated to a connection error.
                 throw connectionError(
                         PROTOCOL_ERROR, "HEADERS frame for stream %d cannot depend on itself.", streamId);
             }

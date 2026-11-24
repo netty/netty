@@ -102,7 +102,7 @@ public final class LazyJavaxX509Certificate extends X509Certificate {
     }
 
     /**
-     * Return the underyling {@code byte[]} without cloning it first. This {@code byte[]} <strong>must</strong> never
+     * Return the underlying {@code byte[]} without cloning it first. This {@code byte[]} <strong>must</strong> never
      * be mutated.
      */
     byte[] getBytes() {

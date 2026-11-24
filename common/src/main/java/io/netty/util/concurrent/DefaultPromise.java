@@ -40,7 +40,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * listener notifications prompt other listeners to be notified.
      * <p>
      * When the reentrancy/recursion level becomes greater than this number, a new task will instead be scheduled
-     * on the event loop, to finish notifying any subsequent listners.
+     * on the event loop, to finish notifying any subsequent listeners.
      * <p>
      * The default value is {@code 8}.
      */
