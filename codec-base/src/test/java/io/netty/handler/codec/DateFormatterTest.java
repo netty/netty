@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import static io.netty.handler.codec.DateFormatter.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -132,7 +133,7 @@ public class DateFormatterTest {
 
     @Test
     public void testParseLastDayOfMonth() {
-        Calendar cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         cal.clear();
         cal.set(2016, Calendar.FEBRUARY, 29, 8, 49, 37);
         assertEquals(cal.getTime(), parseHttpDate("Mon, 29 Feb 2016 08:49:37 GMT"));
