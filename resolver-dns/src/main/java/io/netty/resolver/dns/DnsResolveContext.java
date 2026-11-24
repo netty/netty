@@ -68,6 +68,9 @@ import static java.lang.Math.min;
 
 abstract class DnsResolveContext<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolveContext.class);
+
+    // The zone name servers we were configured with are trusted for, which is everything.
+    private static final String ROOT_ZONE = ".";
     private static final String PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
             "io.netty.resolver.dns.tryCnameOnAddressLookups";
     static boolean TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
@@ -372,15 +375,16 @@ abstract class DnsResolveContext<T> {
         }
 
         try {
-            DnsServerAddressStream nameServerAddressStream = getNameServers(name);
+            NameServers nameServers = getNameServers(name);
 
             final int end = expectedTypes.length - 1;
             for (int i = 0; i < end; ++i) {
-                if (!query(name, expectedTypes[i], nameServerAddressStream.duplicate(), false, promise)) {
+                if (!query(name, expectedTypes[i], nameServers.stream.duplicate(), nameServers.zone, false,
+                        promise)) {
                     return;
                 }
             }
-            query(name, expectedTypes[end], nameServerAddressStream, false, promise);
+            query(name, expectedTypes[end], nameServers.stream, nameServers.zone, false, promise);
         } finally {
             // Now flush everything we submitted before for the Channel.
             channel.flush();
@@ -388,10 +392,10 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
-     * Returns the {@link DnsServerAddressStream} that was cached for the given hostname or {@code null} if non
-     *  could be found.
+     * Returns the {@link DnsServerAddressStream} (and the zone it is authoritative for) that was cached for the
+     * given hostname or {@code null} if non could be found.
      */
-    private DnsServerAddressStream getNameServersFromCache(String hostname) {
+    private NameServers getNameServersFromCache(String hostname) {
         int len = hostname.length();
 
         if (len == 0) {
@@ -426,12 +430,15 @@ abstract class DnsResolveContext<T> {
             if (entries != null) {
                 // The returned List may contain unresolved InetSocketAddress instances that will be
                 // resolved on the fly in query(....).
-                return entries;
+                //
+                // The cached servers are authoritative for the zone we found them under.
+                return new NameServers(entries, hostname.toLowerCase(Locale.US));
             }
         }
     }
 
     private void query(final DnsServerAddressStream nameServerAddrStream,
+                       final String zone,
                        final int nameServerAddrStreamIndex,
                        final DnsQuestion question,
                        final DnsQueryLifecycleObserver queryLifecycleObserver,
@@ -440,8 +447,8 @@ abstract class DnsResolveContext<T> {
                        final Throwable cause) {
         if (completeEarly || nameServerAddrStreamIndex >= nameServerAddrStream.size() ||
                 allowedQueries == 0 || originalPromise.isCancelled() || promise.isCancelled()) {
-            tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
-                               promise, cause);
+            tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
+                               queryLifecycleObserver, promise, cause);
             return;
         }
 
@@ -449,8 +456,8 @@ abstract class DnsResolveContext<T> {
 
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
         if (nameServerAddr.isUnresolved()) {
-            queryUnresolvedNameServer(nameServerAddr, nameServerAddrStream, nameServerAddrStreamIndex, question,
-                                      queryLifecycleObserver, promise, cause);
+            queryUnresolvedNameServer(nameServerAddr, nameServerAddrStream, zone, nameServerAddrStreamIndex,
+                                      question, queryLifecycleObserver, promise, cause);
             return;
         }
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
@@ -502,7 +509,7 @@ abstract class DnsResolveContext<T> {
                         feedbackNameServerAddrStream.feedbackSuccess(nameServerAddr,
                                 System.nanoTime() - queryStartTimeNanos);
                     }
-                    onResponse(nameServerAddrStream, nameServerAddrStreamIndex, question, future.getNow(),
+                    onResponse(nameServerAddrStream, zone, nameServerAddrStreamIndex, question, future.getNow(),
                                queryLifecycleObserver, promise);
                 } else {
                     // Server did not respond or I/O error occurred; try again.
@@ -513,11 +520,11 @@ abstract class DnsResolveContext<T> {
                                 System.nanoTime() - queryStartTimeNanos);
                     }
                     queryLifecycleObserver.queryFailed(queryCause);
-                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                    query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
                           newDnsQueryLifecycleObserver(question), true, promise, queryCause);
                 }
             } finally {
-                tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
+                tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
                                    // queryLifecycleObserver has already been terminated at this point so we must
                                    // not allow it to be terminated again by tryToFinishResolve.
                                    NoopDnsQueryLifecycleObserver.INSTANCE,
@@ -528,6 +535,7 @@ abstract class DnsResolveContext<T> {
 
     private void queryUnresolvedNameServer(final InetSocketAddress nameServerAddr,
                                            final DnsServerAddressStream nameServerAddrStream,
+                                           final String zone,
                                            final int nameServerAddrStreamIndex,
                                            final DnsQuestion question,
                                            final DnsQueryLifecycleObserver queryLifecycleObserver,
@@ -550,11 +558,11 @@ abstract class DnsResolveContext<T> {
                 List<InetAddress> resolvedAddresses = future.getNow();
                 DnsServerAddressStream addressStream = new CombinedDnsServerAddressStream(
                         nameServerAddr, resolvedAddresses, nameServerAddrStream);
-                query(addressStream, nameServerAddrStreamIndex, question,
+                query(addressStream, zone, nameServerAddrStreamIndex, question,
                       queryLifecycleObserver, true, promise, cause);
             } else {
                 // Ignore the server and try the next one...
-                query(nameServerAddrStream, nameServerAddrStreamIndex + 1,
+                query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1,
                       question, queryLifecycleObserver, true, promise, cause);
             }
         });
@@ -613,15 +621,16 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private void onResponse(final DnsServerAddressStream nameServerAddrStream, final int nameServerAddrStreamIndex,
-                            final DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
+    private void onResponse(final DnsServerAddressStream nameServerAddrStream, final String zone,
+                            final int nameServerAddrStreamIndex, final DnsQuestion question,
+                            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
                             final DnsQueryLifecycleObserver queryLifecycleObserver,
                             Promise<List<T>> promise) {
         try {
             final DnsResponse res = envelope.content();
             final DnsResponseCode code = res.code();
             if (code == DnsResponseCode.NOERROR) {
-                if (handleRedirect(question, envelope, queryLifecycleObserver, promise)) {
+                if (handleRedirect(question, zone, envelope, queryLifecycleObserver, promise)) {
                     // Was a redirect so return here as everything else is handled in handleRedirect(...)
                     return;
                 }
@@ -647,7 +656,7 @@ abstract class DnsResolveContext<T> {
 
             // Retry with the next server if the server did not tell us that the domain does not exist.
             if (code != DnsResponseCode.NXDOMAIN) {
-                query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
                       queryLifecycleObserver.queryNoAnswer(code), true, promise, cause(code));
             } else {
                 queryLifecycleObserver.queryFailed(NXDOMAIN_QUERY_FAILED_EXCEPTION);
@@ -671,11 +680,11 @@ abstract class DnsResolveContext<T> {
                 //                ....
                 //                ....
                 if (!res.isAuthoritativeAnswer()) {
-                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                    query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
                             newDnsQueryLifecycleObserver(question), true, promise, cause(code));
                 } else {
                     // Failed with NX cause - distinction between NXDOMAIN vs a timeout
-                    tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
+                    tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
                             queryLifecycleObserver, promise, NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION);
                 }
             }
@@ -688,13 +697,13 @@ abstract class DnsResolveContext<T> {
      * Handles a redirect answer if needed and returns {@code true} if a redirect query has been made.
      */
     private boolean handleRedirect(
-            DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
+            DnsQuestion question, String zone, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
             final DnsQueryLifecycleObserver queryLifecycleObserver, Promise<List<T>> promise) {
         final DnsResponse res = envelope.content();
 
         // Check if we have answers, if not this may be an non authority NS and so redirects must be handled.
         if (res.count(DnsSection.ANSWER) == 0) {
-            AuthoritativeNameServerList serverNames = extractAuthoritativeNameServers(question.name(), res);
+            AuthoritativeNameServerList serverNames = extractAuthoritativeNameServers(question.name(), zone, res);
             if (serverNames != null) {
                 int additionalCount = res.count(DnsSection.ADDITIONAL);
 
@@ -717,12 +726,25 @@ abstract class DnsResolveContext<T> {
 
                 List<InetSocketAddress> addresses = serverNames.addressList();
 
+                String redirectZone = serverNames.zone();
+                DnsServerAddressStream cached = parent.authoritativeDnsServerCache().get(question.name());
+                if (cached != null && cached.size() != 0) {
+                    // By default newRedirectDnsServerStream(...) will not use the servers of the referral but the
+                    // ones we have cached for the question name. These are only authoritative for the question name
+                    // itself, so we must not trust them for the (possibly wider) zone of the referral.
+                    //
+                    // We must look at the same cache as newRedirectDnsServerStream(...), which is the one of the
+                    // parent and not authoritativeDnsServerCache(). The latter never returns anything while we
+                    // resolve the address of a name server we got no glue for.
+                    redirectZone = question.name().toLowerCase(Locale.US);
+                }
+
                 // Give the user the chance to sort or filter the used servers for the query.
                 DnsServerAddressStream serverStream = parent.newRedirectDnsServerStream(
                         question.name(), addresses);
 
                 if (serverStream != null) {
-                    query(serverStream, 0, question,
+                    query(serverStream, redirectZone, 0, question,
                           queryLifecycleObserver.queryRedirected(new DnsAddressStreamList(serverStream)),
                           true, promise, null);
                     return true;
@@ -801,13 +823,14 @@ abstract class DnsResolveContext<T> {
      * Returns the {@code {@link AuthoritativeNameServerList} which were included in {@link DnsSection#AUTHORITY}
      * or {@code null} if non are found.
      */
-    private static AuthoritativeNameServerList extractAuthoritativeNameServers(String questionName, DnsResponse res) {
+    private static AuthoritativeNameServerList extractAuthoritativeNameServers(
+            String questionName, String zone, DnsResponse res) {
         int authorityCount = res.count(DnsSection.AUTHORITY);
         if (authorityCount == 0) {
             return null;
         }
 
-        AuthoritativeNameServerList serverNames = new AuthoritativeNameServerList(questionName);
+        AuthoritativeNameServerList serverNames = new AuthoritativeNameServerList(questionName, zone);
         for (int i = 0; i < authorityCount; i++) {
             serverNames.add(res.recordAt(DnsSection.AUTHORITY, i));
         }
@@ -1026,6 +1049,7 @@ abstract class DnsResolveContext<T> {
     }
 
     private void tryToFinishResolve(final DnsServerAddressStream nameServerAddrStream,
+                                    final String zone,
                                     final int nameServerAddrStreamIndex,
                                     final DnsQuestion question,
                                     final DnsQueryLifecycleObserver queryLifecycleObserver,
@@ -1047,11 +1071,11 @@ abstract class DnsResolveContext<T> {
                 if (queryLifecycleObserver == NoopDnsQueryLifecycleObserver.INSTANCE) {
                     // If the queryLifecycleObserver has already been terminated we should create a new one for this
                     // fresh query.
-                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                    query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
                           newDnsQueryLifecycleObserver(question), true, promise, cause);
                 } else {
-                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question, queryLifecycleObserver,
-                          true, promise, cause);
+                    query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
+                          queryLifecycleObserver, true, promise, cause);
                 }
                 return;
             }
@@ -1080,7 +1104,8 @@ abstract class DnsResolveContext<T> {
                     // As the last resort, try to query CNAME, just in case the name server has it.
                     triedCNAME = true;
 
-                    query(hostname, DnsRecordType.CNAME, getNameServers(hostname), true, promise);
+                    NameServers nameServers = getNameServers(hostname);
+                    query(hostname, DnsRecordType.CNAME, nameServers.stream, nameServers.zone, true, promise);
                     return;
                 }
             }
@@ -1176,39 +1201,56 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private DnsServerAddressStream getNameServers(String name) {
-        DnsServerAddressStream stream = getNameServersFromCache(name);
-        if (stream == null) {
+    private NameServers getNameServers(String name) {
+        NameServers nameServers = getNameServersFromCache(name);
+        if (nameServers == null) {
             // We need to obtain a new stream from the parent DnsNameResolver if the hostname is not the same as
             // for the original query (for example we may follow CNAMEs). Otherwise let's just duplicate the
-            // original nameservers so we correctly update the internal index
+            // original nameservers so we correctly update the internal index.
+            //
+            // These are the servers we were configured with, so we trust them for the whole namespace.
             if (name.equals(hostname)) {
-                return nameServerAddrs.duplicate();
+                return new NameServers(nameServerAddrs.duplicate(), ROOT_ZONE);
             }
-            return parent.newNameServerAddressStream(name);
+            return new NameServers(parent.newNameServerAddressStream(name), ROOT_ZONE);
         }
-        return stream;
+        return nameServers;
+    }
+
+    /**
+     * A {@link DnsServerAddressStream} together with the zone the contained name servers are authoritative for.
+     * Responses from these servers may only be trusted (and cached) for names inside of this zone, see
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2181#section-5.4.1">RFC 2181 section 5.4.1</a>.
+     */
+    private static final class NameServers {
+        final DnsServerAddressStream stream;
+        final String zone;
+
+        NameServers(DnsServerAddressStream stream, String zone) {
+            this.stream = stream;
+            this.zone = zone;
+        }
     }
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
         final DnsQuestion cnameQuestion;
-        final DnsServerAddressStream stream;
+        final NameServers nameServers;
         try {
             cname = cnameResolveFromCache(cnameCache(), cname);
-            stream = getNameServers(cname);
+            nameServers = getNameServers(cname);
             cnameQuestion = new DefaultDnsQuestion(cname, question.type(), dnsClass);
         } catch (Throwable cause) {
             queryLifecycleObserver.queryFailed(cause);
             PlatformDependent.throwException(cause);
             return;
         }
-        query(stream, 0, cnameQuestion, queryLifecycleObserver.queryCNAMEd(cnameQuestion),
-              true, promise, null);
+        query(nameServers.stream, nameServers.zone, 0, cnameQuestion,
+              queryLifecycleObserver.queryCNAMEd(cnameQuestion), true, promise, null);
     }
 
     private boolean query(String hostname, DnsRecordType type, DnsServerAddressStream dnsServerAddressStream,
-                          boolean flush, Promise<List<T>> promise) {
+                          String zone, boolean flush, Promise<List<T>> promise) {
         final DnsQuestion question;
         try {
             question = new DefaultDnsQuestion(hostname, type, dnsClass);
@@ -1219,7 +1261,8 @@ abstract class DnsResolveContext<T> {
                     type + ']', cause));
             return false;
         }
-        query(dnsServerAddressStream, 0, question, newDnsQueryLifecycleObserver(question), flush, promise, null);
+        query(dnsServerAddressStream, zone, 0, question, newDnsQueryLifecycleObserver(question), flush, promise,
+              null);
         return true;
     }
 
@@ -1276,13 +1319,27 @@ abstract class DnsResolveContext<T> {
 
         private final String questionName;
 
+        // The zone the server that sent us the response is authoritative for. We must only trust (and cache) NS
+        // records for this zone and its subzones.
+        private final String zone;
+
         // We not expect the linked-list to be very long so a double-linked-list is overkill.
         private AuthoritativeNameServer head;
 
         private int nameServerCount;
 
-        AuthoritativeNameServerList(String questionName) {
+        AuthoritativeNameServerList(String questionName, String zone) {
             this.questionName = questionName.toLowerCase(Locale.US);
+            this.zone = zone;
+        }
+
+        /**
+         * Returns the zone the name servers we will be redirected to are authoritative for. This is the owner of the
+         * closest delegation, or the zone of the server that sent us the response if the delegation was not within
+         * it, so a bogus referral can never widen what we trust.
+         */
+        String zone() {
+            return head != null && isWithinZone(head.domainName, zone) ? head.domainName : zone;
         }
 
         void add(DnsRecord r) {
@@ -1430,15 +1487,22 @@ abstract class DnsResolveContext<T> {
             if (server.isRootServer()) {
                 return;
             }
-            // Bailiwick check (RFC 2181 §5.4.1): only cache a nameserver entry when its zone
-            // equals the question name or is a subdomain of it. A server that is authoritative
-            // for a child zone must not be trusted to supply authoritative NS records for a
-            // parent zone, which would allow cache poisoning of the parent.
-            if (!server.domainName.equals(questionName) &&
-                    !server.domainName.endsWith("." + questionName)) {
+            // Bailiwick check (RFC 2181 §5.4.1): only cache a nameserver entry when the zone it delegates is
+            // the zone of the server that sent it, or one below it. A server that is authoritative for a child
+            // zone must not be trusted to supply NS records for a parent zone, which would allow cache poisoning
+            // of the parent.
+            if (!isWithinZone(server.domainName, zone)) {
                 return;
             }
             cache.cache(server.domainName, server.address, server.ttl, loop);
+        }
+
+        /**
+         * Returns {@code true} if the given {@code name} is the {@code zone} or a name below it. Both are expected to
+         * be lower-case and end with a {@code '.'}.
+         */
+        private static boolean isWithinZone(String name, String zone) {
+            return zone.equals(ROOT_ZONE) || name.equals(zone) || name.endsWith('.' + zone);
         }
 
         /**
