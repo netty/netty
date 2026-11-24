@@ -1825,7 +1825,7 @@ public class DnsNameResolverTest {
         // listen on the same loopback address.
         final String evilServerIp = "10.0.0.1";
         final String authorityServerIp = "10.0.0.2";
-        final Set<String> names = new HashSet<>(Arrays.asList(hostname, "evil.co.uk"));
+        final Set<String> names = new HashSet<>(Arrays.asList(hostname, "evil.co.uk", "sub.evil.co.uk"));
 
         final TestDnsServer authorityServer = new TestDnsServer(names);
         authorityServer.start();
@@ -1837,6 +1837,11 @@ public class DnsNameResolverTest {
                 message.getAnswerRecords().clear();
                 message.getAuthorityRecords().clear();
                 message.getAdditionalRecords().clear();
+                if (message.getQuestionRecords().get(0).getDomainName().equals("sub.evil.co.uk")) {
+                    // A referral without glue whose name server is the name we have cached servers for.
+                    message.getAuthorityRecords().add(newNsRecord("sub.evil.co.uk", "evil.co.uk"));
+                    return message;
+                }
                 message.getAuthorityRecords().add(newNsRecord("co.uk", nsName));
                 message.getAdditionalRecords().add(newARecord(nsName, authorityServerIp));
                 return message;
@@ -1915,6 +1920,10 @@ public class DnsNameResolverTest {
             // The referral to uk. is followed with the servers cached for evil.co.uk., which must still only be
             // trusted for evil.co.uk.
             resolver.resolveAll("evil.co.uk").await();
+            assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
+
+            // The same must hold while resolving the name of a name server we got no glue for.
+            resolver.resolveAll("sub.evil.co.uk").await();
             assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
         } finally {
             resolver.close();

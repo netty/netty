@@ -721,11 +721,15 @@ abstract class DnsResolveContext<T> {
                 List<InetSocketAddress> addresses = serverNames.addressList();
 
                 String redirectZone = serverNames.zone();
-                DnsServerAddressStream cached = authoritativeDnsServerCache.get(question.name());
+                DnsServerAddressStream cached = parent.authoritativeDnsServerCache().get(question.name());
                 if (cached != null && cached.size() != 0) {
                     // By default newRedirectDnsServerStream(...) will not use the servers of the referral but the
                     // ones we have cached for the question name. These are only authoritative for the question name
                     // itself, so we must not trust them for the (possibly wider) zone of the referral.
+                    //
+                    // We must look at the same cache as newRedirectDnsServerStream(...), which is the one of the
+                    // parent and not authoritativeDnsServerCache(). The latter never returns anything while we
+                    // resolve the address of a name server we got no glue for.
                     redirectZone = question.name().toLowerCase(Locale.US);
                 }
 
