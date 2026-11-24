@@ -323,12 +323,12 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void clientReservePushStreamShouldSucceed() throws Http2Exception {
-        Http2Stream stream = server.remote().createStream(3, true);
-        Http2Stream pushStream = server.local().reservePushStream(4, stream);
+        Http2Stream stream = client.local().createStream(3, true);
+        Http2Stream pushStream = client.remote().reservePushStream(4, stream);
         assertEquals(4, pushStream.id());
-        assertEquals(State.RESERVED_LOCAL, pushStream.state());
-        assertEquals(1, server.numActiveStreams());
-        assertEquals(4, server.local().lastStreamCreated());
+        assertEquals(State.RESERVED_REMOTE, pushStream.state());
+        assertEquals(1, client.numActiveStreams());
+        assertEquals(4, client.remote().lastStreamCreated());
     }
 
     @Test
