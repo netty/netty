@@ -314,7 +314,7 @@ public class IoUringPollCancellationTest {
     private static void complete(Channel channel, long pollId, int res, int flags) {
         // The data of the user_data, its low 16 bits, tells which poll of the channel the completion is of.
         ((IoUringIoHandle) channel.unsafe()).handle(((AbstractIoUringChannel) channel).registration(),
-                new IoUringIoEvent(res, flags, Native.IORING_OP_POLL_ADD, (short) pollId));
+                new IoUringIoEvent(res, flags, Native.IORING_OP_POLL_ADD, (long) (short) pollId));
     }
 
     private static void awaitArmed(Channel channel, int ioStateBits) throws Exception {
