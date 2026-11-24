@@ -374,20 +374,23 @@ public class HashedWheelTimerTest {
         final AtomicInteger round = new AtomicInteger();
         final AtomicInteger newTimeoutDone = new AtomicInteger();
         final AtomicBoolean done = new AtomicBoolean();
-        Thread newTimeoutThread = new Thread(() -> {
-            for (int i = 1; ; i++) {
-                while (round.get() < i) {
-                    if (done.get()) {
-                        return;
+        Thread newTimeoutThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 1; ; i++) {
+                    while (round.get() < i) {
+                        if (done.get()) {
+                            return;
+                        }
+                        Thread.yield();
                     }
-                    Thread.yield();
+                    try {
+                        timerRef.get().newTimeout(createNoOpTimerTask(), 1, TimeUnit.HOURS);
+                    } catch (IllegalStateException expected) {
+                        // stop() won the race.
+                    }
+                    newTimeoutDone.set(i);
                 }
-                try {
-                    timerRef.get().newTimeout(createNoOpTimerTask(), 1, TimeUnit.HOURS);
-                } catch (IllegalStateException expected) {
-                    // stop() won the race.
-                }
-                newTimeoutDone.set(i);
             }
         });
         newTimeoutThread.setDaemon(true);
