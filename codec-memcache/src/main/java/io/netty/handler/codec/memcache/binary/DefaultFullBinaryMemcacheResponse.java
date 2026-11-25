@@ -95,6 +95,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
         ByteBuf key = null;
         ByteBuf extras = null;
         ByteBuf content = null;
+        boolean success = false;
         try {
             if (key() != null) {
                 key = key().copy();
@@ -103,12 +104,15 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
                 extras = extras().copy();
             }
             content = content().copy();
-            return newInstance(key, extras, content);
-        } catch (Throwable cause) {
-            ReferenceCountUtil.safeRelease(key);
-            ReferenceCountUtil.safeRelease(extras);
-            ReferenceCountUtil.safeRelease(content);
-            throw cause;
+            FullBinaryMemcacheResponse copy = newInstance(key, extras, content);
+            success = true;
+            return copy;
+        } finally {
+            if (!success) {
+                ReferenceCountUtil.safeRelease(key);
+                ReferenceCountUtil.safeRelease(extras);
+                ReferenceCountUtil.safeRelease(content);
+            }
         }
     }
 
@@ -128,11 +132,15 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     @Override
     public FullBinaryMemcacheResponse retainedDuplicate() {
         ByteBuf content = content().retainedDuplicate();
+        boolean success = false;
         try {
-            return replace(content);
-        } catch (Throwable cause) {
-            ReferenceCountUtil.safeRelease(content);
-            throw cause;
+            FullBinaryMemcacheResponse duplicate = replace(content);
+            success = true;
+            return duplicate;
+        } finally {
+            if (!success) {
+                ReferenceCountUtil.safeRelease(content);
+            }
         }
     }
 
@@ -140,6 +148,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     public FullBinaryMemcacheResponse replace(ByteBuf content) {
         ByteBuf key = null;
         ByteBuf extras = null;
+        boolean success = false;
         try {
             if (key() != null) {
                 key = key().retainedDuplicate();
@@ -147,11 +156,14 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
             if (extras() != null) {
                 extras = extras().retainedDuplicate();
             }
-            return newInstance(key, extras, content);
-        } catch (Throwable cause) {
-            ReferenceCountUtil.safeRelease(key);
-            ReferenceCountUtil.safeRelease(extras);
-            throw cause;
+            FullBinaryMemcacheResponse replacement = newInstance(key, extras, content);
+            success = true;
+            return replacement;
+        } finally {
+            if (!success) {
+                ReferenceCountUtil.safeRelease(key);
+                ReferenceCountUtil.safeRelease(extras);
+            }
         }
     }
 
