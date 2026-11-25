@@ -1602,8 +1602,10 @@ public class DnsNameResolverTest {
                 assertNull(nsCache.cache.get("netty.io."));
                 DnsServerAddressStream entries = nsCache.cache.get("record.netty.io.");
 
-                // Should be null because of bailiwick check.
-                assertNull(entries);
+                // First address should be resolved (as we received a matching additional record), second is unresolved.
+                assertEquals(2, entries.size());
+                assertFalse(entries.next().isUnresolved());
+                assertTrue(entries.next().isUnresolved());
 
                 assertNull(nsCache.cache.get(hostname));
 
@@ -1613,15 +1615,27 @@ public class DnsNameResolverTest {
                 observer = lifecycleObserverFactory.observers.poll();
                 assertNotNull(observer);
                 assertTrue(lifecycleObserverFactory.observers.isEmpty());
-                assertEquals(4, observer.events.size());
+                assertEquals(2, observer.events.size());
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
-                QueryRedirectedEvent ev = (QueryRedirectedEvent) observer.events.poll();
+                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
+                assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
+                succeededEvent = (QuerySucceededEvent) observer.events.poll();
 
-                assertInstanceOf(UnknownHostException.class, resolver.resolveAll(hostname2).await().cause());
+                resolver.resolveAll(hostname2).syncUninterruptibly();
 
+                observer = lifecycleObserverFactory.observers.poll();
+                assertNotNull(observer);
+                assertTrue(lifecycleObserverFactory.observers.isEmpty());
+                assertEquals(2, observer.events.size());
+                writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
+                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
+                assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
+                succeededEvent = (QuerySucceededEvent) observer.events.poll();
+
+                // Check that it only queried the cache for record.netty.io.
                 assertNull(nsCache.cacheHits.get("io."));
                 assertNull(nsCache.cacheHits.get("netty.io."));
-                assertNull(nsCache.cacheHits.get("record.netty.io."));
+                assertNotNull(nsCache.cacheHits.get("record.netty.io."));
                 assertNull(nsCache.cacheHits.get("some.record.netty.io."));
             }
         } finally {
@@ -1756,8 +1770,19 @@ public class DnsNameResolverTest {
 
             if (authoritativeDnsServerCache != NoopAuthoritativeDnsServerCache.INSTANCE) {
                 DnsServerAddressStream cached = authoritativeDnsServerCache.get(domain + '.');
-                // We should not cache anything because of bailiwick check
-                assertNull(cached);
+                assertEquals(2, cached.size());
+                InetSocketAddress ns1Address = InetSocketAddress.createUnresolved(
+                        ns1Name + '.', DefaultDnsServerAddressStreamProvider.DNS_PORT);
+                InetSocketAddress ns2Address = InetSocketAddress.createUnresolved(
+                        ns2Name + '.', DefaultDnsServerAddressStreamProvider.DNS_PORT);
+
+                if (invalidNsFirst) {
+                    assertEquals(ns2Address, cached.next());
+                    assertEquals(ns1Address, cached.next());
+                } else {
+                    assertEquals(ns1Address, cached.next());
+                    assertEquals(ns2Address, cached.next());
+                }
             }
             if (cache != NoopDnsCache.INSTANCE) {
                 List<? extends DnsCacheEntry> ns1Cached = cache.get(ns1Name + '.', null);
@@ -1789,6 +1814,125 @@ public class DnsNameResolverTest {
             redirectServer.stop();
             dnsServerAuthority.stop();
             socket.close();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testRedirectCachesDelegationButNotParentZone(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        final String hostname = "x.evil.co.uk";
+        final String nsName = "ns.evil.co.uk";
+        // We use fake addresses in the ADDITIONAL section and map them to the real servers below, as all servers
+        // listen on the same loopback address.
+        final String evilServerIp = "10.0.0.1";
+        final String authorityServerIp = "10.0.0.2";
+        final Set<String> names = new HashSet<>(Arrays.asList(hostname, "evil.co.uk", "sub.evil.co.uk"));
+
+        final TestDnsServer authorityServer = new TestDnsServer(names);
+        authorityServer.start();
+
+        // Authoritative for evil.co.uk, but tries to hand us NS records for the parent zone co.uk.
+        final TestDnsServer evilServer = new TestDnsServer(names) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                message.getAnswerRecords().clear();
+                message.getAuthorityRecords().clear();
+                message.getAdditionalRecords().clear();
+                if (message.getQuestionRecords().get(0).getDomainName().equals("sub.evil.co.uk")) {
+                    // A referral without glue whose name server is the name we have cached servers for.
+                    message.getAuthorityRecords().add(newNsRecord("sub.evil.co.uk", "evil.co.uk"));
+                    return message;
+                }
+                message.getAuthorityRecords().add(newNsRecord("co.uk", nsName));
+                message.getAdditionalRecords().add(newARecord(nsName, authorityServerIp));
+                return message;
+            }
+        };
+        evilServer.start();
+
+        // The server we are configured with, it delegates evil.co.uk to the evil server. For evil.co.uk itself it
+        // answers with a referral to uk., as a root server would.
+        final TestDnsServer configuredServer = new TestDnsServer(names) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                boolean apex = message.getQuestionRecords().get(0).getDomainName().equals("evil.co.uk");
+                message.getAnswerRecords().clear();
+                message.getAuthorityRecords().clear();
+                message.getAdditionalRecords().clear();
+                if (apex) {
+                    message.getAuthorityRecords().add(newNsRecord("uk", "ns.uk"));
+                    message.getAdditionalRecords().add(newARecord("ns.uk", authorityServerIp));
+                } else {
+                    message.getAuthorityRecords().add(newNsRecord("evil.co.uk", nsName));
+                    message.getAdditionalRecords().add(newARecord(nsName, evilServerIp));
+                }
+                return message;
+            }
+        };
+        configuredServer.start();
+
+        final Set<String> cachedZones = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+        final AuthoritativeDnsServerCache authoritativeDnsServerCache = new DefaultAuthoritativeDnsServerCache() {
+            @Override
+            public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
+                cachedZones.add(hostname);
+                super.cache(hostname, address, originalTtl, loop);
+            }
+        };
+
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(configuredServer.localAddress());
+        final DnsNameResolver resolver = new DnsNameResolver(
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null, false,
+                NoopDnsCache.INSTANCE, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
+                NoopDnsQueryLifecycleObserverFactory.INSTANCE, 3000, ResolvedAddressTypes.IPV4_ONLY,
+                true, 10, true, 4096,
+                false, HostsFileEntriesResolver.DEFAULT,
+                provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0,
+                true, false, 0, strategy) {
+            @Override
+            InetSocketAddress newRedirectServerAddress(InetAddress server) {
+                String ip = server.getHostAddress();
+                if (ip.equals(evilServerIp)) {
+                    return evilServer.localAddress();
+                }
+                if (ip.equals(authorityServerIp)) {
+                    return authorityServer.localAddress();
+                }
+                return super.newRedirectServerAddress(server);
+            }
+        };
+
+        try {
+            // We follow the referral of the configured server to the evil server and the redirect of the evil server
+            // to the authority server, which answers.
+            assertFalse(resolver.resolveAll(hostname).syncUninterruptibly().getNow().isEmpty());
+
+            // The delegation from the server we are configured with is not out of its bailiwick, even though the
+            // name that is looked up is below the delegated zone. It must be cached.
+            assertTrue(cachedZones.contains("evil.co.uk."), "cached: " + cachedZones);
+
+            // The evil server is only authoritative for evil.co.uk. and so must not be able to supply NS records
+            // for any of the parent zones.
+            assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
+            assertFalse(cachedZones.contains("uk."), "cached: " + cachedZones);
+
+            // The referral to uk. is followed with the servers cached for evil.co.uk., which must still only be
+            // trusted for evil.co.uk.
+            resolver.resolveAll("evil.co.uk").await();
+            assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
+
+            // The same must hold while resolving the name of a name server we got no glue for.
+            resolver.resolveAll("sub.evil.co.uk").await();
+            assertFalse(cachedZones.contains("co.uk."), "cached: " + cachedZones);
+        } finally {
+            resolver.close();
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+            configuredServer.stop();
+            evilServer.stop();
+            authorityServer.stop();
         }
     }
 
@@ -1901,9 +2045,7 @@ public class DnsNameResolverTest {
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
-
-            // We should not cache anything because of bailiwick check
-            assertEquals(0, cached.size());
+            assertEquals(4, cached.size());
 
             if (reversed) {
                 assertEquals(ns4Address, redirected.next());
@@ -1916,6 +2058,12 @@ public class DnsNameResolverTest {
                 assertEquals(ns3Address, redirected.next());
                 assertEquals(ns4Address, redirected.next());
             }
+
+            // We should always have the same order in the cache.
+            assertEquals(ns1Address, cached.get(0));
+            assertEquals(ns2Address, cached.get(1));
+            assertEquals(ns3Address, cached.get(2));
+            assertEquals(ns4Address, cached.get(3));
         } finally {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
@@ -2034,8 +2182,7 @@ public class DnsNameResolverTest {
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
-            // We should not cache because of bailiwick check.
-            assertEquals(0, cached.size());
+            assertEquals(3, cached.size());
 
             // The redirected addresses should have been retrieven from the DnsCache if not resolved, so these are
             // fully resolved.
@@ -2045,6 +2192,13 @@ public class DnsNameResolverTest {
             assertEquals(ns3Address, redirected.next());
             assertEquals(ns4Address, redirected.next());
             assertEquals(ns5Address, redirected.next());
+
+            // As this address was supplied as ADDITIONAL we should put it resolved into the cache.
+            assertEquals(ns0Address, cached.get(0));
+            assertEquals(ns5Address, cached.get(1));
+
+            // We should have put the unresolved address in the AuthoritativeDnsServerCache (but only 1 time)
+            assertEquals(unresolved(ns1Address), cached.get(2));
         } finally {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
