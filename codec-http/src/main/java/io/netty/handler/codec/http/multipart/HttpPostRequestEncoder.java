@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.File;
@@ -49,7 +48,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.Locale;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.UUID;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -291,8 +290,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @return a newly generated Delimiter (either for DATA or MIXED)
      */
     private static String getNewMultipartDelimiter() {
-        // construct a generated delimiter
-        return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong());
+        // construct a generated delimiter. It must not be predictable, as whoever can guess it can inject
+        // additional parts through the content of a part, so use a random UUID, which comes from SecureRandom.
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**

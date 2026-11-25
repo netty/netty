@@ -31,6 +31,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
@@ -414,6 +418,13 @@ public class NettyBlockHoundIntegrationTest {
         } while (thread.isAlive());
         thread.join();
         task.get();
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testHttpPostRequestEncoderMultipartAllowsBlockingCalls() throws InterruptedException {
+        doTestParseResolverFilesAllowsBlockingCalls(() -> new HttpPostRequestEncoder(
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/"), true));
     }
 
     @Test
