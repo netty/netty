@@ -871,9 +871,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         final void schedulePollIn() {
             assert (ioState & POLL_IN_SCHEDULED) == 0;
-            // A pending close has already cancelled the polls, so nothing would cancel this one, and it would keep
-            // the socket open after its fd is closed.
-            if (!isActive() || delayedClose != null || shouldBreakIoUringInReady(config())) {
+            if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
             pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn(), POLL_IN_DATA);
