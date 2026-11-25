@@ -23,7 +23,9 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,6 +40,7 @@ import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import static io.netty.handler.codec.http.HttpUtil.setTransferEncodingChunked;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -244,6 +247,92 @@ public class HttpServerKeepAliveHandlerTest {
         assertFalse(ch.isOpen());
         ReferenceCountUtil.release(writtenResponse);
         assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "HTTP/1.0, true, true", "HTTP/1.0, true, false",
+            "HTTP/1.0, false, true", "HTTP/1.0, false, false",
+            "HTTP/1.1, true, true", "HTTP/1.1, true, false",
+            "HTTP/1.1, false, true", "HTTP/1.1, false, false"
+    })
+    void testHeadResponseWithoutLength(String version, boolean requestKeepAlive, boolean responseKeepAlive) {
+        HttpVersion httpVersion = HttpVersion.valueOf(version);
+        try {
+            FullHttpRequest request = new DefaultFullHttpRequest(httpVersion, HttpMethod.HEAD, "/");
+            setKeepAlive(request, requestKeepAlive);
+            channel.writeInbound(request);
+            ReferenceCountUtil.release(channel.readInbound());
+
+            FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, OK);
+            setKeepAlive(response, responseKeepAlive);
+            channel.writeOutbound(response);
+            HttpResponse writtenResponse = channel.readOutbound();
+            try {
+                assertThat(channel.isOpen()).isEqualTo(requestKeepAlive && responseKeepAlive);
+                assertThat(isKeepAlive(writtenResponse)).isEqualTo(requestKeepAlive && responseKeepAlive);
+            } finally {
+                ReferenceCountUtil.release(writtenResponse);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testPipelinedHeadResponse(boolean headFirst) {
+        try {
+            channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                    headFirst ? HttpMethod.HEAD : HttpMethod.GET, "/first"));
+            channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                    headFirst ? HttpMethod.GET : HttpMethod.HEAD, "/second"));
+            ReferenceCountUtil.release(channel.readInbound());
+            ReferenceCountUtil.release(channel.readInbound());
+
+            FullHttpResponse firstResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, OK);
+            if (!headFirst) {
+                setContentLength(firstResponse, 0);
+            }
+            channel.writeOutbound(firstResponse);
+            assertWrittenResponseKeepAlive(true);
+
+            // Only the HEAD response has an implicit zero-length body. A GET without framing must still close.
+            channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, OK));
+            assertWrittenResponseKeepAlive(!headFirst);
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    void testInformationalResponseDoesNotConsumeHeadRequest() {
+        try {
+            channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/first"));
+            channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/second"));
+            ReferenceCountUtil.release(channel.readInbound());
+            ReferenceCountUtil.release(channel.readInbound());
+
+            channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
+            assertWrittenResponseKeepAlive(true);
+            channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, OK));
+            assertWrittenResponseKeepAlive(true);
+            channel.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, OK));
+            assertWrittenResponseKeepAlive(false);
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    private void assertWrittenResponseKeepAlive(boolean expected) {
+        HttpResponse response = channel.readOutbound();
+        try {
+            assertThat(response).isNotNull();
+            assertThat(isKeepAlive(response)).isEqualTo(expected);
+            assertThat(channel.isOpen()).isEqualTo(expected);
+        } finally {
+            ReferenceCountUtil.release(response);
+        }
     }
 
     private static void setupMessageLength(HttpResponse response, int setSelfDefinedMessageLength) {
