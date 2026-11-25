@@ -154,10 +154,11 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
                 int localReadBytes = buffer.writeBytes(in, offset + readBytes, chunkSize - readBytes);
                 if (localReadBytes < 0) {
                     // The file is shorter than the region we were asked to transfer (for example it was truncated
-                    // after this ChunkedNioFile was created). Fail like ChunkedFile instead of returning empty
-                    // chunks forever, as isEndOfInput() would never return true.
-                    throw new EOFException("Underlying file size " + in.size() + " smaller than requested end " +
-                            "offset " + endOffset);
+                    // after this ChunkedNioFile was created, or size() reports more than the file holds, like for
+                    // files in sysfs). Fail like ChunkedFile instead of returning empty chunks forever, as
+                    // isEndOfInput() would never return true.
+                    throw new EOFException("Underlying file ended at offset " + (offset + readBytes) +
+                            " before the requested end offset " + endOffset + " (size() reported " + in.size() + ')');
                 }
                 readBytes += localReadBytes;
                 if (readBytes == chunkSize) {

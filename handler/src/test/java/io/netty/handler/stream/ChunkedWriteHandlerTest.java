@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.TimeUnit.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -175,23 +176,31 @@ public class ChunkedWriteHandlerTest {
                     ctx.write(msg, promise);
                 }
             }, new ChunkedWriteHandler());
-
-            ChannelFuture future = ch.writeAndFlush(input);
-            assertTrue(future.isDone());
-            assertInstanceOf(EOFException.class, future.cause());
-            assertEquals(5, writes.get());
-
-            int read = 0;
-            for (;;) {
-                ByteBuf buffer = ch.readOutbound();
-                if (buffer == null) {
-                    break;
+            try {
+                ChannelFuture future = ch.writeAndFlush(input);
+                assertTrue(future.isDone());
+                assertInstanceOf(EOFException.class, future.cause());
+                if (nio) {
+                    assertThat(future.cause()).hasMessage("Underlying file ended at offset 512 before the " +
+                            "requested end offset 1024 (size() reported 512)");
                 }
-                read += buffer.readableBytes();
-                buffer.release();
+                assertEquals(5, writes.get());
+
+                int read = 0;
+                for (;;) {
+                    ByteBuf buffer = ch.readOutbound();
+                    if (buffer == null) {
+                        break;
+                    }
+                    read += buffer.readableBytes();
+                    buffer.release();
+                }
+                assertEquals(500, read);
+                assertFalse(ch.finish());
+            } finally {
+                // Release what is still queued, also if an assertion above failed.
+                ch.finishAndReleaseAll();
             }
-            assertEquals(500, read);
-            assertFalse(ch.finish());
         }
     }
 
