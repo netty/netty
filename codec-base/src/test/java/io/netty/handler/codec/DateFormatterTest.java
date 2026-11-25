@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import static io.netty.handler.codec.DateFormatter.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,6 +135,33 @@ public class DateFormatterTest {
         assertNull(parseHttpDate("Sunday, 06 Nov 1994 0:0:000 GMT"));
         assertNull(parseHttpDate("Sunday, 06 Nov 1994 0:000:0 GMT"));
         assertNull(parseHttpDate("Sunday, 06 Nov 1994 000:0:0 GMT"));
+    }
+
+    @Test
+    public void testParseNonExistentDate() {
+        // RFC 6265, section 5.1.1: if no such date exists, fail to parse the cookie-date.
+        assertNull(parseHttpDate("Wed, 31 Feb 2016 08:49:37 GMT"));
+        assertNull(parseHttpDate("Wed, 30 Feb 2016 08:49:37 GMT"));
+        assertNull(parseHttpDate("Sun, 29 Feb 2015 08:49:37 GMT"));
+        assertNull(parseHttpDate("Thu, 31 Apr 2016 08:49:37 GMT"));
+        assertNull(parseHttpDate("Thu, 31-Nov-94 08:49:37 GMT"));
+        // century years are leap years only if divisible by 400
+        assertNull(parseHttpDate("Thu, 29 Feb 1900 08:49:37 GMT"));
+        assertNull(parseHttpDate("Sat, 29 Feb 2100 08:49:37 GMT"));
+    }
+
+    @Test
+    public void testParseLastDayOfMonth() {
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        cal.clear();
+        cal.set(2016, Calendar.FEBRUARY, 29, 8, 49, 37);
+        assertEquals(cal.getTime(), parseHttpDate("Mon, 29 Feb 2016 08:49:37 GMT"));
+        cal.clear();
+        cal.set(2016, Calendar.DECEMBER, 31, 8, 49, 37);
+        assertEquals(cal.getTime(), parseHttpDate("Sat, 31 Dec 2016 08:49:37 GMT"));
+        cal.clear();
+        cal.set(2000, Calendar.FEBRUARY, 29, 8, 49, 37);
+        assertEquals(cal.getTime(), parseHttpDate("Tue, 29 Feb 2000 08:49:37 GMT"));
     }
 
     @Test

@@ -22,6 +22,7 @@ import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.text.ParseException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.Set;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_MODIFIED_SINCE;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZERO;
@@ -381,6 +383,24 @@ public class DefaultHttpHeadersTest {
         assertEquals("y", headers.get("x"));
         entry.setValue("z");
         assertEquals("z", headers.get("x"));
+    }
+
+    @Test
+    public void getTimeMillisNonExistentDate() {
+        final HttpHeaders headers = new DefaultHttpHeaders()
+                .add(IF_MODIFIED_SINCE, "Wed, 31 Feb 2016 08:49:37 GMT");
+        assertThrows(ParseException.class, new Executable() {
+            @Override
+            public void execute() {
+                headers.getTimeMillis(IF_MODIFIED_SINCE);
+            }
+        });
+        assertThrows(ParseException.class, new Executable() {
+            @Override
+            public void execute() {
+                headers.getTimeMillis(IF_MODIFIED_SINCE, -1);
+            }
+        });
     }
 
     private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {
