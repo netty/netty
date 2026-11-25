@@ -59,6 +59,15 @@ public class ClientCookieDecoderTest {
     }
 
     @Test
+    public void testDecodingExpiresWithFullMonthName() {
+        // RFC 6265, section 5.1.1: a month token only needs to start with the month abbreviation
+        Cookie cookie = ClientCookieDecoder.STRICT.decode(
+                "myCookie=myValue; Expires=Sunday, 06 November 2094 08:49:37 GMT");
+        assertNotNull(cookie);
+        assertTrue(cookie.maxAge() > 0, "maxAge should be set when Expires uses a full month name");
+    }
+
+    @Test
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                 "domain=.adomainsomewhere;secure;comment=this is a comment;version=0;" +
