@@ -21,6 +21,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -88,17 +89,32 @@ public class DefaultFullBinaryMemcacheResponseTest {
                 extras, allocator.heapBuffer(1).writeByte(1));
         extras.writeZero(256);
         long allocated = allocator.metric().usedHeapMemory();
-        ByteBuf replacement = Unpooled.buffer(1);
+        final ByteBuf replacement = Unpooled.buffer(1);
         try {
-            assertThrows(IllegalArgumentException.class, () -> response.copy());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    response.copy();
+                }
+            });
             assertEquals(allocated, allocator.metric().usedHeapMemory());
 
-            assertThrows(IllegalArgumentException.class, () -> response.retainedDuplicate());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    response.retainedDuplicate();
+                }
+            });
             assertEquals(1, response.key().refCnt());
             assertEquals(1, extras.refCnt());
             assertEquals(1, response.content().refCnt());
 
-            assertThrows(IllegalArgumentException.class, () -> response.replace(replacement));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    response.replace(replacement);
+                }
+            });
             assertEquals(1, response.key().refCnt());
             assertEquals(1, extras.refCnt());
             assertEquals(1, replacement.refCnt());

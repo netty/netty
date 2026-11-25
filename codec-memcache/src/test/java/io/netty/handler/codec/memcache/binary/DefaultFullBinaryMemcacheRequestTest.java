@@ -21,6 +21,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -89,17 +90,32 @@ public class DefaultFullBinaryMemcacheRequestTest {
                 allocator.heapBuffer(1).writeByte(1), allocator.heapBuffer(1).writeByte(1));
         key.writeZero(65536);
         long allocated = allocator.metric().usedHeapMemory();
-        ByteBuf replacement = Unpooled.buffer(1);
+        final ByteBuf replacement = Unpooled.buffer(1);
         try {
-            assertThrows(IllegalArgumentException.class, () -> request.copy());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.copy();
+                }
+            });
             assertEquals(allocated, allocator.metric().usedHeapMemory());
 
-            assertThrows(IllegalArgumentException.class, () -> request.retainedDuplicate());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.retainedDuplicate();
+                }
+            });
             assertEquals(1, key.refCnt());
             assertEquals(1, request.extras().refCnt());
             assertEquals(1, request.content().refCnt());
 
-            assertThrows(IllegalArgumentException.class, () -> request.replace(replacement));
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.replace(replacement);
+                }
+            });
             assertEquals(1, key.refCnt());
             assertEquals(1, request.extras().refCnt());
             assertEquals(1, replacement.refCnt());
