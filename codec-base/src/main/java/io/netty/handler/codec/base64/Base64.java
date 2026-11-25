@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
@@ -132,6 +133,12 @@ public final class Base64 {
             boolean addPadding) {
         ObjectUtil.checkNotNull(src, "src");
         ObjectUtil.checkNotNull(dialect, "dialect");
+
+        int srcCapacity = src.capacity();
+        if (MathUtil.isOutOfBounds(off, len, srcCapacity)) {
+            throw new IndexOutOfBoundsException("off: " + off + ", len: " + len +
+                    " (expected: range(0, " + srcCapacity + "))");
+        }
 
         int capacity = encodedBufferSize(len, breakLines);
         ByteBuf destBuf = allocator.buffer(capacity).order(src.order());
