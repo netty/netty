@@ -62,6 +62,25 @@ public class DateFormatterTest {
     }
 
     @Test
+    public void testParseCookieDateWithFullMonthName() {
+        // RFC 6265, section 5.1.1: month = ( "jan" / ... / "dec" ) *OCTET
+        String rfc1123 = "Sunday, 06 November 1994 08:49:37 GMT";
+        String rfc850 = "Sunday, 06-November-94 08:49:37 GMT";
+        assertEquals(DATE, parseCookieDate(rfc1123, 0, rfc1123.length()));
+        assertEquals(DATE, parseCookieDate(rfc850, 0, rfc850.length()));
+        assertEquals(DATE, parseCookieDate("Sun, 06 Nov 1994 08:49:37 GMT", 0, 29));
+    }
+
+    @Test
+    public void testParseHttpDateRejectsFullMonthName() {
+        assertNull(parseHttpDate("Sunday, 06 November 1994 08:49:37 GMT"));
+        // a cookie date must not leave the formatter accepting long months for the next HTTP date
+        String cookieDate = "Sunday, 06 November 1994 08:49:37 GMT";
+        assertEquals(DATE, parseCookieDate(cookieDate, 0, cookieDate.length()));
+        assertNull(parseHttpDate(cookieDate));
+    }
+
+    @Test
     public void testParseWithoutGMT() {
         assertEquals(DATE, parseHttpDate("Sun Nov 06 08:49:37 1994"));
     }
