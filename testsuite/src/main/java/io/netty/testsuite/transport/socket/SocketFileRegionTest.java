@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -146,6 +148,17 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
                 testFileRegionCountLargerThenFile(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testFileRegionFileEndsBeforeReportedSize(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testFileRegionFileEndsBeforeReportedSize(serverBootstrap, bootstrap);
             }
         });
     }
@@ -351,6 +364,36 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
         cc.close().sync();
         sc.close().sync();
+    }
+
+    public void testFileRegionFileEndsBeforeReportedSize(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        // Files in sysfs report the page size as their size but hold fewer bytes. A transfer returns 0 at the end of
+        // their content, while the socket stays writable.
+        File file = new File("/sys/devices/system/cpu/online");
+        assumeTrue(file.canRead(), "Requires a readable " + file);
+        int contentLength = Files.readAllBytes(file.toPath()).length;
+        assumeTrue(file.length() > contentLength,
+                "Requires " + file + " to report a size (" + file.length() + ") larger than its content ("
+                        + contentLength + ')');
+
+        sb.childHandler(new SimpleChannelInboundHandler<ByteBuf>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                // Just drop the message.
+            }
+        });
+        cb.handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        try {
+            ChannelFuture future = cc.writeAndFlush(new DefaultFileRegion(file, 0, file.length()));
+            assertThat(future.await(5, TimeUnit.SECONDS)).as("The write did not complete").isTrue();
+            assertThat(future.cause()).isInstanceOf(EOFException.class);
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+        }
     }
 
     /**
