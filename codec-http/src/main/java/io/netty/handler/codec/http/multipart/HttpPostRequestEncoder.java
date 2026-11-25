@@ -46,7 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.UUID;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -283,8 +283,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @return a newly generated Delimiter (either for DATA or MIXED)
      */
     private static String getNewMultipartDelimiter() {
-        // construct a generated delimiter
-        return Long.toHexString(ThreadLocalRandom.current().nextLong());
+        // construct a generated delimiter. It must not be predictable, as whoever can guess it can inject
+        // additional parts through the content of a part, so use a random UUID, which comes from SecureRandom.
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
