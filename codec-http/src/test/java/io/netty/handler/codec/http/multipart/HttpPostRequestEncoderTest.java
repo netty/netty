@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -470,6 +472,30 @@ public class HttpPostRequestEncoderTest {
 
         assertTrue(encoder.isEndOfInput());
         encoder.cleanFiles();
+    }
+
+    @Test
+    public void testCopyAndRetainedDuplicateReleaseContentWhenWrappedRequestLineIsInvalid() throws Exception {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "/bad path", new DefaultHttpHeaders(), false);
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, false);
+        encoder.addBodyAttribute("x", "hello");
+        FullHttpRequest wrapped = assertInstanceOf(FullHttpRequest.class, encoder.finalizeRequest());
+        try {
+            assertThrows(IllegalArgumentException.class, wrapped::copy);
+            assertThrows(IllegalArgumentException.class, wrapped::retainedDuplicate);
+            assertEquals(1, wrapped.refCnt());
+
+            wrapped.setUri("/valid");
+            wrapped.copy().release();
+            FullHttpRequest duplicate = wrapped.retainedDuplicate();
+            assertEquals(2, wrapped.refCnt());
+            duplicate.release();
+            assertEquals(1, wrapped.refCnt());
+        } finally {
+            wrapped.release();
+            encoder.cleanFiles();
+        }
     }
 
     @Test
