@@ -2954,7 +2954,8 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = newResolver(strategy)
                 .resolvedAddressTypes(types)
                 .ndots(1)
-                .searchDomains(singletonList(".")).build();
+                // The empty label makes "invalid.com.foo..com" an invalid hostname.
+                .searchDomains(singletonList("foo..com")).build();
         try {
             resolver.resolve("invalid.com").syncUninterruptibly();
         } finally {
