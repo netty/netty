@@ -486,10 +486,20 @@ public class HttpPostRequestEncoderTest {
                 "/bad path", new DefaultHttpHeaders(), false);
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, false);
         encoder.addBodyAttribute("x", "hello");
-        FullHttpRequest wrapped = assertInstanceOf(FullHttpRequest.class, encoder.finalizeRequest());
+        final FullHttpRequest wrapped = assertInstanceOf(FullHttpRequest.class, encoder.finalizeRequest());
         try {
-            assertThrows(IllegalArgumentException.class, wrapped::copy);
-            assertThrows(IllegalArgumentException.class, wrapped::retainedDuplicate);
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    wrapped.copy();
+                }
+            });
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    wrapped.retainedDuplicate();
+                }
+            });
             assertEquals(1, wrapped.refCnt());
 
             wrapped.setUri("/valid");

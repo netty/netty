@@ -1296,11 +1296,15 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         private FullHttpRequest replaceAndReleaseOnFailure(ByteBuf content) {
+            boolean success = false;
             try {
-                return replace(content);
-            } catch (Throwable cause) {
-                content.release();
-                throw cause;
+                FullHttpRequest request = replace(content);
+                success = true;
+                return request;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
             }
         }
 

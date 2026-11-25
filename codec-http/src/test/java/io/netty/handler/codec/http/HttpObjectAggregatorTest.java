@@ -618,12 +618,22 @@ public class HttpObjectAggregatorTest {
             ByteBuf body = allocator.buffer(4).writeInt(1);
             assertTrue(channel.writeInbound(request, new DefaultLastHttpContent(body)));
 
-            FullHttpRequest aggregated = channel.readInbound();
+            final FullHttpRequest aggregated = channel.readInbound();
             try {
                 long usedHeapMemory = allocator.metric().usedHeapMemory();
-                assertThrows(IllegalArgumentException.class, aggregated::copy);
+                assertThrows(IllegalArgumentException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        aggregated.copy();
+                    }
+                });
                 assertEquals(usedHeapMemory, allocator.metric().usedHeapMemory());
-                assertThrows(IllegalArgumentException.class, aggregated::retainedDuplicate);
+                assertThrows(IllegalArgumentException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        aggregated.retainedDuplicate();
+                    }
+                });
                 assertEquals(1, aggregated.refCnt());
 
                 aggregated.setUri("/valid");

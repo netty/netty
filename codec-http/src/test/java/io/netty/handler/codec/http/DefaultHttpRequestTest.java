@@ -213,13 +213,23 @@ public class DefaultHttpRequestTest {
         UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
         ByteBuf content = allocator.buffer(4).writeInt(1);
         try {
-            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                     "/bad path", content, new DefaultHttpHeaders(), new DefaultHttpHeaders(), false);
             long usedHeapMemory = allocator.metric().usedHeapMemory();
 
-            assertThrows(IllegalArgumentException.class, () -> request.copy());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.copy();
+                }
+            });
             assertEquals(usedHeapMemory, allocator.metric().usedHeapMemory());
-            assertThrows(IllegalArgumentException.class, () -> request.retainedDuplicate());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.retainedDuplicate();
+                }
+            });
             assertEquals(1, request.refCnt());
         } finally {
             content.release();
