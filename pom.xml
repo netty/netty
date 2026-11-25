@@ -1396,6 +1396,12 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <new>method boolean io.netty.handler.ssl.ReferenceCountedOpenSslEngine::isSessionReused()</new>
+                  <justification>Allow applications to inspect OpenSSL session reuse without accessing the native SSL pointer.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
                   <regex>true</regex>
                   <package>io\.netty\..*</package>

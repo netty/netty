@@ -472,7 +472,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return new SecretKeySpec(SSL.getMasterKey(ssl), "AES");
     }
 
-    synchronized boolean isSessionReused() {
+    /**
+     * Returns whether the completed handshake reused a TLS session.
+     * Returns false if this engine has been shut down.
+     */
+    public synchronized boolean isSessionReused() {
         if (destroyed) {
             return false;
         }
