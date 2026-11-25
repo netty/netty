@@ -17,12 +17,15 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultFullBinaryMemcacheRequestTest {
 
@@ -75,6 +78,50 @@ public class DefaultFullBinaryMemcacheRequestTest {
         } finally {
             request.release();
             newInstance.release();
+        }
+    }
+
+    @Test
+    public void rejectedCopyDoesNotRetainBuffers() {
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
+        request.release();
+        ByteBuf key = allocator.heapBuffer(0, 65536);
+        request = new DefaultFullBinaryMemcacheRequest(key,
+                allocator.heapBuffer(1).writeByte(1), allocator.heapBuffer(1).writeByte(1));
+        key.writeZero(65536);
+        long allocated = allocator.metric().usedHeapMemory();
+        final ByteBuf replacement = Unpooled.buffer(1);
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.copy();
+                }
+            });
+            assertEquals(allocated, allocator.metric().usedHeapMemory());
+
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.retainedDuplicate();
+                }
+            });
+            assertEquals(1, key.refCnt());
+            assertEquals(1, request.extras().refCnt());
+            assertEquals(1, request.content().refCnt());
+
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.replace(replacement);
+                }
+            });
+            assertEquals(1, key.refCnt());
+            assertEquals(1, request.extras().refCnt());
+            assertEquals(1, replacement.refCnt());
+        } finally {
+            replacement.release();
+            request.release();
         }
     }
 
