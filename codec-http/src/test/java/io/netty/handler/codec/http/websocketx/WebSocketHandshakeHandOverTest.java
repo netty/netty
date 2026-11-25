@@ -235,9 +235,10 @@ public class WebSocketHandshakeHandOverTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testClientHandshakerForceClose() throws Exception {
+        final long forceCloseTimeoutMillis = 10000;
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 new URI("ws://localhost:1234/test"), WebSocketVersion.V13, null, true,
-                EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE, true, false, 20);
+                EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE, true, false, forceCloseTimeoutMillis);
 
         EmbeddedChannel serverChannel = createServerChannel(
                 new CloseNoOpServerProtocolHandler("/test"),
@@ -260,6 +261,10 @@ public class WebSocketHandshakeHandOverTest {
             }
         });
 
+        // Freeze the clock of the client so the force close timeout can only fire when we advance the time
+        // explicitly. Otherwise a slow machine could make the timeout expire before we check that it has not.
+        clientChannel.freezeTime();
+
         // Transfer the handshake from the client to the server
         transferAllDataWithMerge(clientChannel, serverChannel);
         // Transfer the handshake from the server to client
@@ -271,11 +276,15 @@ public class WebSocketHandshakeHandOverTest {
         // Should not be closed yet as we disabled closing the connection on the server
         assertFalse(clientForceClosed);
 
-        while (!clientForceClosed) {
-            Thread.sleep(10);
-            // We need to run all pending tasks as the force close timeout is scheduled on the EventLoop.
-            clientChannel.runPendingTasks();
-        }
+        // Just before the timeout the connection must still be open.
+        clientChannel.advanceTimeBy(forceCloseTimeoutMillis - 1, TimeUnit.MILLISECONDS);
+        clientChannel.runScheduledPendingTasks();
+        assertFalse(clientForceClosed);
+
+        // The force close timeout is scheduled on the EventLoop, so advance the time to trigger it.
+        clientChannel.advanceTimeBy(1, TimeUnit.MILLISECONDS);
+        clientChannel.runScheduledPendingTasks();
+        assertTrue(clientForceClosed);
 
         // clientForceClosed would be set to TRUE after any close,
         // so check here that force close timeout was actually fired
