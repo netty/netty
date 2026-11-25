@@ -17,11 +17,11 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.unix.Errors;
 import io.netty.util.NetUtil;
@@ -63,7 +63,7 @@ public class IoUringPollCancellationTest {
     private static final int POLLERR = 0x008;
     private static final int POLLHUP = 0x010;
 
-    private IoEventLoopGroup group;
+    private MultiThreadIoEventLoopGroup group;
     private ServerSocket server;
 
     @BeforeAll
@@ -90,9 +90,9 @@ public class IoUringPollCancellationTest {
     @Test
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void closeFromConnectListenerWithWriteInFlightClosesTheSocket() throws Exception {
-        Channel channel = newClient(new ChannelInboundHandlerAdapter(), true);
+        Channel channel = newClient(new ChannelInboundHandler() { }, true);
         // Connect on the event loop, so that the listener is added before the connect can complete.
-        channel.eventLoop().submit(() -> channel.connect(server.getLocalSocketAddress()).addListener(f -> {
+        channel.executor().submit(() -> channel.connect(server.getLocalSocketAddress()).addListener(f -> {
             channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {1, 2, 3}));
             channel.close();
         })).sync();
@@ -106,7 +106,7 @@ public class IoUringPollCancellationTest {
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void readDuringDelayedCloseArmsNoPoll() throws Exception {
         AtomicBoolean pollInArmed = new AtomicBoolean(true);
-        Channel channel = newClient(new ChannelInboundHandlerAdapter() {
+        Channel channel = newClient(new ChannelInboundHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Fired after the connect listener closed the channel.
@@ -115,7 +115,7 @@ public class IoUringPollCancellationTest {
                 pollInArmed.set((ioState(ctx.channel()) & POLL_IN_SCHEDULED) != 0);
             }
         }, true);
-        channel.eventLoop().submit(() -> channel.connect(server.getLocalSocketAddress()).addListener(f -> {
+        channel.executor().submit(() -> channel.connect(server.getLocalSocketAddress()).addListener(f -> {
             channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {1}));
             channel.close();
         })).sync();
@@ -298,18 +298,18 @@ public class IoUringPollCancellationTest {
         }
     }
 
-    private Channel newClient(ChannelInboundHandlerAdapter handler, boolean autoRead) throws InterruptedException {
+    private Channel newClient(ChannelInboundHandler handler, boolean autoRead) throws InterruptedException {
         return new Bootstrap()
                 .group(group)
                 .channel(IoUringSocketChannel.class)
                 .handler(handler)
                 .option(ChannelOption.AUTO_READ, autoRead)
                 .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST, server.getLocalPort()))
-                .register().sync().channel();
+                .register().sync().getNow();
     }
 
     private Channel connect(boolean autoRead) throws InterruptedException {
-        Channel channel = newClient(new ChannelInboundHandlerAdapter(), autoRead);
+        Channel channel = newClient(new ChannelInboundHandler() { }, autoRead);
         channel.connect(server.getLocalSocketAddress()).sync();
         return channel;
     }
@@ -320,9 +320,9 @@ public class IoUringPollCancellationTest {
         return new Bootstrap()
                 .group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .option(ChannelOption.SO_SNDBUF, 4096)
-                .connect(server.getLocalSocketAddress()).sync().channel();
+                .connect(server.getLocalSocketAddress()).sync().getNow();
     }
 
     /**
@@ -401,7 +401,7 @@ public class IoUringPollCancellationTest {
     }
 
     private static <T> T onEventLoop(Channel channel, Callable<T> task) throws Exception {
-        return channel.eventLoop().submit(task).get(10, SECONDS);
+        return channel.executor().submit(task).get(10, SECONDS);
     }
 
     private static void assertEof(Socket socket) throws IOException {
@@ -419,9 +419,11 @@ public class IoUringPollCancellationTest {
     }
 
     private static boolean rdHupReceived(Channel channel) throws ReflectiveOperationException {
+        Method recvBufAllocHandle = AbstractChannel.class.getDeclaredMethod("recvBufAllocHandle");
+        recvBufAllocHandle.setAccessible(true);
         Field field = IoUringRecvByteAllocatorHandle.class.getDeclaredField("rdHupReceived");
         field.setAccessible(true);
-        return field.getBoolean(channel.unsafe().recvBufAllocHandle());
+        return field.getBoolean(recvBufAllocHandle.invoke(channel));
     }
 
     private static Field field(String name) throws NoSuchFieldException {
