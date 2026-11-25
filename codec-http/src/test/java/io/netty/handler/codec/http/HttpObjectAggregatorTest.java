@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -604,6 +605,49 @@ public class HttpObjectAggregatorTest {
         assertEquals(replacedReq.decoderResult(), aggregatedReq.decoderResult());
         aggregatedReq.release();
         replacedReq.release();
+    }
+
+    @Test
+    public void testCopyAndRetainedDuplicateReleaseContentWhenAggregatedRequestLineIsInvalid() {
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpObjectAggregator(1024));
+        channel.config().setAllocator(allocator);
+        try {
+            HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                    "/bad path", new DefaultHttpHeaders(), false);
+            ByteBuf body = allocator.buffer(4).writeInt(1);
+            assertTrue(channel.writeInbound(request, new DefaultLastHttpContent(body)));
+
+            final FullHttpRequest aggregated = channel.readInbound();
+            try {
+                long usedHeapMemory = allocator.metric().usedHeapMemory();
+                assertThrows(IllegalArgumentException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        aggregated.copy();
+                    }
+                });
+                assertEquals(usedHeapMemory, allocator.metric().usedHeapMemory());
+                assertThrows(IllegalArgumentException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        aggregated.retainedDuplicate();
+                    }
+                });
+                assertEquals(1, aggregated.refCnt());
+
+                aggregated.setUri("/valid");
+                aggregated.copy().release();
+                FullHttpRequest duplicate = aggregated.retainedDuplicate();
+                assertEquals(2, aggregated.refCnt());
+                duplicate.release();
+                assertEquals(1, aggregated.refCnt());
+            } finally {
+                aggregated.release();
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     @Test

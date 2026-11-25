@@ -402,7 +402,7 @@ public class HttpObjectAggregator
 
         @Override
         public FullHttpRequest copy() {
-            return replace(content().copy());
+            return replaceAndReleaseOnFailure(content().copy());
         }
 
         @Override
@@ -412,7 +412,7 @@ public class HttpObjectAggregator
 
         @Override
         public FullHttpRequest retainedDuplicate() {
-            return replace(content().retainedDuplicate());
+            return replaceAndReleaseOnFailure(content().retainedDuplicate());
         }
 
         @Override
@@ -421,6 +421,19 @@ public class HttpObjectAggregator
                     headers().copy(), trailingHeaders().copy());
             dup.setDecoderResult(decoderResult());
             return dup;
+        }
+
+        private FullHttpRequest replaceAndReleaseOnFailure(ByteBuf content) {
+            boolean success = false;
+            try {
+                FullHttpRequest request = replace(content);
+                success = true;
+                return request;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
+            }
         }
 
         @Override

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -28,6 +30,7 @@ import java.util.function.LongFunction;
 import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -203,6 +206,34 @@ public class DefaultHttpRequestTest {
                 request.setUri(uri);
             }
         });
+    }
+
+    @Test
+    void copyAndRetainedDuplicateMustReleaseContentWhenRequestLineValidationFails() {
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
+        ByteBuf content = allocator.buffer(4).writeInt(1);
+        try {
+            final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                    "/bad path", content, new DefaultHttpHeaders(), new DefaultHttpHeaders(), false);
+            long usedHeapMemory = allocator.metric().usedHeapMemory();
+
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.copy();
+                }
+            });
+            assertEquals(usedHeapMemory, allocator.metric().usedHeapMemory());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    request.retainedDuplicate();
+                }
+            });
+            assertEquals(1, request.refCnt());
+        } finally {
+            content.release();
+        }
     }
 
     @ParameterizedTest
