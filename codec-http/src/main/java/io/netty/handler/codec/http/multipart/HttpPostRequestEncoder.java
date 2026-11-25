@@ -1274,7 +1274,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
         @Override
         public FullHttpRequest copy() {
-            return replace(content().copy());
+            return replaceAndReleaseOnFailure(content().copy());
         }
 
         @Override
@@ -1284,7 +1284,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
         @Override
         public FullHttpRequest retainedDuplicate() {
-            return replace(content().retainedDuplicate());
+            return replaceAndReleaseOnFailure(content().retainedDuplicate());
         }
 
         @Override
@@ -1293,6 +1293,15 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             duplicate.headers().set(headers());
             duplicate.trailingHeaders().set(trailingHeaders());
             return duplicate;
+        }
+
+        private FullHttpRequest replaceAndReleaseOnFailure(ByteBuf content) {
+            try {
+                return replace(content);
+            } catch (Throwable cause) {
+                content.release();
+                throw cause;
+            }
         }
 
         @Override
