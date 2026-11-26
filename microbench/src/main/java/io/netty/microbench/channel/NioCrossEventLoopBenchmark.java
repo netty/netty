@@ -61,7 +61,7 @@ public class NioCrossEventLoopBenchmark extends AbstractMicrobenchmark {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel channel) {
-                            EventLoop owner = channel.eventLoop();
+                            EventLoop owner = channel.executor();
                             EventLoop other = owner == first ? second : first;
                             channel.pipeline().addLast(new FixedLengthFrameDecoder(Long.BYTES));
                             channel.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
@@ -73,7 +73,7 @@ public class NioCrossEventLoopBenchmark extends AbstractMicrobenchmark {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
+                    }).bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().getNow();
         }
 
         @TearDown
