@@ -162,7 +162,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    void testNulCharacterInContentWithContentLength() {
+    void testNulCharacterInContentWithContentLength() throws Exception {
         String body = "hello\0world";
         StompFrame frame = new DefaultStompFrame(StompCommand.MESSAGE, Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
         frame.headers().set(StompHeaders.CONTENT_LENGTH, Integer.toString(body.length()));
