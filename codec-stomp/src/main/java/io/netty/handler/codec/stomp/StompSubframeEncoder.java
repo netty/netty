@@ -163,6 +163,13 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
 
     private ByteBuf encodeFullFrame(StompFrame frame, ChannelHandlerContext ctx) {
         int contentReadableBytes = frame.content().readableBytes();
+        // Without a content-length header the receiver ends the frame at the first NUL octet,
+        // so content that contains one would be parsed as further frames.
+        if (contentReadableBytes > 0 && frame.content().bytesBefore(NUL) != -1 &&
+                !frame.headers().contains(CONTENT_LENGTH)) {
+            throw new IllegalArgumentException(
+                    "STOMP " + frame.command() + " content contains a NUL octet but has no content-length header");
+        }
         ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(frame) + contentReadableBytes);
         try {
             encodeHeaders(frame, buf);

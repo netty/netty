@@ -159,6 +159,46 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
+    void mustRejectNulCharacterInContentWithoutContentLength() {
+        // Without a content-length header the receiver ends the frame at the first NUL octet and parses
+        // the rest of the content as further frames.
+        final StompFrame frame = new DefaultStompFrame(StompCommand.MESSAGE,
+                Unpooled.copiedBuffer("hello\0ERROR\nmessage:injected\n\n", CharsetUtil.UTF_8));
+        frame.headers().set(StompHeaders.SUBSCRIPTION, "0");
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(frame);
+            }
+        })
+                .isInstanceOf(EncoderException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("content-length");
+        assertEquals(0, frame.refCnt());
+    }
+
+    @Test
+    void testNulCharacterInContentWithContentLength() {
+        String body = "hello\0world";
+        StompFrame frame = new DefaultStompFrame(StompCommand.MESSAGE, Unpooled.copiedBuffer(body, CharsetUtil.UTF_8));
+        frame.headers().set(StompHeaders.CONTENT_LENGTH, Integer.toString(body.length()));
+        assertTrue(channel.writeOutbound(frame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+
+        EmbeddedChannel decoder = new EmbeddedChannel(new StompSubframeDecoder(), new StompSubframeAggregator(1024));
+        assertTrue(decoder.writeInbound(stompBuffer));
+        StompFrame decoded = decoder.readInbound();
+        assertNotNull(decoded);
+        assertEquals(body, decoded.content().toString(CharsetUtil.UTF_8));
+        assertTrue(decoded.release());
+        assertNull(decoder.readInbound());
+        assertFalse(decoder.finish());
+    }
+
+    @Test
     void mustRejectEmptyHeaderNames() {
         final StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
         frame1.headers()
