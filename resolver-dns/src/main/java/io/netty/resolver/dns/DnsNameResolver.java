@@ -253,7 +253,7 @@ public class DnsNameResolver extends InetNameResolver {
      * of {@code "."} in the list.
      */
     private static String[] normalizeSearchDomains(String[] searchDomains) {
-        Set<String> normalized = new LinkedHashSet<>(searchDomains.length);
+        Set<String> normalized = new LinkedHashSet<String>(searchDomains.length);
         for (String searchDomain : searchDomains) {
             if (searchDomain == null || ".".equals(searchDomain)) {
                 continue;
