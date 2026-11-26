@@ -82,9 +82,11 @@ import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
@@ -180,7 +182,7 @@ public class DnsNameResolver extends InetNameResolver {
             List<String> list = PlatformDependent.isWindows()
                     ? getSearchDomainsHack()
                     : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
-            searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
+            searchDomains = normalizeSearchDomains(list.toArray(EmptyArrays.EMPTY_STRINGS));
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
             searchDomains = EmptyArrays.EMPTY_STRINGS;
@@ -236,6 +238,29 @@ public class DnsNameResolver extends InetNameResolver {
             return (List<String>) nameservers.invoke(instance);
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * Removes {@code null}, {@code "."} and duplicate entries from the search domains and strips one leading
+     * {@code '.'} from the others, so {@code ".example.org"} becomes {@code "example.org"}. Empty entries are kept,
+     * as they already make the resolver query the hostname as an absolute name at their position.
+     * <p>
+     * {@code "."} is the root domain, as in the {@code search .} line that systemd-resolved writes to
+     * {@code resolv.conf} when it knows no search domains. Appending it gives an invalid name like {@code "host.."},
+     * so it never resulted in a query. The hostname is still queried as an absolute name: first if it has at least
+     * {@code ndots} dots, otherwise after the search domains, unless a query with a search domain succeeds or fails
+     * with a transport error or timeout before. Unlike with glibc, the absolute name is not queried at the position
+     * of {@code "."} in the list.
+     */
+    private static String[] normalizeSearchDomains(String[] searchDomains) {
+        Set<String> normalized = new LinkedHashSet<String>(searchDomains.length);
+        for (String searchDomain : searchDomains) {
+            if (searchDomain == null || ".".equals(searchDomain)) {
+                continue;
+            }
+            normalized.add(searchDomain.startsWith(".") ? searchDomain.substring(1) : searchDomain);
+        }
+        return normalized.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder() {
@@ -491,7 +516,7 @@ public class DnsNameResolver extends InetNameResolver {
                         new BiDnsQueryLifecycleObserverFactory(new LoggingDnsQueryLifeCycleObserverFactory(),
                                                                dnsQueryLifecycleObserverFactory) :
                 checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
-        this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
+        this.searchDomains = searchDomains != null ? normalizeSearchDomains(searchDomains) : DEFAULT_SEARCH_DOMAINS;
         this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;

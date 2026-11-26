@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverOptions;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class UnixResolverDnsServerAddressStreamProviderTest {
@@ -222,6 +223,17 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
                            "nameserver 127.0.0.2\n");
         List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
         assertEquals(Collections.singletonList("linecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithRootDomain(@TempDir Path tempDir) throws IOException {
+        // systemd-resolved writes "search ." when it knows no search domains. "." must still take precedence over
+        // the domain line, DnsNameResolver drops it later.
+        File f = buildFile(tempDir, "domain linecorp.local\n" +
+                           "search .\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertThat(domains).containsExactly(".");
     }
 
     @Test

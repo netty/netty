@@ -18,6 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -307,5 +308,111 @@ public class SearchDomainTest {
         final Throwable cause = fut.cause();
         assertInstanceOf(UnknownHostException.class, cause);
         assertThat(cause.getMessage()).doesNotContain("foo.com");
+    }
+
+    @Test
+    public void testResolveWithRootSearchDomain() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1");
+        domains.add("host2.foo.com");
+        domains.add("host3.sub");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        // systemd-resolved writes "search ." to resolv.conf when it knows no search domains. "." is the root domain.
+        resolver = newResolver().searchDomains(Collections.singletonList(".")).build();
+        assertThat(assertResolve(resolver, "host1")).isEqualTo(store.getAddress("host1"));
+        assertThat(assertResolve(resolver, "host3.sub")).isEqualTo(store.getAddress("host3.sub"));
+        resolver.close();
+
+        resolver = newResolver().searchDomains(Arrays.asList(".", "foo.com")).build();
+        assertThat(assertResolve(resolver, "host1")).isEqualTo(store.getAddress("host1"));
+        assertThat(assertResolve(resolver, "host2")).isEqualTo(store.getAddress("host2.foo.com"));
+        assertThat(assertResolve(resolver, "host3.sub")).isEqualTo(store.getAddress("host3.sub"));
+    }
+
+    @Test
+    public void testResolveWithLeadingDotSearchDomain() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1");
+        domains.add("host1.foo.com");
+        domains.add("host2.sub.foo.com");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        // ".foo.com" is used as "foo.com", like glibc does.
+        resolver = newResolver().searchDomains(Collections.singletonList(".foo.com")).build();
+        assertThat(assertResolve(resolver, "host1")).isEqualTo(store.getAddress("host1.foo.com"));
+        assertThat(assertResolve(resolver, "host2.sub")).isEqualTo(store.getAddress("host2.sub.foo.com"));
+    }
+
+    @Test
+    public void testResolveWithEmptySearchDomainFirst() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1");
+        domains.add("host1.foo.com");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        // An empty search domain queries the absolute name at its position, so "host1" is tried before
+        // "host1.foo.com".
+        resolver = newResolver().searchDomains(Arrays.asList("", "foo.com")).ndots(1).build();
+        assertThat(assertResolve(resolver, "host1")).isEqualTo(store.getAddress("host1"));
+    }
+
+    @Test
+    public void testResolveAllWithEmptySearchDomainFirst() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1");
+        domains.add("host1.foo.com");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains, 2);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        // An empty search domain queries the absolute name at its position, so "host1" is tried before
+        // "host1.foo.com".
+        resolver = newResolver().searchDomains(Arrays.asList("", "foo.com")).ndots(1).build();
+        assertThat(assertResolveAll(resolver, "host1"))
+                .containsExactlyInAnyOrderElementsOf(store.getAddresses("host1"));
+    }
+
+    @Test
+    public void testExceptionCauseWithRootSearchDomain() throws Exception {
+        testExceptionCauseIsDnsError(Collections.singletonList("."));
+    }
+
+    @Test
+    public void testExceptionCauseWithRootSearchDomainLast() throws Exception {
+        testExceptionCauseIsDnsError(Arrays.asList("foo.com", "."));
+    }
+
+    @Test
+    public void testExceptionCauseWithLeadingDotSearchDomain() throws Exception {
+        testExceptionCauseIsDnsError(Collections.singletonList(".foo.com"));
+    }
+
+    private void testExceptionCauseIsDnsError(List<String> searchDomains) throws Exception {
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        resolver = newResolver().searchDomains(searchDomains).ndots(1).build();
+
+        // "unknown.hostname" has at least ndots dots, so it is queried as is first and then with each search domain.
+        Future<InetAddress> fut = resolver.resolve("unknown.hostname");
+        assertThat(fut.await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(fut.isSuccess()).isFalse();
+        final Throwable cause = fut.cause();
+        // The cause must be the NXDOMAIN of the server, not the IllegalArgumentException for an invalid name like
+        // "unknown.hostname..".
+        assertThat(cause).isInstanceOf(UnknownHostException.class).hasCauseInstanceOf(DnsErrorCauseException.class);
+        assertThat(((DnsErrorCauseException) cause.getCause()).getCode()).isEqualTo(DnsResponseCode.NXDOMAIN);
     }
 }
