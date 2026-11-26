@@ -153,6 +153,40 @@ public class PoolArenaTest {
     }
 
     @Test
+    public void testDeallocationsCountedWhenThreadCacheFreedByFinalizer() {
+        final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
+                true,   // preferDirect
+                0,      // nHeapArena
+                1,      // nDirectArena
+                8192,   // pageSize
+                11,     // maxOrder
+                0,      // tinyCacheSize
+                256,    // smallCacheSize
+                0,      // normalCacheSize
+                true    // useCacheForAllThreads
+                );
+
+        final int numBuffers = 10;
+        for (int i = 0; i < numBuffers; i++) {
+            // Small buffers are cached in the thread-local cache on release.
+            assertTrue(allocator.directBuffer(512).release());
+        }
+
+        final PoolArenaMetric metric = allocator.directArenas().get(0);
+        assertEquals(numBuffers, metric.numAllocations());
+        // All released buffers sit in the thread-local cache, so nothing is deallocated yet.
+        assertEquals(0, metric.numDeallocations());
+        assertEquals(numBuffers, metric.numActiveAllocations());
+
+        // Free the thread-local cache the same way the PoolThreadCache finalizer does.
+        allocator.threadCache().free(true);
+
+        assertEquals(numBuffers, metric.numDeallocations());
+        assertEquals(numBuffers, metric.numSmallDeallocations());
+        assertEquals(0, metric.numActiveAllocations());
+    }
+
+    @Test
     public void testDirectArenaMemoryCopy() {
         ByteBuf src = PooledByteBufAllocator.DEFAULT.directBuffer(512);
         ByteBuf dst = PooledByteBufAllocator.DEFAULT.directBuffer(512);
