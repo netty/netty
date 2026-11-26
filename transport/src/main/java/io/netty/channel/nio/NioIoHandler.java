@@ -599,6 +599,7 @@ public final class NioIoHandler implements IoHandler {
     private void select(IoHandlerContext runner) throws IOException {
         // A wakeup received while awake is remembered without touching the selector.
         if (!wakeupState.compareAndSet(AWAKE, SELECTING)) {
+            assert wakeupState.get() == WAKEUP_REQUESTED;
             selectNow();
             return;
         }
