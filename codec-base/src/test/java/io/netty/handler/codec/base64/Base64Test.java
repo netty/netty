@@ -18,10 +18,13 @@ package io.netty.handler.codec.base64;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -63,6 +66,33 @@ public class Base64Test {
         ByteBuf src = Unpooled.EMPTY_BUFFER;
         ByteBuf expectedEncoded = Unpooled.EMPTY_BUFFER;
         testEncode(src, expectedEncoded);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-1, 1", "-1, 0", "0, -1", "3, 2", "5, 0", "2147483647, 1"})
+    public void testEncodeRejectsInvalidRangeBeforeAllocating(int off, int len) {
+        ByteBuf src = copiedBuffer("test", CharsetUtil.US_ASCII);
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, () ->
+                    Base64.encode(src, off, len, false, Base64Dialect.STANDARD, allocator));
+            assertEquals(0, allocator.metric().usedHeapMemory());
+        } finally {
+            src.release();
+        }
+    }
+
+    @Test
+    public void testEncodeRangeWithinCapacityBeyondWriterIndex() {
+        ByteBuf src = Unpooled.buffer(4);
+        src.setBytes(0, new byte[] {'t', 'e', 's', 't'});
+        ByteBuf encoded = Base64.encode(src, 1, 3, false);
+        try {
+            assertEquals("ZXN0", encoded.toString(CharsetUtil.US_ASCII));
+        } finally {
+            src.release();
+            encoded.release();
+        }
     }
 
     @Test

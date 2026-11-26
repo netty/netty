@@ -1311,7 +1311,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.16.RELEASE</version>
+        <version>1.0.19.RELEASE</version>
       </dependency>
 
       <dependency>
@@ -1393,6 +1393,12 @@
                   <code>java.method.visibilityIncreased</code>
                   <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initUnidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
                   <justification>Allow applications to customize initialization of unidirectional streams by subclassing.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <new>method boolean io.netty.handler.ssl.ReferenceCountedOpenSslEngine::isSessionReused()</new>
+                  <justification>Allow applications to inspect OpenSSL session reuse without accessing the native SSL pointer.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>

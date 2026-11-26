@@ -79,7 +79,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     // These buffers are used for msghdr, iov, sockaddr_in / sockaddr_in6 when doing recvmsg / sendmsg
     //
-    // TODO: Alternative we could also allocate these everytime from the ByteBufAllocator or we could use
+    // TODO: Alternative we could also allocate these every time from the ByteBufAllocator or we could use
     //       some sort of other pool. Let's keep it simple for now.
     //
     // Consider exposing some configuration for that.
