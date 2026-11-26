@@ -186,6 +186,10 @@ class Hidden {
                     "pushId");
 
             builder.allowBlockingCallsInside(
+                    "io.netty.handler.codec.http.multipart.HttpPostRequestEncoder",
+                    "getNewMultipartDelimiter");
+
+            builder.allowBlockingCallsInside(
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
