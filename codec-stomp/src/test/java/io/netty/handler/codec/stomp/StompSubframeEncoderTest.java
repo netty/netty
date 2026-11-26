@@ -162,10 +162,15 @@ public class StompSubframeEncoderTest {
     void mustRejectNulCharacterInContentWithoutContentLength() {
         // Without a content-length header the receiver ends the frame at the first NUL octet and parses
         // the rest of the content as further frames.
-        StompFrame frame = new DefaultStompFrame(StompCommand.MESSAGE,
+        final StompFrame frame = new DefaultStompFrame(StompCommand.MESSAGE,
                 Unpooled.copiedBuffer("hello\0ERROR\nmessage:injected\n\n", CharsetUtil.UTF_8));
         frame.headers().set(StompHeaders.SUBSCRIPTION, "0");
-        assertThatThrownBy(() -> channel.writeOutbound(frame))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(frame);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("content-length");
