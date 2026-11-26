@@ -65,6 +65,15 @@ class DnsNameResolverBuilderTest {
     }
 
     @Test
+    void searchDomainsDropsRootDomainAndStripsLeadingDot() {
+        resolver = builder.searchDomains(
+                Arrays.asList(".", "", ".foo.com", "bar.com", "", "foo.com", "baz.com.", ".")).build();
+
+        // An empty search domain is kept, as it already queries the absolute name at its position.
+        assertThat(resolver.searchDomains()).containsExactly("", "foo.com", "bar.com", "baz.com.");
+    }
+
+    @Test
     void testDefaults() {
         resolver = builder.build();
 
