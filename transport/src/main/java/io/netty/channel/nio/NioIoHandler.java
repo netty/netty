@@ -50,6 +50,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * {@link IoHandler} implementation which register the {@link IoHandle}'s to a {@link Selector}.
@@ -65,6 +66,10 @@ public final class NioIoHandler implements IoHandler {
 
     private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
+
+    private static final int AWAKE = 0;
+    private static final int SELECTING = 1;
+    private static final int WAKEUP_REQUESTED = 2;
 
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
@@ -102,13 +107,8 @@ public final class NioIoHandler implements IoHandler {
 
     private final SelectorProvider provider;
 
-    /**
-     * Boolean that controls determines if a blocked Selector.select should
-     * break out of its selection process. In our case we use a timeout for
-     * the select method and the select method will block for that time unless
-     * waken up.
-     */
-    private final AtomicBoolean wakenUp = new AtomicBoolean();
+    // A wakeup does not always come with a queued task (for example, suspension).
+    private final AtomicInteger wakeupState = new AtomicInteger(AWAKE);
 
     private final SelectStrategy selectStrategy;
     private final ThreadAwareExecutor executor;
@@ -431,39 +431,7 @@ public final class NioIoHandler implements IoHandler {
                         // fall-through to SELECT since the busy-wait is not supported with NIO
 
                     case SelectStrategy.SELECT:
-                        select(context, wakenUp.getAndSet(false));
-
-                        // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                        // before calling 'selector.wakeup()' to reduce the wake-up
-                        // overhead. (Selector.wakeup() is an expensive operation.)
-                        //
-                        // However, there is a race condition in this approach.
-                        // The race condition is triggered when 'wakenUp' is set to
-                        // true too early.
-                        //
-                        // 'wakenUp' is set to true too early if:
-                        // 1) Selector is waken up between 'wakenUp.set(false)' and
-                        //    'selector.select(...)'. (BAD)
-                        // 2) Selector is waken up between 'selector.select(...)' and
-                        //    'if (wakenUp.get()) { ... }'. (OK)
-                        //
-                        // In the first case, 'wakenUp' is set to true and the
-                        // following 'selector.select(...)' will wake up immediately.
-                        // Until 'wakenUp' is set to false again in the next round,
-                        // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                        // any attempt to wake up the Selector will fail, too, causing
-                        // the following 'selector.select(...)' call to block
-                        // unnecessarily.
-                        //
-                        // To fix this problem, we wake up the selector again if wakenUp
-                        // is true immediately after selector.select(...).
-                        // It is inefficient in that it wakes up the selector for both
-                        // the first case (BAD - wake-up required) and the second case
-                        // (OK - no wake-up required).
-
-                        if (wakenUp.get()) {
-                            selector.wakeup();
-                        }
+                        select(context);
                         // fall through
                     default:
                 }
@@ -613,7 +581,8 @@ public final class NioIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.isExecutorThread(Thread.currentThread()) && wakenUp.compareAndSet(false, true)) {
+        if (!executor.isExecutorThread(Thread.currentThread()) && wakeupState.get() != WAKEUP_REQUESTED
+                && wakeupState.getAndSet(WAKEUP_REQUESTED) == SELECTING) {
             selector.wakeup();
         }
     }
@@ -627,7 +596,13 @@ public final class NioIoHandler implements IoHandler {
         return unwrappedSelector;
     }
 
-    private void select(IoHandlerContext runner, boolean oldWakenUp) throws IOException {
+    private void select(IoHandlerContext runner) throws IOException {
+        // A wakeup received while awake is remembered without touching the selector.
+        if (!wakeupState.compareAndSet(AWAKE, SELECTING)) {
+            selectNow();
+            return;
+        }
+
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
@@ -655,11 +630,8 @@ public final class NioIoHandler implements IoHandler {
                     // in NIO this means to block without any deadline
                     timeoutMillis = 0;
                 }
-                // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
-                // Selector#wakeup. So we need to check task queue again before executing select operation.
-                // If we don't, the task might be pended until select operation was timed out.
-                // It might be pended until idle timeout if IdleStateHandler existed in pipeline.
-                if (!runner.canBlock() && wakenUp.compareAndSet(false, true)) {
+                // Recheck the queue after publishing SELECTING. A later submission can wake the selector.
+                if (!runner.canBlock() || wakeupState.get() == WAKEUP_REQUESTED) {
                     selector.selectNow();
                     selectCnt = 1;
                     break;
@@ -668,7 +640,7 @@ public final class NioIoHandler implements IoHandler {
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
-                if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || !runner.canBlock()) {
+                if (selectedKeys != 0 || wakeupState.get() == WAKEUP_REQUESTED || !runner.canBlock()) {
                     // - Selected something,
                     // - waken up by user, or
                     // - the task queue has a pending task.
@@ -718,6 +690,8 @@ public final class NioIoHandler implements IoHandler {
                         selector, e);
             }
             // Harmless exception - log anyway
+        } finally {
+            wakeupState.lazySet(AWAKE);
         }
     }
 
@@ -741,14 +715,9 @@ public final class NioIoHandler implements IoHandler {
     }
 
     int selectNow() throws IOException {
-        try {
-            return selector.selectNow();
-        } finally {
-            // restore wakeup state if needed
-            if (wakenUp.get()) {
-                selector.wakeup();
-            }
-        }
+        // This poll makes progress on requests already received; a later wakeup remains pending.
+        wakeupState.lazySet(AWAKE);
+        return selector.selectNow();
     }
 
     private Selector selectRebuildSelector(int selectCnt) throws IOException {
