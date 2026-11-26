@@ -317,18 +317,40 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // Filter out duplicates.
         LinkedHashSet<String> suitesSet = new LinkedHashSet<String>(suites.length);
         Collections.addAll(suitesSet, suites);
-        if (!suitesSet.isEmpty()) {
+        boolean removedNonTlsv13Cipher = false;
+        if (!disabledAlgorithms.isEmpty()) {
+            if (suitesSet.isEmpty()) {
+                // An empty list would mean "use the OpenSSL defaults", which are not filtered by the security
+                // property. Apply the property to the default cipher suites that are available instead.
+                for (String cipher : OpenSsl.DEFAULT_CIPHERS) {
+                    if (OpenSsl.isCipherSuiteAvailable(cipher)) {
+                        suitesSet.add(cipher);
+                    }
+                }
+            }
+            List<String> configured = new ArrayList<String>(suitesSet);
             // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
             Iterator<String> suitesIt = suitesSet.iterator();
             while (suitesIt.hasNext()) {
-                if (disabledAlgorithms.isCipherSuiteDisabled(suitesIt.next())) {
+                String suite = suitesIt.next();
+                if (ReferenceCountedOpenSslEngine.isCipherSuiteDisabled(disabledAlgorithms, suite)) {
                     suitesIt.remove();
+                    removedNonTlsv13Cipher |= !SslUtils.isTLSv13Cipher(suite);
                 }
             }
             if (suitesSet.isEmpty()) {
                 // An empty list would mean "use the OpenSSL defaults", which must not happen here.
                 throw new SSLException("All configured cipher suites are disabled via the security property '" +
-                        JdkDisabledAlgorithms.PROPERTY + "': " + Arrays.asList(suites));
+                        JdkDisabledAlgorithms.PROPERTY + "': " + configured);
+            }
+            if (OpenSsl.isBoringSSL()) {
+                for (String suite : configured) {
+                    if (SslUtils.isTLSv13Cipher(suite) && disabledAlgorithms.isCipherSuiteDisabled(suite)) {
+                        logger.warn("The TLSv1.3 cipher suite {} is disabled via the security property '{}' but " +
+                                "BoringSSL does not allow to disable TLSv1.3 cipher suites, so it stays enabled.",
+                                suite, JdkDisabledAlgorithms.PROPERTY);
+                    }
+                }
             }
         }
         unmodifiableCiphers = new ArrayList<String>(suitesSet);
@@ -336,7 +358,21 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
-        this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        String[] configuredProtocols = protocols == null ?
+                OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        if (removedNonTlsv13Cipher && !hasNonTlsv13Cipher(unmodifiableCiphers)) {
+            // The security property removed all cipher suites for TLSv1.2 and below. Setting an empty cipher list
+            // is a no-op for OpenSSL / BoringSSL, so it would fall back to its defaults for these protocols unless we
+            // explicitly do not enable them.
+            List<String> tlsv13Only = new ArrayList<String>(1);
+            for (String protocol : configuredProtocols) {
+                if (SslProtocols.TLS_v1_3.equals(protocol)) {
+                    tlsv13Only.add(protocol);
+                }
+            }
+            configuredProtocols = tlsv13Only.toArray(EmptyArrays.EMPTY_STRINGS);
+        }
+        this.protocols = configuredProtocols;
         enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols, disabledAlgorithms);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.serverNames = serverNames;
@@ -530,6 +566,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 release();
             }
         }
+    }
+
+    private static boolean hasNonTlsv13Cipher(List<String> ciphers) {
+        for (String cipher : ciphers) {
+            if (!SslUtils.isTLSv13Cipher(cipher)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isCertificateCompressionDisabled(int mode) {

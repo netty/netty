@@ -83,13 +83,22 @@ final class JdkDisabledAlgorithms {
         if (value == null) {
             return;
         }
-        for (String entry : value.split(",")) {
+        String unquoted = value;
+        // Same as the JDK, the value may be enclosed in double quotes.
+        if (unquoted.length() >= 2 && unquoted.charAt(0) == '"' && unquoted.charAt(unquoted.length() - 1) == '"') {
+            unquoted = unquoted.substring(1, unquoted.length() - 1);
+        }
+        for (String entry : unquoted.split(",")) {
             String algorithm = entry.trim();
             if (algorithm.isEmpty() || containsWhitespace(algorithm)) {
                 // Constraint or directive, we can only handle plain names.
                 continue;
             }
             algorithm = algorithm.toLowerCase(Locale.ROOT);
+            if (algorithm.startsWith("ssl_")) {
+                // SSL_ and TLS_ prefixed names refer to the same cipher suite.
+                algorithm = "tls_" + algorithm.substring(4);
+            }
             if (algorithm.indexOf('*') >= 0) {
                 // Same as the JDK, only cipher suites starting with TLS_ are allowed to have wildcard characters.
                 if (algorithm.startsWith("tls_")) {
@@ -110,8 +119,15 @@ final class JdkDisabledAlgorithms {
         return false;
     }
 
+    /**
+     * Returns {@code true} if no algorithm that can be evaluated is disabled.
+     */
+    boolean isEmpty() {
+        return disabled.isEmpty() && wildcards.length == 0;
+    }
+
     boolean isProtocolDisabled(String protocol) {
-        return !disabled.isEmpty() && disabled.contains(protocol.toLowerCase(Locale.ROOT));
+        return protocol != null && !disabled.isEmpty() && disabled.contains(protocol.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -123,11 +139,14 @@ final class JdkDisabledAlgorithms {
      * into.
      */
     boolean isCipherSuiteDisabled(String cipherSuite) {
-        if (disabled.isEmpty() && wildcards.length == 0) {
+        if (isEmpty()) {
             return false;
         }
         String name = cipherSuite.toLowerCase(Locale.ROOT);
-        if (!name.startsWith("tls_") && !name.startsWith("ssl_")) {
+        if (name.startsWith("ssl_")) {
+            // SSL_ and TLS_ prefixed names refer to the same cipher suite.
+            name = "tls_" + name.substring(4);
+        } else if (!name.startsWith("tls_")) {
             // Might be an OpenSSL name, we need to evaluate the Java name as that is what the property is based on.
             String javaName = CipherSuiteConverter.toJava(cipherSuite, "TLS");
             if (javaName != null) {
@@ -157,6 +176,7 @@ final class JdkDisabledAlgorithms {
         // The JDK also decomposes a cipher suite into the standard names of its algorithms, which do not necessarily
         // match a component of the cipher suite name.
         return containsDisabled(keyExchangeAliases(name)) || containsDisabled(macAliases(name)) ||
+                containsDisabled(cipherAliases(delimited)) ||
                 (delimited.contains("_3des_ede_cbc_") && disabled.contains("desede"));
     }
 
@@ -184,6 +204,22 @@ final class JdkDisabledAlgorithms {
         return NO_PATTERNS;
     }
 
+    // The delimited name is expected, see isJavaCipherSuiteDisabled(...).
+    private static String[] cipherAliases(String delimited) {
+        List<String> aliases = new ArrayList<String>(3);
+        if (delimited.contains("_chacha20_poly1305_")) {
+            aliases.add("chacha20-poly1305");
+        }
+        if (delimited.contains("_null_")) {
+            aliases.add("c_null");
+        }
+        // The JDK transformations of all block, AEAD and stream ciphers other than RC4 end with NoPadding.
+        if (delimited.contains("_cbc_") || delimited.contains("_gcm_") || delimited.contains("_chacha20_poly1305_")) {
+            aliases.add("nopadding");
+        }
+        return aliases.isEmpty() ? NO_PATTERNS : aliases.toArray(new String[0]);
+    }
+
     private static String[] macAliases(String name) {
         int idx = name.lastIndexOf('_');
         String mac = idx == -1 ? name : name.substring(idx + 1);
@@ -192,7 +228,8 @@ final class JdkDisabledAlgorithms {
             case "md5":
                 return new String[] { "hmacmd5" };
             case "sha":
-                return new String[] { "sha1", "sha-1", "hmacsha1" };
+                // The JDK also uses SHA-256 as the PRF hash of these cipher suites.
+                return new String[] { "sha1", "sha-1", "hmacsha1", "sha256", "sha-256", "hmacsha256" };
             case "sha256":
                 return new String[] { "sha-256", "hmacsha256" };
             case "sha384":

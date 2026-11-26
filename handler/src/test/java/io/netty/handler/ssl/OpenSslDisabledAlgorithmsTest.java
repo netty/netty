@@ -233,8 +233,61 @@ class OpenSslDisabledAlgorithmsTest {
             engine = (ReferenceCountedOpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
             int options = SSL.getOptions(engine.sslPointer());
             assertThat(options & SSL.SSL_OP_NO_TLSv1_1).as("SSL_OP_NO_TLSv1_1").isEqualTo(SSL.SSL_OP_NO_TLSv1_1);
+            // The range must stay contiguous, so everything below the disabled protocol is disabled as well.
+            assertThat(options & SSL.SSL_OP_NO_TLSv1).as("SSL_OP_NO_TLSv1").isEqualTo(SSL.SSL_OP_NO_TLSv1);
+            assertThat(options & SSL.SSL_OP_NO_TLSv1_2).as("SSL_OP_NO_TLSv1_2").isZero();
         } finally {
             ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void settingOnlyDisabledCipherSuitesOnTheEngineFails() throws Exception {
+        String disabled = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        assumeTrue(OpenSsl.isCipherSuiteAvailable(disabled));
+        Security.setProperty(PROPERTY, disabled);
+        SslContext context = newServerBuilder().protocols(SslProtocols.TLS_v1_2).build();
+        SSLEngine engine = null;
+        try {
+            engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            SSLEngine sslEngine = engine;
+            assertThatThrownBy(() -> sslEngine.setEnabledCipherSuites(new String[] { disabled }))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessageContaining(PROPERTY);
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void protocolsAreNotEnabledIfOnlyTlsv13CipherSuitesAreLeft() throws Exception {
+        String disabled = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        assumeTrue(OpenSsl.isTlsv13Supported() && OpenSsl.isCipherSuiteAvailable(disabled));
+        Security.setProperty(PROPERTY, disabled);
+        SslContext context = newServerBuilder()
+                .protocols(SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)
+                .ciphers(Arrays.asList(disabled, "TLS_AES_128_GCM_SHA256"))
+                .build();
+        ReferenceCountedOpenSslEngine engine = null;
+        try {
+            engine = (ReferenceCountedOpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            assertThat(engine.getEnabledProtocols()).doesNotContain(SslProtocols.TLS_v1_2);
+            assertThat(SSL.getOptions(engine.sslPointer()) & SSL.SSL_OP_NO_TLSv1_2).isNotZero();
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void emptyCipherSuitesAreFilteredByTheSecurityProperty() throws Exception {
+        Security.setProperty(PROPERTY, "TLS_RSA_*");
+        // An empty list would use the native defaults, which are not aware of the security property.
+        SslContext context = newServerBuilder().ciphers(Collections.<String>emptyList()).build();
+        try {
+            assertThat(context.cipherSuites()).isNotEmpty().noneMatch(suite -> suite.startsWith("TLS_RSA_"));
+        } finally {
             ReferenceCountUtil.release(context);
         }
     }

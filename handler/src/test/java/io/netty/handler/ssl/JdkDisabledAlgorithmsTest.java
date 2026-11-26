@@ -55,6 +55,45 @@ class JdkDisabledAlgorithmsTest {
     }
 
     @Test
+    void sslAndTlsPrefixesAreEquivalent() {
+        JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms("SSL_RSA_WITH_3DES_EDE_CBC_SHA, TLS_DHE_*");
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_3DES_EDE_CBC_SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("SSL_RSA_WITH_3DES_EDE_CBC_SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("SSL_DHE_RSA_WITH_AES_128_CBC_SHA")).isTrue();
+
+        algorithms = new JdkDisabledAlgorithms("TLS_RSA_*");
+        assertThat(algorithms.isCipherSuiteDisabled("SSL_RSA_WITH_AES_128_GCM_SHA256")).isTrue();
+    }
+
+    @Test
+    void valueEnclosedInQuotesIsSupported() {
+        JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms("\"TLSv1.3, RC4, TLS_RSA_*\"");
+        assertThat(algorithms.isProtocolDisabled("TLSv1.3")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_RC4_128_SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_GCM_SHA256")).isTrue();
+    }
+
+    @Test
+    void nullProtocolIsNotDisabled() {
+        assertThat(new JdkDisabledAlgorithms("TLSv1").isProtocolDisabled(null)).isFalse();
+    }
+
+    @Test
+    void jdkCipherAndHashDecompositionIsSupported() {
+        JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms("ChaCha20-Poly1305");
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")).isFalse();
+
+        algorithms = new JdkDisabledAlgorithms("NoPadding, C_NULL");
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_NULL_SHA")).isTrue();
+
+        // The JDK uses SHA-256 as PRF hash for the _SHA cipher suites.
+        algorithms = new JdkDisabledAlgorithms("SHA256");
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_CBC_SHA")).isTrue();
+    }
+
+    @Test
     void constraintsAndDirectivesAreIgnored() {
         JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms(
                 "include jdk.disabled.namedCurves, RSA keySize < 1024, SHA1 usage TLSServer, , TLSv1");

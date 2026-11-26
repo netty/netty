@@ -1788,7 +1788,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     enabledSet.add(cipher);
                 }
                 for (String extraCipher : extraCiphers) {
-                    if (!disabledAlgorithms.isCipherSuiteDisabled(extraCipher)) {
+                    if (!isCipherSuiteDisabled(disabledAlgorithms, extraCipher)) {
                         enabledSet.add(extraCipher);
                     }
                 }
@@ -1804,12 +1804,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
+        // Validate all the given cipher suites first, this also includes the ones that are disabled via the
+        // jdk.tls.disabledAlgorithms security property.
+        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), new StringBuilder(),
+                new StringBuilder(), OpenSsl.isBoringSSL());
+
         // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
         List<String> allowedCipherSuites = new ArrayList<String>(cipherSuites.length);
         for (String cipherSuite : cipherSuites) {
-            if (cipherSuite == null || !disabledAlgorithms.isCipherSuiteDisabled(cipherSuite)) {
+            if (cipherSuite == null || !isCipherSuiteDisabled(disabledAlgorithms, cipherSuite)) {
                 allowedCipherSuites.add(cipherSuite);
             }
+        }
+        if (allowedCipherSuites.isEmpty()) {
+            throw new IllegalArgumentException("All cipher suites are disabled via the security property '" +
+                    JdkDisabledAlgorithms.PROPERTY + "': " + Arrays.asList(cipherSuites));
         }
 
         CipherSuiteConverter.convertToCipherStrings(allowedCipherSuites, buf, bufTLSv13,
@@ -1897,6 +1906,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
+    /**
+     * Returns {@code true} if the given cipher suite is disabled via the {@code jdk.tls.disabledAlgorithms} security
+     * property and OpenSSL / BoringSSL is able to honor this.
+     */
+    static boolean isCipherSuiteDisabled(JdkDisabledAlgorithms disabledAlgorithms, String cipherSuite) {
+        // BoringSSL does not allow to enable or disable TLSv1.3 cipher suites explicitly (see
+        // OpenSsl.checkTls13Ciphers(...)), so they are always enabled and must be reported as such.
+        return disabledAlgorithms.isCipherSuiteDisabled(cipherSuite) &&
+                !(OpenSsl.isBoringSSL() && SslUtils.isTLSv13Cipher(cipherSuite));
+    }
+
     static String[] toEnabledProtocols(String[] protocols, JdkDisabledAlgorithms disabledAlgorithms) {
         Set<String> enabledProtocols = new LinkedHashSet<String>();
         // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
@@ -1972,10 +1992,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             opts |= OPENSSL_OP_NO_PROTOCOLS[i];
         }
         // A protocol that is disabled via the jdk.tls.disabledAlgorithms security property might still be inside of
-        // the [min protocol, max protocol] range, so we need to explicitly disable it.
-        for (int i = minProtocolIndex; i <= maxProtocolIndex; ++i) {
+        // the [min protocol, max protocol] range. Disabling only that protocol would leave a non-contiguous range,
+        // which BoringSSL and OpenSSL clients cut down to the lowest contiguous part. Raise the minimum instead.
+        for (int i = maxProtocolIndex; i >= minProtocolIndex; --i) {
             if (disabledAlgorithms.isProtocolDisabled(OPENSSL_PROTOCOL_NAMES[i])) {
-                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+                for (int j = minProtocolIndex; j <= i; ++j) {
+                    opts |= OPENSSL_OP_NO_PROTOCOLS[j];
+                }
+                break;
             }
         }
 
