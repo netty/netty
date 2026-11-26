@@ -51,7 +51,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         @Override
         public boolean canBlock() {
             assert inEventLoop();
-            return !hasTasks() && !hasScheduledTasks();
+            // trySuspend() wakes up the IoHandler but does not queue a task. An IoHandler may drop a wakeup that
+            // arrives while the event loop is awake, as it is expected to look for work after it announced that it
+            // is about to block. So we also need to report that we can not block if the loop can be suspended now,
+            // otherwise the request might be missed until something else wakes up the event loop.
+            return !hasTasks() && !hasScheduledTasks() && !canSuspend();
         }
 
         @Override
