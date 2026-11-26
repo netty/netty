@@ -63,4 +63,43 @@ class JdkDisabledAlgorithmsTest {
         assertThat(algorithms.isProtocolDisabled("include")).isFalse();
         assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_CBC_SHA")).isFalse();
     }
+
+    @Test
+    void cipherSuiteWildcardsAreSupported() {
+        JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms("TLS_RSA_*, tls_ecdh_*_with_aes_*_cbc_sha, *");
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_CBC_SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDH_RSA_WITH_AES_256_CBC_SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384")).isFalse();
+        assertThat(algorithms.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")).isFalse();
+        // Only cipher suites are allowed to use wildcards.
+        assertThat(algorithms.isProtocolDisabled("TLSv1.2")).isFalse();
+    }
+
+    @Test
+    void jdkAlgorithmNamesAreSupported() {
+        JdkDisabledAlgorithms sha1 = new JdkDisabledAlgorithms("SHA1");
+        assertThat(sha1.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_CBC_SHA")).isTrue();
+        assertThat(sha1.isCipherSuiteDisabled("TLS_RSA_WITH_AES_128_CBC_SHA256")).isFalse();
+        assertThat(sha1.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")).isFalse();
+
+        JdkDisabledAlgorithms hmacSha256 = new JdkDisabledAlgorithms("HmacSHA256");
+        assertThat(hmacSha256.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")).isTrue();
+        assertThat(hmacSha256.isCipherSuiteDisabled("TLS_AES_256_GCM_SHA384")).isFalse();
+
+        JdkDisabledAlgorithms dh = new JdkDisabledAlgorithms("DH");
+        assertThat(dh.isCipherSuiteDisabled("TLS_DHE_RSA_WITH_AES_128_CBC_SHA")).isTrue();
+        assertThat(dh.isCipherSuiteDisabled("TLS_DH_anon_WITH_AES_128_CBC_SHA")).isTrue();
+        assertThat(dh.isCipherSuiteDisabled("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA")).isFalse();
+        assertThat(dh.isCipherSuiteDisabled("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA")).isFalse();
+
+        JdkDisabledAlgorithms desede = new JdkDisabledAlgorithms("DESede");
+        assertThat(desede.isCipherSuiteDisabled("TLS_RSA_WITH_3DES_EDE_CBC_SHA")).isTrue();
+    }
+
+    @Test
+    void openSslCipherSuiteNamesAreSupported() {
+        JdkDisabledAlgorithms algorithms = new JdkDisabledAlgorithms("TLS_RSA_WITH_AES_128_CBC_SHA");
+        assertThat(algorithms.isCipherSuiteDisabled("AES128-SHA")).isTrue();
+        assertThat(algorithms.isCipherSuiteDisabled("AES256-SHA")).isFalse();
+    }
 }

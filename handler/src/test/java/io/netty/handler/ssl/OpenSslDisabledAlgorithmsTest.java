@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -157,5 +158,84 @@ class OpenSslDisabledAlgorithmsTest {
                 .ciphers(Collections.singletonList(cipher));
         // Must not fall back to the OpenSSL defaults, which would silently enable the disabled cipher suite.
         assertThatThrownBy(builder::build).isInstanceOf(SSLException.class).hasMessageContaining(PROPERTY);
+    }
+
+    @Test
+    void cipherSuiteWildcardPatternsAreRespected() throws Exception {
+        Security.setProperty(PROPERTY, "TLS_RSA_*");
+        SslContext context = newServerBuilder().build();
+        try {
+            assertThat(context.cipherSuites()).noneMatch(suite -> suite.startsWith("TLS_RSA_"));
+        } finally {
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void cipherSuitesDisabledViaJdkAlgorithmNamesAreRemoved() throws Exception {
+        Security.setProperty(PROPERTY, "SHA1");
+        SslContext context = newServerBuilder().build();
+        try {
+            assertThat(context.cipherSuites()).noneMatch(suite -> suite.endsWith("_SHA"));
+        } finally {
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void cipherSuitesInOpenSslFormatDisabledViaSecurityPropertyAreRemoved() throws Exception {
+        String disabled = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        String enabled = "TLS_RSA_WITH_AES_256_CBC_SHA";
+        assumeTrue(OpenSsl.isCipherSuiteAvailable(disabled) && OpenSsl.isCipherSuiteAvailable(enabled));
+        Security.setProperty(PROPERTY, disabled);
+        SslContext context = newServerBuilder()
+                .protocols(SslProtocols.TLS_v1_2)
+                .ciphers(Arrays.asList("AES128-SHA", "AES256-SHA"))
+                .build();
+        SSLEngine engine = null;
+        try {
+            engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            assertThat(engine.getEnabledCipherSuites()).contains(enabled).doesNotContain(disabled);
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void cipherSuitesDisabledViaSecurityPropertyAreNotEnabledOnTheEngine() throws Exception {
+        String disabled = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        String enabled = "TLS_RSA_WITH_AES_256_CBC_SHA";
+        assumeTrue(OpenSsl.isCipherSuiteAvailable(disabled) && OpenSsl.isCipherSuiteAvailable(enabled));
+        Security.setProperty(PROPERTY, disabled);
+        SslContext context = newServerBuilder().protocols(SslProtocols.TLS_v1_2).build();
+        SSLEngine engine = null;
+        try {
+            engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            engine.setEnabledCipherSuites(new String[] { disabled, enabled });
+            assertThat(engine.getEnabledCipherSuites()).contains(enabled).doesNotContain(disabled);
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
+    void protocolDisabledInsideTheEnabledRangeIsNotEnabled() throws Exception {
+        assumeTrue(OpenSsl.isProtocolSupported(SslProtocols.TLS_v1) &&
+                OpenSsl.isProtocolSupported(SslProtocols.TLS_v1_1));
+        Security.setProperty(PROPERTY, SslProtocols.TLS_v1_1);
+        SslContext context = newServerBuilder()
+                .protocols(SslProtocols.TLS_v1, SslProtocols.TLS_v1_1, SslProtocols.TLS_v1_2)
+                .build();
+        ReferenceCountedOpenSslEngine engine = null;
+        try {
+            engine = (ReferenceCountedOpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            int options = SSL.getOptions(engine.sslPointer());
+            assertThat(options & SSL.SSL_OP_NO_TLSv1_1).as("SSL_OP_NO_TLSv1_1").isEqualTo(SSL.SSL_OP_NO_TLSv1_1);
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
     }
 }

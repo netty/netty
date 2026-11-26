@@ -116,6 +116,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.SSL_OP_NO_TLSv1_2,
             SSL.SSL_OP_NO_TLSv1_3
     };
+    // Same order as OPENSSL_OP_NO_PROTOCOLS.
+    private static final String[] OPENSSL_PROTOCOL_NAMES = {
+            SslProtocols.SSL_v2,
+            SslProtocols.SSL_v3,
+            SslProtocols.TLS_v1,
+            SslProtocols.TLS_v1_1,
+            SslProtocols.TLS_v1_2,
+            SslProtocols.TLS_v1_3
+    };
 
     /**
      * Depends upon tcnative ... only use if tcnative is available!
@@ -1778,7 +1787,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     enabledSet.add(cipher);
                 }
-                Collections.addAll(enabledSet, extraCiphers);
+                for (String extraCipher : extraCiphers) {
+                    if (!disabledAlgorithms.isCipherSuiteDisabled(extraCipher)) {
+                        enabledSet.add(extraCipher);
+                    }
+                }
             }
             return enabledSet.toArray(EMPTY_STRINGS);
         }
@@ -1791,7 +1804,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
-        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13,
+        // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
+        List<String> allowedCipherSuites = new ArrayList<String>(cipherSuites.length);
+        for (String cipherSuite : cipherSuites) {
+            if (cipherSuite == null || !disabledAlgorithms.isCipherSuiteDisabled(cipherSuite)) {
+                allowedCipherSuites.add(cipherSuite);
+            }
+        }
+
+        CipherSuiteConverter.convertToCipherStrings(allowedCipherSuites, buf, bufTLSv13,
                 OpenSsl.isBoringSSL());
         final String cipherSuiteSpec = buf.toString();
         final String cipherSuiteSpecTLSv13 = bufTLSv13.toString();
@@ -1949,6 +1970,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         assert maxProtocolIndex != MAX_VALUE;
         for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
             opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+        // A protocol that is disabled via the jdk.tls.disabledAlgorithms security property might still be inside of
+        // the [min protocol, max protocol] range, so we need to explicitly disable it.
+        for (int i = minProtocolIndex; i <= maxProtocolIndex; ++i) {
+            if (disabledAlgorithms.isProtocolDisabled(OPENSSL_PROTOCOL_NAMES[i])) {
+                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+            }
         }
 
         SSL.setOptions(ssl, opts);
