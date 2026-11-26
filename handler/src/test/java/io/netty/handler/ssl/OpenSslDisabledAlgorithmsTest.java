@@ -281,6 +281,25 @@ class OpenSslDisabledAlgorithmsTest {
     }
 
     @Test
+    void tlsv12IsNotEnabledIfOnlyTlsv13CipherSuitesAreConfigured() throws Exception {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        Security.setProperty(PROPERTY, "TLS_RSA_*");
+        SslContext context = newServerBuilder()
+                .protocols(SslProtocols.TLS_v1_2, SslProtocols.TLS_v1_3)
+                .ciphers(Collections.singletonList("TLS_AES_128_GCM_SHA256"))
+                .build();
+        ReferenceCountedOpenSslEngine engine = null;
+        try {
+            engine = (ReferenceCountedOpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            assertThat(engine.getEnabledProtocols()).doesNotContain(SslProtocols.TLS_v1_2);
+            assertThat(SSL.getOptions(engine.sslPointer()) & SSL.SSL_OP_NO_TLSv1_2).isNotZero();
+        } finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(context);
+        }
+    }
+
+    @Test
     void emptyCipherSuitesAreFilteredByTheSecurityProperty() throws Exception {
         Security.setProperty(PROPERTY, "TLS_RSA_*");
         // An empty list would use the native defaults, which are not aware of the security property.

@@ -317,7 +317,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // Filter out duplicates.
         LinkedHashSet<String> suitesSet = new LinkedHashSet<String>(suites.length);
         Collections.addAll(suitesSet, suites);
-        boolean removedNonTlsv13Cipher = false;
         if (!disabledAlgorithms.isEmpty()) {
             if (suitesSet.isEmpty()) {
                 // An empty list would mean "use the OpenSSL defaults", which are not filtered by the security
@@ -335,7 +334,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 String suite = suitesIt.next();
                 if (ReferenceCountedOpenSslEngine.isCipherSuiteDisabled(disabledAlgorithms, suite)) {
                     suitesIt.remove();
-                    removedNonTlsv13Cipher |= !SslUtils.isTLSv13Cipher(suite);
                 }
             }
             if (suitesSet.isEmpty()) {
@@ -360,10 +358,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         String[] configuredProtocols = protocols == null ?
                 OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
-        if (removedNonTlsv13Cipher && !hasNonTlsv13Cipher(unmodifiableCiphers)) {
-            // The security property removed all cipher suites for TLSv1.2 and below. Setting an empty cipher list
-            // is a no-op for OpenSSL / BoringSSL, so it would fall back to its defaults for these protocols unless we
-            // explicitly do not enable them.
+        if (!disabledAlgorithms.isEmpty() && !unmodifiableCiphers.isEmpty() &&
+                !hasNonTlsv13Cipher(unmodifiableCiphers)) {
+            // Only TLSv1.3 cipher suites are left. Setting an empty cipher list is a no-op for OpenSSL / BoringSSL,
+            // so it would fall back to its defaults for TLSv1.2 and below unless we explicitly do not enable them.
             List<String> tlsv13Only = new ArrayList<String>(1);
             for (String protocol : configuredProtocols) {
                 if (SslProtocols.TLS_v1_3.equals(protocol)) {
