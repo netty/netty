@@ -35,6 +35,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -139,7 +140,9 @@ public class DefaultFileRegionTest {
                 assertThat(region.transferred()).isEqualTo(data.length - position);
                 assertThat(outputStream.toByteArray()).isEqualTo(Arrays.copyOfRange(data, position, data.length));
 
-                // The transfer returns 0 at the end of the file, which must fail instead of being retried forever.
+                // The transfer returns 0 at the end of the file. The first 0 may be a full socket and is retried, the
+                // second one at the same offset must fail instead of being retried forever.
+                assertThat(region.transferTo(channel, data.length - position)).isZero();
                 assertThatThrownBy(() -> region.transferTo(channel, data.length - position))
                         .isInstanceOf(EOFException.class)
                         .hasMessage("Underlying file ended at offset " + data.length + " before the requested count " +
@@ -158,7 +161,9 @@ public class DefaultFileRegionTest {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
             FileRegion region = new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length);
             try {
-                // Like a socket whose send buffer is full, the transfer returns 0 and is retried later.
+                // Like a socket whose send buffer is full, the transfer returns 0 and is retried later. The second 0
+                // at the same offset checks for the end of the file, and finds more bytes.
+                assertThat(region.transferTo(new FullChannel(), 0)).isZero();
                 assertThat(region.transferTo(new FullChannel(), 0)).isZero();
                 assertThat(region.transferred()).isZero();
             } finally {
@@ -183,6 +188,8 @@ public class DefaultFileRegionTest {
             };
             FileRegion region = new DefaultFileRegion(fileChannel, 0, data.length);
             try {
+                // The second 0 at the same offset tries the read, which throws.
+                assertThat(region.transferTo(new FullChannel(), 0)).isZero();
                 assertThat(region.transferTo(new FullChannel(), 0)).isZero();
                 assertThat(region.transferred()).isZero();
             } finally {
@@ -190,6 +197,61 @@ public class DefaultFileRegionTest {
             }
         } finally {
             file.delete();
+        }
+    }
+
+    @Test
+    public void testOnlyARepeatedTransferOfZeroReadsTheFile() throws IOException {
+        File file = newFile();
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
+            final AtomicInteger reads = new AtomicInteger();
+            FileChannel fileChannel = new DelegatingFileChannel(randomAccessFile.getChannel()) {
+                @Override
+                public int read(ByteBuffer dst, long position) throws IOException {
+                    reads.incrementAndGet();
+                    return super.read(dst, position);
+                }
+            };
+            FileRegion region = new DefaultFileRegion(fileChannel, 0, data.length);
+            try {
+                // Like a full socket: the first 0 is retried without reading the file.
+                assertThat(region.transferTo(new FullChannel(), 0)).isZero();
+                assertThat(reads).hasValue(0);
+
+                // The socket took bytes again, so the next 0 is at another offset.
+                assertThat(region.transferTo(new TenBytesChannel(), 0)).isEqualTo(10);
+                assertThat(region.transferTo(new FullChannel(), 10)).isZero();
+                assertThat(reads).hasValue(0);
+
+                // A second 0 at the same offset reads one byte, which is there.
+                assertThat(region.transferTo(new FullChannel(), 10)).isZero();
+                assertThat(reads).hasValue(1);
+                assertThat(region.transferred()).isEqualTo(10);
+            } finally {
+                region.release();
+            }
+        } finally {
+            file.delete();
+        }
+    }
+
+    // Like a socket with room for ten more bytes.
+    private static final class TenBytesChannel implements WritableByteChannel {
+        @Override
+        public int write(ByteBuffer src) {
+            int written = Math.min(10, src.remaining());
+            src.position(src.position() + written);
+            return written;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return true;
+        }
+
+        @Override
+        public void close() {
+            // NOOP
         }
     }
 

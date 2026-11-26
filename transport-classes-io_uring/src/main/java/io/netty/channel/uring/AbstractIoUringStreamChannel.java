@@ -721,15 +721,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private boolean handleWriteCompleteFileRegion(ChannelOutboundBuffer channelOutboundBuffer,
-                                                      IoUringFileRegion fileRegion, int res, short data) {
+        // Visible for testing.
+        boolean handleWriteCompleteFileRegion(ChannelOutboundBuffer channelOutboundBuffer,
+                                              IoUringFileRegion fileRegion, int res, short data) {
             try {
                 if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                     return true;
                 }
                 int result = res >= 0 ? res : ioResult("io_uring splice", res);
                 if (result == 0 && fileRegion.count() > 0) {
-                    validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                    // A splice from the pipe into the socket returns 0 when the socket is full (-EAGAIN), which says
+                    // nothing about the file. Only a splice from the file into the pipe, which is empty then, can
+                    // reach the end of the file.
+                    if (data == IoUringFileRegion.SPLICE_TO_PIPE) {
+                        validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                    }
                     return false;
                 }
                 int progress = fileRegion.handleResult(result, data);

@@ -36,6 +36,7 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.EOFException;
@@ -71,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.condition.OS.LINUX;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
@@ -143,6 +145,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -154,6 +157,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    @EnabledOnOs(LINUX)
     public void testFileRegionFileEndsBeforeReportedSize(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -361,14 +365,21 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
-        cc.close().sync();
-        sc.close().sync();
+        try {
+            ChannelFuture future = cc.writeAndFlush(region);
+            assertThat(future.await(5, TimeUnit.SECONDS)).as("The write did not complete").isTrue();
+            assertInstanceOf(IOException.class, future.cause());
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+        }
     }
 
     public void testFileRegionFileEndsBeforeReportedSize(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         // Files in sysfs report the page size as their size but hold fewer bytes. A transfer returns 0 at the end of
-        // their content, while the socket stays writable.
+        // their content, while the socket stays writable. This fixture needs Linux sysfs, and a real file, as the
+        // native transports pass its file descriptor to sendfile and splice. DefaultFileRegionTest covers the check
+        // on every platform with a FileChannel whose size() reports too much.
         File file = new File("/sys/devices/system/cpu/online");
         assumeTrue(file.canRead(), "Requires a readable " + file);
         int contentLength = Files.readAllBytes(file.toPath()).length;

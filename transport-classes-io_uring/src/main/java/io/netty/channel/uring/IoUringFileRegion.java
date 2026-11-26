@@ -27,8 +27,8 @@ import java.nio.channels.WritableByteChannel;
 final class IoUringFileRegion implements FileRegion {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringFileRegion.class);
 
-    private static final short SPLICE_TO_PIPE = 1;
-    private static final short SPLICE_TO_SOCKET = 2;
+    static final short SPLICE_TO_PIPE = 1;
+    static final short SPLICE_TO_SOCKET = 2;
 
     final DefaultFileRegion fileRegion;
     private FileDescriptor[] pipe;
