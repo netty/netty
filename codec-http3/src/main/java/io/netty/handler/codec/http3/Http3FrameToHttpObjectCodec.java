@@ -40,7 +40,9 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.quic.QuicException;
 import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamResetException;
 import io.netty.util.concurrent.PromiseCombiner;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,6 +56,10 @@ import java.net.SocketAddress;
  * <p>
  * For simplicity, it converts to chunked encoding unless the entire stream
  * is a single header.
+ * <p>
+ * A {@link QuicException} or {@link Http3Exception} of the stream is passed on to the next handler, e.g. a
+ * {@link QuicStreamResetException} when the remote peer reset the stream, so that it learns that the message was
+ * aborted or is malformed.
  */
 public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInboundHandler
         implements ChannelOutboundHandler {
@@ -120,6 +126,24 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
         if (inboundTranslationInProgress) {
             ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
         }
+    }
+
+    /**
+     * Fires the exception to the next handler, e.g. the {@link QuicStreamResetException} of a stream that the remote
+     * peer reset, so that it learns that the message was aborted.
+     */
+    @Override
+    protected void handleQuicException(ChannelHandlerContext ctx, QuicException exception) {
+        ctx.fireExceptionCaught(exception);
+    }
+
+    /**
+     * Fires the exception to the next handler, e.g. for a malformed message, so that it learns that the message is
+     * malformed.
+     */
+    @Override
+    protected void handleHttp3Exception(ChannelHandlerContext ctx, Http3Exception exception) {
+        ctx.fireExceptionCaught(exception);
     }
 
     /**
