@@ -192,11 +192,6 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
 
     @Override
     public boolean contains(String name, String value, boolean ignoreCase) {
-        return containsValue(name, value, ignoreCase);
-    }
-
-    @Override
-    public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
         if (ignoreCase) {
             for (int i = 0; i < nameValuePairs.length; i += 2) {
                 if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
@@ -210,6 +205,17 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
                         contentEquals(nameValuePairs[i + 1], value)) {
                     return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
+        for (int i = 0; i < nameValuePairs.length; i += 2) {
+            if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
+                    HttpHeaders.containsCommaSeparatedTrimmed(nameValuePairs[i + 1], value, ignoreCase)) {
+                return true;
             }
         }
         return false;
