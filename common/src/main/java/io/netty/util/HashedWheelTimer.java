@@ -350,19 +350,26 @@ public class HashedWheelTimer implements Timer {
      *                               {@linkplain #stop() stopped} already
      */
     public void start() {
-        int state = WORKER_STATE_UPDATER.get(this);
-        switch (state) {
-            case WORKER_STATE_INIT:
-                if (WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
+        for (;;) {
+            int state = WORKER_STATE_UPDATER.get(this);
+            switch (state) {
+                case WORKER_STATE_INIT:
+                    if (!WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
+                        // The state changed after we read it. If stop() moved it from WORKER_STATE_INIT to
+                        // WORKER_STATE_SHUTDOWN the worker thread will never be started, so waiting for it below would
+                        // block forever. Read the state again so we throw in this case.
+                        continue;
+                    }
                     workerThread.start();
-                }
-                break;
-            case WORKER_STATE_STARTED:
-                break;
-            case WORKER_STATE_SHUTDOWN:
-                throw new IllegalStateException("cannot be started once stopped");
-            default:
-                throw new Error("Invalid WorkerState: " + state);
+                    break;
+                case WORKER_STATE_STARTED:
+                    break;
+                case WORKER_STATE_SHUTDOWN:
+                    throw new IllegalStateException("cannot be started once stopped");
+                default:
+                    throw new Error("Invalid WorkerState: " + state);
+            }
+            break;
         }
 
         // Wait until the startTime is initialized by the worker.
@@ -596,7 +603,7 @@ public class HashedWheelTimer implements Timer {
                     }
                 }
 
-                // Check if we run on windows, as if thats the case we will need
+                // Check if we run on windows, as if that's the case we will need
                 // to round the sleepTime as workaround for a bug that only affect
                 // the JVM if it runs on windows.
                 //

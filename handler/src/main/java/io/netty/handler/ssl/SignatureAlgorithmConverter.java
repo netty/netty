@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,6 +47,33 @@ final class SignatureAlgorithmConverter {
             "(?:(^[a-zA-Z].+)(?:_with_|-with-|_pkcs1_|_pss_rsae_)(.+$))|" +
             // group 5 - 6
             "(?:(^[a-zA-Z].+)_(.+$))");
+
+    /**
+     * Converts OpenSSL algorithm names to Java algorithm names. The result keeps the order of the given names and
+     * leaves out the names that can't be converted and the ones that were converted to the same name before.
+     */
+    static String[] toJavaNames(String[] opensslNames) {
+        // A peer only offers a handful of algorithms, so looking through the names that were converted so far is
+        // cheaper than collecting them in a Set.
+        String[] javaNames = new String[opensslNames.length];
+        int count = 0;
+        for (String opensslName : opensslNames) {
+            String javaName = toJavaName(opensslName);
+            if (javaName != null && !contains(javaNames, count, javaName)) {
+                javaNames[count++] = javaName;
+            }
+        }
+        return count == javaNames.length ? javaNames : Arrays.copyOf(javaNames, count);
+    }
+
+    private static boolean contains(String[] names, int count, String name) {
+        for (int i = 0; i < count; i++) {
+            if (names[i].equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Converts an OpenSSL algorithm name to a Java algorithm name and return it,

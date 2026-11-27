@@ -137,7 +137,7 @@ final class Http3ControlStreamOutboundHandler
 
     @Override
     public boolean isSharable() {
-        // This handle keeps state so we cant reuse it.
+        // This handle keeps state so we can't reuse it.
         return false;
     }
 }

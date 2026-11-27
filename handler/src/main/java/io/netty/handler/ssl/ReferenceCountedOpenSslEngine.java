@@ -294,19 +294,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                         } else {
                             String[] algs = SSL.getSigAlgs(ssl);
-                            if (algs == null) {
-                                peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
-                            } else {
-                                Set<String> algorithmList = new LinkedHashSet<>(algs.length);
-                                for (String alg: algs) {
-                                    String converted = SignatureAlgorithmConverter.toJavaName(alg);
-
-                                    if (converted != null) {
-                                        algorithmList.add(converted);
-                                    }
-                                }
-                                peerSupportedSignatureAlgorithms = algorithmList.toArray(EMPTY_STRINGS);
-                            }
+                            peerSupportedSignatureAlgorithms = algs == null ?
+                                    EMPTY_STRINGS : SignatureAlgorithmConverter.toJavaNames(algs);
                         }
                     }
                     return peerSupportedSignatureAlgorithms.clone();
@@ -483,7 +472,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return new SecretKeySpec(SSL.getMasterKey(ssl), "AES");
     }
 
-    synchronized boolean isSessionReused() {
+    /**
+     * Returns whether the completed handshake reused a TLS session.
+     * Returns false if this engine has been shut down.
+     */
+    public synchronized boolean isSessionReused() {
         if (destroyed) {
             return false;
         }
@@ -2505,6 +2498,46 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw new SSLException("Failed to get selected credential", e);
             }
         }
+    }
+
+    /**
+     * Returns whether the given credential was selected for this SSL connection. The credential must be added to this
+     * engine or its context. The result remains available after the handshake completes until this engine is shut down.
+     *
+     * @throws SSLException if an error occurs querying the selected credential.
+     */
+    public synchronized boolean isSelectedCredential(OpenSslCredential credential) throws SSLException {
+        checkNotNull(credential, "credential");
+
+        if (destroyed || !(credential instanceof OpenSslCredentialPointer) || !containsCredential(credential)) {
+            return false;
+        }
+
+        try {
+            long selectedCredentialAddress = SSL.getSelectedCredential(ssl);
+            return selectedCredentialAddress != 0 &&
+                    ((OpenSslCredentialPointer) credential).credentialAddress() == selectedCredentialAddress;
+        } catch (Exception e) {
+            throw new SSLException("Failed to get selected credential", e);
+        }
+    }
+
+    private boolean containsCredential(OpenSslCredential credential) {
+        if (engineCredentials != null) {
+            for (OpenSslCredential configuredCredential : engineCredentials) {
+                if (configuredCredential == credential) {
+                    return true;
+                }
+            }
+        }
+
+        for (OpenSslCredential configuredCredential : parentContext.credentials) {
+            if (configuredCredential == credential) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static long bufferAddress(ByteBuffer b) {

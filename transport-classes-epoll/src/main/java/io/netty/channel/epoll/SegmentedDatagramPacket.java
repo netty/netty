@@ -28,7 +28,7 @@ public final class SegmentedDatagramPacket extends io.netty.channel.unix.Segment
     /**
      * Create a new instance.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
+     * @param data          the {@link ByteBuf} which must be contiguous.
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */
@@ -40,7 +40,7 @@ public final class SegmentedDatagramPacket extends io.netty.channel.unix.Segment
     /**
      * Create a new instance.
      *
-     * @param data          the {@link ByteBuf} which must be continguous.
+     * @param data          the {@link ByteBuf} which must be contiguous.
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */

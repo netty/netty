@@ -165,7 +165,7 @@ final class HpackEncoder {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-              HpackHeaderField.sizeOf(name, value));
+              HpackHeaderField.sizeOf(name, value), sensitivityDetector);
         }
     }
 
@@ -174,7 +174,8 @@ final class HpackEncoder {
      * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
+    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize,
+                              SensitivityDetector sensitivityDetector) {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
@@ -212,6 +213,9 @@ final class HpackEncoder {
             if (staticTableIndex != HpackStaticTable.NOT_FOUND) {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
+            } else if (sensitivityDetector.skipIndexing(name, value)) {
+                // Section 6.2.2. Literal Header Field without Indexing
+                encodeLiteral(out, name, value, IndexType.NONE, getNameIndex(name));
             } else {
                 ensureCapacity(headerSize);
                 encodeAndAddEntries(out, name, nameHash, value, valueHash);

@@ -484,37 +484,29 @@ public final class IoUringIoHandler implements IoHandler {
         if (eventPending) {
             // There is an event that has been or will be written by another thread, so we must wait for the event.
             // Make sure we're actually listening for writes to the event fd.
-            while (eventfdReadSubmitted == 0) {
+            if (eventfdReadSubmitted == 0) {
                 submitEventFdRead();
-                submissionQueue.submit();
             }
-            // Drain the eventfd of the pending wakup.
-            class DrainFdEventCallback implements CompletionCallback {
-                boolean eventFdDrained;
+        } else if (eventfdReadSubmitted != 0) {
+            // `eventfdAsyncNotify` will never transition back to false, thus no other thread will write to the
+            // eventfd anymore. Write to it ourselves so the pending read is guaranteed to complete.
+            Native.eventFdWrite(eventfd.intValue(), 1L);
+        }
+        // Wait for the completion of the eventfd read before eventfdReadBuf is freed. Cancelling the read is not
+        // enough: the kernel may run it in an io-wq worker (for example when it was submitted while an
+        // IOSQE_IO_DRAIN request was in flight), which copies into eventfdReadBuf independently of this thread, may
+        // already be executing, and is not stopped by closing the ring.
+        // As eventFdClosing is set, handleEventFdRead() will not submit another read.
+        // See https://github.com/netty/netty/issues/18483
+        while (eventfdReadSubmitted != 0) {
+            submissionQueue.submitAndGet();
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, completionCallback);
+        }
+    }
 
-                @Override
-                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
-                    if (udata == EVENTFD_TOKEN) {
-                        eventFdDrained = true;
-                    }
-                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
-                }
-            }
-            final DrainFdEventCallback handler = new DrainFdEventCallback();
-            completionQueue.process(handler);
-            while (!handler.eventFdDrained) {
-                submissionQueue.submitAndGet();
-                processCompletionsAndHandleOverflow(submissionQueue, completionQueue, handler);
-            }
-        }
-        // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
-        // transition back to false, thus we should never have any more events written.
-        // So, if we have a read event pending, we can cancel it.
-        if (eventfdReadSubmitted != 0) {
-            submissionQueue.addCancel(eventfdReadSubmitted, EVENTFD_TOKEN);
-            eventfdReadSubmitted = 0;
-            submissionQueue.submit();
-        }
+    // Visible for testing.
+    boolean isEventFdReadPending() {
+        return eventfdReadSubmitted != 0;
     }
 
     private void completeRingClose() {
@@ -704,7 +696,7 @@ public final class IoUringIoHandler implements IoHandler {
             event.update(res, flags, op, userData, extraCqeData);
             handle.handle(this, event);
             // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
-            // receive more completions for the intial request.
+            // receive more completions for the initial request.
             if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
                 // No more outstanding completions, remove the registration now.
                 removeLater = false;
