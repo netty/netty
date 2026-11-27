@@ -129,6 +129,9 @@ public class Http2ControlFrameLimitEncoderTest {
         Http2Connection connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
+        // Create and close stream 1 so streamMayHaveExisted(1) returns true. The limit encoder tests
+        // need RST_STREAM to actually be written, not short-circuited as an idle stream per RFC 9113.
+        connection.local().createStream(1, false).close();
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);
