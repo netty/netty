@@ -338,6 +338,83 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamClosedWhenStopSendingReceivedAfterFin(Executor executor) throws Throwable {
+        testStreamClosedOnceStoppedAndInputEnded(executor, false, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamClosedWhenFinReceivedAfterStopSending(Executor executor) throws Throwable {
+        testStreamClosedOnceStoppedAndInputEnded(executor, true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamClosedWhenStopSendingReceivedAfterReset(Executor executor) throws Throwable {
+        testStreamClosedOnceStoppedAndInputEnded(executor, false, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testStreamClosedWhenResetReceivedAfterStopSending(Executor executor) throws Throwable {
+        testStreamClosedOnceStoppedAndInputEnded(executor, true, true);
+    }
+
+    private static void testStreamClosedOnceStoppedAndInputEnded(Executor executor, boolean stopFirst, boolean reset)
+            throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            ServerStreams serverStreams = new ServerStreams();
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, serverStreams);
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = connect(channel, server);
+
+            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
+            QuicStreamChannel serverStream = serverStreams.open(clientStream);
+
+            if (stopFirst) {
+                stopSending(clientStream, serverStreams);
+                endInput(clientStream, serverStreams, reset);
+            } else {
+                endInput(clientStream, serverStreams, reset);
+                stopSending(clientStream, serverStreams);
+            }
+
+            // Both directions of the stream are done, so the stream channel is closed, while the connection is still
+            // open.
+            assertThat(serverStream.closeFuture().await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(serverStream.parent().isActive()).isTrue();
+            assertThat(serverStreams.events).isEmpty();
+
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    private static void stopSending(QuicStreamChannel clientStream, ServerStreams serverStreams) throws Exception {
+        clientStream.shutdownInput((int) ERROR_CODE).sync();
+        assertStopped(serverStreams.next());
+    }
+
+    private static void endInput(QuicStreamChannel clientStream, ServerStreams serverStreams, boolean reset)
+            throws Exception {
+        if (reset) {
+            clientStream.shutdownOutput((int) ERROR_CODE).sync();
+            assertThat(serverStreams.next()).isInstanceOf(QuicStreamResetException.class);
+        } else {
+            clientStream.shutdownOutput().sync();
+            assertThat(serverStreams.next()).isSameAs(ChannelInputShutdownReadComplete.INSTANCE);
+        }
+    }
+
     /**
      * Creates a stream, waiting for the server to give stream credit back if there is none left.
      */

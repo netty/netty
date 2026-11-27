@@ -289,6 +289,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return finReceived || inputReset;
     }
 
+    private boolean isOutputTerminated() {
+        return finSent || outputStopped;
+    }
+
     void stopSendingErrorCode(long errorCode) {
         stopSendingErrorCode = errorCode;
     }
@@ -301,12 +305,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             capacity = 0;
             if (registered) {
                 pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+                eventLoop().execute(this::closeIfDone);
             }
         }
     }
 
     private void closeIfDone() {
-        if (finSent && (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
+        if (isOutputTerminated() &&
+                (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
             unsafe().close(unsafe().voidPromise());
         }
     }
@@ -958,7 +964,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
-            if (readFrames && finReceived && finSent) {
+            if (readFrames && finReceived && isOutputTerminated()) {
                 close(voidPromise());
             } else if (config.isAllowHalfClosure()) {
                 if (finReceived) {
@@ -966,7 +972,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     // to be consistent with other transports.
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-                    if (finSent) {
+                    if (isOutputTerminated()) {
                         // This was an unidirectional stream which means as soon as we received FIN and sent a FIN
                         // we need close the connection.
                         close(voidPromise());
