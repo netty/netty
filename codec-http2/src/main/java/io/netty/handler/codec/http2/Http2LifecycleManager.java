@@ -54,13 +54,15 @@ public interface Http2LifecycleManager {
      * Ensure the stream identified by {@code streamId} is reset. If our local state does not indicate the stream has
      * been reset yet then a {@code RST_STREAM} will be sent to the peer. If our local state indicates the stream
      * has already been reset then the return status will indicate success without sending anything to the peer.
+     * The same applies to unknown locally initiated streams for which the local endpoint has no creation history.
      * @param ctx The context used for communication and buffer allocation if necessary.
      * @param streamId The identifier of the stream to reset.
      * @param errorCode Justification as to why this stream is being reset. See {@link Http2Error}.
      * @param promise Used to indicate the return status of this operation.
      * @return Will be considered successful when the connection and stream state has been updated, and a
      * {@code RST_STREAM} frame has been sent to the peer. If the stream state has already been updated and a
-     * {@code RST_STREAM} frame has been sent then the return status may indicate success immediately.
+     * {@code RST_STREAM} frame has been sent, or no frame is needed, then the return status may indicate success
+     * immediately.
      */
     ChannelFuture resetStream(ChannelHandlerContext ctx, int streamId, long errorCode,
             ChannelPromise promise);
