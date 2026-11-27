@@ -21,9 +21,11 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -43,6 +45,8 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final long count;
     private long transferred;
     private FileChannel file;
+    // The file offset at which the last transfer returned 0, or -1. See validate(...).
+    private long zeroTransferOffset = -1;
 
     /**
      * Create a new instance
@@ -191,6 +195,33 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         long count = region.count - position;
         if (region.position + count + position > size) {
             throw new IOException("Underlying file size " + size + " smaller then requested count " + region.count);
+        }
+        // transferTo(...), sendfile and splice return 0 both when the socket can not take more data and when the
+        // end of the file was reached. size() may report more than the file holds (for example files in sysfs
+        // report the page size), so the check above does not catch the latter and we would retry forever while the
+        // socket stays writable. As a best-effort check, a positional read of one byte tells the two apart, as it
+        // returns -1 only at the end of the file. After a transfer returned 0 the transport waits for the socket to
+        // become writable before it tries again. The read is only done when a transfer returns 0 again at the same
+        // offset, so a single 0, or a 0 at a new offset, costs no read.
+        long offset = region.position + position;
+        if (count > 0) {
+            if (region.zeroTransferOffset != offset) {
+                region.zeroTransferOffset = offset;
+            } else if (isEndOfFile(region.file, offset)) {
+                throw new EOFException("Underlying file ended at offset " + offset + " before the requested count " +
+                        region.count + " was transferred (size() reported " + size + ')');
+            }
+        }
+    }
+
+    private static boolean isEndOfFile(FileChannel file, long offset) {
+        try {
+            return file.read(ByteBuffer.allocate(1), offset) == -1;
+        } catch (IOException e) {
+            // We can not tell. For example a FileChannel opened with ExtendedOpenOption.DIRECT only allows reads that
+            // are aligned to the block size, while sendfile works at any offset. Retry later, as before, which means
+            // that we still spin if such a file holds fewer bytes than its size() reports.
+            return false;
         }
     }
 }
