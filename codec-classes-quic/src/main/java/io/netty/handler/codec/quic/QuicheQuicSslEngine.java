@@ -446,7 +446,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
             }
 
             if (value instanceof SSLSessionBindingListener) {
-                // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
+                // Use newSSLSessionBindingEvent so we always use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueBound(newSSLSessionBindingEvent(name));
             }
             notifyUnbound(old, name);
@@ -497,7 +497,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
 
         private void notifyUnbound(@Nullable Object value, String name) {
             if (value instanceof SSLSessionBindingListener) {
-                // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
+                // Use newSSLSessionBindingEvent so we always use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueUnbound(newSSLSessionBindingEvent(name));
             }
         }

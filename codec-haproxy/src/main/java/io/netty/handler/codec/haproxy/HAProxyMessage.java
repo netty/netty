@@ -299,8 +299,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             throw new HAProxyProtocolException(
                     "Maximum TLV nesting level reached: " + nestingLevel + " (expected: < " + MAX_NESTING_LEVEL + ')');
         }
-        // We need at least 4 bytes for a TLV
-        if (header.readableBytes() < 4) {
+        // We need at least 3 bytes for a TLV: the type and the length, the value may be empty
+        if (header.readableBytes() < 3) {
             return null;
         }
 
@@ -308,14 +308,14 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         final HAProxyTLV.Type type = HAProxyTLV.Type.typeForByteValue(typeAsByte);
 
         final int length = header.readUnsignedShort();
+        if (length > header.readableBytes()) {
+            throw new HAProxyProtocolException("TLV length must be smaller or equal the readable bytes (" +
+                    header.readableBytes() + ") but was: " + length);
+        }
         switch (type) {
         case PP2_TYPE_SSL:
             if (length < 5) {
                 throw new HAProxyProtocolException("TLV length must be at least 5 but was: " + length);
-            }
-            if (length > header.readableBytes()) {
-                throw new HAProxyProtocolException("TLV length must be smaller or equal the readable bytes (" +
-                        header.readableBytes() + ") but was: " + length);
             }
             // Slice the rawContent but only retain it if we didn't see an error as otherwise we might
             // leak.
@@ -324,7 +324,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             final byte client = byteBuf.readByte();
             final int verify = byteBuf.readInt();
 
-            if (byteBuf.readableBytes() >= 4) {
+            if (byteBuf.readableBytes() >= 3) {
 
                 final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
                 try {
@@ -334,7 +334,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                             break;
                         }
                         encapsulatedTlvs.add(haProxyTLV);
-                    } while (byteBuf.readableBytes() >= 4);
+                    } while (byteBuf.readableBytes() >= 3);
                 }  catch (Throwable t) {
                     // Release all previously read TLVs before rethrowing as otherwise we would leak.
                     releaseDeep(encapsulatedTlvs);
@@ -605,10 +605,28 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     int tlvNumBytes() {
         int tlvNumBytes = 0;
-        for (int i = 0; i < tlvs.size(); i++) {
+        for (int i = 0; i < tlvs.size(); i += 1 + flattenedChildren(tlvs, i)) {
             tlvNumBytes += tlvs.get(i).totalNumBytes();
         }
         return tlvNumBytes;
+    }
+
+    /**
+     * Returns how many entries directly following {@link HAProxySSLTLV} at {@code index}
+     * are its encapsulated TLVs.
+     */
+    static int flattenedChildren(List<HAProxyTLV> tlvs, int index) {
+        HAProxyTLV tlv = tlvs.get(index);
+        if (!(tlv instanceof HAProxySSLTLV)) {
+            return 0;
+        }
+        List<HAProxyTLV> children = ((HAProxySSLTLV) tlv).encapsulatedTLVs();
+        int n = 0;
+        while (n < children.size() && (index + 1 + n) < tlvs.size() &&
+                children.get(n) == tlvs.get(index + 1 + n)) {
+            n++;
+        }
+        return n;
     }
 
     @Override

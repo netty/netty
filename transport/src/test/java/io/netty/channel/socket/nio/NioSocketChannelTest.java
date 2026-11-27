@@ -31,6 +31,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
@@ -39,6 +40,8 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -52,17 +55,68 @@ import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NetworkChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChannel> {
+
+    @ParameterizedTest(name = "{0} buffers, writeSpinCount={1}")
+    @CsvSource({ "1, 1", "2, 1", "1, 2", "2, 2" })
+    @Timeout(30)
+    public void testFlushDoesNotScheduleTaskAfterDrainingOutboundBuffer(int bufferCount, int writeSpinCount)
+            throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        NioSocketChannel channel = new NioSocketChannel();
+        try (ServerSocket server = new ServerSocket()) {
+            server.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0));
+            channel.config().setWriteSpinCount(writeSpinCount);
+            new Bootstrap().group(group)
+                    .channelFactory(() -> channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .connect(server.getLocalSocketAddress()).sync();
+            try (Socket peer = server.accept()) {
+                SingleThreadEventLoop loop = (SingleThreadEventLoop) channel.eventLoop();
+                loop.submit(() -> {
+                    List<ChannelFuture> writes = new ArrayList<ChannelFuture>(bufferCount);
+                    for (int i = 0; i < bufferCount; i++) {
+                        writes.add(channel.write(Unpooled.directBuffer(1).writeByte(i)));
+                    }
+
+                    // Observe the queue in the same task as the flush, before any newly queued task can run.
+                    int pendingTasks = loop.pendingTasks();
+                    channel.flush();
+
+                    for (ChannelFuture write : writes) {
+                        assertThat(write.isSuccess()).as("write completed during flush").isTrue();
+                    }
+                    assertThat(channel.unsafe().outboundBuffer().isEmpty()).isTrue();
+                    assertThat(loop.pendingTasks()).as("flush must not enqueue a task after draining the buffer")
+                            .isEqualTo(pendingTasks);
+                }).sync();
+
+                for (int i = 0; i < bufferCount; i++) {
+                    assertThat(peer.getInputStream().read()).isEqualTo(i);
+                }
+            }
+        } finally {
+            if (channel.isRegistered()) {
+                channel.close().syncUninterruptibly();
+            } else {
+                channel.unsafe().closeForcibly();
+            }
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
 
     /**
      * Reproduces the issue #1600

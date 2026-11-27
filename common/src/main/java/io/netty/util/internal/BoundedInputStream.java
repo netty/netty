@@ -28,7 +28,7 @@ public final class BoundedInputStream extends FilterInputStream {
 
     public BoundedInputStream(@NotNull InputStream in, int maxBytesRead) {
         super(in);
-        this.maxBytesRead = ObjectUtil.checkPositive(maxBytesRead, "maxRead");
+        this.maxBytesRead = ObjectUtil.checkPositive(maxBytesRead, "maxBytesRead");
     }
 
     public BoundedInputStream(@NotNull InputStream in) {

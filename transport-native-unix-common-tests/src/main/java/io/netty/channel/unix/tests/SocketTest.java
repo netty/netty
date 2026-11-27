@@ -16,20 +16,33 @@
 package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.Limits;
 import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.TestAbortedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Arrays;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
@@ -129,11 +142,213 @@ public abstract class SocketTest<T extends Socket> {
         cleanableDirectBuffer.clean();
     }
 
+    @Test
+    public void testSendToDomainSocketWithTooLongPath() throws IOException {
+        byte[] path = new byte[4096];
+        Arrays.fill(path, (byte) 'a');
+        path[0] = '/';
+
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(1);
+        Socket domainSocket = Socket.newSocketDomainDgram();
+        try {
+            ByteBuffer buffer = cleanableDirectBuffer.buffer();
+            // The path must be rejected instead of silently being truncated and sent to a different address.
+            NativeIoException e = assertThrows(NativeIoException.class,
+                    () -> domainSocket.sendToDomainSocket(buffer, 0, 1, path));
+            assertEquals(Errors.ERRNO_ENAMETOOLONG_NEGATIVE, e.expectedErr());
+        } finally {
+            domainSocket.close();
+            cleanableDirectBuffer.clean();
+        }
+    }
+
     protected int level() {
         throw new TestAbortedException("Not supported");
     }
 
     protected int optname() {
         throw new TestAbortedException("Not supported");
+    }
+
+    @Test
+    public void testBindDomainSocketDoesNotRemoveRegularFile() throws Exception {
+        File file = PlatformDependent.createTempFile("NETTY", "UDS", null);
+        try {
+            byte[] content = "do not delete".getBytes(StandardCharsets.US_ASCII);
+            Files.write(file.toPath(), content);
+
+            Socket domainSocket = Socket.newSocketDomain();
+            try {
+                assertThrows(IOException.class, () -> domainSocket.bind(new DomainSocketAddress(file)));
+            } finally {
+                domainSocket.close();
+            }
+            assertTrue(file.isFile());
+            assertArrayEquals(content, Files.readAllBytes(file.toPath()));
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testBindDomainSocketReplacesStaleSocket() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File file = new File(address.path());
+        try {
+            Socket first = Socket.newSocketDomain();
+            try {
+                first.bind(address);
+            } finally {
+                first.close();
+            }
+            // The socket inode is left behind after close.
+            assertTrue(file.exists());
+
+            Socket second = Socket.newSocketDomain();
+            try {
+                second.bind(address);
+            } finally {
+                second.close();
+            }
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testDeleteDomainSocketFileOnlyDeletesSockets() throws Exception {
+        File regular = PlatformDependent.createTempFile("NETTY", "UDS", null);
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File socketFile = new File(address.path());
+        try {
+            assertFalse(UnixChannelUtil.deleteDomainSocketFile(regular.getPath()));
+            assertTrue(regular.exists());
+
+            Socket domainSocket = Socket.newSocketDomain();
+            try {
+                domainSocket.bind(address);
+            } finally {
+                domainSocket.close();
+            }
+            assertTrue(UnixChannelUtil.deleteDomainSocketFile(address.path()));
+            assertFalse(socketFile.exists());
+            // Does not exist anymore.
+            assertFalse(UnixChannelUtil.deleteDomainSocketFile(address.path()));
+        } finally {
+            regular.delete();
+            socketFile.delete();
+        }
+    }
+
+    @Test
+    public void testBindDomainSocketWithTrailingSlashDoesNotRemoveSocket() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File file = new File(address.path());
+        try {
+            Socket first = Socket.newSocketDomain();
+            try {
+                first.bind(address);
+            } finally {
+                first.close();
+            }
+            assertTrue(file.exists());
+
+            // "<socket>/" does not refer to the socket file (lstat fails with ENOTDIR), so it must not be removed.
+            Socket second = Socket.newSocketDomain();
+            try {
+                assertThrows(IOException.class, () -> second.bind(new DomainSocketAddress(address.path() + '/')));
+            } finally {
+                second.close();
+            }
+            assertTrue(file.exists());
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testBindDomainSocketDoesNotRemoveFifo() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File fifo = new File(address.path());
+        try {
+            mkfifo(fifo);
+
+            Socket domainSocket = Socket.newSocketDomain();
+            try {
+                assertThrows(IOException.class, () -> domainSocket.bind(address));
+            } finally {
+                domainSocket.close();
+            }
+            assertTrue(fifo.exists());
+        } finally {
+            fifo.delete();
+        }
+    }
+
+    @Test
+    public void testDeleteDomainSocketFileDoesNotDeleteFifo() throws Exception {
+        DomainSocketAddress address = UnixTestUtils.newDomainSocketAddress();
+        File fifo = new File(address.path());
+        try {
+            mkfifo(fifo);
+
+            assertFalse(UnixChannelUtil.deleteDomainSocketFile(fifo.getPath()));
+            assertTrue(fifo.exists());
+        } finally {
+            fifo.delete();
+        }
+    }
+
+    @Test
+    public void testBindAbstractDomainSocket() throws Exception {
+        // Abstract namespace addresses are only supported on Linux.
+        assumeTrue("linux".equals(PlatformDependent.normalizedOs()));
+        // Abstract namespace addresses have no file system presence, so there is no stale file to remove.
+        DomainSocketAddress address = new DomainSocketAddress("\0" + UnixTestUtils.newDomainSocketAddress().path());
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.bind(address);
+        } finally {
+            domainSocket.close();
+        }
+    }
+
+    private static void mkfifo(File file) throws Exception {
+        int exitCode;
+        try {
+            exitCode = new ProcessBuilder("mkfifo", file.getPath()).inheritIO().start().waitFor();
+        } catch (IOException e) {
+            throw new TestAbortedException("mkfifo not available", e);
+        }
+        if (exitCode != 0) {
+            throw new TestAbortedException("mkfifo failed with exit code " + exitCode);
+        }
+    }
+
+    @Test
+    public void testConnectDomainSocketWithMaxLengthPath() throws Exception {
+        int max = Limits.UDS_SUN_PATH_SIZE;
+        assertTrue(max >= 100);
+        // A path that fills sun_path completely does not need a NUL terminator and must be handled deterministically.
+        for (int i = 0; i < 100; i++) {
+            assertFalse(isConnectPathTooLong(max));
+        }
+        assertTrue(isConnectPathTooLong(max + 1));
+    }
+
+    private static boolean isConnectPathTooLong(int length) throws IOException {
+        StringBuilder path = new StringBuilder("/");
+        while (path.length() < length) {
+            path.append('a');
+        }
+        Socket domainSocket = Socket.newSocketDomain();
+        try {
+            domainSocket.connect(new DomainSocketAddress(path.toString()));
+            return false;
+        } catch (IOException e) {
+            return e.getMessage() != null && e.getMessage().contains("too long");
+        } finally {
+            domainSocket.close();
+        }
     }
 }

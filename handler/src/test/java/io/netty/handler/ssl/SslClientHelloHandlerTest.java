@@ -22,7 +22,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SslClientHelloHandlerTest {
 
@@ -56,9 +56,7 @@ public class SslClientHelloHandlerTest {
                 if (hostname == null) {
                     nullRetryOccurred.set(true);
                 }
-                Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-                promise.setSuccess(new Object());
-                return promise;
+                return ImmediateEventExecutor.INSTANCE.newSucceededFuture(new Object());
             }
 
             @Override
@@ -87,5 +85,123 @@ public class SslClientHelloHandlerTest {
         assertNotNull(cause);
         assertInstanceOf(DecoderException.class, cause);
         assertFalse(nullRetryOccurred.get(), "Expected no select(ctx, null) retry");
+    }
+
+    @Test
+    public void testLeadingZeroLengthHandshakeRecordFailsClosed() {
+        // A zero-length TLS handshake record: content type = handshake (0x16), version 3.3, length = 0.
+        // It is followed by a real ClientHello, which some TLS implementations would still process.
+        assertFailsClosed("1603030000", TLS_CLIENT_HELLO_HEX_PART1,
+                TLS_CLIENT_HELLO_HEX_PART2);
+    }
+
+    @Test
+    public void testInterleavedZeroLengthHandshakeRecordFailsClosed() {
+        // Fragment the ClientHello handshake message over two records and put a zero-length handshake record
+        // in between them.
+        String handshake = TLS_CLIENT_HELLO_HEX_PART2.substring(2);
+        String firstFragment = handshake.substring(0, 20);
+        String secondFragment = handshake.substring(20);
+        assertFailsClosed(
+                "160301" + String.format("%04x", firstFragment.length() / 2) + firstFragment,
+                "1603030000",
+                "160301" + String.format("%04x", secondFragment.length() / 2) + secondFragment);
+    }
+
+    private static void assertFailsClosed(String... chunks) {
+        final AtomicBoolean lookupCalled = new AtomicBoolean();
+        final AtomicReference<SniCompletionEvent> eventRef = new AtomicReference<SniCompletionEvent>();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new AbstractSniHandler<Object>() {
+            @Override
+            protected Future<Object> lookup(ChannelHandlerContext ctx, String hostname) {
+                lookupCalled.set(true);
+                return ImmediateEventExecutor.INSTANCE.newSucceededFuture(new Object());
+            }
+
+            @Override
+            protected void onLookupComplete(ChannelHandlerContext ctx, String hostname,
+                                            Future<Object> future) {
+                // no-op
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof SniCompletionEvent) {
+                    eventRef.set((SniCompletionEvent) evt);
+                }
+            }
+        });
+
+        try {
+            DecoderException e = assertThrows(DecoderException.class, () -> {
+                for (String chunk : chunks) {
+                    ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(chunk)));
+                }
+            });
+            assertInstanceOf(NotSslRecordException.class, e.getCause());
+            assertFalse(ch.isActive());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+
+        assertFalse(lookupCalled.get(), "Expected no context selection");
+        assertNotNull(eventRef.get());
+        assertInstanceOf(NotSslRecordException.class, eventRef.get().cause());
+    }
+
+    @Test
+    public void testMalformedServerNameExtensionFailsClosed() {
+        // server_name extension whose host_name runs past the extension into the next one. An SSLEngine might
+        // interpret this differently, so we must not select the default context.
+        String serverName = "0000" + "0009" + "ffff" + "00" + "000d" + "62657461";
+        String nextExtension = "ff01" + "0009" + "2e736e692e74657374";
+        String record = clientHelloRecord(serverName + nextExtension);
+        assertFailsClosed(record);
+        // Also when the record arrives in two chunks.
+        assertFailsClosed(record.substring(0, 20), record.substring(20));
+    }
+
+    private static String clientHelloRecord(String extensions) {
+        String body = "0303" + new String(new char[64]).replace('\0', '0') // client_version + random (32 zero bytes)
+                + "00" // session_id length
+                + "0002" + "002f" // cipher_suites
+                + "01" + "00" // compression_methods
+                + String.format("%04x", extensions.length() / 2) + extensions;
+        String handshake = "01" + String.format("%06x", body.length() / 2) + body;
+        return "160301" + String.format("%04x", handshake.length() / 2) + handshake;
+    }
+
+    @Test
+    public void testManyZeroLengthHandshakeRecordsAreNotBuffered() {
+        final AtomicBoolean lookupCalled = new AtomicBoolean();
+        AbstractSniHandler<Object> handler = new AbstractSniHandler<Object>() {
+            @Override
+            protected Future<Object> lookup(ChannelHandlerContext ctx, String hostname) {
+                lookupCalled.set(true);
+                return ImmediateEventExecutor.INSTANCE.newSucceededFuture(new Object());
+            }
+
+            @Override
+            protected void onLookupComplete(ChannelHandlerContext ctx, String hostname,
+                                            Future<Object> future) {
+                // no-op
+            }
+        };
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+
+        byte[] records = new byte[5 * 200_000];
+        for (int i = 0; i < records.length; i += 5) {
+            records[i] = SslUtils.SSL_CONTENT_TYPE_HANDSHAKE;
+            records[i + 1] = 3;
+            records[i + 2] = 3;
+        }
+        try {
+            assertThrows(DecoderException.class, () -> ch.writeInbound(Unpooled.wrappedBuffer(records)));
+            assertFalse(ch.isActive());
+            assertFalse(lookupCalled.get());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
     }
 }

@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.19.Final-SNAPSHOT</version>
+    <version>4.2.22.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
@@ -158,6 +158,15 @@
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
       </properties>
     </profile>
+    <profile>
+      <id>java27</id>
+      <activation>
+        <jdk>27</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
@@ -190,6 +199,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-resolver-dns</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

@@ -168,10 +168,6 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
         }
 
         final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
         final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
@@ -203,7 +199,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
             }
         }
 
-        return writtenBytes > 0;
+        // A zero-length datagram is valid; sendto() returns 0 for it.
+        return writtenBytes > 0 || dataLen == 0;
     }
 
     @Override
@@ -353,8 +350,11 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                             if (localAddress == null) {
                                 localAddress = (DomainSocketAddress) localAddress();
                             }
-                            allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+                            final int receivedAmount = remoteAddress.receivedAmount();
+                            // Avoid signalling end-of-data for zero-sized datagrams, otherwise continueReading(...)
+                            // may stop the loop and leave the remaining datagrams unread.
+                            allocHandle.lastBytesRead(Math.max(1, receivedAmount));
+                            byteBuf.writerIndex(byteBuf.writerIndex() + receivedAmount);
 
                             packet = new DomainDatagramPacket(byteBuf, localAddress, remoteAddress);
                         }

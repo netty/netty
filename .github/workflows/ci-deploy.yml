@@ -194,11 +194,11 @@ jobs:
             cache-windows-maven-
 
       # Pinned to 1.96.1
-      - name: Install stable rust toolchain
+      - name: Install rust toolchain 1.100.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           targets: x86_64-pc-windows-msvc
-          toolchain: 'stable'
+          toolchain: '1.100.0'
 
       # Pinned to v3.0.0
       - name: Add msbuild to PATH

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -59,6 +60,9 @@ final class QpackDecoder {
 
     private static final QpackException UNKNOWN_TYPE =
             QpackException.newStatic(QpackDecoder.class, "decode(...)", "QPACK - unknown type");
+    private static final QpackException TRUNCATED_PREFIXED_INTEGER =
+            QpackException.newStatic(QpackDecoder.class, "decode(...)",
+                    "QPACK - truncated prefixed integer in field section");
 
     private final QpackHuffmanDecoder huffmanDecoder;
     private final QpackDecoderDynamicTable dynamicTable;
@@ -67,9 +71,9 @@ final class QpackDecoder {
     private final QpackDecoderStateSyncStrategy stateSyncStrategy;
     /**
      * Hashmap with key as the required insert count to unblock the stream and the value a {@link List} of
-     * {@link Runnable} to invoke when the stream can be unblocked.
+     * {@link BlockedStream} to invoke when the stream can be unblocked.
      */
-    private final IntObjectHashMap<List<Runnable>> blockedStreams;
+    private final IntObjectHashMap<List<BlockedStream>> blockedStreams;
 
     private final long maxEntries;
     private final long fullRange;
@@ -119,7 +123,8 @@ final class QpackDecoder {
         final int requiredInsertCount = decodeRequiredInsertCount(qpackAttributes, in);
         if (shouldWaitForDynamicTableUpdates(requiredInsertCount)) {
             blockedStreamsCount++;
-            blockedStreams.computeIfAbsent(requiredInsertCount, __ -> new ArrayList<>(2)).add(whenDecoded);
+            blockedStreams.computeIfAbsent(requiredInsertCount, __ -> new ArrayList<>(2))
+                    .add(new BlockedStream(streamId, whenDecoded));
             in.readerIndex(initialReaderIdx);
             return false;
         }
@@ -148,6 +153,12 @@ final class QpackDecoder {
             assert qpackAttributes.decoderStreamAvailable();
 
             stateSyncStrategy.sectionAcknowledged(requiredInsertCount);
+            // A Section Acknowledgment also acknowledges all insertions up to the Required Insert Count, so the next
+            // Insert Count Increment must not include them again.
+            // See https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1
+            if (requiredInsertCount > lastAckInsertCount) {
+                lastAckInsertCount = requiredInsertCount;
+            }
             final ByteBuf sectionAck = qpackAttributes.decoderStream().alloc().buffer(8);
             encodePrefixedInteger(sectionAck, (byte) 0b1000_0000, 7, streamId);
             closeOnFailure(qpackAttributes.decoderStream().writeAndFlush(sectionAck));
@@ -236,6 +247,11 @@ final class QpackDecoder {
         if (maxTableCapacity == 0) {
             return;
         }
+        releaseBlockedStream(streamId);
+        sendStreamCancellation(qpackDecoderStream, streamId);
+    }
+
+    void sendStreamCancellation(QuicStreamChannel qpackDecoderStream, long streamId) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.2
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
@@ -244,6 +260,26 @@ final class QpackDecoder {
         final ByteBuf cancel = qpackDecoderStream.alloc().buffer(8);
         encodePrefixedInteger(cancel, (byte) 0b0100_0000, 6, streamId);
         closeOnFailure(qpackDecoderStream.writeAndFlush(cancel));
+    }
+
+    boolean releaseBlockedStream(long streamId) {
+        if (blockedStreamsCount == 0) {
+            return false;
+        }
+        for (PrimitiveEntry<List<BlockedStream>> entry : blockedStreams.entries()) {
+            List<BlockedStream> list = entry.value();
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).streamId == streamId) {
+                    list.remove(i);
+                    blockedStreamsCount--;
+                    if (list.isEmpty()) {
+                        blockedStreams.remove(entry.key());
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean isIndexed(byte b) {
@@ -291,6 +327,27 @@ final class QpackDecoder {
         return (b & 0b1111_0000) == 0b0000_0000;
     }
 
+    // decode() and its helpers always operate on a slice that holds the complete field section, so a prefixed
+    // integer can never be legitimately truncated here. decodePrefixedInteger returns -1 when it would need more
+    // bytes, which can only happen for a malformed encoding in this context. Turn that into a decompression error
+    // instead of relying on an assert (disabled in production) and then advancing with a negative value, which
+    // would index the dynamic table out of range or spin in the decode loop without consuming any bytes.
+    private int decodePrefixedIntOrThrow(ByteBuf in, int prefixLength) throws QpackException {
+        final int i = decodePrefixedIntegerAsInt(in, prefixLength);
+        if (i < 0) {
+            throw TRUNCATED_PREFIXED_INTEGER;
+        }
+        return i;
+    }
+
+    private static long decodePrefixedLongOrThrow(ByteBuf in, int prefixLength) throws QpackException {
+        final long i = QpackUtil.decodePrefixedInteger(in, prefixLength);
+        if (i < 0) {
+            throw TRUNCATED_PREFIXED_INTEGER;
+        }
+        return i;
+    }
+
     private void decodeIndexed(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
@@ -302,15 +359,13 @@ final class QpackDecoder {
         // T == 1 implies static table
         final QpackHeaderField field;
         if (firstByteEquals(in, (byte) 0b1100_0000)) {
-            final int idx = decodePrefixedIntegerAsInt(in, 6);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 6);
             if (idx >= QpackStaticTable.length) {
                 throw HEADER_ILLEGAL_INDEX_VALUE;
             }
             field = QpackStaticTable.getField(idx);
         } else {
-            final int idx = decodePrefixedIntegerAsInt(in, 6);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 6);
             field = dynamicTable.getEntryRelativeEncodedField(base - idx - 1);
         }
         sink.accept(field.name, field.value);
@@ -323,8 +378,7 @@ final class QpackDecoder {
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 1 |  Index (4+)   |
         // +---+---+---+---+---------------+
-        final int idx = decodePrefixedIntegerAsInt(in, 4);
-        assert idx >= 0;
+        final int idx = decodePrefixedIntOrThrow(in, 4);
         QpackHeaderField field = dynamicTable.getEntryRelativeEncodedField(base + idx);
         sink.accept(field.name, field.value);
     }
@@ -344,15 +398,13 @@ final class QpackDecoder {
         //
         // T == 1 implies static table
         if (firstByteEquals(in, (byte) 0b0001_0000)) {
-            final int idx = decodePrefixedIntegerAsInt(in, 4);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 4);
             if (idx >= QpackStaticTable.length) {
                 throw NAME_ILLEGAL_INDEX_VALUE;
             }
             name = QpackStaticTable.getField(idx).name;
         } else {
-            final int idx = decodePrefixedIntegerAsInt(in, 4);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 4);
             name = dynamicTable.getEntryRelativeEncodedField(base - idx - 1).name;
         }
         final CharSequence value = decodeHuffmanEncodedLiteral(in, 7);
@@ -370,8 +422,7 @@ final class QpackDecoder {
         // +---+---------------------------+
         // |  Value String (Length bytes)  |
         // +-------------------------------+
-        final int idx = decodePrefixedIntegerAsInt(in, 3);
-        assert idx >= 0;
+        final int idx = decodePrefixedIntOrThrow(in, 3);
         CharSequence name = dynamicTable.getEntryRelativeEncodedField(base + idx).name;
         final CharSequence value = decodeHuffmanEncodedLiteral(in, 7);
         sink.accept(name, value);
@@ -397,8 +448,7 @@ final class QpackDecoder {
     private CharSequence decodeHuffmanEncodedLiteral(ByteBuf in, int prefix) throws QpackException {
         assert prefix < 8;
         final boolean huffmanEncoded = firstByteEquals(in, (byte) (1 << prefix));
-        final int length = decodePrefixedIntegerAsInt(in, prefix);
-        assert length >= 0;
+        final int length = decodePrefixedIntOrThrow(in, prefix);
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
@@ -412,8 +462,7 @@ final class QpackDecoder {
 
     // Visible for testing
     int decodeRequiredInsertCount(QpackAttributes qpackAttributes, ByteBuf buf) throws QpackException {
-        final long encodedInsertCount = QpackUtil.decodePrefixedInteger(buf, 8);
-        assert encodedInsertCount >= 0;
+        final long encodedInsertCount = decodePrefixedLongOrThrow(buf, 8);
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count
         // FullRange = 2 * MaxEntries
         //   if EncodedInsertCount == 0:
@@ -470,8 +519,7 @@ final class QpackDecoder {
         // | S |      Delta Base (7+)      |
         // +---+---------------------------+
         final boolean s = (buf.getByte(buf.readerIndex()) & 0b1000_0000) == 0b1000_0000;
-        final int deltaBase = decodePrefixedIntegerAsInt(buf, 7);
-        assert deltaBase >= 0;
+        final int deltaBase = decodePrefixedIntOrThrow(buf, 7);
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-base
         //    if S == 0:
         //      Base = ReqInsertCount + DeltaBase
@@ -492,23 +540,25 @@ final class QpackDecoder {
 
     private void sendInsertCountIncrementIfRequired(QuicStreamChannel qpackDecoderStream) throws QpackException {
         final int insertCount = dynamicTable.insertCount();
-        final List<Runnable> runnables = this.blockedStreams.remove(insertCount);
-        if (runnables != null) {
-            blockedStreamsCount -= runnables.size();
+        final List<BlockedStream> streams = this.blockedStreams.remove(insertCount);
+        if (streams != null) {
+            blockedStreamsCount -= streams.size();
             boolean failed = false;
-            for (Runnable runnable : runnables) {
+            for (BlockedStream stream : streams) {
                 try {
-                    runnable.run();
+                    stream.whenDecoded.run();
                 } catch (Exception e) {
                     failed = true;
-                    logger.error("Failed to resume a blocked stream {}.", runnable, e);
+                    logger.error("Failed to resume a blocked stream {}.", stream.whenDecoded, e);
                 }
             }
             if (failed) {
                 throw BLOCKED_STREAM_RESUMPTION_FAILED;
             }
         }
-        if (stateSyncStrategy.entryAdded(insertCount)) {
+        if (stateSyncStrategy.entryAdded(insertCount) &&
+                // The insertions might have been acknowledged by a Section Acknowledgment already.
+                insertCount > lastAckInsertCount) {
             // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment
             //   0   1   2   3   4   5   6   7
             // +---+---+---+---+---+---+---+---+
@@ -518,6 +568,16 @@ final class QpackDecoder {
             encodePrefixedInteger(incr, (byte) 0b0, 6, insertCount - lastAckInsertCount);
             lastAckInsertCount = insertCount;
             closeOnFailure(qpackDecoderStream.writeAndFlush(incr));
+        }
+    }
+
+    private static final class BlockedStream {
+        final long streamId;
+        final Runnable whenDecoded;
+
+        BlockedStream(long streamId, Runnable whenDecoded) {
+            this.streamId = streamId;
+            this.whenDecoded = whenDecoded;
         }
     }
 }

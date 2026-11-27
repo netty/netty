@@ -1331,6 +1331,223 @@ public class LocalChannelTest {
     }
 
     @Test
+    @Timeout(30)
+    public void testPeerWriteAndCloseWhileWriteInProgressDeliversData() throws Exception {
+        final CountDownLatch writeListenerEntered = new CountDownLatch(1);
+        final CountDownLatch releaseWriteListener = new CountDownLatch(1);
+        final CountDownLatch dataReceived = new CountDownLatch(1);
+        final CountDownLatch clientInactive = new CountDownLatch(1);
+        final AtomicReference<Boolean> receivedBeforeInactive = new AtomicReference<>();
+        final BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group1, group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) {
+                        accepted.add(ch);
+                    }
+                });
+        Bootstrap cb = new Bootstrap()
+                .group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ReferenceCountUtil.release(msg);
+                                dataReceived.countDown();
+                            }
+
+                            @Override
+                            public void channelInactive(ChannelHandlerContext ctx) {
+                                receivedBeforeInactive.set(dataReceived.getCount() == 0);
+                                clientInactive.countDown();
+                            }
+                        });
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            final LocalChannel child = accepted.poll(5, SECONDS);
+            assertNotNull(child);
+            while (!child.isActive()) {
+                Thread.sleep(10);
+            }
+
+            // Block the client inside doWrite(...) (the promise listener is run while writeInProgress is true) so
+            // that the peer sees the client as writing.
+            cc.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 'X' })).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    writeListenerEntered.countDown();
+                    try {
+                        releaseWriteListener.await();
+                    } catch (InterruptedException ignore) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
+            assertTrue(writeListenerEntered.await(5, SECONDS));
+
+            // Write and close from the peer while the client is still writing, then unblock the client.
+            child.eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    child.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 'P' }));
+                    child.close();
+                }
+            }).sync();
+            releaseWriteListener.countDown();
+
+            assertTrue(clientInactive.await(5, SECONDS));
+            assertEquals(Boolean.TRUE, receivedBeforeInactive.get(),
+                    "Data written by the peer before it closed must not be dropped");
+        } finally {
+            releaseWriteListener.countDown();
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    public void testPeerWritesMoreThanOneReadAndClosesDeliversAllData() throws Exception {
+        testPeerWritesMoreThanOneReadAndClosesDeliversAllData(group1, group2);
+    }
+
+    @Test
+    @Timeout(30)
+    public void testPeerWritesMoreThanOneReadAndClosesDeliversAllDataSameEventLoop() throws Exception {
+        testPeerWritesMoreThanOneReadAndClosesDeliversAllData(group1, group1);
+    }
+
+    private static void testPeerWritesMoreThanOneReadAndClosesDeliversAllData(
+            EventLoopGroup serverGroup, EventLoopGroup clientGroup) throws Exception {
+        final int messages = 100;
+        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<>();
+        final List<Object> received = new ArrayList<>();
+
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(serverGroup)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        received.add(msg);
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                        receivedBeforeInactive.add(received.size());
+                    }
+                });
+        Bootstrap cb = new Bootstrap()
+                .group(clientGroup)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = null;
+        final Channel cc;
+        try {
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            // Write more messages than the peer reads in one go and close right away.
+            cc.eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < messages; i++) {
+                        cc.write(i);
+                    }
+                    cc.flush();
+                    cc.close();
+                }
+            }).sync();
+
+            Integer count = receivedBeforeInactive.poll(10, SECONDS);
+            assertNotNull(count);
+            assertEquals(messages, count.intValue(),
+                    "Data written by the peer before it closed must not be dropped");
+            for (int i = 0; i < messages; i++) {
+                assertEquals(i, received.get(i));
+            }
+        } finally {
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    public void testPeerWritesAndClosesDeliversAllBufferedDataWithAutoReadOff() throws Exception {
+        final int messages = 100;
+        final BlockingQueue<Integer> receivedBeforeInactive = new LinkedBlockingQueue<>();
+        final List<Integer> received = new ArrayList<>();
+
+        // The accepted channel never calls read(). Like the epoll and kqueue transports when they see the peer's
+        // FIN, it gets the data that is still buffered before it becomes inactive.
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group1, group2)
+                .channel(LocalServerChannel.class)
+                .childOption(ChannelOption.AUTO_READ, false)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        try {
+                            while (buf.isReadable()) {
+                                received.add((int) buf.readByte());
+                            }
+                        } finally {
+                            buf.release();
+                        }
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                        receivedBeforeInactive.add(received.size());
+                    }
+                });
+        Bootstrap cb = new Bootstrap()
+                .group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = null;
+        final Channel cc;
+        try {
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            cc.eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < messages; i++) {
+                        cc.write(Unpooled.directBuffer(1).writeByte(i));
+                    }
+                    cc.flush();
+                    cc.close();
+                }
+            }).sync();
+
+            Integer count = receivedBeforeInactive.poll(10, SECONDS);
+            assertNotNull(count);
+            assertEquals(messages, count.intValue(),
+                    "Data written by the peer before it closed must not be dropped");
+            for (int i = 0; i < messages; i++) {
+                assertEquals(i, received.get(i));
+            }
+        } finally {
+            closeChannel(sc);
+        }
+    }
+
+    @Test
     public void testClientCloseWhileConnectionIsQueued() throws Exception {
         BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
         Channel sc = bindServerWithAutoReadDisabled(accepted);

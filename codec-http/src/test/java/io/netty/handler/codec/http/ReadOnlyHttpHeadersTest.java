@@ -51,6 +51,15 @@ public class ReadOnlyHttpHeadersTest {
     }
 
     @Test
+    public void getNotConvertible() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false, CONTENT_LENGTH, "not a number");
+        assertNull(headers.getInt(CONTENT_LENGTH));
+        assertEquals(-1, headers.getInt(CONTENT_LENGTH, -1));
+        assertNull(headers.getShort(CONTENT_LENGTH));
+        assertEquals((short) -1, headers.getShort(CONTENT_LENGTH, (short) -1));
+    }
+
+    @Test
     public void charSequenceIterator() {
         ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(true,
                 ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, CONNECTION, CLOSE);
@@ -116,6 +125,30 @@ public class ReadOnlyHttpHeadersTest {
     }
 
     @Test
+    public void valueStringIterator() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false,
+                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, ACCEPT, APPLICATION_OCTET_STREAM);
+        Iterator<String> itr = headers.valueStringIterator(ACCEPT);
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_JSON.contentEqualsIgnoreCase(itr.next()));
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_OCTET_STREAM.contentEqualsIgnoreCase(itr.next()));
+        assertFalse(itr.hasNext());
+    }
+
+    @Test
+    public void valueCharSequenceIterator() {
+        ReadOnlyHttpHeaders headers = new ReadOnlyHttpHeaders(false,
+                ACCEPT, APPLICATION_JSON, CONTENT_LENGTH, ZERO, ACCEPT, APPLICATION_OCTET_STREAM);
+        Iterator<CharSequence> itr = headers.valueCharSequenceIterator(ACCEPT);
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_JSON.contentEqualsIgnoreCase(itr.next()));
+        assertTrue(itr.hasNext());
+        assertTrue(APPLICATION_OCTET_STREAM.contentEqualsIgnoreCase(itr.next()));
+        assertFalse(itr.hasNext());
+    }
+
+    @Test
     public void validateNamesFail() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
@@ -124,6 +157,17 @@ public class ReadOnlyHttpHeadersTest {
                         ACCEPT, APPLICATION_JSON, AsciiString.cached(" "));
             }
         });
+    }
+
+    @Test
+    public void validateValuesFail() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new ReadOnlyHttpHeaders(true, "x", "a\r\nInjected: 1");
+            }
+        });
+        new ReadOnlyHttpHeaders(false, "x", "a\r\nInjected: 1");
     }
 
     @Test

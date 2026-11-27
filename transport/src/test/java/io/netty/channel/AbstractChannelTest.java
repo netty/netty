@@ -100,7 +100,7 @@ public class AbstractChannelTest {
     @EnabledForJreRange(min = JRE.JAVA_9)
     void processIdWithProcessHandleJava9() {
         ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
-        int processHandlePid = DefaultChannelId.processHandlePid(loader);
+        int processHandlePid = DefaultChannelId.processHandlePid();
         assertTrue(processHandlePid != -1);
         assertEquals(DefaultChannelId.jmxPid(loader), processHandlePid);
         assertEquals(DefaultChannelId.defaultProcessId(), processHandlePid);
@@ -110,7 +110,7 @@ public class AbstractChannelTest {
     @EnabledForJreRange(max = JRE.JAVA_8)
     void processIdWithJmxPrejava9() {
         ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
-        int processHandlePid = DefaultChannelId.processHandlePid(loader);
+        int processHandlePid = DefaultChannelId.processHandlePid();
         assertEquals(-1, processHandlePid);
         assertEquals(DefaultChannelId.defaultProcessId(), DefaultChannelId.jmxPid(loader));
     }

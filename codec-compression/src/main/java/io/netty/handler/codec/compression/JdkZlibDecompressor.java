@@ -231,7 +231,12 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
                     throw new DecompressionException(
                             "decompression failure, unable to set dictionary as none was specified");
                 }
-                inflater.setDictionary(dictionary);
+                try {
+                    inflater.setDictionary(dictionary);
+                } catch (IllegalArgumentException e) {
+                    // The dictionary ID in the stream header does not match the configured dictionary.
+                    throw new DecompressionException("decompression failure, dictionary mismatch", e);
+                }
             }
             if (inflater.finished()) {
                 inputBufferInInflater = false;
@@ -375,7 +380,7 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
         if ((flags & flagMask) != 0) {
             for (;;) {
                 if (!in.isReadable()) {
-                    // We didnt find the end yet, need to retry again once more data is readable
+                    // We didn't find the end yet, need to retry again once more data is readable
                     return false;
                 }
                 int b = in.readUnsignedByte();

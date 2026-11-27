@@ -167,6 +167,13 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
 
     private ByteBuf encodeFullFrame(StompFrame frame, ChannelHandlerContext ctx) {
         int contentReadableBytes = frame.content().readableBytes();
+        // Without a content-length header the receiver ends the frame at the first NUL octet,
+        // so content that contains one would be parsed as further frames.
+        if (contentReadableBytes > 0 && frame.content().bytesBefore(NUL) != -1 &&
+                !frame.headers().contains(CONTENT_LENGTH)) {
+            throw new IllegalArgumentException(
+                    "STOMP " + frame.command() + " content contains a NUL octet but has no content-length header");
+        }
         ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(frame) + contentReadableBytes);
         try {
             encodeHeaders(frame, buf);
@@ -204,9 +211,11 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
                 headerKey = cachedHeaderKey;
                 headerValue = escape(command, "header value", headerValue);
             } else {
-                // For CONNECT/CONNECTED: don't escape but REJECT illegal characters
-                validateNoIllegalCharacters(command, headerKey, "header name");
-                validateNoIllegalCharacters(command, headerValue, "header value");
+                // For CONNECT/CONNECTED: don't escape but REJECT illegal characters.
+                // A colon is only illegal in the header name, as header values do not escape it
+                // (STOMP 1.2, Value Encoding).
+                validateNoIllegalCharacters(command, headerKey, "header name", false);
+                validateNoIllegalCharacters(command, headerValue, "header value", true);
             }
 
             ByteBufUtil.writeUtf8(buf, headerKey);
@@ -234,10 +243,11 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         return command != StompCommand.CONNECT && command != StompCommand.CONNECTED;
     }
 
-    private static void validateNoIllegalCharacters(StompCommand command, CharSequence value, String type) {
+    private static void validateNoIllegalCharacters(StompCommand command, CharSequence value, String type,
+                                                    boolean allowColon) {
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
-            if (c == '\n' || c == '\r' || c == ':' || c == '\0') {
+            if (c == '\n' || c == '\r' || c == '\0' || c == ':' && !allowColon) {
                 throw newIllegalCharacterException(command, type, i);
             }
         }

@@ -120,7 +120,8 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
         ByteBuf connectionId = getDestinationConnectionId(packet.content(), localConnectionIdLength);
         if (connectionId != null) {
             int idx = decodeIndex(connectionId);
-            if (contextList.size() > idx) {
+            // decodeIndex(...) returns -1 if decoding was not successful.
+            if (idx >= 0 && contextList.size() > idx) {
                 ChannelHandlerContextDispatcher selectedCtx = contextList.get(idx);
                 if (selectedCtx != null) {
                     selectedCtx.fireChannelRead(msg);
@@ -144,7 +145,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
             if (ctxDispatcher != null) {
                 boolean fired = ctxDispatcher.fireChannelReadCompleteIfNeeded();
                 if (fired && !dispatchForOwnContextAlready) {
-                    // Check if we dispatched to ctx so if we didnt at the end we can do it manually.
+                    // Check if we dispatched to ctx so if we didn't at the end we can do it manually.
                     dispatchForOwnContextAlready = ctx.equals(ctxDispatcher.ctx);
                 }
             }

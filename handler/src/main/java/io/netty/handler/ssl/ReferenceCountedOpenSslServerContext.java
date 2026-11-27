@@ -47,7 +47,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class ReferenceCountedOpenSslServerContext extends ReferenceCountedOpenSslContext {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslServerContext.class);
-    private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
+
     private final OpenSslServerSessionContext sessionContext;
 
     ReferenceCountedOpenSslServerContext(
@@ -56,11 +56,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            SessionIdContextBuilder sessionIdContext,
             Map.Entry<SslContextOption<?>, Object>[] options,
             List<OpenSslCredential> credentials) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options, credentials);
+                enableOcsp, keyStore, resumptionController, sessionIdContext, options, credentials);
     }
 
     ReferenceCountedOpenSslServerContext(
@@ -69,6 +70,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            SessionIdContextBuilder sessionIdContext,
             Map.Entry<SslContextOption<?>, Object>[] options,
             List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
@@ -80,7 +82,8 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                     keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                    sessionCacheSize, sessionTimeout, resumptionController, isJdkSignatureFallbackEnabled(options));
+                    sessionCacheSize, sessionTimeout, resumptionController, sessionIdContext,
+                    isJdkSignatureFallbackEnabled(options));
             if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
@@ -105,6 +108,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                                          String keyPassword, KeyManagerFactory keyManagerFactory,
                                                          String keyStore, long sessionCacheSize, long sessionTimeout,
                                                          ResumptionController resumptionController,
+                                                         SessionIdContextBuilder sessionIdContext,
                                                          boolean fallbackToJdkSignatureProviders)
             throws SSLException {
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
@@ -196,7 +200,18 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             }
 
             OpenSslServerSessionContext sessionContext = new OpenSslServerSessionContext(thiz, keyMaterialProvider);
-            sessionContext.setSessionIdContext(ID);
+            // Derive the session_id_context from what distinguishes this context, so sessions can not be resumed
+            // across SslContext instances that differ in their ClientAuth mode or trust / key configuration, even if
+            // session-ticket keys or a session cache are shared between them.
+            if (!sessionContext.setSessionIdContext(sessionIdContext.build())) {
+                // Without a session_id_context we must not continue as resumption would not be scoped.
+                String msg = "failed to set session id context";
+                String lastError = SSL.getLastError();
+                if (lastError != null) {
+                    msg += ": " + lastError;
+                }
+                throw new SSLException(msg);
+            }
             // Enable session caching by default
             sessionContext.setSessionCacheEnabled(SERVER_ENABLE_SESSION_CACHE);
             if (sessionCacheSize > 0) {

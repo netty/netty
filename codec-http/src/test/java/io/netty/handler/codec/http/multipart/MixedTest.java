@@ -45,7 +45,7 @@ public class MixedTest {
 
     @Test
     public void mixedFileUploadRefCnt() throws IOException {
-        MixedFileUpload upload = new MixedFileUpload("foo", "foo", "foo", "UTF-8", CharsetUtil.UTF_8, 0, 100);
+        MixedFileUpload upload = new MixedFileUpload("foo", "foo", "text/plain", "UTF-8", CharsetUtil.UTF_8, 0, 100);
         Assertions.assertEquals(1, upload.refCnt());
         upload.retain();
         Assertions.assertEquals(2, upload.refCnt());
@@ -63,7 +63,7 @@ public class MixedTest {
     public void testSpecificCustomBaseDir() throws IOException {
         File baseDir = new File("target/MixedTest/testSpecificCustomBaseDir");
         baseDir.mkdirs(); // we don't need to clean it since it is in volatile files anyway
-        MixedFileUpload upload = new MixedFileUpload("foo", "foo", "foo", "UTF-8", CharsetUtil.UTF_8, 1000, 100,
+        MixedFileUpload upload = new MixedFileUpload("foo", "foo", "text/plain", "UTF-8", CharsetUtil.UTF_8, 1000, 100,
                                                      baseDir.getAbsolutePath(), true);
 
         upload.addContent(Unpooled.wrappedBuffer(new byte[1000]), true);

@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -917,10 +918,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Closes the connection if the graceful shutdown process has completed.
+     * Closes the connection if the graceful shutdown process has completed. Sub-classes in this package call it when
+     * {@link #isGracefulShutdownComplete()} may have changed for another reason than a stream being closed.
      * @param future Represents the status that will be passed to the {@link #closeListener}.
      */
-    private void checkCloseConnection(ChannelFuture future) {
+    void checkCloseConnection(ChannelFuture future) {
         // If this connection is closing and the graceful shutdown has completed, close the connection
         // once this operation completes.
         if (closeListener != null && isGracefulShutdownComplete()) {
@@ -1055,7 +1057,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (promise == null) {
                 ctx.close();
             } else {
-                ctx.close(promise);
+                // The original promise may be completed while we waited for the active streams, so don't pass it to
+                // close(...). Notify it without failing if it's already done; a cancellation still prevents the close.
+                ctx.close(PromiseNotifier.cascade(false, ctx.newPromise(), promise));
             }
         }
     }

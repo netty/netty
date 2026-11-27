@@ -56,7 +56,7 @@ public final class IoUringBufferRingConfig {
      *
      * @param bgId                  the buffer group id to use (must be non-negative).
      * @param bufferRingSize        the size of the ring
-     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
+     * @param batchSize             the size of the batch on how many buffers are added every time we need to expand the
      *                              buffer ring.
      * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
      * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
@@ -105,7 +105,7 @@ public final class IoUringBufferRingConfig {
     }
 
     /**
-     * Returns the size of the batch on how many buffers are added everytime we need to expand the buffer ring.
+     * Returns the size of the batch on how many buffers are added every time we need to expand the buffer ring.
      *
      * @return batch size.
      */
@@ -215,7 +215,7 @@ public final class IoUringBufferRingConfig {
         }
 
         /**
-         * Set the size of the batch on how many buffers are added everytime we need to expand the buffer ring.
+         * Set the size of the batch on how many buffers are added every time we need to expand the buffer ring.
          *
          * @param batchSize The batch size.
          * @return          This builder.

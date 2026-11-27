@@ -18,6 +18,9 @@ package io.netty.buffer;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public abstract class AbstractAdaptiveByteBufTest extends AbstractPooledByteBufTest {
     private final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator();
 
@@ -38,5 +41,49 @@ public abstract class AbstractAdaptiveByteBufTest extends AbstractPooledByteBufT
     @Test
     @Override
     public void testEnsureWritableDoesntGrowTooMuch() {
+    }
+
+    @Test
+    public void testSetBytesFromBuffersOfOtherKinds() {
+        final byte[] bytes = new byte[64];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (i + 1);
+        }
+        ByteBuf pooledDirect = PooledByteBufAllocator.DEFAULT.directBuffer(72).writeZero(8).writeBytes(bytes);
+        ByteBuf unpooledHeap = Unpooled.buffer(72).writeZero(8).writeBytes(bytes);
+        ByteBuf adaptive = alloc(72, 72).writeZero(8).writeBytes(bytes);
+        CompositeByteBuf composite = Unpooled.compositeBuffer().addComponents(true,
+                Unpooled.directBuffer(32).writeBytes(bytes, 0, 32),
+                Unpooled.buffer(32).writeBytes(bytes, 32, 32));
+        ByteBuf wrappedHeap = Unpooled.wrappedBuffer(bytes);
+        final ByteBuf[] sources = {
+                pooledDirect.slice(8, 64),
+                unpooledHeap.slice(8, 64),
+                adaptive.slice(8, 64),
+                composite,
+                wrappedHeap.asReadOnly(),
+        };
+        final ByteBuf target = alloc(128, 128);
+        try {
+            for (ByteBuf src : sources) {
+                target.clear().writeZero(128);
+                target.setBytes(16, src, 4, 40);
+                for (int i = 0; i < 128; i++) {
+                    byte expected = i >= 16 && i < 56 ? bytes[i - 16 + 4] : 0;
+                    assertEquals(expected, target.getByte(i), "index " + i + " from " + src);
+                }
+                assertEquals(0, src.readerIndex());
+                assertEquals(64, src.writerIndex());
+            }
+            assertThrows(IndexOutOfBoundsException.class, () -> target.setBytes(0, sources[0], 40, 40));
+            assertThrows(IndexOutOfBoundsException.class, () -> target.setBytes(100, sources[0], 0, 40));
+        } finally {
+            target.release();
+            pooledDirect.release();
+            unpooledHeap.release();
+            adaptive.release();
+            composite.release();
+            wrappedHeap.release();
+        }
     }
 }

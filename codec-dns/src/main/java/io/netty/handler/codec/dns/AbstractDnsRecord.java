@@ -19,6 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
+import java.util.Locale;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -139,7 +140,7 @@ public abstract class AbstractDnsRecord implements DnsRecord {
             return hashCode;
         }
 
-        return this.hashCode = name.toLowerCase().hashCode() * 31 + type().intValue() * 31 + dnsClass();
+        return this.hashCode = name.toLowerCase(Locale.ROOT).hashCode() * 31 + type().intValue() * 31 + dnsClass();
     }
 
     @Override

@@ -64,7 +64,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
                         break;
                     }
                     case DOMAIN: {
-                        int fieldLength = byteBuf.readByte();
+                        int fieldLength = byteBuf.readUnsignedByte();
                         String host = byteBuf.readString(fieldLength, CharsetUtil.US_ASCII);
                         int port = ByteBufUtil.readUnsignedShortBE(byteBuf);
                         out.add(new SocksCmdResponse(cmdStatus, addressType, host, port));

@@ -73,7 +73,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public byte getByte(int index) {
-        ensureAccessible();
+        checkIndex(index, 1);
         return _getByte(index);
     }
 
@@ -84,7 +84,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public short getShort(int index) {
-        ensureAccessible();
+        checkIndex(index, 2);
         return _getShort(index);
     }
 
@@ -95,7 +95,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 2);
         return _getShortLE(index);
     }
 
@@ -106,7 +106,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        ensureAccessible();
+        checkIndex(index, 3);
         return _getUnsignedMedium(index);
     }
 
@@ -119,7 +119,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 3);
         return _getUnsignedMediumLE(index);
     }
 
@@ -132,7 +132,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getInt(int index) {
-        ensureAccessible();
+        checkIndex(index, 4);
         return _getInt(index);
     }
 
@@ -143,7 +143,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 4);
         return _getIntLE(index);
     }
 
@@ -154,7 +154,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public long getLong(int index) {
-        ensureAccessible();
+        checkIndex(index, 8);
         return _getLong(index);
     }
 
@@ -165,7 +165,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        ensureAccessible();
+        checkIndex(index, 8);
         return _getLongLE(index);
     }
 

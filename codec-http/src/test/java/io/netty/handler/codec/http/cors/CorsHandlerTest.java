@@ -82,6 +82,7 @@ public class CorsHandlerTest {
         assertEquals("null", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("true", response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS));
         assertNull(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals(ORIGIN.toString(), response.headers().get(VARY));
         assertTrue(ReferenceCountUtil.release(response));
     }
 
@@ -233,6 +234,7 @@ public class CorsHandlerTest {
         final HttpResponse response = preflightRequest(config, origin, "content-type, xheader1");
         assertEquals("null", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("true", response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS));
+        assertEquals(ORIGIN.toString(), response.headers().get(VARY));
         assertTrue(ReferenceCountUtil.release(response));
     }
 

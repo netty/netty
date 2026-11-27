@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.quic;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -31,10 +32,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
@@ -285,6 +291,201 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                                     : ChannelFutureListener.CLOSE);
                 }
             });
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testCloseBeforeEndOfInputReturnsFlowControlCredit(Executor executor) throws Throwable {
+        final int window = 64 * 1024;
+        // Larger than the windows of the client, so the response can't be received completely before it reads.
+        final int responseSize = 2 * window;
+        Channel server = null;
+        Channel channel = null;
+        try {
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public boolean isSharable() {
+                            return true;
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                ctx.writeAndFlush(Unpooled.directBuffer(responseSize).writeZero(responseSize))
+                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    });
+            channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                    .initialMaxData(window).initialMaxStreamDataBidirectionalLocal(window));
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect().get();
+
+            // Close the stream once the first bytes of the response were received, the rest is never read by the
+            // user.
+            QuicStreamChannel cancelled = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ReferenceCountUtil.release(msg);
+                            ctx.close();
+                        }
+                    }).get();
+            cancelled.writeAndFlush(Unpooled.directBuffer().writeZero(8))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            cancelled.closeFuture().sync();
+
+            // The next response must still be received completely.
+            AtomicInteger received = new AtomicInteger();
+            CountDownLatch endOfInput = new CountDownLatch(1);
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            received.addAndGet(((ByteBuf) msg).readableBytes());
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                endOfInput.countDown();
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    }).get();
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(8))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            assertTrue(endOfInput.await(5, TimeUnit.SECONDS), "received only " + received.get() + " bytes");
+            assertEquals(responseSize, received.get());
+            stream.closeFuture().sync();
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testCloseOutsideOfReadBeforeEndOfInputReturnsFlowControlCredit(Executor executor) throws Throwable {
+        final int window = 64 * 1024;
+        // Larger than the windows of the client, so the response can't be received completely before it reads.
+        final int responseSize = 2 * window;
+        Semaphore responseWritten = new Semaphore(0);
+        Channel server = null;
+        Channel channel = null;
+        try {
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public boolean isSharable() {
+                            return true;
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                // The write only completes once the client opened its flow control windows far
+                                // enough to accept the whole response.
+                                ctx.writeAndFlush(Unpooled.directBuffer(responseSize).writeZero(responseSize))
+                                        .addListener(future -> {
+                                            if (future.isSuccess()) {
+                                                responseWritten.release();
+                                            }
+                                        })
+                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    });
+            channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                    .initialMaxData(window).initialMaxStreamDataBidirectionalLocal(window));
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect().get();
+
+            // Read only the first bytes of the response, the rest stays in quiche as the user never asks for it.
+            CountDownLatch firstRead = new CountDownLatch(1);
+            QuicStreamChannel cancelled = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void handlerAdded(ChannelHandlerContext ctx) {
+                            ctx.channel().config().setAutoRead(false);
+                        }
+
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            ctx.read();
+                            ctx.fireChannelActive();
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ReferenceCountUtil.release(msg);
+                            firstRead.countDown();
+                        }
+                    }).get();
+            cancelled.writeAndFlush(Unpooled.directBuffer().writeZero(8))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            assertTrue(firstRead.await(5, TimeUnit.SECONDS));
+
+            // Close the stream outside of a read callback, so it is up to close() to drop what is left and to send
+            // the resulting window updates. Nothing else is sent by the client until the response is written.
+            cancelled.close().sync();
+            assertTrue(responseWritten.tryAcquire(5, TimeUnit.SECONDS),
+                    "server could not write the whole response of the closed stream");
+
+            // The next response must be received completely as well.
+            AtomicInteger received = new AtomicInteger();
+            CountDownLatch endOfInput = new CountDownLatch(1);
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            received.addAndGet(((ByteBuf) msg).readableBytes());
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                endOfInput.countDown();
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    }).get();
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(8))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            assertTrue(endOfInput.await(5, TimeUnit.SECONDS), "received only " + received.get() + " bytes");
+            assertEquals(responseSize, received.get());
+            stream.closeFuture().sync();
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
         }
     }
 

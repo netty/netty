@@ -34,6 +34,7 @@ public final class BrotliDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
     private DecoderJNI.Wrapper decoder;
     private ByteBuf unusedInput;
+    private boolean pulledSinceLastPush;
 
     static {
         try {
@@ -65,6 +66,13 @@ public final class BrotliDecompressor implements Decompressor {
                         return Status.NEED_OUTPUT;
                     }
                     if (unusedInput == null) {
+                        if (pulledSinceLastPush) {
+                            // After a pull, the decoder reports NEEDS_MORE_INPUT as soon as all pushed input is
+                            // consumed, even if it could still produce more output from its internal state
+                            // (e.g. a long back-reference). Push without new input to find out.
+                            push(0);
+                            break;
+                        }
                         return Status.NEED_INPUT;
                     }
                     addSomeInput(unusedInput);
@@ -74,7 +82,7 @@ public final class BrotliDecompressor implements Decompressor {
                     }
                     break;
                 case OK:
-                    decoder.push(0);
+                    push(0);
                     break;
                 case NEEDS_MORE_OUTPUT:
                     return Status.NEED_OUTPUT;
@@ -106,14 +114,19 @@ public final class BrotliDecompressor implements Decompressor {
         ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
         decoderInputBuffer.clear();
         int readBytes = readBytes(buf, decoderInputBuffer);
-        decoder.push(readBytes);
+        push(readBytes);
+    }
+
+    private void push(int length) {
+        pulledSinceLastPush = false;
+        decoder.push(length);
     }
 
     @Override
     public void endOfInput() throws DecompressionException {
         if (decoder.getStatus() == DecoderJNI.Status.NEEDS_MORE_INPUT) {
             assert unusedInput == null : "Expected to be in NEED_INPUT state";
-            decoder.push(0);
+            push(0);
             if (decoder.getStatus() == DecoderJNI.Status.NEEDS_MORE_INPUT) {
                 throw new DecompressionException("Truncated brotli stream");
             }
@@ -123,6 +136,7 @@ public final class BrotliDecompressor implements Decompressor {
     @Override
     public ByteBuf takeOutput() throws DecompressionException {
         ByteBuffer nativeBuffer = decoder.pull();
+        pulledSinceLastPush = true;
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
         // size limited by maxOutputChunkSize
         ByteBuf copy = allocator.buffer(nativeBuffer.remaining());

@@ -25,6 +25,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +51,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         @Override
         public boolean canBlock() {
             assert inEventLoop();
-            return !hasTasks() && !hasScheduledTasks();
+            // trySuspend() wakes up the IoHandler but does not queue a task. An IoHandler may drop a wakeup that
+            // arrives while the event loop is awake, as it is expected to look for work after it announced that it
+            // is about to block. So we also need to report that we can not block if the loop can be suspended now,
+            // otherwise the request might be missed until something else wakes up the event loop.
+            return !hasTasks() && !hasScheduledTasks() && !canSuspend();
         }
 
         @Override
@@ -201,6 +206,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     protected void run() {
         assert inEventLoop();
         ioHandler.initialize();
+        boolean preparedToDestroy = false;
         do {
             final int ioRatio = this.ioRatio;
             final long taskQuantumNs;
@@ -221,14 +227,33 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                     taskQuantumNs = quantum;
                 }
             }
-            if (isShuttingDown()) {
+            if (!preparedToDestroy && isShuttingDown()) {
+                // Only call this once: confirmShutdown() keeps returning false for the whole quiet period, so we
+                // would otherwise call it on every iteration. Registrations after this point are rejected in
+                // registerForIo0, so a second call has nothing left to close.
                 ioHandler.prepareToDestroy();
+                preparedToDestroy = true;
             }
             // Now run tasks for the computed amount of time before trying to run IO again.
             runAllTasks(taskQuantumNs);
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
+
+        if (isShuttingDown() && !preparedToDestroy) {
+            // confirmShutdown() can return true without prepareToDestroy() having run, for example when
+            // shutdownGracefully(0, ...) is called while tasks are running. Close everything that is still registered
+            // now. The resulting close callbacks are run by the remaining confirmShutdown() calls of
+            // SingleThreadEventExecutor. Registrations that run after this point are rejected in registerForIo0.
+            //
+            // Only do this if prepareToDestroy() did not run in the loop above: once it ran, the shutdown had started,
+            // so registerForIo0 rejected every later registration and nothing new can be left to close. Calling it a
+            // second time is not safe for every IoHandler. IoUringIoHandler writes to its eventfd in
+            // prepareToDestroy(), and a second write whose read completion is never reaped lets the kernel copy into
+            // the eventfd read buffer after destroy() freed it.
+            // See https://github.com/netty/netty/issues/18483
+            ioHandler.prepareToDestroy();
+        }
     }
 
     protected final IoHandler ioHandler() {
@@ -298,6 +323,14 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
+        if (isShuttingDown()) {
+            // Once shutdown has started a new registration might never be closed: the IO loop may already have
+            // exited (or never run again, e.g. if it was suspending when shutdown started) and the remaining tasks
+            // only run as part of confirmShutdown(). Checking the state instead of a flag set by the IO loop covers
+            // every path, as the state is updated before any task can observe the shutdown.
+            promise.setFailure(new RejectedExecutionException("IoEventLoop is shutting down"));
+            return;
+        }
         final IoRegistration registration;
         try {
             registration = ioHandler.register(handle);

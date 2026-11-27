@@ -126,7 +126,28 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             // drain everything so we are sure we never leak anything.
             writeResumptionListener.drain();
         }
+        abandonIfBlocked(ctx);
         super.handlerRemoved0(ctx);
+    }
+
+    private void abandonIfBlocked(ChannelHandlerContext ctx) {
+        if (readResumptionListener == null || !readResumptionListener.isSuspended()) {
+            return;
+        }
+        // https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2
+        long streamId = ((QuicStreamChannel) ctx.channel()).streamId();
+        if (!qpackDecoder.releaseBlockedStream(streamId)) {
+            return;
+        }
+        if (qpackAttributes.decoderStreamAvailable()) {
+            qpackDecoder.sendStreamCancellation(qpackAttributes.decoderStream(), streamId);
+        } else {
+            qpackAttributes.whenDecoderStreamAvailable(f -> {
+                if (f.isSuccess()) {
+                    qpackDecoder.sendStreamCancellation(qpackAttributes.decoderStream(), streamId);
+                }
+            });
+        }
     }
 
     @Override

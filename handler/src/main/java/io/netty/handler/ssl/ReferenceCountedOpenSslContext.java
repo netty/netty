@@ -46,6 +46,7 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -89,6 +90,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
+
+    private static final OpenSslCertificateCompressionConfig DEFAULT_CERTIFICATE_COMPRESSION_CONFIG =
+            OpenSslCertificateCompressionConfig.newBuilder()
+                    .addAlgorithm(ZlibCertificateCompressionAlgorithm.INSTANCE,
+                            OpenSslCertificateCompressionConfig.AlgorithmMode.Both)
+                    .build();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
@@ -97,6 +104,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
+    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -162,6 +170,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    // What a new engine reports as its enabled protocols. Computed once as it is the same for every engine.
+    final String[] enabledProtocols;
     final String endpointIdentificationAlgorithm;
     final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
@@ -287,6 +297,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
         }
+        if (certCompressionConfig == null && isCertificateCompressionDisabled(mode)) {
+            certCompressionConfig = null;
+        } else if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+            certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
+        }
 
         this.tlsFalseStart = tlsFalseStart;
 
@@ -294,6 +309,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.serverNames = serverNames;
         this.enableOcsp = enableOcsp;
@@ -465,7 +481,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateListBytes(maxCertificateList));
             }
 
             // Set the curves / groups if anything is configured.
@@ -495,6 +511,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    private static boolean isCertificateCompressionDisabled(int mode) {
+        String property = mode == SSL.SSL_MODE_CLIENT ?
+                "jdk.tls.client.disableExtensions" : "jdk.tls.server.disableExtensions";
+        String disabledExtensions = SystemPropertyUtil.get(property);
+        if (disabledExtensions != null) {
+            for (String extension : disabledExtensions.split(",")) {
+                if ("compress_certificate".equals(extension.trim())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {
         switch (behavior) {
             case NO_ADVERTISE:
@@ -504,6 +534,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             default:
                 throw new Error("Unexpected behavior: " + behavior);
         }
+    }
+
+    static int maxCertificateListBytes(int maxCertificateListBytes) {
+        return maxCertificateListBytes > 0 ?
+                Math.max(maxCertificateListBytes, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateListBytes;
     }
 
     private void addCredential(OpenSslCredential credential) throws SSLException {
@@ -939,6 +974,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     }
                 }
                 wrapped = wrapped.getCause();
+            }
+            if (cause instanceof CertificateException) {
+                // The certificate was rejected (for example by the TrustManager), use X509_V_ERR_CERT_UNTRUSTED so a
+                // bad_certificate alert is sent. X509_V_ERR_UNSPECIFIED would result in an internal_error alert which
+                // should only be used for errors that are not related to the remote peer.
+                return CertificateVerifier.X509_V_ERR_CERT_UNTRUSTED;
             }
             return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
         }

@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -421,6 +422,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // Don't write the initial data that was sent by TCP_FASTOPEN_CONNECT a second time.
+        removeFastOpenData();
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -477,7 +480,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (msg instanceof ByteBuf) {
             return writeBytes(in, (ByteBuf) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
+            DefaultFileRegion region = (DefaultFileRegion) msg;
+            FileChannel channel = fileChannel(region);
+            // An unopened region uses RandomAccessFile when opened by sendFile.
+            if (channel == null || UnixChannelUtil.isFileChannelImpl(channel)) {
+                return writeDefaultFileRegion(in, region);
+            }
+            return writeFileRegion(in, region);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
         } else if (msg instanceof SpliceOutTask) {
@@ -538,6 +547,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected final void doShutdownOutput() throws Exception {
+        // The initial data that was sent by TCP_FASTOPEN_CONNECT must not be failed when shutting down the output.
+        removeFastOpenData();
         socket.shutdown(false, true);
     }
 

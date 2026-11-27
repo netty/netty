@@ -17,13 +17,18 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -37,6 +42,41 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Tests channel buffer streams
  */
 public class ByteBufStreamTest {
+
+    @Test
+    void writeFloatingPointValuesMustMatchDataOutputStream() throws Exception {
+        int[] floatBits = {
+                0x00000000, 0x80000000,
+                0x3f800000, 0xbf800000,
+                0x7f800000, 0xff800000,
+                0x7fc00001, 0xffc00001
+        };
+        long[] doubleBits = {
+                0x0000000000000000L, 0x8000000000000000L,
+                0x3ff0000000000000L, 0xbff0000000000000L,
+                0x7ff0000000000000L, 0xfff0000000000000L,
+                0x7ff8000000000001L, 0xfff8000000000001L
+        };
+        ByteArrayOutputStream expectedBytes = new ByteArrayOutputStream();
+        ByteBuf buf = Unpooled.buffer();
+        try (DataOutputStream expected = new DataOutputStream(expectedBytes);
+             ByteBufOutputStream out = new ByteBufOutputStream(buf, true)) {
+            for (int bits : floatBits) {
+                float value = Float.intBitsToFloat(bits);
+                expected.writeFloat(value);
+                out.writeFloat(value);
+            }
+            for (long bits : doubleBits) {
+                double value = Double.longBitsToDouble(bits);
+                expected.writeDouble(value);
+                out.writeDouble(value);
+            }
+
+            byte[] actual = new byte[buf.readableBytes()];
+            buf.getBytes(buf.readerIndex(), actual);
+            assertThat(actual).containsExactly(expectedBytes.toByteArray());
+        }
+    }
 
     @Test
     public void testAll() throws Exception {
@@ -170,6 +210,36 @@ public class ByteBufStreamTest {
         } finally {
             buf.release();
             in.close();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1 })
+    void testZeroLengthBulkReadsAtEndOfStream(int length) throws Exception {
+        ByteBuf buf = Unpooled.buffer(1).writeByte(42);
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
+            assertEquals(0, in.read(EMPTY_BYTES));
+            assertEquals(length == 0 ? -1 : 42, in.read());
+            assertEquals(-1, in.read());
+            assertEquals(0, in.read(EMPTY_BYTES));
+            assertEquals(0, in.read(new byte[1], 1, 0));
+            assertEquals(length, in.readBytes());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1 })
+    void testBulkReadValidatesArgumentsBeforeCheckingAvailableBytes(int length) throws Exception {
+        ByteBuf buf = Unpooled.buffer(1).writeByte(42);
+        byte[] bytes = new byte[1];
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, length, true)) {
+            assertThrows(NullPointerException.class, () -> in.read(null, 0, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, -1, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, -1));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 2, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, 0, 2));
+            assertThrows(IndexOutOfBoundsException.class, () -> in.read(bytes, Integer.MAX_VALUE, 1));
+            assertEquals(0, in.readBytes());
         }
     }
 

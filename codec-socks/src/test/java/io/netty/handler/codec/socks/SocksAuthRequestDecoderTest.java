@@ -70,4 +70,21 @@ public class SocksAuthRequestDecoderTest {
 
         assertFalse(ch.finishAndReleaseAll());
     }
+
+    /**
+     * ULEN and PLEN are unsigned octets (RFC 1929); user names and passwords of 128 to 255 bytes must decode.
+     */
+    @Test
+    public void testAuthRequestDecoderLongUsernameAndPassword() {
+        String longUsername = SocksCommonTestUtils.asciiStringOfLength(128);
+        String longPassword = SocksCommonTestUtils.asciiStringOfLength(255);
+        SocksAuthRequest msg = new SocksAuthRequest(longUsername, longPassword);
+        EmbeddedChannel embedder = new EmbeddedChannel(new SocksAuthRequestDecoder());
+        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
+        msg = embedder.readInbound();
+        assertEquals(longUsername, msg.username());
+        assertEquals(longPassword, msg.password());
+        assertNull(embedder.readInbound());
+        assertFalse(embedder.finish());
+    }
 }

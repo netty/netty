@@ -72,6 +72,14 @@ public class QueryStringEncoderTest {
     }
 
     @Test
+    public void testUnpairedLeadingSurrogateEncoding() throws Exception {
+        QueryStringEncoder e = new QueryStringEncoder("/foo");
+        e.addParam("a", "\uD800\u4E2D");
+        e.addParam("b", "\uD800\uD83D\uDE00");
+        assertEquals("/foo?a=%3F%E4%B8%AD&b=%3F%F0%9F%98%80", e.toString());
+    }
+
+    @Test
     public void testWhitespaceEncoding() throws Exception {
         QueryStringEncoder e = new QueryStringEncoder("/foo");
         e.addParam("a", "b c");

@@ -71,9 +71,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final CleanableDirectBuffer timeoutMemoryCleanable;
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
-    private final IovArray iovArray;
-    private final IovArrayReferenceCollector iovArrayReferenceCollector;
-    private final MsgHdrMemoryArray msgHdrMemoryArray;
+    private final IoUringSharedIovArray iovArray;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -148,9 +146,7 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(KERNEL_TIMESPEC_SIZE);
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
-        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
-        iovArrayReferenceCollector = new IovArrayReferenceCollector(iovArray);
-        msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
+        iovArray = new IoUringSharedIovArray(IoUring.NUM_ELEMENTS_IOVEC);
     }
 
     @Override
@@ -249,7 +245,6 @@ public final class IoUringIoHandler implements IoHandler {
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
         iovArray.clear();
-        msgHdrMemoryArray.clear();
         return submitted;
     }
 
@@ -418,7 +413,6 @@ public final class IoUringIoHandler implements IoHandler {
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
         iovArray.clear();
-        msgHdrMemoryArray.clear();
         return submitted;
     }
 
@@ -490,37 +484,29 @@ public final class IoUringIoHandler implements IoHandler {
         if (eventPending) {
             // There is an event that has been or will be written by another thread, so we must wait for the event.
             // Make sure we're actually listening for writes to the event fd.
-            while (eventfdReadSubmitted == 0) {
+            if (eventfdReadSubmitted == 0) {
                 submitEventFdRead();
-                submissionQueue.submit();
             }
-            // Drain the eventfd of the pending wakup.
-            class DrainFdEventCallback implements CompletionCallback {
-                boolean eventFdDrained;
+        } else if (eventfdReadSubmitted != 0) {
+            // `eventfdAsyncNotify` will never transition back to false, thus no other thread will write to the
+            // eventfd anymore. Write to it ourselves so the pending read is guaranteed to complete.
+            Native.eventFdWrite(eventfd.intValue(), 1L);
+        }
+        // Wait for the completion of the eventfd read before eventfdReadBuf is freed. Cancelling the read is not
+        // enough: the kernel may run it in an io-wq worker (for example when it was submitted while an
+        // IOSQE_IO_DRAIN request was in flight), which copies into eventfdReadBuf independently of this thread, may
+        // already be executing, and is not stopped by closing the ring.
+        // As eventFdClosing is set, handleEventFdRead() will not submit another read.
+        // See https://github.com/netty/netty/issues/18483
+        while (eventfdReadSubmitted != 0) {
+            submissionQueue.submitAndGet();
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, completionCallback);
+        }
+    }
 
-                @Override
-                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
-                    if (udata == EVENTFD_TOKEN) {
-                        eventFdDrained = true;
-                    }
-                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
-                }
-            }
-            final DrainFdEventCallback handler = new DrainFdEventCallback();
-            completionQueue.process(handler);
-            while (!handler.eventFdDrained) {
-                submissionQueue.submitAndGet();
-                processCompletionsAndHandleOverflow(submissionQueue, completionQueue, handler);
-            }
-        }
-        // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
-        // transition back to false, thus we should never have any more events written.
-        // So, if we have a read event pending, we can cancel it.
-        if (eventfdReadSubmitted != 0) {
-            submissionQueue.addCancel(eventfdReadSubmitted, EVENTFD_TOKEN);
-            eventfdReadSubmitted = 0;
-            submissionQueue.submit();
-        }
+    // Visible for testing.
+    boolean isEventFdReadPending() {
+        return eventfdReadSubmitted != 0;
     }
 
     private void completeRingClose() {
@@ -539,7 +525,6 @@ public final class IoUringIoHandler implements IoHandler {
         eventfdReadBufCleanable.clean();
         timeoutMemoryCleanable.clean();
         iovArray.release();
-        msgHdrMemoryArray.release();
     }
 
     @Override
@@ -711,7 +696,7 @@ public final class IoUringIoHandler implements IoHandler {
             event.update(res, flags, op, userData, extraCqeData);
             handle.handle(this, event);
             // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
-            // receive more completions for the intial request.
+            // receive more completions for the initial request.
             if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
                 // No more outstanding completions, remove the registration now.
                 removeLater = false;
@@ -772,25 +757,11 @@ public final class IoUringIoHandler implements IoHandler {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
-            assert iovArray.count() == 0;
+            // Without anything to submit all the entries were submitted already, so they can be reused too.
+            iovArray.clear();
         }
-        return iovArray;
-    }
-
-    /**
-     * Returns the {@link IovArrayReferenceCollector} paired with {@link #iovArray()}. A plain getter: callers are
-     * expected to have already called {@link #iovArray()} to make room, so this must not itself submit-and-clear.
-     */
-    IovArrayReferenceCollector iovArrayReferenceCollector() {
-        return iovArrayReferenceCollector;
-    }
-
-    MsgHdrMemoryArray msgHdrMemoryArray() {
-        if (msgHdrMemoryArray.isFull()) {
-            // Submit so we can reuse the msgHdrArray.
-            submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
-        }
-        return msgHdrMemoryArray;
+        IovArray next = iovArray.next();
+        return next;
     }
 
     /**

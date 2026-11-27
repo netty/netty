@@ -82,6 +82,9 @@ final class HpackEncoder {
     private long maxHeaderTableSize;
     private long maxHeaderListSize;
 
+    private boolean pendingHeaderTableSizeUpdate;
+    private long pendingMinHeaderTableSize = Long.MAX_VALUE;
+
     /**
      * Creates a new encoder.
      */
@@ -147,11 +150,22 @@ final class HpackEncoder {
 
     private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
                                                       SensitivityDetector sensitivityDetector) {
+        if (this.pendingHeaderTableSizeUpdate) {
+            this.pendingHeaderTableSizeUpdate = false;
+            // Casting to integer is safe as we verified the table size is a valid unsigned int in
+            // setMaxHeaderTableSize().
+            if (this.pendingMinHeaderTableSize < this.maxHeaderTableSize) {
+                // The table size shrunk and increased again.
+                encodeInteger(out, 0x20, 5, this.pendingMinHeaderTableSize);
+            }
+            this.pendingMinHeaderTableSize = Long.MAX_VALUE;
+            encodeInteger(out, 0x20, 5, this.maxHeaderTableSize);
+        }
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-              HpackHeaderField.sizeOf(name, value));
+              HpackHeaderField.sizeOf(name, value), sensitivityDetector);
         }
     }
 
@@ -160,7 +174,8 @@ final class HpackEncoder {
      * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
+    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize,
+                              SensitivityDetector sensitivityDetector) {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
@@ -198,6 +213,9 @@ final class HpackEncoder {
             if (staticTableIndex != HpackStaticTable.NOT_FOUND) {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
+            } else if (sensitivityDetector.skipIndexing(name, value)) {
+                // Section 6.2.2. Literal Header Field without Indexing
+                encodeLiteral(out, name, value, IndexType.NONE, getNameIndex(name));
             } else {
                 ensureCapacity(headerSize);
                 encodeAndAddEntries(out, name, nameHash, value, valueHash);
@@ -233,7 +251,7 @@ final class HpackEncoder {
     /**
      * Set the maximum table size.
      */
-    public void setMaxHeaderTableSize(ByteBuf out, long maxHeaderTableSize) throws Http2Exception {
+    public void setMaxHeaderTableSize(long maxHeaderTableSize) throws Http2Exception {
         if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
               MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
@@ -245,10 +263,10 @@ final class HpackEncoder {
         if (this.maxHeaderTableSize == maxHeaderTableSize) {
             return;
         }
+        this.pendingHeaderTableSizeUpdate = true;
+        this.pendingMinHeaderTableSize = Math.min(this.pendingMinHeaderTableSize, maxHeaderTableSize);
         this.maxHeaderTableSize = maxHeaderTableSize;
         ensureCapacity(0);
-        // Casting to integer is safe as we verified the maxHeaderTableSize is a valid unsigned int.
-        encodeInteger(out, 0x20, 5, maxHeaderTableSize);
     }
 
     /**

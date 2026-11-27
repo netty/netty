@@ -82,6 +82,7 @@ final class BoringSSL {
     static native void SSLContext_set_early_data_enabled(long context, boolean enabled);
     static native long SSLContext_setSessionCacheSize(long context, long size);
     static native long SSLContext_setSessionCacheTimeout(long context, long size);
+    static native boolean SSLContext_setSessionIdContext(long context, byte[] sidCtx);
 
     static native void SSLContext_setSessionTicketKeys(long context, boolean enableCallback);
 

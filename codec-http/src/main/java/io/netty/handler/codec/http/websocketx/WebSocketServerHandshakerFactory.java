@@ -155,6 +155,13 @@ public class WebSocketServerHandshakerFactory {
         return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
     }
 
+    // Like resolveHandshaker(HttpRequest, String, String, WebSocketDecoderConfig) but defers URI construction.
+    static WebSocketServerHandshaker resolveHandshaker(HttpRequest req, boolean isSecure, String host, String path,
+                                                       String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        return resolveHandshaker0(req, isSecure, host, path, subprotocols, decoderConfig);
+    }
+
     private static WebSocketServerHandshaker resolveHandshaker0(HttpRequest req,
                                                                 String webSocketURL,
                                                                 String subprotocols,
@@ -179,6 +186,35 @@ public class WebSocketServerHandshakerFactory {
         } else {
             // Assume version 00 where version header was not specified
             return new WebSocketServerHandshaker00(webSocketURL, subprotocols, decoderConfig);
+        }
+    }
+
+    private static WebSocketServerHandshaker resolveHandshaker0(HttpRequest req,
+                                                                boolean isSecure,
+                                                                String host,
+                                                                String path,
+                                                                String subprotocols,
+                                                                WebSocketDecoderConfig decoderConfig) {
+        CharSequence version = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
+        if (version != null) {
+            if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
+                // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
+                return new WebSocketServerHandshaker13(
+                        isSecure, host, path, subprotocols, decoderConfig);
+            } else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
+                // Version 8 of the wire protocol - version 10 of the draft hybi specification.
+                return new WebSocketServerHandshaker08(
+                        isSecure, host, path, subprotocols, decoderConfig);
+            } else if (version.equals(WebSocketVersion.V07.toHttpHeaderValue())) {
+                // Version 8 of the wire protocol - version 07 of the draft hybi specification.
+                return new WebSocketServerHandshaker07(
+                        isSecure, host, path, subprotocols, decoderConfig);
+            } else {
+                return null;
+            }
+        } else {
+            // Assume version 00 where version header was not specified
+            return new WebSocketServerHandshaker00(isSecure, host, path, subprotocols, decoderConfig);
         }
     }
 

@@ -95,6 +95,23 @@ public final class DateFormatter {
      * @return a {@link Date}, or null if text couldn't be parsed
      */
     public static Date parseHttpDate(CharSequence txt, int start, int end) {
+        return parse(txt, start, end, false);
+    }
+
+    /**
+     * Parse the date of a cookie into a {@link Date}, according to RFC6265.
+     * Unlike {@link #parseHttpDate(CharSequence, int, int)}, this also accepts a month that is longer than its
+     * three letter abbreviation, such as {@code November}.
+     * @param txt text to parse
+     * @param start the start index inside {@code txt}
+     * @param end the end index inside {@code txt}
+     * @return a {@link Date}, or null if text couldn't be parsed
+     */
+    public static Date parseCookieDate(CharSequence txt, int start, int end) {
+        return parse(txt, start, end, true);
+    }
+
+    private static Date parse(CharSequence txt, int start, int end, boolean longMonthAllowed) {
         int length = end - start;
         if (length == 0) {
             return null;
@@ -104,7 +121,9 @@ public final class DateFormatter {
             throw new IllegalArgumentException("Can't parse more than 64 chars, " +
                     "looks like a user error or a malformed header");
         }
-        return formatter().parse0(checkNotNull(txt, "txt"), start, end);
+        DateFormatter formatter = formatter();
+        formatter.longMonthAllowed = longMonthAllowed;
+        return formatter.parse0(checkNotNull(txt, "txt"), start, end);
     }
 
     /**
@@ -157,6 +176,7 @@ public final class DateFormatter {
     private int month;
     private boolean yearFound;
     private int year;
+    private boolean longMonthAllowed;
 
     private DateFormatter() {
         reset();
@@ -266,7 +286,8 @@ public final class DateFormatter {
     private boolean tryParseMonth(CharSequence txt, int tokenStart, int tokenEnd) {
         int len = tokenEnd - tokenStart;
 
-        if (len != 3) {
+        // RFC 6265, section 5.1.1: month = ( "jan" / ... / "dec" ) *OCTET, so "November" is a month in a cookie date
+        if (len < 3 || (len > 3 && !longMonthAllowed)) {
             return false;
         }
 
@@ -409,7 +430,25 @@ public final class DateFormatter {
             // invalid value
             return false;
         }
-        return true;
+
+        // RFC 6265, section 5.1.1: fail to parse if no such date exists, e.g. 31 Feb.
+        return dayOfMonth <= daysInMonth(month, year);
+    }
+
+    // Not GregorianCalendar.getActualMaximum(), which clones the calendar on every call.
+    // year is at least 1601 here, so the Gregorian leap year rule applies.
+    private static int daysInMonth(int month, int year) {
+        switch (month) {
+            case Calendar.FEBRUARY:
+                return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 ? 29 : 28;
+            case Calendar.APRIL:
+            case Calendar.JUNE:
+            case Calendar.SEPTEMBER:
+            case Calendar.NOVEMBER:
+                return 30;
+            default:
+                return 31;
+        }
     }
 
     private Date computeDate() {

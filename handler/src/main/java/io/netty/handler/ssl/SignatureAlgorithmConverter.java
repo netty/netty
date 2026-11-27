@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,6 +49,33 @@ final class SignatureAlgorithmConverter {
             "(?:(^[a-zA-Z].+)_(.+$))");
 
     /**
+     * Converts OpenSSL algorithm names to Java algorithm names. The result keeps the order of the given names and
+     * leaves out the names that can't be converted and the ones that were converted to the same name before.
+     */
+    static String[] toJavaNames(String[] opensslNames) {
+        // A peer only offers a handful of algorithms, so looking through the names that were converted so far is
+        // cheaper than collecting them in a Set.
+        String[] javaNames = new String[opensslNames.length];
+        int count = 0;
+        for (String opensslName : opensslNames) {
+            String javaName = toJavaName(opensslName);
+            if (javaName != null && !contains(javaNames, count, javaName)) {
+                javaNames[count++] = javaName;
+            }
+        }
+        return count == javaNames.length ? javaNames : Arrays.copyOf(javaNames, count);
+    }
+
+    private static boolean contains(String[] names, int count, String name) {
+        for (int i = 0; i < count; i++) {
+            if (names[i].equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Converts an OpenSSL algorithm name to a Java algorithm name and return it,
      * or return {@code null} if the conversion failed because the format is not known.
      */
@@ -55,13 +83,69 @@ final class SignatureAlgorithmConverter {
         if (opensslName == null) {
             return null;
         }
-        // EdDSA names carry no hash, so the pattern can't match them
-        if ("ed25519".equalsIgnoreCase(opensslName)) {
-            return "Ed25519";
+        // The names the native libraries report for the signature algorithms that TLS peers offer in practice.
+        // These are converted on every handshake, so they must not pay for the regular expression. Each result is
+        // what the regular expression produces for that name, anything else still goes through it.
+        switch (opensslName) {
+            // BoringSSL and AWS-LC, see SSL_get_signature_algorithm_name(...).
+            case "ecdsa_sha256":
+            // OpenSSL, see OBJ_nid2ln(...).
+            case "ecdsa-with-SHA256":
+                return "SHA256withECDSA";
+            case "ecdsa_sha384":
+            case "ecdsa-with-SHA384":
+                return "SHA384withECDSA";
+            case "ecdsa_sha512":
+            case "ecdsa-with-SHA512":
+                return "SHA512withECDSA";
+            case "ecdsa-with-SHA224":
+                return "SHA224withECDSA";
+            case "ecdsa_sha1":
+            case "ecdsa-with-SHA1":
+                return "SHA1withECDSA";
+            case "rsa_pss_rsae_sha256":
+            case "rsa_pkcs1_sha256":
+            case "sha256WithRSAEncryption":
+                return "SHA256withRSA";
+            case "rsa_pss_rsae_sha384":
+            case "rsa_pkcs1_sha384":
+            case "sha384WithRSAEncryption":
+                return "SHA384withRSA";
+            case "rsa_pss_rsae_sha512":
+            case "rsa_pkcs1_sha512":
+            case "sha512WithRSAEncryption":
+                return "SHA512withRSA";
+            case "sha224WithRSAEncryption":
+                return "SHA224withRSA";
+            case "rsa_pkcs1_sha1":
+            case "sha1WithRSAEncryption":
+                return "SHA1withRSA";
+            case "dsa_with_SHA256":
+                return "SHA256withDSA";
+            // EdDSA names carry no hash, so the pattern can't match them. All spellings are listed as these names
+            // are matched without regard to case.
+            case "ed25519":
+            case "ED25519":
+            case "Ed25519":
+            case "eD25519":
+                return "Ed25519";
+            case "ed448":
+            case "ED448":
+            case "Ed448":
+            case "eD448":
+                return "Ed448";
+            // OpenSSL reports these for RSA-PSS, DSA and algorithms it has no name for. There is no Java name
+            // for them.
+            case "rsassaPss":
+            case "dsaEncryption":
+            case "undefined":
+                return null;
+            default:
+                return toJavaNameWithPattern(opensslName);
         }
-        if ("ed448".equalsIgnoreCase(opensslName)) {
-            return "Ed448";
-        }
+    }
+
+    static String toJavaNameWithPattern(String opensslName) {
         Matcher matcher = PATTERN.matcher(opensslName);
         if (matcher.matches()) {
             String group1 = matcher.group(1);

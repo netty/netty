@@ -17,12 +17,14 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultFullBinaryMemcacheResponseTest {
 
@@ -74,6 +76,35 @@ public class DefaultFullBinaryMemcacheResponseTest {
         } finally {
             response.release();
             newInstance.release();
+        }
+    }
+
+    @Test
+    public void rejectedCopyDoesNotRetainBuffers() {
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(false);
+        response.release();
+        ByteBuf extras = allocator.heapBuffer(0, 256);
+        response = new DefaultFullBinaryMemcacheResponse(allocator.heapBuffer(1).writeByte(1),
+                extras, allocator.heapBuffer(1).writeByte(1));
+        extras.writeZero(256);
+        long allocated = allocator.metric().usedHeapMemory();
+        ByteBuf replacement = Unpooled.buffer(1);
+        try {
+            assertThrows(IllegalArgumentException.class, () -> response.copy());
+            assertEquals(allocated, allocator.metric().usedHeapMemory());
+
+            assertThrows(IllegalArgumentException.class, () -> response.retainedDuplicate());
+            assertEquals(1, response.key().refCnt());
+            assertEquals(1, extras.refCnt());
+            assertEquals(1, response.content().refCnt());
+
+            assertThrows(IllegalArgumentException.class, () -> response.replace(replacement));
+            assertEquals(1, response.key().refCnt());
+            assertEquals(1, extras.refCnt());
+            assertEquals(1, replacement.refCnt());
+        } finally {
+            replacement.release();
+            response.release();
         }
     }
 

@@ -53,7 +53,7 @@ public abstract class ChannelInitializerExtension {
     public static final String EXTENSIONS_SYSTEM_PROPERTY = "io.netty.bootstrap.extensions";
 
     /**
-     * Get the "priority" of this extension. If multiple extensions are avilable, then they will be called in their
+     * Get the "priority" of this extension. If multiple extensions are available, then they will be called in their
      * priority order, from lowest to highest.
      * <p>
      * Implementers are encouraged to pick a number between {@code -100.0} and {@code 100.0}, where extensions that have

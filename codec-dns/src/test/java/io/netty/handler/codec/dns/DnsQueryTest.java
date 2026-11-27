@@ -15,9 +15,11 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +34,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
@@ -151,5 +154,24 @@ public class DnsQueryTest {
 
         assertTrue(packet.release());
         assertFalse(writeChannel.finish());
+    }
+
+    @Test
+    public void rejectTooManyRecordsInQuery() {
+        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        for (int section = 0; section < 4; section++) {
+            final EmbeddedChannel channel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
+            ByteBuf buf = channel.alloc().buffer(12);
+            buf.writeShort(1).writeShort(0);
+            for (int i = 0; i < 4; i++) {
+                buf.writeShort(i == section ? DnsCodecUtil.MAX_RECORDS_PER_SECTION + 1 : 0);
+            }
+            final DatagramPacket packet = new DatagramPacket(buf, null, new InetSocketAddress(0));
+            try {
+                assertThrows(TooLongFrameException.class, () -> channel.writeInbound(packet));
+            } finally {
+                assertFalse(channel.finish());
+            }
+        }
     }
 }

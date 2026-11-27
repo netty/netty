@@ -101,8 +101,9 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
         HpackEncoder hpackEncoder = new HpackEncoder();
         ByteBuf buf = Unpooled.buffer();
         try {
-            hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+            hpackEncoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
             hpackEncoder.setMaxHeaderListSize(MAX_HEADER_LIST_SIZE);
+            hpackEncoder.encodeHeaders(0, buf, EmptyHttp2Headers.INSTANCE, Http2HeadersEncoder.NEVER_SENSITIVE);
         } catch (Http2Exception e) {
             throw new Error("max size not allowed?", e);
         } finally  {

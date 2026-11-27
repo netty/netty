@@ -79,6 +79,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -2158,6 +2159,53 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testRetainedSliceOfNonRetainedDerivedBufferCoversTheReadableBytes() {
+        for (int i = 0; i < buffer.capacity(); i++) {
+            buffer.setByte(i, i);
+        }
+        // a writer index below the capacity, and a reader index at zero or above
+        for (int readerIndex = 0; readerIndex <= 1; readerIndex++) {
+            buffer.setIndex(readerIndex, buffer.capacity() - 2);
+            ByteBuf retainedDuplicate = null;
+            ByteBuf retainedSlice = null;
+            try {
+                retainedDuplicate = buffer.retainedDuplicate();
+                retainedSlice = buffer.retainedSlice();
+                for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice());
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate().duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice().slice());
+                }
+            } finally {
+                if (retainedDuplicate != null) {
+                    retainedDuplicate.release();
+                }
+                if (retainedSlice != null) {
+                    retainedSlice.release();
+                }
+            }
+            assertEquals(1, buffer.refCnt());
+        }
+    }
+
+    private static void assertRetainedSliceBeforeAndAfterRead(ByteBuf buf) {
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+        buf.readByte();
+        assertRetainedSliceMatchesTheReadableBytes(buf);
+    }
+
+    private static void assertRetainedSliceMatchesTheReadableBytes(ByteBuf buf) {
+        ByteBuf retainedSlice = buf.retainedSlice();
+        try {
+            assertEquals(buf.readableBytes(), retainedSlice.readableBytes());
+            assertEquals(buf.slice(), retainedSlice);
+        } finally {
+            retainedSlice.release();
+        }
+    }
+
+    @Test
     public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
         ByteBuf slice = buffer.retainedSlice();
         ByteBuf duplicate = slice.duplicate();
@@ -2272,6 +2320,32 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes(copied);
         assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
         copied.release();
+    }
+
+    @Test
+    public void testReadUsAsciiCharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testReadUtf8CharSequenceOutOfBounds() {
+        testReadCharSequenceOutOfBounds(CharsetUtil.UTF_8);
+    }
+
+    private void testReadCharSequenceOutOfBounds(final Charset charset) {
+        final ByteBuf buf = newBuffer(16);
+        try {
+            buf.clear().writeBytes(new byte[] { 'a', 'b' });
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readCharSequence(3, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.readString(3, charset));
+            assertEquals(0, buf.readerIndex());
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(0, buf.capacity() + 1, charset));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.toString(-1, 1, charset));
+            assertThrows(IndexOutOfBoundsException.class,
+                    () -> buf.getCharSequence(0, buf.capacity() + 1, charset));
+        } finally {
+            buf.release();
+        }
     }
 
     @Test
@@ -3191,6 +3265,86 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testGetShortOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getShort(buffer.capacity() - 1);
+            }
+        });
+    }
+
+    @Test
+    public void testGetShortLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getShortLE(buffer.capacity() - 1);
+            }
+        });
+    }
+
+    @Test
+    public void testGetUnsignedMediumOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getUnsignedMedium(buffer.capacity() - 2);
+            }
+        });
+    }
+
+    @Test
+    public void testGetUnsignedMediumLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getUnsignedMediumLE(buffer.capacity() - 2);
+            }
+        });
+    }
+
+    @Test
+    public void testGetIntOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getInt(buffer.capacity() - 3);
+            }
+        });
+    }
+
+    @Test
+    public void testGetIntLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getIntLE(buffer.capacity() - 3);
+            }
+        });
+    }
+
+    @Test
+    public void testGetLongOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getLong(buffer.capacity() - 7);
+            }
+        });
+    }
+
+    @Test
+    public void testGetLongLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.getLongLE(buffer.capacity() - 7);
+            }
+        });
+    }
+
+    @Test
     public void testGetShortAfterRelease() {
         assertThrows(IllegalReferenceCountException.class, new Executable() {
             @Override
@@ -3491,6 +3645,86 @@ public abstract class AbstractByteBufTest {
             @Override
             public void execute() {
                 releasedBuffer().setShort(0, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetShortOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setShort(buffer.capacity() - 1, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetShortLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setShortLE(buffer.capacity() - 1, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetMediumOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setMedium(buffer.capacity() - 2, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetMediumLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setMediumLE(buffer.capacity() - 2, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetIntOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setInt(buffer.capacity() - 3, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetIntLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setIntLE(buffer.capacity() - 3, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetLongOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setLong(buffer.capacity() - 7, 1);
+            }
+        });
+    }
+
+    @Test
+    public void testSetLongLEOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.setLongLE(buffer.capacity() - 7, 1);
             }
         });
     }
@@ -4511,6 +4745,21 @@ public abstract class AbstractByteBufTest {
         ByteBuf buf = releasedBuffer();
         if (buf.hasMemoryAddress()) {
             assertThrows(IllegalReferenceCountException.class, () -> buf.memoryAddress());
+        }
+    }
+
+    @Test
+    public void testMemoryAddressUnsupportedWhenNoMemoryAddress() {
+        ByteBuf buf = newBuffer(16);
+        try {
+            if (buf.hasMemoryAddress()) {
+                // Must not throw, and must not be the "no address" marker.
+                assertNotEquals(0L, buf.memoryAddress());
+            } else {
+                assertThrows(UnsupportedOperationException.class, () -> buf.memoryAddress());
+            }
+        } finally {
+            buf.release();
         }
     }
 

@@ -15,30 +15,46 @@
  */
 package io.netty.handler.ssl.ocsp;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.dns.DnsNameResolver;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Promise;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.asn1.ocsp.ResponseBytes;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
@@ -47,7 +63,9 @@ import org.bouncycastle.cert.ocsp.BasicOCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.CertificateID;
 import org.bouncycastle.cert.ocsp.CertificateStatus;
 import org.bouncycastle.cert.ocsp.OCSPException;
+import org.bouncycastle.cert.ocsp.OCSPReq;
 import org.bouncycastle.cert.ocsp.OCSPRespBuilder;
+import org.bouncycastle.cert.ocsp.Req;
 import org.bouncycastle.cert.ocsp.RespID;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -56,13 +74,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import javax.net.ssl.HttpsURLConnection;
-import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URL;
-import java.security.cert.X509Certificate;
 import java.util.Date;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,32 +89,108 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class OcspClientTest extends AbstractOcspTest {
 
-    @ParameterizedTest
-    @ValueSource(strings = {"https://apple.com"})
-    void simpleOcspQueryTest(String urlString) throws IOException, ExecutionException, InterruptedException {
-        HttpsURLConnection httpsConnection = null;
+    @Test
+    void simpleOcspQueryTest() throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                .subject("CN=TrustedRootCA")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        EventLoopGroup serverGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
-            URL url = new URL(urlString);
-            httpsConnection = (HttpsURLConnection) url.openConnection();
-            httpsConnection.connect();
+            // Start a local OCSP responder so the test never leaves the loopback interface.
+            Channel server = new ServerBootstrap()
+                    .group(serverGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel ch) {
+                            ch.pipeline().addLast(new HttpServerCodec(), new HttpObjectAggregator(64 * 1024),
+                                    new LocalOcspResponder(caRoot));
+                        }
+                    })
+                    .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0))
+                    .sync().channel();
+            try {
+                int port = ((InetSocketAddress) server.localAddress()).getPort();
+                GeneralName ocspName = new GeneralName(GeneralName.uniformResourceIdentifier,
+                        "http://127.0.0.1:" + port + '/');
+                AuthorityInformationAccess aia = new AuthorityInformationAccess(
+                        new AccessDescription(AccessDescription.id_ad_ocsp, ocspName));
+                X509Bundle serverCert = new CertificateBuilder()
+                        .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                        .subject("CN=TargetServer")
+                        .addExtensionOctetString("1.3.6.1.5.5.7.1.1", false, aia.getEncoded())
+                        .buildIssuedBy(caRoot);
 
-            // Pull server certificates for validation
-            X509Certificate[] certs = (X509Certificate[]) httpsConnection.getServerCertificates();
-            X509Certificate serverCert = certs[0];
-            X509Certificate certIssuer = certs[1];
+                IoTransport transport = createDefaultTransport();
+                DnsNameResolver resolver = createDefaultResolver(transport);
+                try {
+                    Promise<BasicOCSPResp> promise = transport.eventLoop().newPromise();
+                    OcspClient.query(serverCert.getCertificate(), caRoot.getCertificate(), true,
+                            transport, resolver, promise);
+                    BasicOCSPResp basicOCSPResp = promise.get(10, TimeUnit.SECONDS);
 
-            IoTransport transport = createDefaultTransport();
-            Promise<BasicOCSPResp> promise = transport.eventLoop().newPromise();
-            OcspClient.query(serverCert, certIssuer, false,
-                    transport, createDefaultResolver(transport), promise);
-            BasicOCSPResp basicOCSPResp = promise.get();
-
-            // 'null' means certificate is valid
-            assertNull(basicOCSPResp.getResponses()[0].getCertStatus());
-        } finally {
-            if (httpsConnection != null) {
-                httpsConnection.disconnect();
+                    // 'null' means certificate is valid
+                    assertNull(basicOCSPResp.getResponses()[0].getCertStatus());
+                } finally {
+                    resolver.close();
+                }
+            } finally {
+                server.close().sync();
             }
+        } finally {
+            serverGroup.shutdownGracefully(0, 1, TimeUnit.SECONDS).syncUninterruptibly();
+        }
+    }
+
+    /**
+     * Minimal OCSP responder. It answers every request with a signed {@code good} status for the requested
+     * certificate and echoes the nonce.
+     */
+    private static final class LocalOcspResponder extends SimpleChannelInboundHandler<FullHttpRequest> {
+        private final X509Bundle issuer;
+
+        LocalOcspResponder(X509Bundle issuer) {
+            this.issuer = issuer;
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+            assertThat(request.method()).isEqualTo(HttpMethod.POST);
+            assertThat(request.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/ocsp-request");
+
+            byte[] requestBytes = new byte[request.content().readableBytes()];
+            request.content().readBytes(requestBytes);
+            OCSPReq ocspReq = new OCSPReq(requestBytes);
+
+            X509CertificateHolder issuerHolder = new JcaX509CertificateHolder(issuer.getCertificate());
+            BasicOCSPRespBuilder respBuilder = new BasicOCSPRespBuilder(new RespID(issuerHolder.getSubject()));
+            for (Req req : ocspReq.getRequestList()) {
+                respBuilder.addResponse(req.getCertID(), CertificateStatus.GOOD);
+            }
+            Extension nonce = ocspReq.getExtension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce);
+            if (nonce != null) {
+                respBuilder.setResponseExtensions(new Extensions(nonce));
+            }
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA")
+                    .build(issuer.getKeyPair().getPrivate());
+            BasicOCSPResp basicResp = respBuilder.build(
+                    signer, new X509CertificateHolder[] { issuerHolder }, new Date());
+            byte[] encoded = new OCSPRespBuilder().build(OCSPRespBuilder.SUCCESSFUL, basicResp).getEncoded();
+
+            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.wrappedBuffer(encoded));
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/ocsp-response");
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, encoded.length);
+            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            cause.printStackTrace();
+            ctx.close();
         }
     }
 

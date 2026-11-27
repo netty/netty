@@ -31,7 +31,7 @@ import java.util.function.BiFunction;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Special {@link SSLEngine} which allows to wrap a {@link ReferenceCountedOpenSslEngine} and verify that that
+ * Special {@link SSLEngine} which allows to wrap a {@link ReferenceCountedOpenSslEngine} and verify that
  * Error stack is empty after each method call.
  */
 final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements ReferenceCounted {

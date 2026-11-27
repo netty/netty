@@ -17,6 +17,7 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -50,7 +51,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
                                             ByteBuf content) {
         super(key, extras);
         this.content = ObjectUtil.checkNotNull(content, "content");
-        setTotalBodyLength(keyLength() + extrasLength() + content.readableBytes());
+        setTotalBodyLength((keyLength() & 0xFFFF) + (extrasLength() & 0xFF) + content.readableBytes());
     }
 
     @Override
@@ -91,15 +92,24 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
 
     @Override
     public FullBinaryMemcacheRequest copy() {
-        ByteBuf key = key();
-        if (key != null) {
-            key = key.copy();
+        ByteBuf key = null;
+        ByteBuf extras = null;
+        ByteBuf content = null;
+        try {
+            if (key() != null) {
+                key = key().copy();
+            }
+            if (extras() != null) {
+                extras = extras().copy();
+            }
+            content = content().copy();
+            return newInstance(key, extras, content);
+        } catch (Throwable cause) {
+            ReferenceCountUtil.safeRelease(key);
+            ReferenceCountUtil.safeRelease(extras);
+            ReferenceCountUtil.safeRelease(content);
+            throw cause;
         }
-        ByteBuf extras = extras();
-        if (extras != null) {
-            extras = extras.copy();
-        }
-        return newInstance(key, extras, content().copy());
     }
 
     @Override
@@ -117,20 +127,32 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
 
     @Override
     public FullBinaryMemcacheRequest retainedDuplicate() {
-        return replace(content().retainedDuplicate());
+        ByteBuf content = content().retainedDuplicate();
+        try {
+            return replace(content);
+        } catch (Throwable cause) {
+            ReferenceCountUtil.safeRelease(content);
+            throw cause;
+        }
     }
 
     @Override
     public FullBinaryMemcacheRequest replace(ByteBuf content) {
-        ByteBuf key = key();
-        if (key != null) {
-            key = key.retainedDuplicate();
+        ByteBuf key = null;
+        ByteBuf extras = null;
+        try {
+            if (key() != null) {
+                key = key().retainedDuplicate();
+            }
+            if (extras() != null) {
+                extras = extras().retainedDuplicate();
+            }
+            return newInstance(key, extras, content);
+        } catch (Throwable cause) {
+            ReferenceCountUtil.safeRelease(key);
+            ReferenceCountUtil.safeRelease(extras);
+            throw cause;
         }
-        ByteBuf extras = extras();
-        if (extras != null) {
-            extras = extras.retainedDuplicate();
-        }
-        return newInstance(key, extras, content);
     }
 
     private DefaultFullBinaryMemcacheRequest newInstance(ByteBuf key, ByteBuf extras, ByteBuf content) {

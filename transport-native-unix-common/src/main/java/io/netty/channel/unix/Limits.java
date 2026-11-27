@@ -18,6 +18,7 @@ package io.netty.channel.unix;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.iovMax;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.sizeOfjlong;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.ssizeMax;
+import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.udsSunPathSize;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.uioMaxIov;
 
 public final class Limits {
@@ -26,6 +27,12 @@ public final class Limits {
     public static final long SSIZE_MAX = ssizeMax();
 
     public static final int SIZEOF_JLONG = sizeOfjlong();
+
+    /**
+     * The size of {@code sun_path} of the native {@code sockaddr_un}, which is the maximum length in bytes
+     * of a path that can be used for a domain socket.
+     */
+    public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
 
     private Limits() { }
 }

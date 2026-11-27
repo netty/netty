@@ -45,6 +45,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpUtilTest {
 
     @Test
+    public void testSetContentLength() {
+        HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpUtil.setContentLength(message, 0);
+        assertEquals("0", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        HttpUtil.setContentLength(message, 42);
+        assertEquals(42, HttpUtil.getContentLength(message));
+    }
+
+    @Test
+    public void testSetNegativeContentLength() {
+        // normalizeAndGetContentLength() rejects a signed value when the message is decoded.
+        final HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        assertThrows(IllegalArgumentException.class, () -> HttpUtil.setContentLength(message, -1));
+        assertThrows(IllegalArgumentException.class, () -> HttpHeaders.setContentLength(message, -1));
+        assertNull(message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+    }
+
+    @Test
     public void testRecognizesOriginForm() {
         // Origin form: https://tools.ietf.org/html/rfc7230#section-5.3.1
         assertTrue(HttpUtil.isOriginForm(URI.create("/where?q=now")));
@@ -83,9 +101,39 @@ public class HttpUtilTest {
             "HTTP/ 1.1",
             "HTTP/\r0.9",
             "HTTP/\n1.1",
+            "/a\tHTTP/1.0",
+            "/admin\u0000/public",
+            "/a\u000Bb",
+            "/a\fb",
+            "/a\u001Bb",
+            "/a\u007Fb",
     })
     public void requestLineTokenValidationMustRejectInvalidTokens(String token) throws Exception {
         assertFalse(HttpUtil.isEncodingSafeStartLineToken(token));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustRejectAllControlCharactersSpaceAndDel() {
+        for (char c = 0; c <= 0x20; c++) {
+            assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a" + c + "b"), "0x" + Integer.toHexString(c));
+        }
+        assertFalse(HttpUtil.isEncodingSafeStartLineToken("/a\u007Fb"));
+    }
+
+    @Test
+    public void requestLineTokenValidationMustAcceptValidTokens() {
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("/path/to/resource?q=1&r=2"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken("http://localhost/\u00e9"));
+        assertTrue(HttpUtil.isEncodingSafeStartLineToken(""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "\t", "\u0000", "\u000B", "\f", "\u001B", "\u007F" })
+    public void defaultHttpRequestMustRejectControlCharactersInUri(String ctl) {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/a" + ctl + "HTTP/1.0"));
     }
 
     @Test

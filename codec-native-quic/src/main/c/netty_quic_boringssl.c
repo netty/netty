@@ -97,6 +97,7 @@ static int sslTaskIdx = -1;
 static int sessionTicketCallbackIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
+static int verifyModeIdx = -1;
 
 static jint netty_boringssl_ssl_verify_none(JNIEnv* env, jclass clazz) {
     return SSL_VERIFY_NONE;
@@ -571,7 +572,16 @@ const SSL_PRIVATE_KEY_METHOD netty_boringssl_private_key_method = {
 
 // See https://www.openssl.org/docs/man1.0.2/man3/SSL_set_cert_cb.html for return values.
 static int quic_certificate_cb(SSL* ssl, void* arg) {
+    // Declare and initialize everything that is used in the done: block up-front as jumping to it would otherwise
+    // skip the initialization and so result in using uninitialized variables.
     jclass certificateTaskClass = NULL;
+    jobjectArray authMethods = NULL;
+    jobjectArray issuers = NULL;
+    jbyteArray types = NULL;
+    EVP_PKEY* pkey = NULL;
+    const STACK_OF(CRYPTO_BUFFER) *cchain = NULL;
+    CRYPTO_BUFFER** certs = NULL;
+    int ret = 0;
     JNIEnv *e = NULL;
     if (quic_get_java_env(&e) != JNI_OK) {
         return 0;
@@ -581,9 +591,6 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
 
     // Let's check if we retried the operation and so have stored a sslTask that runs the certificiate callback.
     if (ssl_task == NULL) {
-        jobjectArray authMethods = NULL;
-        jobjectArray issuers = NULL;
-        jbyteArray types = NULL;
         if (SSL_is_server(ssl) == 1) {
             const STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
             int len = sk_SSL_CIPHER_num(ciphers);
@@ -651,9 +658,8 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
         return 0;
     }
 
-    int ret = 0;
-    EVP_PKEY* pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
-    const STACK_OF(CRYPTO_BUFFER) *cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
+    pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
+    cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
 
     // Set both fields to 0 so destroy() will not destroy the native allocated memory.
     (*e)->SetLongField(e, ssl_task->task, certificateTaskClassKeyField, 0);
@@ -671,7 +677,7 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
     if (numCerts == 0) {
         goto done;
     }
-    CRYPTO_BUFFER** certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
+    certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
 
     if (certs == NULL) {
         goto done;
@@ -697,6 +703,9 @@ done:
         sk_CRYPTO_BUFFER_pop_free((STACK_OF(CRYPTO_BUFFER) *) cchain, CRYPTO_BUFFER_free);
     }
     NETTY_JNI_UTIL_DELETE_LOCAL(e, certificateTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, types);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, issuers);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, authMethods);
 
     return ret;
 }
@@ -943,6 +952,10 @@ int quic_tlsext_servername_callback(SSL *ssl, int *out_alert, void *arg) {
         // Setting the SSL_CTX failed.
         return SSL_TLSEXT_ERR_ALERT_FATAL;
     }
+    // SSL_set_SSL_CTX(...) does not change the verify mode, which was taken from the initial SSL_CTX when the
+    // SSL was created. Apply the one of the selected SSL_CTX so its ClientAuth mode is enforced.
+    int verifyMode = (int) (intptr_t) SSL_CTX_get_ex_data(newCtx, verifyModeIdx);
+    SSL_set_custom_verify(ssl, verifyMode, quic_SSL_cert_custom_verify);
     return resultValue;
 }
 
@@ -1103,6 +1116,9 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     // Set callback which will inform when handshake is done
     SSL_CTX_set_ex_data(ctx, handshakeCompleteCallbackIdx, handshakeCompleteCallbackRef);
     SSL_CTX_set_info_callback(ctx, quic_SSL_info_callback);
+
+    // For preserving the verification mode on SNI context switch
+    SSL_CTX_set_ex_data(ctx, verifyModeIdx, (void*) (intptr_t) verifyMode);
 
     // So we can access this in quic_SSL_cert_custom_verify
     SSL_CTX_set_ex_data(ctx, verifyCallbackIdx, verifyCallbackRef);
@@ -1279,6 +1295,17 @@ static jlong netty_boringssl_SSLContext_setSessionCacheSize(JNIEnv* env, jclass 
     return 0;
 }
 
+static jboolean netty_boringssl_SSLContext_setSessionIdContext(JNIEnv* env, jclass clazz, jlong ctx, jbyteArray sid_ctx) {
+    int len = (*env)->GetArrayLength(env, sid_ctx);
+    uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, sid_ctx, 0);
+    if (data == NULL) {
+        return JNI_FALSE;
+    }
+    int result = SSL_CTX_set_session_id_context((SSL_CTX*) ctx, data, len);
+    (*env)->ReleaseByteArrayElements(env, sid_ctx, (jbyte*) data, JNI_ABORT);
+    return result == 1 ? JNI_TRUE : JNI_FALSE;
+}
+
 static void netty_boringssl_SSLContext_set_early_data_enabled(JNIEnv* env, jclass clazz, jlong ctx, jboolean enabled){
     SSL_CTX_set_early_data_enabled((SSL_CTX*) ctx, enabled == JNI_TRUE ? 1 : 0);
 }
@@ -1329,18 +1356,24 @@ void netty_boringssl_SSL_cleanup(JNIEnv* env, jclass clazz, jlong ssl) {
 
 int netty_boringssl_password_callback(char *buf, int bufsiz, int verify, void *cb) {
     char *password = (char *) cb;
-    if (password == NULL) {
+    if (password == NULL || bufsiz <= 0) {
         return 0;
     }
-    strncpy(buf, password, bufsiz);
-    return (int) strlen(buf);
+    size_t len = strlen(password);
+    if (len > (size_t) bufsiz) {
+        // The password does not fit into the buffer. Signal failure instead of silently truncating it.
+        return 0;
+    }
+    // The returned length is used by the caller, so there is no need to NUL-terminate the buffer.
+    memcpy(buf, password, len);
+    return (int) len;
 }
 
 jlong netty_boringssl_EVP_PKEY_parse(JNIEnv* env, jclass clazz, jbyteArray array, jstring password) {
     int dataLen = (*env)->GetArrayLength(env, array);
     char* data = (char*) (*env)->GetByteArrayElements(env, array, 0);
     if (data == NULL) {
-        return -1;
+        return 0;
     }
     BIO* bio = BIO_new_mem_buf(data, dataLen);
 
@@ -1359,9 +1392,7 @@ jlong netty_boringssl_EVP_PKEY_parse(JNIEnv* env, jclass clazz, jbyteArray array
         (*env)->ReleaseStringUTFChars(env, password, charPass);
     }
     (*env)->ReleaseByteArrayElements(env, array, (jbyte*)data, JNI_ABORT);
-    if (key == NULL) {
-        return -1;
-    }
+    // If parsing failed key is NULL and so we return 0, which the Java side treats as failure.
     return (jlong) key;
 }
 
@@ -1533,6 +1564,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
+  { "SSLContext_setSessionIdContext", "(J[B)Z", (void *) netty_boringssl_SSLContext_setSessionIdContext },
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSLContext_setSessionTicketKeys", "(JZ)V", (void *) netty_boringssl_SSLContext_setSessionTicketKeys },
   { "SSLContext_set1_groups_list", "(JLjava/lang/String;)I", (void *) netty_boringssl_SSLContext_set1_groups_list },
@@ -1703,6 +1735,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     sslTaskIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    verifyModeIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     sessionTicketCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;

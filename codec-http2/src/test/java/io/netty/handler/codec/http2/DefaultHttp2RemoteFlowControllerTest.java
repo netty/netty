@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
@@ -969,6 +970,120 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         // Set the controller
         controller.channelHandlerContext(ctx);
         dataA.assertFullyWritten();
+    }
+
+    @Test
+    public void windowUpdateForReservedStreamShouldBeKeptWhenActivated() throws Http2Exception {
+        Http2Stream pushStream = reservePushStreamOnServer();
+        assertEquals(0, controller.windowSize(pushStream));
+
+        // The peer may send WINDOW_UPDATE for a stream that is reserved (local), see RFC 9113, section 5.1.
+        controller.incrementWindowSize(pushStream, 100);
+        pushStream.open(false);
+        assertEquals(DEFAULT_WINDOW_SIZE + 100, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void initialWindowSizeChangeForReservedStreamShouldBeAppliedWhenActivated() throws Http2Exception {
+        Http2Stream pushStream = reservePushStreamOnServer();
+
+        // The peer only grants credit for the pushed stream via WINDOW_UPDATE.
+        controller.initialWindowSize(0);
+        reset(listener);
+        controller.incrementWindowSize(pushStream, 100);
+        // The credit already makes the reserved stream writable, and the listener is told so.
+        verify(listener, times(1)).writabilityChanged(pushStream);
+        assertTrue(controller.isWritable(pushStream));
+        reset(listener);
+
+        pushStream.open(false);
+        // Activation keeps the credit, so the stream stays writable and the listener is not told otherwise.
+        verify(listener, never()).writabilityChanged(pushStream);
+        assertTrue(controller.isWritable(pushStream));
+        assertEquals(100, controller.windowSize(pushStream));
+
+        FakeFlowControlled data = new FakeFlowControlled(100);
+        controller.addFlowControlled(pushStream, data);
+        controller.writePendingBytes();
+        data.assertFullyWritten();
+    }
+
+    @Test
+    public void initialWindowSizeChangeAndWindowUpdateForReservedStreamShouldBeAddedWhenActivated()
+            throws Http2Exception {
+        Http2Stream pushStream = reservePushStreamOnServer();
+
+        // SETTINGS_INITIAL_WINDOW_SIZE is only applied to active streams, so the reserved stream only holds the
+        // credit from the WINDOW_UPDATE until it is activated.
+        controller.initialWindowSize(1000);
+        controller.incrementWindowSize(pushStream, 100);
+        assertEquals(100, controller.windowSize(pushStream));
+        pushStream.open(false);
+        assertEquals(1100, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void windowUpdateThatOverflowsReservedStreamWhenActivatedShouldFail() throws Http2Exception {
+        final Http2Stream pushStream = reservePushStreamOnServer();
+        // The initialWindowSize is added when the stream becomes active, so this is the most credit it can take.
+        controller.incrementWindowSize(pushStream, MAX_INITIAL_WINDOW_SIZE - DEFAULT_WINDOW_SIZE);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.incrementWindowSize(pushStream, 1);
+            }
+        });
+        assertTrue(e instanceof Http2Exception.StreamException);
+        assertEquals(Http2Error.FLOW_CONTROL_ERROR, e.error());
+        assertEquals(MAX_INITIAL_WINDOW_SIZE - DEFAULT_WINDOW_SIZE, controller.windowSize(pushStream));
+
+        pushStream.open(false);
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void windowUpdateForReservedStreamShouldFailIfInitialWindowSizeLeavesNoRoom() throws Http2Exception {
+        final Http2Stream pushStream = reservePushStreamOnServer();
+        controller.initialWindowSize(MAX_INITIAL_WINDOW_SIZE);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.incrementWindowSize(pushStream, 1);
+            }
+        });
+        assertTrue(e instanceof Http2Exception.StreamException);
+        assertEquals(Http2Error.FLOW_CONTROL_ERROR, e.error());
+        assertEquals(0, controller.windowSize(pushStream));
+
+        pushStream.open(false);
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void initialWindowSizeChangeThatOverflowsReservedStreamIsClampedWhenActivated() throws Http2Exception {
+        Http2Stream pushStream = reservePushStreamOnServer();
+        controller.incrementWindowSize(pushStream, 1000);
+        // A SETTINGS_INITIAL_WINDOW_SIZE increase after the credit was granted is not rejected, as only active
+        // streams are checked when it is applied (a connection error for those, see RFC 9113, section 6.9.2).
+        controller.initialWindowSize(MAX_INITIAL_WINDOW_SIZE);
+        assertEquals(1000, controller.windowSize(pushStream));
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(stream(STREAM_A)));
+
+        // The window is clamped (and a warning is logged) when the stream becomes active.
+        pushStream.open(false);
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(pushStream));
+    }
+
+    private Http2Stream reservePushStreamOnServer() throws Http2Exception {
+        connection = new DefaultHttp2Connection(true);
+        controller = new DefaultHttp2RemoteFlowController(connection, newDistributor(connection), listener);
+        connection.remote().flowController(controller);
+        controller.channelHandlerContext(ctx);
+
+        Http2Stream parent = connection.remote().createStream(STREAM_A, false);
+        return connection.local().reservePushStream(2, parent);
     }
 
     @Test

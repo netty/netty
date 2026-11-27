@@ -21,6 +21,7 @@ import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -109,6 +110,10 @@ final class MsgHdrMemory {
                 cmsgDataOffset, segmentSize);
     }
 
+    int iovLength() {
+        return MsgHdr.iovLength(msgHdrMemory);
+    }
+
     void set(long iovArray, int length) {
         MsgHdr.set(msgHdrMemory, iovArray, length);
     }
@@ -140,7 +145,7 @@ final class MsgHdrMemory {
         MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }
 
-    int getScmRightsFd() {
+    int getScmRightsFd() throws IOException {
         return MsgHdr.getCmsgData(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
     }
 
