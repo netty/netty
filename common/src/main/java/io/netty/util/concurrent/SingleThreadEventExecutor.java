@@ -103,9 +103,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final boolean supportSuspension;
 
     /**
-     * Flag to notify event loop thread to continue running when going from state
-     * ST_SUSPENDING back to ST_STARTED. This happens when attempting to un-suspend
-     * a thread that is not fully suspended.
+     * Set by a submitting thread right before it moves the state from {@code ST_SUSPENDING} back to
+     * {@code ST_STARTED} (see {@code startThread()}). This tells the event loop thread that, if {@link #run()}
+     * returned because it was allowed to suspend but the state is now {@code ST_STARTED}, it must keep running
+     * instead of treating this as a {@link #run()} implementation that terminated without confirming shutdown.
+     * <p>
+     * Only the event loop thread is allowed to clear this flag. A submitting thread must never clear it, even if its
+     * own CAS failed, as another submitter might have just won the CAS and the event loop thread may not have
+     * observed the flag yet.
      */
     private volatile boolean attemptRestart;
 
@@ -1158,46 +1163,46 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
     private void startThread() {
-        int currentState = state;
-        while (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
-            if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
-                resetIdleCycles();
-                resetBusyCycles();
-                boolean success = false;
-                try {
-                    doStartThread();
-                    success = true;
-                } finally {
-                    if (!success) {
-                        STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
+        for (;;) {
+            int currentState = state;
+            if (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
+                if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
+                    resetIdleCycles();
+                    resetBusyCycles();
+                    boolean success = false;
+                    try {
+                        doStartThread();
+                        success = true;
+                    } finally {
+                        if (!success) {
+                            STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
+                        }
                     }
+                    return;
                 }
-                break;
-            }
-            // The state changed after we read it. If trySuspend() moved it from ST_NOT_STARTED to ST_SUSPENDED no
-            // thread was started, so we need to try again. Otherwise the task that was just added might never run.
-            // This may deliberately un-suspend an executor that trySuspend() has just suspended, which is the same
-            // thing execute() does for an executor that is already suspended. We only loop again if another thread
-            // changed the state in between, so this can't spin.
-            currentState = state;
-        }
-        if (currentState == ST_SUSPENDING) {
-            boolean success = false;
-            while (state == ST_SUSPENDING) {
-                // Set attemptRestart before changing state since event loop thread may run and
-                // suspend thread as soon as it sees ST_STARTED
+                // The state changed after we read it. If trySuspend() moved it from ST_NOT_STARTED to ST_SUSPENDED
+                // no thread was started, so we need to try again. Otherwise the task that was just added might never
+                // run. This may deliberately un-suspend an executor that trySuspend() has just suspended, which is the
+                // same thing execute() does for an executor that is already suspended.
+            } else if (currentState == ST_SUSPENDING) {
+                // Suspension was requested but the event loop thread has not confirmed it yet. Cancel the suspension
+                // so the executor keeps running, the same way submitting work to a suspended executor starts it again.
+                // attemptRestart must be set before the CAS as the event loop thread may already have returned from
+                // run() and observe ST_STARTED right after it. It must not be cleared if the CAS fails, see the
+                // javadoc of attemptRestart.
                 attemptRestart = true;
                 if (STATE_UPDATER.compareAndSet(this, ST_SUSPENDING, ST_STARTED)) {
-                    success = true;
-                    break;
+                    resetIdleCycles();
+                    resetBusyCycles();
+                    return;
                 }
-                // CAS did not work, try again if the state is still in suspending
-                attemptRestart = false;
+                // The state changed after we read it, the event loop thread might have completed the suspension in
+                // the meantime and so we need to start a new thread.
+            } else {
+                // Already started or shutting down.
+                return;
             }
-            if (!success) {
-                // Re-do start thread again because state may have changed while attempting to start
-                startThread();
-            }
+            // We only loop again if another thread changed the state in between, so this can't spin.
         }
     }
 
@@ -1258,7 +1263,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
-                        } else if (attemptRestart && currentState == ST_STARTED) {
+                        } else if (currentState == ST_STARTED && attemptRestart) {
+                            // run() returned because it was allowed to suspend, but startThread() cancelled the
+                            // suspension (ST_SUSPENDING -> ST_STARTED) as new work was submitted. Keep running.
                             attemptRestart = false;
                             continue;
                         } else if (currentState == ST_SUSPENDING || currentState == ST_SUSPENDED) {
@@ -1267,9 +1274,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             // - so we can no longer suspend right now. No shutdown was requested, so this must not
                             // be treated as if run() returned without confirming shutdown; just go around the loop
                             // again so run() can pick up whatever raced in.
-                            continue;
-                        } else if (attemptRestart && currentState == ST_STARTED) {
-                            attemptRestart = false;
                             continue;
                         }
                         break;

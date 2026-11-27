@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -301,6 +302,176 @@ public class SingleThreadEventExecutorTest {
                 t.join();
             }
         }
+    }
+
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void testExecuteWhileSuspendingCancelsSuspension() throws Exception {
+        TestThreadFactory threadFactory = new TestThreadFactory();
+        final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
+        final CountDownLatch blockingTaskStarted = new CountDownLatch(1);
+        final CountDownLatch releaseBlockingTask = new CountDownLatch(1);
+        executor.execute(() -> {
+            blockingTaskStarted.countDown();
+            boolean interrupted = false;
+            for (;;) {
+                try {
+                    releaseBlockingTask.await();
+                    break;
+                } catch (InterruptedException e) {
+                    // trySuspend() wakes up the executor by interrupting it.
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        TestThread currentThread = threadFactory.threads.take();
+        blockingTaskStarted.await();
+
+        // The event loop thread is busy, so the suspension can not be completed yet.
+        assertTrue(executor.trySuspend());
+        assertTrue(executor.isSuspended());
+        for (int i = 0; i < 3; i++) {
+            executor.getAndIncrementIdleCycles();
+            executor.getAndIncrementBusyCycles();
+        }
+
+        // Submitting work before the suspension completed must cancel the suspension and, like for an executor that
+        // is started again after it was suspended, reset the cycles used by the auto-scaling.
+        LatchTask task = new LatchTask();
+        executor.execute(task);
+        assertFalse(executor.isSuspended());
+        assertEquals(0, executor.getAndIncrementIdleCycles());
+        assertEquals(0, executor.getAndIncrementBusyCycles());
+        executor.resetIdleCycles();
+        executor.resetBusyCycles();
+
+        releaseBlockingTask.countDown();
+        task.await();
+        // The executor must keep running on the same thread and not suspend itself after it ran the task.
+        assertFalse(executor.isSuspended());
+        assertTrue(threadFactory.threads.isEmpty());
+        assertTrue(currentThread.isAlive());
+
+        // It should still be possible to suspend the executor later on.
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!executor.trySuspend()) {
+            if (System.nanoTime() > deadline) {
+                fail("executor did not suspend");
+            }
+            Thread.sleep(1);
+        }
+        currentThread.join();
+        assertTrue(executor.isSuspended());
+        assertFalse(executor.isShuttingDown());
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        TestThread t;
+        while ((t = threadFactory.threads.poll()) != null) {
+            t.join();
+        }
+    }
+
+    @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    void testConcurrentExecuteWhileSuspendingDoesNotShutdownExecutor() throws Exception {
+        // Regression test: when execute() moves the executor from ST_SUSPENDING back to ST_STARTED, the event loop
+        // thread may already have returned from run() because it was allowed to suspend. It then observes
+        // ST_STARTED and must keep running instead of treating this as a run() implementation that returned without
+        // confirming shutdown, which would shut down the executor. This must also hold if multiple threads race to
+        // cancel the suspension, as only one of them can win.
+        //
+        // To make the race reproducible we use canSuspend(int) to:
+        // 1. release all submitters at once right after run() decided that it can suspend, so they all race in
+        //    startThread() and park the event loop thread, which simulates it being descheduled.
+        // 2. park the event loop thread again once it observed that the suspension was cancelled, so all the
+        //    submitters that lost the race are done before it decides if it should keep running.
+        final int submitters = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors() - 1));
+        final int iterations = 1000;
+        final AtomicInteger requested = new AtomicInteger();
+        final AtomicInteger released = new AtomicInteger();
+        final AtomicInteger suspendingState = new AtomicInteger(-1);
+        final AtomicBoolean checkRestart = new AtomicBoolean();
+        final AtomicBoolean stop = new AtomicBoolean();
+        final AtomicInteger executed = new AtomicInteger();
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
+                Executors.defaultThreadFactory(), true, true, Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown() && !canSuspend()) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        safeExecute(task);
+                    }
+                }
+            }
+
+            @Override
+            protected boolean canSuspend(int state) {
+                boolean canSuspend = super.canSuspend(state);
+                int iteration = requested.get();
+                if (canSuspend && released.get() < iteration) {
+                    suspendingState.set(state);
+                    checkRestart.set(true);
+                    released.set(iteration);
+                    LockSupport.parkNanos(TimeUnit.MICROSECONDS.toNanos(200));
+                } else if (state != suspendingState.get() && checkRestart.compareAndSet(true, false)) {
+                    LockSupport.parkNanos(TimeUnit.MICROSECONDS.toNanos(200));
+                }
+                return canSuspend;
+            }
+        };
+        final Runnable task = executed::incrementAndGet;
+        Thread[] submitterThreads = new Thread[submitters];
+        for (int i = 0; i < submitters; i++) {
+            submitterThreads[i] = new Thread(() -> {
+                for (int iteration = 1; iteration <= iterations; iteration++) {
+                    while (released.get() < iteration) {
+                        if (stop.get()) {
+                            return;
+                        }
+                        // Busy spin so all submitters are released at the same time.
+                    }
+                    executor.execute(task);
+                }
+            });
+            submitterThreads[i].start();
+        }
+        try {
+            int expected = 0;
+            for (int i = 1; i <= iterations; i++) {
+                // Ensure the executor is running and idle before we try to suspend it.
+                executor.execute(task);
+                expected++;
+                awaitExecuted(executor, executed, expected, i);
+
+                requested.set(i);
+                assertTrue(executor.trySuspend(), "iteration " + i);
+                expected += submitters;
+                awaitExecuted(executor, executed, expected, i);
+            }
+        } finally {
+            stop.set(true);
+            for (Thread t : submitterThreads) {
+                t.join();
+            }
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        }
+    }
+
+    private static void awaitExecuted(SingleThreadEventExecutor executor, AtomicInteger executed, int expected,
+                                      int iteration) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (executed.get() != expected) {
+            assertFalse(executor.isShuttingDown(), "executor shut down at iteration " + iteration);
+            if (System.nanoTime() > deadline) {
+                fail("tasks did not run at iteration " + iteration + " (" + executed.get() + '/' + expected + ')');
+            }
+            LockSupport.parkNanos(TimeUnit.MICROSECONDS.toNanos(10));
+        }
+        assertFalse(executor.isShuttingDown(), "executor shut down at iteration " + iteration);
     }
 
     @Test
