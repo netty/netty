@@ -104,7 +104,8 @@ public interface EventExecutor extends EventExecutorGroup, ThreadAwareExecutor {
      * </ul>
      *
      * Even if this method returns {@code true} it might take some time for the {@link EventExecutor} to fully suspend
-     * itself.
+     * itself. Submitting work via one of the methods above before the suspension completed will cancel the suspension,
+     * so a return value of {@code true} does not guarantee that the {@link EventExecutor} will end up suspended.
      *
      * @return {@code true} if suspension was successful, otherwise {@code false}.
      */
