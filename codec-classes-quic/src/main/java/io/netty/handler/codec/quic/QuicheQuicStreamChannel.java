@@ -290,7 +290,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     private boolean isOutputTerminated() {
-        return finSent || outputStopped;
+        return outputShutdown;
     }
 
     void stopSendingErrorCode(long errorCode) {
