@@ -18,12 +18,23 @@ package io.netty.util.internal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.SplittableRandom;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -208,5 +219,61 @@ public class PlatformDependentTest {
                 "The CleanerJava25 implementation must be supported on Java 25+");
         // Note: we're not testing on `PlatformDependent.directBufferPreferred()` because some builds
         // might intentionally disable it, in order to exercise those code paths.
+    }
+
+    @EnabledForJreRange(min = JRE.JAVA_25)
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testZeroMaxDirectMemoryUsesJdkLimit(boolean nativeAccess) throws Exception {
+        List<String> command = new ArrayList<String>();
+        command.add(Paths.get(System.getProperty("java.home"), "bin", "java").toString());
+        command.add("-XX:MaxDirectMemorySize=16m");
+        command.add("-Dio.netty.maxDirectMemory=0");
+        command.add("-Dio.netty.noUnsafe=true");
+        if (nativeAccess) {
+            command.add("--enable-native-access=ALL-UNNAMED");
+        }
+        command.add("-cp");
+        command.add(System.getProperty("java.class.path"));
+        command.add(JdkDirectMemoryLimit.class.getName());
+        Path output = Files.createTempFile("netty-direct-memory", ".log");
+        try {
+            Process process = new ProcessBuilder(command).redirectErrorStream(true)
+                    .redirectOutput(output.toFile()).start();
+            try {
+                assertThat(process.waitFor(30, TimeUnit.SECONDS)).isTrue();
+                assertThat(process.exitValue())
+                        .withFailMessage(new String(Files.readAllBytes(output), StandardCharsets.UTF_8)).isZero();
+            } finally {
+                process.destroyForcibly();
+            }
+        } finally {
+            Files.deleteIfExists(output);
+        }
+    }
+
+    public static final class JdkDirectMemoryLimit {
+        public static void main(String[] args) {
+            ByteBuffer jdkBuffer = ByteBuffer.allocateDirect(4 << 20);
+            CleanableDirectBuffer nettyBuffer = PlatformDependent.allocateDirect(8 << 20, true);
+            CleanableDirectBuffer excess = null;
+            try {
+                excess = PlatformDependent.allocateDirect(8 << 20, true);
+                throw new AssertionError("JDK and Netty allocations exceeded the shared 16 MiB limit");
+            } catch (OutOfMemoryError expected) {
+                if (expected instanceof OutOfDirectMemoryError) {
+                    throw new AssertionError("The limit must be enforced by the JDK", expected);
+                }
+                // Keep the JDK allocation live until the allocation above has been attempted.
+                if (jdkBuffer.get(0) != 0 || PlatformDependent.usedDirectMemory() != -1) {
+                    throw new AssertionError("Netty must defer direct memory accounting to the JDK");
+                }
+            } finally {
+                if (excess != null) {
+                    excess.clean();
+                }
+                nettyBuffer.clean();
+            }
+        }
     }
 }
