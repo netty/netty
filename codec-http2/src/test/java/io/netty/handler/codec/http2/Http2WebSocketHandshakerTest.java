@@ -34,6 +34,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -49,14 +50,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class Http2WebSocketHandshakerTest {
     private static final long TIMEOUT_MILLIS = 1000;
     private final Http2WebSocketHandshaker handshaker = new Http2WebSocketHandshaker(65536, false, TIMEOUT_MILLIS);
-    private final EmbeddedChannel client = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
-            new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+    private EmbeddedChannel client;
     private EmbeddedChannel peer;
+
+    @BeforeEach
+    void setUp() {
+        client = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+    }
 
     @AfterEach
     void tearDown() {
         try {
-            client.finishAndReleaseAll();
+            if (client != null) {
+                client.finishAndReleaseAll();
+            }
         } finally {
             if (peer != null) {
                 peer.finishAndReleaseAll();
