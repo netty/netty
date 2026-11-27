@@ -288,7 +288,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     private boolean isInputTerminated() {
-        return finReceived || inputReset;
+        return inputShutdown;
     }
 
     private boolean isOutputTerminated() {

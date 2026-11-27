@@ -286,4 +286,76 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             shutdown(executor);
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownInputThenShutdownOutputClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, stream -> stream.shutdownInput(100), QuicStreamChannel::shutdownOutput);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownOutputThenShutdownInputClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, QuicStreamChannel::shutdownOutput, stream -> stream.shutdownInput(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownInputThenShutdownOutputWithErrorClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, stream -> stream.shutdownInput(100),
+                stream -> stream.shutdownOutput(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownOutputWithErrorThenShutdownInputClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, stream -> stream.shutdownOutput(100),
+                stream -> stream.shutdownInput(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, QuicStreamChannel::shutdown);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownWithErrorClosesStream(Executor executor) throws Throwable {
+        testClosedAfterLocalShutdowns(executor, stream -> stream.shutdown(100));
+    }
+
+    @SafeVarargs
+    private static void testClosedAfterLocalShutdowns(
+            Executor executor, Function<QuicStreamChannel, ChannelFuture>... shutdowns) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, new ChannelInboundHandlerAdapter());
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get(5, TimeUnit.SECONDS);
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
+
+            for (Function<QuicStreamChannel, ChannelFuture> shutdown : shutdowns) {
+                shutdown.apply(stream).sync();
+            }
+
+            // Both directions are terminated locally, so the stream is closed, while the connection is still open.
+            assertThat(stream.closeFuture().await(2, TimeUnit.SECONDS)).isTrue();
+            assertThat(quicChannel.isActive()).isTrue();
+
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
 }
