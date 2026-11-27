@@ -16,12 +16,17 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.socket.SocketProtocolFamily;
 
 import java.io.IOException;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
+import java.nio.channels.UnresolvedAddressException;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -50,6 +55,26 @@ public final class UnixChannelUtil {
     }
 
     private UnixChannelUtil() {
+    }
+
+    /**
+     * <strong>Internal usage only!</strong>
+     * Checks whether the datagram's recipient can be represented by the socket's address family.
+     * @param recipient The datagram's recipient, which may be {@code null} on a connected socket.
+     * @param family The socket's address family.
+     */
+    public static void checkDatagramRecipient(SocketAddress recipient, SocketProtocolFamily family) {
+        if (recipient instanceof InetSocketAddress) {
+            InetAddress address = ((InetSocketAddress) recipient).getAddress();
+            if (address == null) {
+                throw new UnresolvedAddressException();
+            }
+            // Do not let IPv4 sockaddr encoders silently drop the first 12 bytes of an IPv6 address.
+            if (family == SocketProtocolFamily.INET && address instanceof Inet6Address &&
+                    !NativeInetAddress.isIpv4Mapped((Inet6Address) address)) {
+                throw new UnsupportedAddressTypeException();
+            }
+        }
     }
 
     /**
