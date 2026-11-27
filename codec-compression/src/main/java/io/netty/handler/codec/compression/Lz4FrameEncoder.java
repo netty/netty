@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.EncoderException;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
@@ -64,7 +63,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class Lz4FrameEncoder extends BufferingEncoder {
     static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
 
     private final int blockSize;
@@ -156,7 +155,6 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
          */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
-        super(ByteBuf.class);
         ObjectUtil.checkNotNull(factory, "factory");
         ObjectUtil.checkNotNull(checksum, "checksum");
 
@@ -298,7 +296,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         if (buffer != null && buffer.isReadable()) {
             final ByteBuf buf = allocateBuffer(ctx, Unpooled.EMPTY_BUFFER, isPreferDirect(), false);
             flushBufferedData(buf);
-            ctx.write(buf);
+            writeBuffered(ctx, buf, ctx.newPromise(), false);
         }
         ctx.flush();
     }
@@ -324,7 +322,18 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
         footer.writerIndex(idx + HEADER_LENGTH);
 
-        return ctx.writeAndFlush(footer, promise);
+        writeBuffered(ctx, footer, promise, true);
+        return promise;
+    }
+
+    @Override
+    long bufferedBytes() {
+        return buffer == null ? 0 : buffer.readableBytes();
+    }
+
+    @Override
+    ByteBuf bufferedView(int length) {
+        return Unpooled.wrappedBuffer(buffer.array(), buffer.arrayOffset(), length);
     }
 
     /**
