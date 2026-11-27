@@ -24,6 +24,8 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 
 import java.util.Collections;
 
+import static io.netty.handler.codec.http.websocketx.extensions.compression.
+        PerMessageDeflateServerExtensionHandshaker.MIN_COMPRESS_WINDOW_SIZE;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -91,7 +93,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param windowSize
-     *            zlib window size in bits (8-15) for the server-side deflater. Lower values reduce
+     *            zlib window size in bits (9-15) for the server-side deflater. Lower values reduce
      *            per-connection memory at the cost of compression ratio.
      * @param memLevel
      *            zlib memory level for the server-side deflater (1-9). Lower values reduce per-connection
@@ -147,7 +149,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param windowSize
-     *            zlib window size in bits (8-15) for the server-side deflater.
+     *            zlib window size in bits (9-15) for the server-side deflater.
      * @param memLevel
      *            zlib memory level for the server-side deflater (1-9).
      * @param extensionFilterProvider
@@ -163,7 +165,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
-        this.windowSize = checkInRange(windowSize, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, "windowSize");
+        this.windowSize = checkInRange(windowSize, MIN_COMPRESS_WINDOW_SIZE, MAX_WINDOW_SIZE, "windowSize");
         this.memLevel = checkInRange(memLevel, MIN_MEM_LEVEL, MAX_MEM_LEVEL, "memLevel");
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
         this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");

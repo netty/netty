@@ -17,12 +17,17 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         DeflateFrameServerExtensionHandshaker.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 
@@ -32,6 +37,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 public class DeflateFrameServerExtensionHandshakerTest {
 
@@ -138,6 +145,39 @@ public class DeflateFrameServerExtensionHandshakerTest {
                         DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 15, 0, 0);
             }
         });
+    }
+
+    @Test
+    public void testEightBitWindowRejected() {
+        assertThatIllegalArgumentException().isThrownBy(() ->
+                new DeflateFrameServerExtensionHandshaker(DEFAULT_COMPRESSION_LEVEL, 8, DEFAULT_MEM_LEVEL, 0));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "deflate-frame, 9", "deflate-frame, 15",
+                 "x-webkit-deflate-frame, 9", "x-webkit-deflate-frame, 15" })
+    public void testConfiguredWindowCanCompress(String extensionName, int windowSize) {
+        DeflateFrameServerExtensionHandshaker handshaker = new DeflateFrameServerExtensionHandshaker(
+                DEFAULT_COMPRESSION_LEVEL, windowSize, DEFAULT_MEM_LEVEL, 0);
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(extensionName, Collections.<String, String>emptyMap()));
+        assertThat(extension).isNotNull();
+        EmbeddedChannel encoder = new EmbeddedChannel(extension.newExtensionEncoder());
+        EmbeddedChannel decoder = new EmbeddedChannel(extension.newExtensionDecoder());
+        try {
+            assertThat(encoder.writeOutbound(new TextWebSocketFrame("hello websocket"))).isTrue();
+            WebSocketFrame compressed = encoder.readOutbound();
+            assertThat(decoder.writeInbound(compressed)).isTrue();
+            TextWebSocketFrame decoded = decoder.readInbound();
+            try {
+                assertThat(decoded.text()).isEqualTo("hello websocket");
+            } finally {
+                decoded.release();
+            }
+        } finally {
+            encoder.finishAndReleaseAll();
+            decoder.finishAndReleaseAll();
+        }
     }
 
 }

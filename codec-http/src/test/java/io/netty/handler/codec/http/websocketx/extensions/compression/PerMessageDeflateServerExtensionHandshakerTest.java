@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,6 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 
@@ -32,6 +37,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.function.Executable;
 
 public class PerMessageDeflateServerExtensionHandshakerTest {
@@ -302,5 +309,59 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
                         false, false, MAX_WINDOW_SIZE, 0, 0);
             }
         });
+    }
+
+    @Test
+    public void testUnsupportedServerWindowRejected() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE, false, false, 0);
+        assertThat(handshaker.handshakeExtension(new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION,
+                Collections.singletonMap(SERVER_MAX_WINDOW, "8")))).isNull();
+    }
+
+    @Test
+    public void testUnsupportedConfiguredServerWindowRejected() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
+                        false, false, 8, DEFAULT_MEM_LEVEL, 0));
+    }
+
+    @Test
+    public void testEightBitClientWindowAccepted() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 8, false, false, 0);
+        WebSocketServerExtension extension = handshaker.handshakeExtension(new WebSocketExtensionData(
+                PERMESSAGE_DEFLATE_EXTENSION, Collections.singletonMap(CLIENT_MAX_WINDOW, "8")));
+        assertThat(extension).isNotNull();
+        assertThat(extension.newReponseData().parameters()).containsEntry(CLIENT_MAX_WINDOW, "8");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 9, 15 })
+    public void testNegotiatedWindowCanCompress(int windowSize) {
+        PerMessageDeflateServerExtensionHandshaker server =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, windowSize, false, false, 0);
+        PerMessageDeflateClientExtensionHandshaker client =
+                new PerMessageDeflateClientExtensionHandshaker(6, true, windowSize, false, false, 0);
+        WebSocketServerExtension serverExtension = server.handshakeExtension(client.newRequestData());
+        assertThat(serverExtension).isNotNull();
+        WebSocketClientExtension clientExtension = client.handshakeExtension(serverExtension.newReponseData());
+        assertThat(clientExtension).isNotNull();
+        EmbeddedChannel encoder = new EmbeddedChannel(serverExtension.newExtensionEncoder());
+        EmbeddedChannel decoder = new EmbeddedChannel(clientExtension.newExtensionDecoder());
+        try {
+            assertThat(encoder.writeOutbound(new TextWebSocketFrame("hello websocket"))).isTrue();
+            WebSocketFrame compressed = encoder.readOutbound();
+            assertThat(decoder.writeInbound(compressed)).isTrue();
+            TextWebSocketFrame decoded = decoder.readInbound();
+            try {
+                assertThat(decoded.text()).isEqualTo("hello websocket");
+            } finally {
+                decoded.release();
+            }
+        } finally {
+            encoder.finishAndReleaseAll();
+            decoder.finishAndReleaseAll();
+        }
     }
 }

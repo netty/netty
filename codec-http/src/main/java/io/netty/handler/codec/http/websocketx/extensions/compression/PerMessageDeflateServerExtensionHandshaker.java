@@ -38,6 +38,9 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
     public static final int MIN_WINDOW_SIZE = 8;
     public static final int MAX_WINDOW_SIZE = 15;
 
+    // JZlib supports decoding an 8-bit window, but its encoder requires at least 9 bits.
+    static final int MIN_COMPRESS_WINDOW_SIZE = 9;
+
     static final String PERMESSAGE_DEFLATE_EXTENSION = "permessage-deflate";
     static final String CLIENT_MAX_WINDOW = "client_max_window_bits";
     static final String SERVER_MAX_WINDOW = "server_max_window_bits";
@@ -155,7 +158,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
      *            indicates if server prefers to activate client_no_context_takeover
      *            if client is compatible with (default is false).
      * @param serverWindowSize
-     *            upper bound (in bits, 8-15) on the server-side deflate window. If the client offers
+     *            upper bound (in bits, 9-15) on the server-side deflate window. If the client offers
      *            {@code server_max_window_bits=N}, the negotiated value is {@code min(N, serverWindowSize)}.
      *            Set lower than {@link #MAX_WINDOW_SIZE} to reduce per-connection memory.
      * @param memLevel
@@ -255,7 +258,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
      *            indicates if server prefers to activate client_no_context_takeover
      *            if client is compatible with (default is false).
      * @param serverWindowSize
-     *            upper bound (in bits, 8-15) on the server-side deflate window. If the client offers
+     *            upper bound (in bits, 9-15) on the server-side deflate window. If the client offers
      *            {@code server_max_window_bits=N}, the negotiated value is {@code min(N, serverWindowSize)}.
      *            Per <a href="https://tools.ietf.org/html/rfc7692#section-7.1.2.1">RFC 7692 §7.1.2.1</a>
      *            the server may include {@code server_max_window_bits} with the same or smaller value than the
@@ -288,7 +291,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         this.preferredClientWindowSize = preferredClientWindowSize;
         this.allowServerNoContext = allowServerNoContext;
         this.preferredClientNoContext = preferredClientNoContext;
-        this.serverWindowSize = checkInRange(serverWindowSize, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, "serverWindowSize");
+        this.serverWindowSize = checkInRange(serverWindowSize, MIN_COMPRESS_WINDOW_SIZE, MAX_WINDOW_SIZE,
+                "serverWindowSize");
         this.memLevel = checkInRange(memLevel, MIN_MEM_LEVEL, MAX_MEM_LEVEL, "memLevel");
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
         this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
@@ -329,7 +333,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                 if (allowServerWindowSize) {
                     int clientOfferedServerWindowSize = Integer.parseInt(parameter.getValue());
                     if (clientOfferedServerWindowSize > MAX_WINDOW_SIZE
-                            || clientOfferedServerWindowSize < MIN_WINDOW_SIZE) {
+                            || clientOfferedServerWindowSize < MIN_COMPRESS_WINDOW_SIZE) {
                         deflateEnabled = false;
                     } else {
                         // RFC 7692 §7.1.2.1: server accepts with the same or smaller value than the offer.

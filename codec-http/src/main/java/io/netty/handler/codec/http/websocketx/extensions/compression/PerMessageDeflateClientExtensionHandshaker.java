@@ -237,7 +237,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                     if (value != null) {
                         // Let NumberFormatException bubble up if value is invalid
                         clientWindowSize = Integer.parseInt(value);
-                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_COMPRESS_WINDOW_SIZE) {
                             succeed = false;
                         }
                     }
