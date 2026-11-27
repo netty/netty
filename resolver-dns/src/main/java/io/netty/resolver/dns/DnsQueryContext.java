@@ -20,6 +20,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DefaultDnsOptCookieRecord;
 import io.netty.handler.codec.dns.DnsQuery;
@@ -39,8 +40,11 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
@@ -289,6 +293,16 @@ abstract class DnsQueryContext {
 
     private void writeQuery(final DnsQuery query,
                             final boolean flush, Promise<Void> promise) {
+        if (isIncompatibleWithIpv4Channel()) {
+            // Fail early and consistently on all JDKs / transports. Depending on the JDK, a write of an IPv6 address
+            // via an IPv4 datagram socket would otherwise fail with a platform specific SocketException (JDK 8)
+            // or an UnsupportedAddressTypeException (JDK 11+), and the native transports may even silently truncate
+            // the address.
+            ReferenceCountUtil.release(query);
+            promise.setFailure(new UnsupportedAddressTypeException());
+            onQueryWriteCompletion(queryTimeoutMillis, promise);
+            return;
+        }
         if (flush) {
             channel.writeAndFlush(query, promise);
         } else {
@@ -300,6 +314,21 @@ abstract class DnsQueryContext {
             promise.addListener(future ->
                     onQueryWriteCompletion(queryTimeoutMillis, future));
         }
+    }
+
+    /**
+     * Returns {@code true} if the channel is a datagram channel bound to an IPv4 address and the nameserver can
+     * only be reached via IPv6.
+     */
+    private boolean isIncompatibleWithIpv4Channel() {
+        if (!(channel instanceof DatagramChannel) || !(nameServerAddr.getAddress() instanceof Inet6Address)) {
+            return false;
+        }
+        // IPv4-mapped IPv6 addresses are converted to Inet4Address by the JDK, so any Inet6Address here needs an
+        // IPv6 capable socket.
+        SocketAddress localAddress = ((DatagramChannel) channel).localAddress();
+        return localAddress instanceof InetSocketAddress &&
+                ((InetSocketAddress) localAddress).getAddress() instanceof Inet4Address;
     }
 
     private void onQueryWriteCompletion(final long queryTimeoutMillis,

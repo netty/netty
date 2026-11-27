@@ -47,6 +47,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -500,6 +501,9 @@ abstract class DnsResolveContext<T> {
             }
 
             final Throwable queryCause = future.cause();
+            // A server this channel cannot address should not replace the result from a previous server.
+            final Throwable retryCause = cause != null && queryCause instanceof DnsNameResolverException &&
+                    queryCause.getCause() instanceof UnsupportedAddressTypeException ? cause : queryCause;
             try {
                 if (queryCause == null) {
                     if (isFeedbackAddressStream) {
@@ -520,14 +524,17 @@ abstract class DnsResolveContext<T> {
                     }
                     queryLifecycleObserver.queryFailed(queryCause);
                     query(nameServerAddrStream, zone, nameServerAddrStreamIndex + 1, question,
-                          newDnsQueryLifecycleObserver(question), true, promise, queryCause);
+                          newDnsQueryLifecycleObserver(question), true, promise, retryCause);
                 }
             } finally {
-                tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
-                                   // queryLifecycleObserver has already been terminated at this point so we must
-                                   // not allow it to be terminated again by tryToFinishResolve.
-                                   NoopDnsQueryLifecycleObserver.INSTANCE,
-                                   promise, queryCause);
+                // A retry can complete synchronously. Do not retry again with this attempt's earlier index.
+                if (!promise.isDone()) {
+                    tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
+                                       // The observer for this attempt has already been terminated.
+                                       NoopDnsQueryLifecycleObserver.INSTANCE, promise, retryCause);
+                } else if (queriesInProgress.isEmpty()) {
+                    releaseFinalResult();
+                }
             }
         });
     }

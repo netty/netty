@@ -15,6 +15,8 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -65,6 +67,11 @@ public final class NativeInetAddress {
     public static void copyIpv4MappedIpv6Address(byte[] ipv4, byte[] ipv6) {
         System.arraycopy(IPV4_MAPPED_IPV6_PREFIX, 0, ipv6, 0, IPV4_MAPPED_IPV6_PREFIX.length);
         System.arraycopy(ipv4, 0, ipv6, 12, ipv4.length);
+    }
+
+    static boolean isIpv4Mapped(Inet6Address address) {
+        return PlatformDependent.equals(
+                address.getAddress(), 0, IPV4_MAPPED_IPV6_PREFIX, 0, IPV4_MAPPED_IPV6_PREFIX.length);
     }
 
     public static InetSocketAddress address(byte[] addr, int offset, int len) {
