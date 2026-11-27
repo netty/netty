@@ -23,6 +23,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -30,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -93,6 +96,25 @@ public class HttpRequestEncoderTest {
                     HttpMethod.GET, "http://localhost/"));
             String req = buffer.toString(StandardCharsets.US_ASCII);
             assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
+            buffer.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "http://example.com:8080",
+        "HTTPS://example.com",
+        "http://example.com:8080/",
+        "http://example.com:8080/?format=text",
+        "*"
+    })
+    public void testPreserveOptionsRequestTarget(String target) throws Exception {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            new HttpRequestEncoder().encodeInitialLine(buffer,
+                    new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, target));
+            assertThat(buffer.toString(StandardCharsets.US_ASCII)).isEqualTo("OPTIONS " + target + " HTTP/1.1\r\n");
+        } finally {
             buffer.release();
         }
     }
