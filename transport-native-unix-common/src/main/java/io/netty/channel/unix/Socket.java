@@ -346,6 +346,9 @@ public class Socket extends FileDescriptor {
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
             res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
+        } else if (socketAddress instanceof VSockAddress) {
+            VSockAddress vSockAddress = (VSockAddress) socketAddress;
+            res = connectVSock(fd, vSockAddress.getCid(), vSockAddress.getPort());
         } else {
             throw new Error("Unexpected SocketAddress implementation: " + className(socketAddress));
         }
@@ -385,6 +388,12 @@ public class Socket extends FileDescriptor {
             if (res < 0) {
                 throw newIOException("bind", res);
             }
+        } else if (socketAddress instanceof VSockAddress) {
+            VSockAddress addr = (VSockAddress) socketAddress;
+            int res = bindVSock(fd, addr.getCid(), addr.getPort());
+            if (res < 0) {
+                throw newIOException("bind", res);
+            }
         } else {
             throw new Error("Unexpected SocketAddress implementation: " + className(socketAddress));
         }
@@ -421,6 +430,16 @@ public class Socket extends FileDescriptor {
         return addr == null ? null : new DomainSocketAddress(new String(addr));
     }
 
+    public VSockAddress remoteVSockAddress() {
+        byte[] addr = remoteVSockAddress(fd);
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
     public final InetSocketAddress localAddress() {
         byte[] addr = localAddress(fd);
         // addr may be null if getpeername failed.
@@ -431,6 +450,21 @@ public class Socket extends FileDescriptor {
     public final DomainSocketAddress localDomainSocketAddress() {
         byte[] addr = localDomainSocketAddress(fd);
         return addr == null ? null : new DomainSocketAddress(new String(addr));
+    }
+
+    public VSockAddress localVSockAddress() {
+        byte[] addr = localVSockAddress(fd);
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
+    private static int getIntAt(byte[] array, int startIndex) {
+        return array[startIndex] << 24 | (array[startIndex + 1] & 0xFF) << 16
+                | (array[startIndex + 2] & 0xFF) << 8 | (array[startIndex + 3] & 0xFF);
     }
 
     public final int getReceiveBufferSize() throws IOException {
@@ -591,6 +625,18 @@ public class Socket extends FileDescriptor {
         return new Socket(newSocketDomainDgram0());
     }
 
+    public static Socket newVSockStream() {
+        return new Socket(newVSockStream1());
+    }
+
+    protected static int newVSockStream1() {
+        int res = newSocketVSockFd();
+        if (res < 0) {
+            throw new ChannelException(newIOException("newVSockStream", res));
+        }
+        return res;
+    }
+
     public static void initialize() {
         isIpv6Preferred = isIPv6Preferred0(NetUtil.isIpV4StackPreferred());
     }
@@ -667,17 +713,21 @@ public class Socket extends FileDescriptor {
     private static native int shutdown(int fd, boolean read, boolean write);
     private static native int connect(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int connectDomainSocket(int fd, byte[] path);
+    private static native int connectVSock(int fd, int cid, int port);
     private static native int finishConnect(int fd);
     private static native int disconnect(int fd, boolean ipv6);
     private static native int bind(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int bindDomainSocket(int fd, byte[] path);
+    private static native int bindVSock(int fd, int cid, int port);
     private static native int listen(int fd, int backlog);
     private static native int accept(int fd, byte[] addr);
 
     private static native byte[] remoteAddress(int fd);
     private static native byte[] remoteDomainSocketAddress(int fd);
+    private static native byte[] remoteVSockAddress(int fd);
     private static native byte[] localAddress(int fd);
     private static native byte[] localDomainSocketAddress(int fd);
+    private static native byte[] localVSockAddress(int fd);
 
     private static native int send(int fd, ByteBuffer buf, int pos, int limit);
     private static native int sendAddress(int fd, long address, int pos, int limit);
@@ -715,6 +765,7 @@ public class Socket extends FileDescriptor {
 
     private static native int newSocketStreamFd(boolean ipv6);
     private static native int newSocketDgramFd(boolean ipv6);
+    private static native int newSocketVSockFd();
     private static native int newSocketDomainFd();
     private static native int newSocketDomainDgramFd();
 
