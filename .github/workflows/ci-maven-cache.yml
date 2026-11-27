@@ -1,0 +1,277 @@
+# ----------------------------------------------------------------------------
+# Copyright 2026 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+name: Seed Maven cache
+
+# This is the only workflow that writes the Maven repository caches used by the PR validation (ci-pr.yml) and the
+# other build workflows, those only restore them.
+#
+# Why: GitHub caches are immutable, scoped to the branch (a PR can read its own and its base branch's caches, not the
+# ones of other PRs) and share a 10 GB quota per repository with least-recently-used eviction. When every PR job saved
+# its own copy, the PR scoped copies pushed the ones of the default branch out, so PRs started cold and had to download
+# everything from Maven Central, which in turn rate limits the shared GitHub runner addresses.
+#
+# A cache is only saved when this workflow resolved everything it knows about successfully, a partially populated cache
+# would be frozen under its key as it can't be overwritten later.
+#
+# The key is derived from all pom.xml files, so the workflow only needs to run when one of them changes. The schedule
+# re-creates a cache that got evicted and, as restoring counts as an access, keeps the existing ones from expiring
+# (GitHub evicts caches that were not accessed for 7 days).
+
+on:
+  push:
+    branches: [ "4.2" ]
+    paths:
+      - '**/pom.xml'
+      - '.github/workflows/ci-maven-cache.yml'
+
+  schedule:
+    - cron: '30 3 * * *'  # At 03:30 every day.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+# A newer push has a newer key, so there is no point in finishing the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Used by ci-pr.yml: verify-pr, build-pr (docker, centos 7), build-pr-cross, and by ci-build.yml, ci-build-riscv64.yml,
+  # ci-verify-musl.yml and codeql-analysis.yml.
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # Pinned to v5.7.0
+      - name: Set up JDK 11
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      # cache-hit is only 'true' for an exact match of the key, a match on one of the restore-keys (an older seed) is
+      # used as the starting point so only the difference needs to be downloaded.
+      # Pinned to v5.1.0
+      - name: Restore local Maven repository
+        id: cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-linux-
+
+      # We use "verify" (and not "install") on purpose so no netty artifacts end up in the cache.
+      #
+      # 1. What verify-pr does, this also resolves the maven plugins, the revapi baseline, ...
+      # 2. + 3. The dependencies that depend on the tcnative flavour: the one used by the docker legs (-fedora) and the
+      #    statically linked boringssl one. The other profiles used by the PR legs (leak, jdk8-tests) only change
+      #    properties and so do not need anything else.
+      - name: Resolve the dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: |
+          ./mvnw -B -ntp --file pom.xml verify -DskipTests=true -DskipH3Spec=true
+          ./mvnw -B -ntp --file pom.xml verify -Pfast -Dtcnative.classifier=linux-x86_64-fedora
+          ./mvnw -B -ntp --file pom.xml verify -Pfast,boringssl
+
+      # The surefire provider is only resolved when the tests are executed, which is not the case when they are skipped.
+      # Run the plugin with a test filter that does not match anything so it is resolved but nothing is executed.
+      # Best effort: when this does not work the PR legs just download the provider themselves, as they did before.
+      - name: Resolve the surefire provider
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: ./mvnw -B -ntp --file pom.xml -pl common surefire:test -Dtest=NoSuchTestToResolveTheProvider -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false
+
+      # Pinned to v5.1.0
+      - name: Save local Maven repository
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
+
+  # Used by the awslc leg of ci-pr.yml, which has its own Maven repository (~/.m2-al2023) as it gets a custom build of
+  # netty-tcnative installed into it. The dependencies from Maven Central are the same as for the linux job, so start
+  # from that.
+  #
+  # The build dependencies of netty-tcnative itself are not part of this cache, so that leg still downloads those.
+  al2023:
+    runs-on: ubuntu-22.04
+    needs: linux
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # Pinned to v5.1.0
+      - name: Check for an existing AL2023 cache
+        id: al2023
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2-al2023/repository
+          key: cache-maven-al2023-${{ hashFiles('**/pom.xml') }}
+          lookup-only: true
+
+      # Pinned to v5.1.0
+      - name: Restore the linux Maven repository
+        if: ${{ steps.al2023.outputs.cache-hit != 'true' }}
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
+          fail-on-cache-miss: true
+
+      - name: Copy it to the AL2023 location
+        if: ${{ steps.al2023.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir -p ~/.m2-al2023
+          cp -a ~/.m2/repository ~/.m2-al2023/repository
+
+      # Pinned to v5.1.0
+      - name: Save local Maven repository
+        if: ${{ steps.al2023.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2-al2023/repository
+          key: cache-maven-al2023-${{ hashFiles('**/pom.xml') }}
+
+  # Used by build-pr-windows in ci-pr.yml.
+  windows:
+    runs-on: windows-2022
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # Pinned to v5.1.0
+      - name: Restore local Maven repository
+        id: cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-windows-maven-
+
+      # The toolchain below is needed to get through the reactor, keep it in sync with build-pr-windows in ci-pr.yml.
+      # Pinned to v5.7.0
+      - name: Set up JDK 11
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      # Pinned to 1.96.1
+      - name: Install rust toolchain 1.100.0
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          targets: x86_64-pc-windows-msvc
+          toolchain: '1.100.0'
+
+      # Pinned to v3.0.0
+      - name: Add msbuild to PATH
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
+
+      # Pinned to v1.13.0
+      - name: Configuring Developer Command Prompt
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          arch: x86_amd64
+
+      # Pinned to v4.1.0
+      - name: Install tools
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: crazy-max/ghaction-chocolatey@dfdcf5bba9c0a16358a21c13a06ec5c89024b3ac
+        with:
+          args: install ninja nasm
+
+      - name: Resolve the dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: ./mvnw.cmd -B -ntp --file pom.xml verify -Pboringssl -DskipTests=true -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true '-Drevapi.skip=true'
+
+      # See the linux job.
+      - name: Resolve the surefire provider
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: ./mvnw.cmd -B -ntp --file pom.xml -pl common surefire:test '-Dtest=NoSuchTestToResolveTheProvider' '-Dsurefire.failIfNoSpecifiedTests=false' '-DfailIfNoTests=false'
+
+      # Pinned to v5.1.0
+      - name: Save local Maven repository
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+
+  # Used by build-pr-macos in ci-pr.yml. The tcnative classifier differs per architecture, so one cache for each.
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-15-intel, macos-15 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # Pinned to v5.1.0
+      - name: Restore local Maven repository
+        id: cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-macos-${{ matrix.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-macos-${{ matrix.os }}-
+
+      # Pinned to v5.7.0
+      - name: Set up JDK 11
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Install tools via brew
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: brew bundle
+
+      # Same as build-pr-macos in ci-pr.yml but with verify, so no netty artifacts end up in the cache.
+      - name: Resolve the dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: ./mvnw -B -ntp --file pom.xml verify -Pboringssl -DskipTests=true -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+
+      # Pinned to v5.1.0
+      - name: Save local Maven repository
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-macos-${{ matrix.os }}-${{ hashFiles('**/pom.xml') }}

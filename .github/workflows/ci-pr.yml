@@ -75,19 +75,33 @@ jobs:
           java-version: '11'
 
       # Cache .m2/repository
+      #
+      # The caches are seeded from the default branch by ci-maven-cache.yml, all other jobs only restore them.
+      # Letting every PR job save its own copy used to blow through the 10 GB repository quota, which got the
+      # seeds evicted. This job is the one exception: when the PR changes a pom.xml there is no exact match, so it
+      # saves the (small) delta once for the jobs that depend on it instead of each of them downloading it again.
       # Pinned to v5.1.0
-      - name: Cache local Maven repository
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Restore local Maven repository
+        id: m2-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            cache-maven-${{ hashFiles('**/pom.xml') }}
-            cache-maven-
+            cache-maven-linux-
 
       - name: Verify with Maven
         run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true -DskipH3Spec=true
+
+      # Pinned to v5.1.0
+      - name: Save local Maven repository
+        if: ${{ steps.m2-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
@@ -135,10 +149,10 @@ jobs:
         with:
           args: install ninja nasm
 
-      # Cache .m2/repository
+      # Restore .m2/repository, it is seeded by ci-maven-cache.yml and never written by this job
       # Pinned to v5.1.0
-      - name: Cache local Maven repository
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Restore local Maven repository
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -198,17 +212,16 @@ jobs:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
-      # Cache .m2/repository
+      # Restore .m2/repository, it is seeded by ci-maven-cache.yml and never written by this job
       # Pinned to v5.1.0
-      - name: Cache local Maven repository
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Restore local Maven repository
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            cache-maven-${{ hashFiles('**/pom.xml') }}
-            cache-maven-
+            cache-maven-linux-
 
       - uses: uraimo/run-on-arch-action@v3
         name: Run commands
@@ -308,22 +321,21 @@ jobs:
           path: netty-tcnative
           fetch-depth: 0
 
-      # Cache .m2/repository
+      # Restore .m2/repository, it is seeded by ci-maven-cache.yml and never written by this job
       # Pinned to v5.1.0
-      - name: Cache local Maven repository
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Restore local Maven repository
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         if: ${{ !endsWith(matrix.setup, '-awslc') }}
         with:
           path: ~/.m2/repository
-          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            cache-maven-${{ hashFiles('**/pom.xml') }}
-            cache-maven-
+            cache-maven-linux-
 
       # Pinned to v5.1.0
-      - name: Cache local Maven repository
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - name: Restore local Maven repository
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         if: ${{ endsWith(matrix.setup, '-awslc') }}
         with:
@@ -427,17 +439,16 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
 
-      # Cache .m2/repository
+      # Restore .m2/repository, it is seeded by ci-maven-cache.yml and never written by this job
       # Caching of maven dependencies
       # Pinned to v5.1.0
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-macos-${{ matrix.os }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            cache-maven-${{ hashFiles('**/pom.xml') }}
-            cache-maven-
+            cache-maven-macos-${{ matrix.os }}-
 
       - name: Install tools via brew
         run: brew bundle
