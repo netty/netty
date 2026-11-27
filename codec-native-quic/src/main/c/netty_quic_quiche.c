@@ -13,6 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+#if defined(__linux__) && !defined(__ANDROID__) && defined(__STRICT_ANSI__) && !defined(_POSIX_C_SOURCE)
+// glibc and musl only declare clock_gettime(...) and CLOCK_MONOTONIC in strict ISO C mode (-std=c99) if asked to.
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <jni.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -30,6 +35,8 @@
 #include <netinet/in.h>
 // This needs to be included for quiche_recv_info and quiche_send_info structs.
 #include <sys/time.h>
+// Needed for clock_gettime(...).
+#include <time.h>
 #endif // _WIN32
 
 
@@ -1047,6 +1054,36 @@ static void netty_quiche_config_discover_pmtu(JNIEnv* env, jclass clazz, jlong c
     quiche_config_discover_pmtu((quiche_config*) config, value == JNI_TRUE ? true : false);
 }
 
+static void netty_quiche_config_enable_pacing(JNIEnv* env, jclass clazz, jlong config, jboolean value) {
+    quiche_config_enable_pacing((quiche_config*) config, value == JNI_TRUE ? true : false);
+}
+
+static void netty_quiche_config_set_max_pacing_rate(JNIEnv* env, jclass clazz, jlong config, jlong value) {
+    quiche_config_set_max_pacing_rate((quiche_config*) config, (uint64_t) value);
+}
+
+// Returns the current time, in nanoseconds, of the clock that quiche uses for quiche_send_info.at, or 0 if there is
+// no such clock.
+static jlong netty_quiche_send_time_now_nanos(JNIEnv* env, jclass clazz) {
+#ifdef _WIN32
+    // quiche does not fill in quiche_send_info.at on Windows.
+    return 0;
+#else
+    struct timespec ts;
+#ifdef __APPLE__
+    // Rust's std::time::Instant uses CLOCK_UPTIME_RAW on Apple platforms.
+    clockid_t clock_id = CLOCK_UPTIME_RAW;
+#else
+    // Rust's std::time::Instant uses CLOCK_MONOTONIC everywhere else.
+    clockid_t clock_id = CLOCK_MONOTONIC;
+#endif // __APPLE__
+    if (clock_gettime(clock_id, &ts) != 0) {
+        return 0;
+    }
+    return ((jlong) ts.tv_sec) * 1000000000 + (jlong) ts.tv_nsec;
+#endif // _WIN32
+}
+
 static void netty_quiche_config_set_active_connection_id_limit(JNIEnv* env, jclass clazz, jlong config, jlong value) {
     quiche_config_set_active_connection_id_limit((quiche_config*) config, (uint64_t) value);
 }
@@ -1272,6 +1309,9 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_set_initial_congestion_window_packets", "(JI)V", (void *) netty_quiche_config_set_initial_congestion_window_packets },
   { "quiche_config_enable_hystart", "(JZ)V", (void *) netty_quiche_config_enable_hystart },
   { "quiche_config_discover_pmtu", "(JZ)V", (void *) netty_quiche_config_discover_pmtu },
+  { "quiche_config_enable_pacing", "(JZ)V", (void *) netty_quiche_config_enable_pacing },
+  { "quiche_config_set_max_pacing_rate", "(JJ)V", (void *) netty_quiche_config_set_max_pacing_rate },
+  { "send_time_now_nanos", "()J", (void *) netty_quiche_send_time_now_nanos },
   { "quiche_config_set_active_connection_id_limit", "(JJ)V", (void *) netty_quiche_config_set_active_connection_id_limit },
   { "quiche_config_set_stateless_reset_token", "(J[B)V", (void *) netty_quiche_config_set_stateless_reset_token },
   { "quiche_config_free", "(J)V", (void *) netty_quiche_config_free },

@@ -79,6 +79,12 @@ import java.util.function.Function;
 final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(QuicheQuicChannel.class);
     private static final String QLOG_FILE_EXTENSION = ".qlog";
+    // If the next packet should be sent within this time we send it right away. Waiting for such short times is not
+    // worth a timer, and is also below what we can expect the timers of all transports to support.
+    private static final long PACING_GRANULARITY_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
+    // A send time that is this far in the future can only be the result of a clock mismatch, so we ignore it
+    // instead of stalling the connection.
+    private static final long MAX_PACING_DELAY_NANOS = TimeUnit.SECONDS.toNanos(1);
 
     enum StreamRecvResult {
         /**
@@ -135,6 +141,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler;
+    private final PacingHandler pacingHandler;
     private final QuicConnectionIdGenerator connectionIdAddressGenerator;
     private final QuicResetTokenGenerator resetTokenGenerator;
     private final Set<ByteBuffer> sourceConnectionIds = new HashSet<>();
@@ -153,6 +160,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private QuicConnectionCloseEvent connectionCloseEvent;
     private QuicConnectionStats statsAtClose;
     private boolean supportsDatagram;
+    private boolean pacing;
     private boolean recvDatagramPending;
     private boolean datagramReadable;
     private boolean recvStreamPending;
@@ -192,7 +200,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean streamCreditsInitialized;
 
     private QuicheQuicChannel(Channel parent, boolean server, @Nullable ByteBuffer key, InetSocketAddress local,
-                              InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
+                              InetSocketAddress remote, boolean supportsDatagram, boolean pacing,
+                              ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                               @Nullable Consumer<QuicheQuicChannel> freeTask,
@@ -211,6 +220,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
 
         this.supportsDatagram = supportsDatagram;
+        this.pacing = pacing;
         this.local = local;
         this.remote = remote;
 
@@ -218,6 +228,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.streamOptionsArray = streamOptionsArray;
         this.streamAttrsArray = streamAttrsArray;
         timeoutHandler = new TimeoutHandler();
+        pacingHandler = new PacingHandler();
         this.sslTaskExecutor = sslTaskExecutor == null ? ImmediateExecutor.INSTANCE : sslTaskExecutor;
     }
 
@@ -225,19 +236,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        return new QuicheQuicChannel(parent, false, null, local, remote, false, streamHandler,
+        return new QuicheQuicChannel(parent, false, null, local, remote, false, false, streamHandler,
                 streamOptionsArray, streamAttrsArray, null, null, null, null);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local,
                                        InetSocketAddress remote,
-                                       boolean supportsDatagram, ChannelHandler streamHandler,
+                                       boolean supportsDatagram, boolean pacing, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                                        Consumer<QuicheQuicChannel> freeTask, Executor sslTaskExecutor,
                                        QuicConnectionIdGenerator connectionIdAddressGenerator,
                                        QuicResetTokenGenerator resetTokenGenerator) {
-        return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
+        return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram, pacing,
                 streamHandler, streamOptionsArray, streamAttrsArray, freeTask,
                 sslTaskExecutor, connectionIdAddressGenerator, resetTokenGenerator);
     }
@@ -371,7 +382,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     void connectNow(Function<QuicChannel, ? extends QuicSslEngine> engineProvider, Executor sslTaskExecutor,
                     Consumer<QuicheQuicChannel> freeTask, long configAddr, int localConnIdLength,
-                    boolean supportsDatagram, ByteBuffer fromSockaddrMemory, ByteBuffer toSockaddrMemory)
+                    boolean supportsDatagram, boolean pacing, ByteBuffer fromSockaddrMemory,
+                    ByteBuffer toSockaddrMemory)
             throws Exception {
         assert this.connection == null;
         assert this.traceId == null;
@@ -448,6 +460,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             }
             this.supportsDatagram = supportsDatagram;
+            this.pacing = pacing;
             sourceConnectionIds.add(localConnectId);
         } finally {
             localIdBuffer.release();
@@ -639,6 +652,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         state = ChannelState.CLOSED;
 
+        // We are closing, so we should not hold back anything anymore. This ensures what is left and the
+        // CONNECTION_CLOSE frame is sent right away.
+        pacing = false;
+        pacingHandler.cancel();
+
         QuicheQuicConnection conn = this.connection;
         if (conn == null || conn.isFreed()) {
             if (closeData != null) {
@@ -778,6 +796,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     } else if (res == Quiche.QUICHE_ERR_INVALID_STATE) {
                         throw new UnsupportedOperationException("Remote peer does not support Datagram extension");
                     } else if (res == Quiche.QUICHE_ERR_DONE) {
+                        if (pacingHandler.isScheduled()) {
+                            // The internal queue is full, but we are not allowed to send the next packet yet and
+                            // so can't make space again. Keep the remaining datagrams in the outbound buffer, we
+                            // will try again once the pacing timer fires.
+                            break;
+                        }
                         if (retry) {
                             // We already retried and it didn't work. Let's drop the datagrams on the floor.
                             for (;;) {
@@ -1316,31 +1340,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // We are done, release the buffer and send what we did build up so far.
                     out.release();
 
-                    switch (size) {
-                        case 0:
-                            // Nothing more to write.
-                            break;
-                        case 1:
-                            // We can write a normal datagram packet.
-                            parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
-                            sendResult = SendResult.SOME;
-                            break;
-                        default:
-                            int segmentSize = segmentSize(bufferList);
-                            ByteBuf compositeBuffer = Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0]));
-                            // We had more than one buffer, create a segmented packet.
-                            parent().write(segmentedDatagramPacketAllocator.newPacket(
-                                    compositeBuffer, segmentSize, sendToAddress));
-                            sendResult = SendResult.SOME;
-                            break;
+                    if (size > 0) {
+                        writeSegments(bufferList, sendToAddress, segmentedDatagramPacketAllocator);
+                        sendResult = SendResult.SOME;
                     }
-                    bufferList.clear();
                     if (close) {
                         sendResult = SendResult.CLOSE;
                     }
                     return sendResult;
                 }
                 out.writerIndex(writerIndex + written);
+                // Check this before we might stop below, as otherwise the continueSendingListener would not respect
+                // the send time of the next packet.
+                boolean paced = schedulePacingIfNeeded(sendInfo);
 
                 int segmentSize = -1;
                 if (conn.isSendInfoChanged()) {
@@ -1399,10 +1411,36 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 out.touch(bufferList);
                 // store for later, so we can make use of segments.
                 bufferList.add(out);
+
+                if (paced) {
+                    // The next packet should not be sent yet, so write what we have now and continue once the
+                    // pacing timer fires. All buffers in the list have the same destination, which is the remote
+                    // address of the packet we just added.
+                    writeSegments(bufferList, remote, segmentedDatagramPacketAllocator);
+                    return SendResult.SOME;
+                }
             }
         } finally {
             // NOOP
         }
+    }
+
+    /**
+     * Write all buffers in the list as one packet, using segments if there is more than one buffer, and clear the list.
+     */
+    private void writeSegments(List<ByteBuf> bufferList, InetSocketAddress sendToAddress,
+                               SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
+        assert !bufferList.isEmpty();
+        if (bufferList.size() == 1) {
+            // We can write a normal datagram packet.
+            parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
+        } else {
+            int segmentSize = segmentSize(bufferList);
+            ByteBuf compositeBuffer = Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0]));
+            // We had more than one buffer, create a segmented packet.
+            parent().write(segmentedDatagramPacketAllocator.newPacket(compositeBuffer, segmentSize, sendToAddress));
+        }
+        bufferList.clear();
     }
 
     private static int segmentSize(List<ByteBuf> bufferList) {
@@ -1455,8 +1493,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             out.writerIndex(writerIndex + written);
             boolean stop = writePacket(new DatagramPacket(out, remote), maxDatagramSize, len);
             sendResult = SendResult.SOME;
-            if (stop) {
-                // Nothing left in the window, continue later
+            // Always check if we need to pace, even if we stop anyway, as otherwise the continueSendingListener
+            // would not respect the send time of the next packet.
+            if (schedulePacingIfNeeded(sendInfo) || stop) {
+                // Nothing left in the window or the next packet should not be sent yet, continue later
                 break;
             }
         }
@@ -1478,6 +1518,51 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private static boolean isSendWindowUsed(int maxDatagramSize, int len) {
         return len < maxDatagramSize;
+    }
+
+    /**
+     * Schedules the pacing timer if pacing is enabled and the next packet should not be sent yet, based on the send
+     * time that quiche returned in the given {@code quiche_send_info}.
+     *
+     * quiche computes the send time after the packet was accounted for by the congestion controller, so it is the
+     * earliest time at which the next packet should be sent. This means we can always write the packet that we just
+     * got, and only need to wait before calling {@code quiche_conn_send(...)} again.
+     *
+     * @return {@code true} if the pacing timer was scheduled and so no further packets should be sent for now.
+     */
+    private boolean schedulePacingIfNeeded(ByteBuffer sendInfo) {
+        if (!pacing) {
+            return false;
+        }
+        long atNanos = QuicheSendInfo.getAtNanos(sendInfo);
+        if (atNanos == 0) {
+            // quiche does not provide send times on this platform.
+            return false;
+        }
+        long delayNanos = pacingDelayNanos(atNanos, Quiche.send_time_now_nanos());
+        if (delayNanos == 0) {
+            return false;
+        }
+        pacingHandler.schedule(delayNanos);
+        return true;
+    }
+
+    /**
+     * Returns how long to wait, in nanoseconds, before the next packet should be sent, or {@code 0} if it can be
+     * sent right away.
+     *
+     * @param atNanos   the send time that quiche returned, or {@code 0} if there is none.
+     * @param nowNanos  the current time of the clock that quiche uses for send times, or {@code 0} if unknown.
+     */
+    static long pacingDelayNanos(long atNanos, long nowNanos) {
+        if (atNanos == 0 || nowNanos == 0) {
+            return 0;
+        }
+        long delayNanos = atNanos - nowNanos;
+        if (delayNanos <= PACING_GRANULARITY_NANOS || delayNanos > MAX_PACING_DELAY_NANOS) {
+            return 0;
+        }
+        return delayNanos;
     }
 
     private static int calculateSendBufferLength(long connAddr, int maxDatagramSize) {
@@ -1511,7 +1596,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             SendResult sendResult;
             SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator =
                     config.getSegmentedDatagramPacketAllocator();
-            if (segmentedDatagramPacketAllocator.maxNumSegments() > 0) {
+            if (pacingHandler.isScheduled()) {
+                // We were told to not send the next packet yet. Sending will continue once the pacing timer fires.
+                sendResult = SendResult.NONE;
+            } else if (segmentedDatagramPacketAllocator.maxNumSegments() > 0) {
                 sendResult = connectionSendSegments(conn, segmentedDatagramPacketAllocator);
             } else {
                 sendResult = connectionSendSimple(conn);
@@ -1558,6 +1646,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
+
+        /**
+         * Try to write what is still left in the outbound buffer, if anything.
+         */
+        void writePending() {
+            flush0();
+        }
 
         @Override
         protected void close(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
@@ -2186,6 +2281,46 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (timeoutFuture != null) {
                 timeoutFuture.cancel(false);
                 timeoutFuture = null;
+            }
+        }
+    }
+
+    /**
+     * Continues sending once the send time of the next packet, as computed by the congestion controller, is reached.
+     * While it is scheduled no packets are sent, see {@link #connectionSend(QuicheQuicConnection)}.
+     */
+    private final class PacingHandler implements Runnable {
+        private ScheduledFuture<?> pacingFuture;
+
+        @Override
+        public void run() {
+            pacingFuture = null;
+            if (freeIfClosed()) {
+                return;
+            }
+            if (connectionSend(connection) != SendResult.NONE) {
+                flushParent();
+            }
+            // Datagrams that did not fit into the internal queue while we had to wait are still in the outbound
+            // buffer, so try to write them again now that there is space.
+            ((QuicChannelUnsafe) unsafe()).writePending();
+            freeIfClosed();
+        }
+
+        boolean isScheduled() {
+            return pacingFuture != null;
+        }
+
+        void schedule(long delayNanos) {
+            // connectionSend(...) does not send anything while we are scheduled, so we can't be scheduled already.
+            assert pacingFuture == null;
+            pacingFuture = eventLoop().schedule(this, delayNanos, TimeUnit.NANOSECONDS);
+        }
+
+        void cancel() {
+            if (pacingFuture != null) {
+                pacingFuture.cancel(false);
+                pacingFuture = null;
             }
         }
     }

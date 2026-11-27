@@ -1595,6 +1595,12 @@
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>Change is harmless for compatibility. Needed to close outbound child channels whose stream was never created when the parent channel becomes inactive.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.handler.codec.quic.QuicCodecBuilder</classQualifiedName>
+                  <justification>QuicCodecBuilder can't be extended outside of its package, as all its constructors are package-private.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
