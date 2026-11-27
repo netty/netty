@@ -122,103 +122,125 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
         return retainedSlice(0, capacity()).setIndex(readerIndex(), writerIndex());
     }
 
+    /**
+     * The capacity of this buffer is fixed when it is created, but the capacity of the wrapped buffer may change
+     * afterwards: if it shrinks across a size class its allocation is freed and returned to the arena, and may then
+     * be handed out to and corrupted by another buffer. Checking the original index once against the minimum of
+     * this buffer's fixed capacity and whatever capacity the wrapped buffer currently provides for this slice
+     * covers both bounds with a single check, and keeps the sign / overflow parts of it constant-foldable because
+     * they only depend on the original index and field length.
+     */
+    private AbstractByteBuf checkedUnwrapLimit(int index, int fieldLength) {
+        ensureAccessible();
+        AbstractByteBuf buf = unwrap();
+        // The wrapped buffer is always the root of a pooled buffer hierarchy and so never a CompositeByteBuf, which
+        // means no special-casing as done by UnpooledSlicedByteBuf is needed here.
+        checkIndex0(index, fieldLength, Math.min(maxCapacity(), buf.capacity() - idx(0)));
+        return buf;
+    }
+
+    /**
+     * Variant of {@link #checkedUnwrapLimit(int, int)} for the protected {@code _get/_set} accessors, whose callers
+     * (e.g. the {@code read/write} accessors) have already validated accessibility and the index against this
+     * buffer's fixed capacity: only the capacity the wrapped buffer currently provides for this slice still needs
+     * to be checked.
+     */
+    private AbstractByteBuf checkedUnwrap(int index, int fieldLength) {
+        AbstractByteBuf buf = unwrap();
+        // The wrapped buffer is always the root of a pooled buffer hierarchy and so never a CompositeByteBuf, which
+        // means no special-casing as done by UnpooledSlicedByteBuf is needed here.
+        checkIndex0(index, fieldLength, buf.capacity() - idx(0));
+        return buf;
+    }
+
     @Override
     public byte getByte(int index) {
-        checkIndex(index, 1);
-        return _getByte(index);
+        return checkedUnwrapLimit(index, 1)._getByte(idx(index));
     }
 
     @Override
     protected byte _getByte(int index) {
-        return unwrap()._getByte(idx(index));
+        return checkedUnwrap(index, 1)._getByte(idx(index));
     }
 
     @Override
     public short getShort(int index) {
-        checkIndex(index, 2);
-        return _getShort(index);
+        return checkedUnwrapLimit(index, 2)._getShort(idx(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        return unwrap()._getShort(idx(index));
+        return checkedUnwrap(index, 2)._getShort(idx(index));
     }
 
     @Override
     public short getShortLE(int index) {
-        checkIndex(index, 2);
-        return _getShortLE(index);
+        return checkedUnwrapLimit(index, 2)._getShortLE(idx(index));
     }
 
     @Override
     protected short _getShortLE(int index) {
-        return unwrap()._getShortLE(idx(index));
+        return checkedUnwrap(index, 2)._getShortLE(idx(index));
     }
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
-        return _getUnsignedMedium(index);
+        return checkedUnwrapLimit(index, 3)._getUnsignedMedium(idx(index));
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return unwrap()._getUnsignedMedium(idx(index));
+        return checkedUnwrap(index, 3)._getUnsignedMedium(idx(index));
     }
 
     @Override
     public int getUnsignedMediumLE(int index) {
-        checkIndex(index, 3);
-        return _getUnsignedMediumLE(index);
+        return checkedUnwrapLimit(index, 3)._getUnsignedMediumLE(idx(index));
     }
 
     @Override
     protected int _getUnsignedMediumLE(int index) {
-        return unwrap()._getUnsignedMediumLE(idx(index));
+        return checkedUnwrap(index, 3)._getUnsignedMediumLE(idx(index));
     }
 
     @Override
     public int getInt(int index) {
-        checkIndex(index, 4);
-        return _getInt(index);
+        return checkedUnwrapLimit(index, 4)._getInt(idx(index));
     }
 
     @Override
     protected int _getInt(int index) {
-        return unwrap()._getInt(idx(index));
+        return checkedUnwrap(index, 4)._getInt(idx(index));
     }
 
     @Override
     public int getIntLE(int index) {
-        checkIndex(index, 4);
-        return _getIntLE(index);
+        return checkedUnwrapLimit(index, 4)._getIntLE(idx(index));
     }
 
     @Override
     protected int _getIntLE(int index) {
-        return unwrap()._getIntLE(idx(index));
+        return checkedUnwrap(index, 4)._getIntLE(idx(index));
     }
 
     @Override
     public long getLong(int index) {
-        checkIndex(index, 8);
-        return _getLong(index);
+        return checkedUnwrapLimit(index, 8)._getLong(idx(index));
     }
 
     @Override
     protected long _getLong(int index) {
-        return unwrap()._getLong(idx(index));
+        return checkedUnwrap(index, 8)._getLong(idx(index));
     }
 
     @Override
     public long getLongLE(int index) {
-        checkIndex(index, 8);
-        return _getLongLE(index);
+        return checkedUnwrapLimit(index, 8)._getLongLE(idx(index));
     }
 
     @Override
     protected long _getLongLE(int index) {
-        return unwrap()._getLongLE(idx(index));
+        return checkedUnwrap(index, 8)._getLongLE(idx(index));
     }
 
     @Override
@@ -244,110 +266,101 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public ByteBuf setByte(int index, int value) {
-        checkIndex(index, 1);
-        _setByte(index, value);
+        checkedUnwrapLimit(index, 1)._setByte(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setByte(int index, int value) {
-        unwrap()._setByte(idx(index), value);
+        checkedUnwrap(index, 1)._setByte(idx(index), value);
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
-        _setShort(index, value);
+        checkedUnwrapLimit(index, 2)._setShort(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setShort(int index, int value) {
-        unwrap()._setShort(idx(index), value);
+        checkedUnwrap(index, 2)._setShort(idx(index), value);
     }
 
     @Override
     public ByteBuf setShortLE(int index, int value) {
-        checkIndex(index, 2);
-        _setShortLE(index, value);
+        checkedUnwrapLimit(index, 2)._setShortLE(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
-        unwrap()._setShortLE(idx(index), value);
+        checkedUnwrap(index, 2)._setShortLE(idx(index), value);
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        checkIndex(index, 3);
-        _setMedium(index, value);
+        checkedUnwrapLimit(index, 3)._setMedium(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setMedium(int index, int value) {
-        unwrap()._setMedium(idx(index), value);
+        checkedUnwrap(index, 3)._setMedium(idx(index), value);
     }
 
     @Override
     public ByteBuf setMediumLE(int index, int value) {
-        checkIndex(index, 3);
-        _setMediumLE(index, value);
+        checkedUnwrapLimit(index, 3)._setMediumLE(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setMediumLE(int index, int value) {
-        unwrap()._setMediumLE(idx(index), value);
+        checkedUnwrap(index, 3)._setMediumLE(idx(index), value);
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        checkIndex(index, 4);
-        _setInt(index, value);
+        checkedUnwrapLimit(index, 4)._setInt(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setInt(int index, int value) {
-        unwrap()._setInt(idx(index), value);
+        checkedUnwrap(index, 4)._setInt(idx(index), value);
     }
 
     @Override
     public ByteBuf setIntLE(int index, int value) {
-        checkIndex(index, 4);
-        _setIntLE(index, value);
+        checkedUnwrapLimit(index, 4)._setIntLE(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setIntLE(int index, int value) {
-        unwrap()._setIntLE(idx(index), value);
+        checkedUnwrap(index, 4)._setIntLE(idx(index), value);
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        checkIndex(index, 8);
-        _setLong(index, value);
+        checkedUnwrapLimit(index, 8)._setLong(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setLong(int index, long value) {
-        unwrap()._setLong(idx(index), value);
+        checkedUnwrap(index, 8)._setLong(idx(index), value);
     }
 
     @Override
     public ByteBuf setLongLE(int index, long value) {
-        checkIndex(index, 8);
-        _setLongLE(index, value);
+        checkedUnwrapLimit(index, 8)._setLongLE(idx(index), value);
         return this;
     }
 
     @Override
     protected void _setLongLE(int index, long value) {
-        unwrap()._setLongLE(idx(index), value);
+        checkedUnwrap(index, 8)._setLongLE(idx(index), value);
     }
 
     @Override
