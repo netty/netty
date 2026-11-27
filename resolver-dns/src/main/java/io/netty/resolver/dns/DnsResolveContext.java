@@ -120,7 +120,7 @@ abstract class DnsResolveContext<T> {
                     new IdentityHashMap<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>, Boolean>());
 
     private List<T> finalResult;
-    private int allowedQueries;
+    private int allowedQueries; // Only through allowedQueries() and consumeQuery().
     private boolean triedCNAME;
     private boolean completeEarly;
     private boolean completionHandedOver;
@@ -140,6 +140,21 @@ abstract class DnsResolveContext<T> {
 
         this.nameServerAddrs = ObjectUtil.checkNotNull(nameServerAddrs, "nameServerAddrs");
         this.allowedQueries = allowedQueries;
+    }
+
+    /**
+     * Returns the number of queries the resolution may still send, those of this context by default. A subclass may
+     * count them for a resolution made of several contexts, along with {@link #consumeQuery()}.
+     */
+    int allowedQueries() {
+        return allowedQueries;
+    }
+
+    /**
+     * Counts a query sent by this context, see {@link #allowedQueries()}.
+     */
+    void consumeQuery() {
+        --allowedQueries;
     }
 
     static final class DnsResolveContextException extends RuntimeException {
@@ -548,13 +563,13 @@ abstract class DnsResolveContext<T> {
                        final Promise<List<T>> promise,
                        final Throwable cause) {
         if (completeEarly || nameServerAddrStreamIndex >= nameServerAddrStream.size() ||
-                allowedQueries == 0 || originalPromise.isCancelled() || promise.isCancelled()) {
+                allowedQueries() == 0 || originalPromise.isCancelled() || promise.isCancelled()) {
             tryToFinishResolve(nameServerAddrStream, zone, nameServerAddrStreamIndex, question,
                                queryLifecycleObserver, promise, cause);
             return;
         }
 
-        --allowedQueries;
+        consumeQuery();
 
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
         if (nameServerAddr.isUnresolved()) {
@@ -585,7 +600,7 @@ abstract class DnsResolveContext<T> {
             queriesInProgress.remove(future);
 
             if (future.isCancelled() || promise.isDone() && !completeEarly) {
-                queryLifecycleObserver.queryCancelled(allowedQueries);
+                queryLifecycleObserver.queryCancelled(allowedQueries());
 
                 // Check if we need to release the envelope itself. If the query was cancelled the getNow() will
                 // return null as well as the Future will be failed with a CancellationException.
@@ -676,7 +691,7 @@ abstract class DnsResolveContext<T> {
                     originalPromise, nameServerName, additionals, parent.newNameServerAddressStream(nameServerName),
                     // Resolving the unresolved nameserver must be limited by allowedQueries
                     // so we eventually fail
-                    allowedQueries,
+                    allowedQueries(),
                     resolveCache,
                     redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
                     .resolve(resolverPromise);
@@ -1191,7 +1206,7 @@ abstract class DnsResolveContext<T> {
 
         // There are no queries left to try.
         if (!completeEarly && !queriesInProgress.isEmpty()) {
-            queryLifecycleObserver.queryCancelled(allowedQueries);
+            queryLifecycleObserver.queryCancelled(allowedQueries());
 
             // There are still some queries in process, we will try to notify once the next one finishes until
             // all are finished.
@@ -1243,7 +1258,7 @@ abstract class DnsResolveContext<T> {
                 }
             }
         } else {
-            queryLifecycleObserver.queryCancelled(allowedQueries);
+            queryLifecycleObserver.queryCancelled(allowedQueries());
         }
 
         // We have at least one resolved record or tried CNAME as the last resort.
@@ -1297,7 +1312,7 @@ abstract class DnsResolveContext<T> {
 
         // No resolved address found.
         final int maxAllowedQueries = parent.maxQueriesPerResolve();
-        final int tries = maxAllowedQueries - allowedQueries;
+        final int tries = maxAllowedQueries - allowedQueries();
         final StringBuilder buf = new StringBuilder(64);
 
         buf.append("Failed to resolve '").append(hostname).append("' ").append(Arrays.toString(expectedTypes));
