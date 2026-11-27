@@ -26,9 +26,12 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -223,6 +226,123 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
 
             shutdown(executor);
         }
+    }
+
+    /**
+     * The server finished a response and closed its stream channel, but the data is not acknowledged yet when the
+     * client stops the stream. quiche keeps a stopped stream until the stop is reported to the application, so if
+     * netty never asks about a stream it has no channel for, the stream is never collected and the client never gets
+     * its stream credit back.
+     */
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    @Timeout(60)
+    public void testStopSendingAfterChannelClosedReturnsStreamCredit(Executor executor) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try (DroppingRelay relay = new DroppingRelay()) {
+            BlockingQueue<QuicStreamChannel> closed = new LinkedBlockingQueue<>();
+            BlockingQueue<QuicStreamChannel> barriers = new LinkedBlockingQueue<>();
+            BlockingQueue<Object> limitChanged = new LinkedBlockingQueue<>();
+            ChannelInboundHandlerAdapter responder = new ChannelInboundHandlerAdapter() {
+                @Override
+                public boolean isSharable() {
+                    return true;
+                }
+
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) {
+                    QuicStreamChannel stream = (QuicStreamChannel) ctx.channel();
+                    if (stream.type() == QuicStreamType.UNIDIRECTIONAL) {
+                        barriers.add(stream);
+                    }
+                }
+
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    ReferenceCountUtil.release(msg);
+                }
+
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    if (evt == ChannelInputShutdownReadComplete.INSTANCE &&
+                            ((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL) {
+                        // The response never reaches the client, so it stays unacknowledged.
+                        relay.dropToClient = true;
+                        QuicStreamChannel stream = (QuicStreamChannel) ctx.channel();
+                        stream.closeFuture().addListener(f -> closed.add(stream));
+                        ctx.writeAndFlush(new DefaultQuicStreamFrame(
+                                Unpooled.directBuffer(8).writeZero(8), true));
+                    }
+                    ctx.fireUserEventTriggered(evt);
+                }
+            };
+            server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
+                    .initialMaxStreamsBidirectional(2), InsecureQuicTokenHandler.INSTANCE,
+                    QuicTestUtils.NOOP_HANDLER, responder);
+            relay.start((InetSocketAddress) server.localAddress());
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == QuicStreamLimitChangedEvent.INSTANCE) {
+                                limitChanged.add(evt);
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    })
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(relay.address())
+                    .connect()
+                    .get(5, TimeUnit.SECONDS);
+
+            for (int i = 0; i < 3; i++) {
+                QuicStreamChannel clientStream = createStreamWithin(quicChannel, limitChanged, 8, i);
+                clientStream.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.directBuffer(1).writeZero(1), true))
+                        .sync();
+                QuicStreamChannel serverStream = closed.poll(5, TimeUnit.SECONDS);
+                assertThat(serverStream).as("server stream %d closed", i).isNotNull();
+
+                clientStream.shutdownInput((int) ERROR_CODE).sync();
+                // The STOP_SENDING must arrive while the response is still unacknowledged. The data of a
+                // unidirectional stream is sent after it, so once the server has seen that stream, it has also
+                // processed the STOP_SENDING.
+                QuicStreamChannel barrier = quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
+                        new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
+                barrier.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.directBuffer(1).writeZero(1), true))
+                        .sync();
+                assertThat(barriers.poll(5, TimeUnit.SECONDS)).as("barrier stream %d", i).isNotNull();
+                relay.dropToClient = false;
+            }
+
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+            shutdown(executor);
+        }
+    }
+
+    /**
+     * Creates a stream, waiting for the server to give stream credit back if there is none left.
+     */
+    private static QuicStreamChannel createStreamWithin(QuicChannel quicChannel, BlockingQueue<Object> limitChanged,
+                                                        int seconds, int index) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds);
+        Throwable last;
+        do {
+            // Cleared before the attempt, so a change that comes in while it fails is not missed.
+            limitChanged.clear();
+            Future<QuicStreamChannel> f = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).await();
+            if (f.isSuccess()) {
+                return f.getNow();
+            }
+            last = f.cause();
+        } while (limitChanged.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS) != null);
+        throw new AssertionError("could not open stream " + index + " within " + seconds +
+                "s: the server did not give the stream credit back", last);
     }
 
     private static QuicChannel connect(Channel channel, Channel server) throws Exception {

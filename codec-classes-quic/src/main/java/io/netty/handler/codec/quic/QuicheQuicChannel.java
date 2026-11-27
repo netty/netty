@@ -1199,6 +1199,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 if (streamChannel.writable(capacity)) {
                                     mayNeedWrite = true;
                                 }
+                            } else {
+                                // quiche collects a stopped stream only once the stop was reported.
+                                Quiche.quiche_conn_stream_capacity(connAddr, streamId);
                             }
                         }
                         if (writable > 0) {
