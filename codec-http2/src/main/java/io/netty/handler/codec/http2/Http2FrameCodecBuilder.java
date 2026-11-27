@@ -209,6 +209,11 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public Http2FrameCodecBuilder autoTuneFlowControlWindow(int maxWindowSize) {
+        return super.autoTuneFlowControlWindow(maxWindowSize);
+    }
+
+    @Override
     public int decoderEnforceMaxSmallContinuationFrames() {
         return super.decoderEnforceMaxSmallContinuationFrames();
     }

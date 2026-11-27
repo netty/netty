@@ -18,6 +18,8 @@ package io.netty.handler.codec.http2;
 import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -36,9 +39,14 @@ import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.MockTicker;
+import io.netty.util.concurrent.Ticker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -380,6 +388,217 @@ public class DefaultHttp2LocalFlowControllerTest {
                 controller.consumeBytes(connection.stream(STREAM_ID), -1);
             }
         });
+    }
+
+    @Test
+    public void autoTuningGrowsWindowsToFourTimesTheBytesConsumedPerRoundTrip() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        // Sends a connection WINDOW_UPDATE, which starts timing the round trip with 32767 bytes left.
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        // Passing the old limit sets the RTT; 32768 bytes were consumed within it.
+        receiveAndConsume(32768);
+        assertEquals(131072, controller.initialWindowSize(connection.connectionStream()));
+
+        receiveAndConsume(16384);
+        ticker.advance(20, MILLISECONDS);
+        // Still within the round trip, and before the old limit.
+        receiveAndConsume(8192);
+        ticker.advance(20, MILLISECONDS);
+        receiveAndConsume(40960);
+        assertEquals(262144, controller.initialWindowSize(connection.connectionStream()));
+        assertEquals(262144, controller.initialWindowSize(stream(STREAM_ID)));
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, 262144 - 65536);
+        verifyWindowUpdateSent(STREAM_ID, 262144 - 65536);
+
+        // 98304 bytes over three round trips are 32768 per round trip, so no growth.
+        ticker.advance(120, MILLISECONDS);
+        receiveAndConsume(98304);
+        assertEquals(262144, controller.initialWindowSize(connection.connectionStream()));
+    }
+
+    @Test
+    public void autoTuningKeepsTheShortestRoundTrip() throws Http2Exception {
+        MockTicker ticker = growTo131072();
+        // The second sample takes 1 s, but the RTT stays 40 ms.
+        ticker.advance(1, SECONDS);
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(65536);
+        assertEquals(262144, controller.initialWindowSize(connection.connectionStream()));
+    }
+
+    @Test
+    public void autoTuningGrowsWindowsForBatchedConsumption() throws Http2Exception {
+        MockTicker ticker = growTo131072();
+        ticker.advance(40, MILLISECONDS);
+        // The peer fills the windows while the application waits 200 ms (five round trips) before consuming.
+        receiveFlowControlledFrame(STREAM_ID, 131072, 0, false);
+        ticker.advance(200, MILLISECONDS);
+        consumeBytes(STREAM_ID, 131072);
+        assertEquals(2 * 131072, controller.initialWindowSize(connection.connectionStream()));
+    }
+
+    @Test
+    public void autoTuningKeepsTheLargestWindowForNewStreams() throws Http2Exception {
+        MockTicker ticker = growTo131072();
+        ticker.advance(40, MILLISECONDS);
+        // A round trip with few bytes must not lower the windows of streams opened later.
+        receiveAndConsume(100);
+        connection.local().createStream(3, false);
+        receiveFlowControlledFrame(3, 100, 0, false);
+        consumeBytes(3, 100);
+        assertEquals(131072, controller.initialWindowSize(stream(3)));
+    }
+
+    @Test
+    public void autoTuningContinuesWhenWindowIsNotLoweredAfterGrowth() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        // Lowered before any growth, e.g. when the initial SETTINGS are acknowledged.
+        controller.initialWindowSize(DEFAULT_WINDOW_SIZE - 1);
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(32768);
+        assertEquals(131072, controller.initialWindowSize(stream(STREAM_ID)));
+        // The same SETTINGS value applied again.
+        controller.initialWindowSize(DEFAULT_WINDOW_SIZE - 1);
+        receiveAndConsume(16384);
+        ticker.advance(20, MILLISECONDS);
+        receiveAndConsume(8192);
+        ticker.advance(20, MILLISECONDS);
+        receiveAndConsume(40960);
+        assertEquals(262144, controller.initialWindowSize(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void autoTuningStopsWhenWindowIsLoweredByIncrement() throws Http2Exception {
+        MockTicker ticker = growTo131072();
+        controller.incrementWindowSize(stream(STREAM_ID), -16384);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(100);
+        assertEquals(131072 - 16384, controller.initialWindowSize(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void autoTuningStopsAtMaxWindowSize() throws Http2Exception {
+        MockTicker ticker = autoTune(98304);
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(32768);
+        assertEquals(98304, controller.initialWindowSize(connection.connectionStream()));
+        assertEquals(98304, controller.initialWindowSize(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void autoTuningRoundTripEndsOnlyPastTheOldLimit() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        // Sends a connection WINDOW_UPDATE; the peer may still send 32767 bytes before it arrives.
+        receiveAndConsume(32768);
+        ticker.advance(1, MILLISECONDS);
+        receiveFlowControlledFrame(STREAM_ID, 32767, 0, false);
+        ticker.advance(39, MILLISECONDS);
+        // The first byte past the old limit sets the RTT to 40 ms.
+        receiveFlowControlledFrame(STREAM_ID, 1, 0, false);
+        consumeBytes(STREAM_ID, 32768);
+        assertEquals(131072, controller.initialWindowSize(connection.connectionStream()));
+    }
+
+    @Test
+    public void autoTuningIgnoresWindowUpdatesNotForConsumedBytes() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        // Like Http2FrameCodec with an initial window of 131070: the connection window is doubled at startup.
+        controller.initialWindowSize(131070);
+        controller.incrementWindowSize(connection.connectionStream(), 131070);
+        // The client is idle before it uploads.
+        ticker.advance(10, SECONDS);
+        receiveAndConsume(65536);
+        assertEquals(131070, controller.initialWindowSize(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void autoTuningStopsWhenWindowIsLowered() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(32768);
+        assertEquals(131072, controller.initialWindowSize(stream(STREAM_ID)));
+        // SETTINGS_INITIAL_WINDOW_SIZE lowered to 16384 and acknowledged.
+        controller.initialWindowSize(16384);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(100);
+        assertEquals(131072 - (DEFAULT_WINDOW_SIZE - 16384), controller.initialWindowSize(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void autoTuningThroughFrameCodecAndMultiplexHandler() {
+        Http2FrameCodec codec = Http2FrameCodecBuilder.forServer().autoTuneFlowControlWindow(1024 * 1024).build();
+        EmbeddedChannel serverChannel = new EmbeddedChannel();
+        serverChannel.freezeTime();
+        serverChannel.pipeline().addLast(codec, new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ReferenceCountUtil.release(msg);
+            }
+        }));
+        Http2FrameInboundWriter peer = new Http2FrameInboundWriter(serverChannel);
+        try {
+            serverChannel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+            peer.writeInboundSettings(new Http2Settings());
+            peer.writeInboundHeaders(3, new DefaultHttp2Headers().method("POST").path("/").scheme("https"), 0, false);
+            // Consuming 32768 bytes sends a connection WINDOW_UPDATE, which starts timing the round trip.
+            writeData(peer, 2);
+            serverChannel.advanceTimeBy(40, MILLISECONDS);
+            // Passes the old limit: RTT = 40 ms.
+            writeData(peer, 3);
+            serverChannel.advanceTimeBy(40, MILLISECONDS);
+            // 49152 bytes consumed within the last 40 ms.
+            writeData(peer, 1);
+            Http2Connection codecConnection = codec.connection();
+            Http2LocalFlowController flowController = codecConnection.local().flowController();
+            assertEquals(196608, flowController.initialWindowSize(codecConnection.connectionStream()));
+            assertEquals(196608, flowController.initialWindowSize(codecConnection.stream(3)));
+        } finally {
+            serverChannel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void autoTuningRequiresDefaultLocalFlowController() {
+        DefaultHttp2Connection h2Connection = new DefaultHttp2Connection(true);
+        h2Connection.local().flowController(mock(Http2LocalFlowController.class));
+        assertThrows(IllegalArgumentException.class, () -> new Http2ConnectionHandlerBuilder()
+                .connection(h2Connection)
+                .frameListener(new Http2FrameAdapter())
+                .autoTuneFlowControlWindow(1024 * 1024)
+                .build());
+    }
+
+    private MockTicker growTo131072() throws Http2Exception {
+        MockTicker ticker = autoTune(1024 * 1024);
+        // Sends a connection WINDOW_UPDATE, which starts timing the round trip; the next one passes the old limit.
+        receiveAndConsume(32768);
+        ticker.advance(40, MILLISECONDS);
+        receiveAndConsume(32768);
+        assertEquals(131072, controller.initialWindowSize(stream(STREAM_ID)));
+        return ticker;
+    }
+
+    private MockTicker autoTune(int maxWindowSize) {
+        MockTicker ticker = Ticker.newMockTicker();
+        when(executor.ticker()).thenReturn(ticker);
+        controller.autoTuneWindowSize(maxWindowSize);
+        return ticker;
+    }
+
+    private void receiveAndConsume(int bytes) throws Http2Exception {
+        receiveFlowControlledFrame(STREAM_ID, bytes, 0, false);
+        consumeBytes(STREAM_ID, bytes);
+    }
+
+    private static void writeData(Http2FrameInboundWriter peer, int frames) {
+        for (int i = 0; i < frames; i++) {
+            peer.writeInboundData(3, Unpooled.wrappedBuffer(new byte[16384]), 0, false);
+        }
     }
 
     private void testRatio(float ratio, int newDefaultWindowSize, int newStreamId, boolean setStreamRatio)
