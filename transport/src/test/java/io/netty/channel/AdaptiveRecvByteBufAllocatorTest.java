@@ -25,6 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -69,6 +70,31 @@ public class AdaptiveRecvByteBufAllocatorTest {
         computingNext(2048, 1550);
         computingNext(2048, 2000);
         computingNext(2048, 1900);
+    }
+
+    @Test
+    public void repeatedReadsAtShrinkThresholdKeepBufferSize() {
+        AdaptiveRecvByteBufAllocator allocator = new AdaptiveRecvByteBufAllocator(64, 4096, 65536);
+        RecvByteBufAllocator.ExtendedHandle handle = (RecvByteBufAllocator.ExtendedHandle) allocator.newHandle();
+        for (int i = 0; i < 16; i++) {
+            handle.reset(config);
+            allocRead(handle, alloc, 4096, 2048);
+            handle.readComplete();
+            assertThat(handle.guess()).isEqualTo(4096);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1700, 2047 })
+    public void repeatedReadSequencesAboveShrinkThresholdKeepBufferSize(int lowReadSize) {
+        AdaptiveRecvByteBufAllocator allocator = new AdaptiveRecvByteBufAllocator(64, 4096, 65536);
+        RecvByteBufAllocator.ExtendedHandle handle = (RecvByteBufAllocator.ExtendedHandle) allocator.newHandle();
+        for (int i = 0; i < 18; i++) {
+            handle.reset(config);
+            allocRead(handle, alloc, 4096, i % 3 == 2 ? 2048 : lowReadSize);
+            handle.readComplete();
+            assertThat(handle.guess()).isEqualTo(4096);
+        }
     }
 
     private void computingNext(long expectedSize, int actualReadBytes) {
