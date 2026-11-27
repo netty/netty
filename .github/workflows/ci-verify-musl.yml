@@ -14,9 +14,10 @@
 # under the License.
 # ----------------------------------------------------------------------------
 # The Linux native artifacts are glibc-built but are expected to load from the same jar on musl.
-# Nothing in the normal build notices when that stops being true: the build hosts are CentOS, the
-# test hosts are Ubuntu, and musl does not fail a dlopen on a relocation it cannot resolve, so a
-# broken artifact still loads and only dies later. These legs run the real thing on real Alpine.
+# Nothing in the normal build notices when that stops being true: the libraries are cross compiled
+# against glibc (docker/Dockerfile.cross_compile), the test hosts are Ubuntu, and musl does not fail
+# a dlopen on a relocation it cannot resolve, so a broken artifact still loads and only dies later.
+# These legs run the real thing on real Alpine.
 name: Verify native library loading on musl
 
 on:
@@ -42,12 +43,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Built the same way as the released artifacts, see docker/cross-compile/build.sh
           - arch: x86_64
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-native-quic"
+            target: linux-x86_64
           - arch: aarch64
-            docker-compose-build: "-f docker/docker-compose.centos-7.cross.yaml build"
-            docker-compose-run: "-f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-build-native-quic"
+            target: linux-aarch_64
 
     name: build-jars-${{ matrix.arch }}
     permissions:
@@ -57,6 +57,10 @@ jobs:
       # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
       # entries in the docker-compose*.yaml files are actually honored.
       COMPOSE_BAKE: "true"
+      NETTY_CROSS_TARGET: ${{ matrix.target }}
+      # Build just what netty-codec-native-quic needs (with -am), and install it so the musl verification legs can
+      # pick the jars out of ~/.m2.
+      NETTY_CROSS_MODULES: codec-native-quic
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -93,10 +97,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
-        run: docker compose ${{ matrix.docker-compose-build }}
+        run: docker compose -f docker/docker-compose.cross.yaml build
 
       - name: Build the native quic jars
-        run: docker compose ${{ matrix.docker-compose-run }}
+        run: docker compose -f docker/docker-compose.cross.yaml run cross-compile-install
 
       # Pinned to v6.0.0
       - name: Upload the netty jars

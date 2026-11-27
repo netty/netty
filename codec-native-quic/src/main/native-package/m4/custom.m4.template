@@ -22,7 +22,7 @@ AC_DEFUN([CUSTOM_M4_SETUP],
           LDFLAGS="$LDFLAGS -Wl,-exported_symbol,_JNI_*"
           ;;
       *linux*)
-          LDFLAGS="$LDFLAGS -Wl,--exclude-libs,ALL"
+          LDFLAGS="$LDFLAGS -Wl,--version-script=@LINUX_VERSION_SCRIPT@"
           ;;
       *)
           ;;
