@@ -424,7 +424,8 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     } else {
                         name = StringUtil.EMPTY_STRING;
                     }
-                } else {
+                } else if (shouldUnescape) {
+                    // CONNECT and CONNECTED header values do not escape colons (STOMP 1.2, Value Encoding).
                     valid = false;
                 }
             }
