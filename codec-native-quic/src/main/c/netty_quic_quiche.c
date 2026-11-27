@@ -532,6 +532,7 @@ static jlong netty_quiche_conn_stream_capacity(JNIEnv* env, jclass clazz, jlong 
 static jlong netty_quiche_conn_stream_writable_capacity(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong error_codeAddr) {
     // An empty send is done first to get the error code of a STOP_SENDING: quiche_conn_stream_capacity does not
     // return it, and may collect the stream so that a later quiche_conn_stream_send cannot return it either.
+    // TODO: remove the empty send once quiche_conn_stream_capacity returns the error code of a STOP_SENDING.
     ssize_t res = quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id, NULL, 0, false, (uint64_t *) error_codeAddr);
     if (res == QUICHE_ERR_STREAM_STOPPED) {
         return (jlong) res;
