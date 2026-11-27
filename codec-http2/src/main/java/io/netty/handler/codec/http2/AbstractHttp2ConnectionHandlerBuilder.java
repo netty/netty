@@ -18,6 +18,8 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 
+import java.util.function.ToLongFunction;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
@@ -114,6 +116,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
     private int maxSmallContinuationFrames = Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME;
+    private int maxAutoTunedWindowSize;
+    private ToLongFunction<? super Channel> autoTuneRttMicros;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -513,6 +517,34 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Enables auto-tuning of the local flow control windows, like Cloudflare's nginx patch and TCP receive buffer
+     * auto-tuning: once per round trip, the stream windows grow to four times the bytes the application consumed per
+     * round trip, or twice the bytes consumed since the last round trip when it consumes in batches or late, if that
+     * is larger, and the connection window to twice the stream windows, so that one stream cannot take all of it. No
+     * extra frames are sent. Requires the default {@link DefaultHttp2LocalFlowController}.
+     * <p>
+     * {@code rttMicros} returns the round trip time of the connection in microseconds, or {@code 0} if it is not
+     * known. It is called at most once per second per connection, only while the channel is active and the windows can
+     * still grow, and may be shared by many connections, so it must be thread-safe. Exceptions and negative values
+     * count as unknown. With the native transports on Linux it can read {@code TCP_INFO}, for example
+     * {@code ch -> ch instanceof EpollSocketChannel ? ((EpollSocketChannel) ch).tcpInfo().rtt() : 0}.
+     * <p>
+     * Auto-tuning grows the connection window to at most {@code maxWindowSize} and each stream window to at most half
+     * of that, so a remote peer can make each connection buffer up to {@code maxWindowSize} bytes before the
+     * application consumes them; pauses in consumption also grow the windows up to that limit. It never shrinks a
+     * window; lowering one after it was grown turns auto-tuning off, and windows that are configured larger are left
+     * as they are.
+     * <p>
+     * A {@code maxWindowSize} of {@code 0} disables auto-tuning, which is the default.
+     */
+    protected B autoTuneFlowControlWindow(int maxWindowSize, ToLongFunction<? super Channel> rttMicros) {
+        enforceNonCodecConstraints("autoTuneFlowControlWindow");
+        maxAutoTunedWindowSize = checkPositiveOrZero(maxWindowSize, "maxWindowSize");
+        autoTuneRttMicros = maxWindowSize == 0 ? null : checkNotNull(rttMicros, "rttMicros");
+        return self();
+    }
+
+    /**
      * Determine if settings frame should automatically be acknowledged and applied.
      * @return this.
      */
@@ -666,6 +698,17 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
             promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders(),
             isValidateRequiredPseudoHeaders());
+        if (maxAutoTunedWindowSize > 0) {
+            Http2LocalFlowController flowController = decoder.flowController();
+            if (!(flowController instanceof DefaultHttp2LocalFlowController)) {
+                encoder.close();
+                decoder.close();
+                throw new IllegalArgumentException(
+                        "autoTuneFlowControlWindow requires a DefaultHttp2LocalFlowController: " + flowController);
+            }
+            ((DefaultHttp2LocalFlowController) flowController).autoTuneWindowSize(
+                    maxAutoTunedWindowSize, autoTuneRttMicros);
+        }
         return buildFromCodec(decoder, encoder);
     }
 

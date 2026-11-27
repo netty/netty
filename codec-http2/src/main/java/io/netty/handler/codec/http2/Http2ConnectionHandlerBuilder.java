@@ -16,7 +16,10 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+
+import java.util.function.ToLongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -133,6 +136,12 @@ public final class Http2ConnectionHandlerBuilder
     public Http2ConnectionHandlerBuilder encoderEnforceMaxRstFramesPerWindow(
             int maxRstFramesPerWindow, int secondsPerWindow) {
         return super.encoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);
+    }
+
+    @Override
+    public Http2ConnectionHandlerBuilder autoTuneFlowControlWindow(
+            int maxWindowSize, ToLongFunction<? super Channel> rttMicros) {
+        return super.autoTuneFlowControlWindow(maxWindowSize, rttMicros);
     }
 
     @Override
