@@ -1003,14 +1003,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private int streamSend0(QuicheQuicConnection conn, long streamId, ByteBuf buffer, boolean fin)
             throws ClosedChannelException {
-        return Quiche.quiche_conn_stream_send(connectionAddressChecked(conn), streamId,
-                Quiche.readerMemoryAddress(buffer), buffer.readableBytes(), fin);
+        return (int) streamSendResult(streamId, Quiche.quiche_conn_stream_send(connectionAddressChecked(conn),
+                streamId, Quiche.readerMemoryAddress(buffer), buffer.readableBytes(), fin, outErrorCodeAddress()));
     }
 
     private int streamSend(QuicheQuicConnection conn, long streamId, ByteBuffer buffer, boolean fin)
             throws ClosedChannelException {
-        return Quiche.quiche_conn_stream_send(connectionAddressChecked(conn), streamId,
-                Quiche.memoryAddressWithPosition(buffer), buffer.remaining(), fin);
+        return (int) streamSendResult(streamId, Quiche.quiche_conn_stream_send(connectionAddressChecked(conn),
+                streamId, Quiche.memoryAddressWithPosition(buffer), buffer.remaining(), fin, outErrorCodeAddress()));
+    }
+
+    private long outErrorCodeAddress() {
+        if (outErrorCodeBuffer == null) {
+            outErrorCodeBuffer = alloc().directBuffer(8);
+        }
+        outErrorCodeBuffer.setLongLE(0, -1L);
+        return Quiche.writerMemoryAddress(outErrorCodeBuffer);
     }
 
     StreamRecvResult streamRecv(long streamId, ByteBuf buffer) throws Exception {
@@ -1149,6 +1157,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return Quiche.quiche_conn_stream_capacity(conn.address(), streamId);
     }
 
+    private long writableStreamCapacity(long connAddr, long streamId) {
+        return streamSendResult(streamId,
+                Quiche.quiche_conn_stream_writable_capacity(connAddr, streamId, outErrorCodeAddress()));
+    }
+
+    private long streamSendResult(long streamId, long res) {
+        if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+            QuicheQuicStreamChannel streamChannel = streams.get(streamId);
+            if (streamChannel != null) {
+                streamChannel.stopSendingErrorCode(outErrorCodeBuffer.getLongLE(0));
+            }
+        }
+        return res;
+    }
+
     private boolean handleWritableStreams(QuicheQuicConnection conn) {
         if (conn.isFreed()) {
             return false;
@@ -1172,10 +1195,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             long streamId = writableStreams[i];
                             QuicheQuicStreamChannel streamChannel = streams.get(streamId);
                             if (streamChannel != null) {
-                                long capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
+                                long capacity = writableStreamCapacity(connAddr, streamId);
                                 if (streamChannel.writable(capacity)) {
                                     mayNeedWrite = true;
                                 }
+                            } else {
+                                // quiche collects a stopped stream only once the stop was reported.
+                                Quiche.quiche_conn_stream_capacity(connAddr, streamId);
                             }
                         }
                         if (writable > 0) {
@@ -2091,7 +2117,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     QuicheQuicChannel.this, streamId);
             QuicheQuicStreamChannel old = streams.put(streamId, streamChannel);
             assert old == null;
-            streamChannel.writable(streamCapacity(streamId));
+            QuicheQuicConnection conn = connection;
+            streamChannel.writable(conn.isClosed() ? 0 : writableStreamCapacity(conn.address(), streamId));
             return streamChannel;
         }
     }

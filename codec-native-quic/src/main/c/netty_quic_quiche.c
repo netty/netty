@@ -516,9 +516,9 @@ static jint netty_quiche_conn_stream_recv(JNIEnv* env, jclass clazz, jlong conn,
     return (jint) quiche_conn_stream_recv((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) out, (size_t) buf_len, (bool *) finAddr, (uint64_t *) error_codeAddr);
 }
 
-static jint netty_quiche_conn_stream_send(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong buf, int buf_len, jboolean fin) {
+static jint netty_quiche_conn_stream_send(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong buf, int buf_len, jboolean fin, jlong error_codeAddr) {
     uint64_t error_code;
-    return (jint) quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) buf, (size_t) buf_len, fin == JNI_TRUE ? true : false, &error_code);
+    return (jint) quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) buf, (size_t) buf_len, fin == JNI_TRUE ? true : false, error_codeAddr == 0 ? &error_code : (uint64_t *) error_codeAddr);
 }
 
 static jint netty_quiche_conn_stream_shutdown(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jint direction, jlong err) {
@@ -526,6 +526,17 @@ static jint netty_quiche_conn_stream_shutdown(JNIEnv* env, jclass clazz, jlong c
 }
 
 static jlong netty_quiche_conn_stream_capacity(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id) {
+    return (jlong) quiche_conn_stream_capacity((quiche_conn *) conn, (uint64_t) stream_id);
+}
+
+static jlong netty_quiche_conn_stream_writable_capacity(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong error_codeAddr) {
+    // An empty send is done first to get the error code of a STOP_SENDING: quiche_conn_stream_capacity does not
+    // return it, and may collect the stream so that a later quiche_conn_stream_send cannot return it either.
+    // TODO: remove the empty send once quiche_conn_stream_capacity returns the error code of a STOP_SENDING.
+    ssize_t res = quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id, NULL, 0, false, (uint64_t *) error_codeAddr);
+    if (res == QUICHE_ERR_STREAM_STOPPED) {
+        return (jlong) res;
+    }
     return (jlong) quiche_conn_stream_capacity((quiche_conn *) conn, (uint64_t) stream_id);
 }
 
@@ -1227,9 +1238,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_peer_streams_left_uni", "(J)J", (void *) netty_quiche_conn_peer_streams_left_uni },
   { "quiche_conn_stream_priority", "(JJBZ)I", (void *) netty_quiche_conn_stream_priority },
   { "quiche_conn_stream_recv", "(JJJIJJ)I", (void *) netty_quiche_conn_stream_recv },
-  { "quiche_conn_stream_send", "(JJJIZ)I", (void *) netty_quiche_conn_stream_send },
+  { "quiche_conn_stream_send", "(JJJIZJ)I", (void *) netty_quiche_conn_stream_send },
   { "quiche_conn_stream_shutdown", "(JJIJ)I", (void *) netty_quiche_conn_stream_shutdown },
   { "quiche_conn_stream_capacity", "(JJ)J", (void *) netty_quiche_conn_stream_capacity },
+  { "quiche_conn_stream_writable_capacity", "(JJJ)J", (void *) netty_quiche_conn_stream_writable_capacity },
   { "quiche_conn_stream_finished", "(JJ)Z", (void *) netty_quiche_conn_stream_finished },
   { "quiche_conn_close", "(JZJJI)I", (void *) netty_quiche_conn_close },
   { "quiche_conn_is_established", "(J)Z", (void *) netty_quiche_conn_is_established },

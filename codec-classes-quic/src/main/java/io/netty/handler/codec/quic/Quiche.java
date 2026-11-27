@@ -420,7 +420,8 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_stream_send</a>.
      */
-    static native int quiche_conn_stream_send(long connAddr, long streamId, long bufAddr, int bufLen, boolean fin);
+    static native int quiche_conn_stream_send(long connAddr, long streamId, long bufAddr, int bufLen, boolean fin,
+                                              long outErrorCodeAddr);
 
     /**
      * See
@@ -433,6 +434,14 @@ final class Quiche {
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L274">quiche_conn_stream_capacity</a>.
      */
     static native long quiche_conn_stream_capacity(long connAddr, long streamId);
+
+    /**
+     * Returns the capacity of a stream like {@link #quiche_conn_stream_capacity(long, long)}, or
+     * {@link #QUICHE_ERR_STREAM_STOPPED} with the error code of the STOP_SENDING written to {@code outErrorCodeAddr}.
+     * An empty {@link #quiche_conn_stream_send(long, long, long, int, boolean, long)} is done first, as
+     * quiche_conn_stream_capacity does not return the error code and may collect the stream.
+     */
+    static native long quiche_conn_stream_writable_capacity(long connAddr, long streamId, long outErrorCodeAddr);
 
     /**
      * See

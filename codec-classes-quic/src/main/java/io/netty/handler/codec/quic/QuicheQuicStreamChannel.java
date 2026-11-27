@@ -69,6 +69,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private boolean finReceived;
     private boolean finSent;
     private boolean inputReset;
+    private boolean outputStopped;
+    private long stopSendingErrorCode;
 
     private volatile boolean registered;
     private volatile boolean writable = true;
@@ -89,6 +91,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         this.address = new QuicStreamAddress(streamId);
         this.closePromise = newPromise();
         queue = new PendingWriteQueue(this);
+        stopSendingErrorCode = -1;
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for
         // these to be read.
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {
@@ -223,6 +226,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         parent().streamShutdown(streamId(), false, true, error, channelPromise);
         outputShutdown = true;
+        setUnwritable();
         closeIfDone();
     }
 
@@ -271,6 +275,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         inputShutdown = true;
         outputShutdown = true;
+        setUnwritable();
         parent().streamShutdown(streamId(), true, true, error, channelPromise);
         closeIfDone();
     }
@@ -283,11 +288,37 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     private boolean isInputTerminated() {
-        return finReceived || inputReset;
+        return inputShutdown;
+    }
+
+    private boolean isOutputTerminated() {
+        return outputShutdown;
+    }
+
+    private void setUnwritable() {
+        writable = false;
+        capacity = 0;
+    }
+
+    void stopSendingErrorCode(long errorCode) {
+        stopSendingErrorCode = errorCode;
+    }
+
+    private void outputStopped() {
+        if (!outputStopped) {
+            outputStopped = true;
+            outputShutdown = true;
+            setUnwritable();
+            if (registered) {
+                pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+                eventLoop().execute(this::closeIfDone);
+            }
+        }
     }
 
     private void closeIfDone() {
-        if (finSent && (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
+        if (isOutputTerminated() &&
+                (isInputTerminated() || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
             unsafe().close(unsafe().voidPromise());
         }
     }
@@ -422,6 +453,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (capacity < 0) {
             // If the value is negative its a quiche error.
             if (capacity != Quiche.QUICHE_ERR_DONE) {
+                if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    outputStopped();
+                }
                 if (!queue.isEmpty()) {
                     if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                         queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
@@ -517,6 +551,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             promise.setSuccess();
             pipeline.fireChannelRegistered();
             pipeline.fireChannelActive();
+            if (outputStopped) {
+                pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+            }
         }
 
         @Override
@@ -552,6 +589,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 return;
             }
             active = false;
+            setUnwritable();
             try {
                 // Close the channel and fail the queued messages in all cases.
                 sendFinIfNeeded();
@@ -717,6 +755,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                             break;
                         } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                            outputStopped();
                             // Once its signaled that the stream is stopped we can just fail everything.
                             // That said we should not close the channel yet as there might be some data that is
                             // not read yet by the user.
@@ -753,6 +792,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 queueAndFailAll(msg, promise, new ClosedChannelException());
             } else if (finSent) {
                 queueAndFailAll(msg, promise, new ChannelOutputShutdownException("Fin was sent already"));
+            } else if (outputStopped) {
+                queueAndFailAll(msg, promise, new ChannelOutputShutdownException("STOP_SENDING frame received"));
             } else if (!queue.isEmpty()) {
                 // If the queue is not empty we should just add the message to the queue as we will drain
                 // it later once the stream becomes writable again.
@@ -833,6 +874,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     queue.add(msg, promise);
                     mayNeedWritabilityUpdate = true;
                 } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    outputStopped();
                     throw new ChannelOutputShutdownException("STOP_SENDING frame received");
                 } else {
                     throw Quiche.convertToException(res);
@@ -897,6 +939,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 if (fin) {
                     finSent = true;
                     outputShutdown = true;
+                    setUnwritable();
                 }
                 return 1;
             } finally {
@@ -929,7 +972,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
-            if (readFrames && finReceived && finSent) {
+            if (readFrames && finReceived && isOutputTerminated()) {
                 close(voidPromise());
             } else if (config.isAllowHalfClosure()) {
                 if (finReceived) {
@@ -937,7 +980,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     // to be consistent with other transports.
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-                    if (finSent) {
+                    if (isOutputTerminated()) {
                         // This was an unidirectional stream which means as soon as we received FIN and sent a FIN
                         // we need close the connection.
                         close(voidPromise());

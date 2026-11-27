@@ -177,6 +177,102 @@ public class QuicStreamResetTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
+    public void testResetReceivedThenShutdownOutputWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, true, false, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testFinReceivedThenShutdownOutputWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, false, false, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testResetReceivedAfterShutdownOutputWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, true, true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testFinReceivedAfterShutdownOutputWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, false, true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testResetReceivedThenShutdownWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, true, false, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testFinReceivedThenShutdownWithErrorClosesStream(Executor executor) throws Throwable {
+        testEndOfInputAndShutdownOutputWithErrorClosesStream(executor, false, false, true);
+    }
+
+    private static void testEndOfInputAndShutdownOutputWithErrorClosesStream(Executor executor, boolean reset,
+                                                                             boolean shutdownOutputFirst,
+                                                                             boolean shutdownInputToo)
+            throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            ServerStreams serverStreams = new ServerStreams();
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, serverStreams);
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = connect(channel, server);
+
+            EventCollector collector = new EventCollector();
+            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, collector)
+                    .get(5, TimeUnit.SECONDS);
+            QuicStreamChannel serverStream = serverStreams.open(clientStream);
+
+            if (shutdownOutputFirst) {
+                shutdownOutputWithError(clientStream, shutdownInputToo);
+                endInput(serverStream, collector, reset);
+            } else {
+                endInput(serverStream, collector, reset);
+                shutdownOutputWithError(clientStream, shutdownInputToo);
+            }
+
+            // The output was reset and the input ended, so both directions are terminated.
+            assertThat(clientStream.closeFuture().await(CLOSE_TIMEOUT_MILLIS)).isTrue();
+            assertThat(hasStream(clientStream)).isFalse();
+            assertThat(collector.events).isEmpty();
+
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    private static void shutdownOutputWithError(QuicStreamChannel stream, boolean shutdownInputToo)
+            throws InterruptedException {
+        if (shutdownInputToo) {
+            stream.shutdown((int) ERROR_CODE).sync();
+        } else {
+            stream.shutdownOutput((int) ERROR_CODE).sync();
+        }
+    }
+
+    private static void endInput(QuicStreamChannel serverStream, EventCollector collector, boolean reset)
+            throws Exception {
+        if (reset) {
+            serverStream.shutdownOutput((int) ERROR_CODE).sync();
+            assertReset(collector);
+        } else {
+            serverStream.shutdownOutput().sync();
+            assertThat(collector.next()).isSameAs(ChannelInputShutdownEvent.INSTANCE);
+            assertThat(collector.next()).isSameAs(ChannelInputShutdownReadComplete.INSTANCE);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
     public void testResetReceivedAfterFinReceived(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
