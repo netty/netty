@@ -125,6 +125,24 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
             ChannelFuture thirdWrite = serverStream.writeAndFlush(third).await();
             assertThat(thirdWrite.cause()).isInstanceOf(ChannelOutputShutdownException.class);
             assertThat(third.refCnt()).isZero();
+
+            // A write of a buffer with several components fails as well, instead of being queued.
+            ByteBuf composite = Unpooled.wrappedBuffer(
+                    Unpooled.directBuffer(8).writeZero(8), Unpooled.directBuffer(8).writeZero(8));
+            ChannelFuture fourthWrite = serverStream.eventLoop()
+                    .submit(() -> serverStream.writeAndFlush(composite)).get(5, TimeUnit.SECONDS);
+            assertThat(fourthWrite.isDone()).isTrue();
+            assertThat(fourthWrite.cause()).isInstanceOf(ChannelOutputShutdownException.class);
+            assertThat(composite.refCnt()).isZero();
+
+            // An empty write fails as well, instead of succeeding.
+            ByteBuf empty = Unpooled.directBuffer(0);
+            ChannelFuture fifthWrite = serverStream.eventLoop()
+                    .submit(() -> serverStream.writeAndFlush(empty)).get(5, TimeUnit.SECONDS);
+            assertThat(fifthWrite.isDone()).isTrue();
+            assertThat(fifthWrite.cause()).isInstanceOf(ChannelOutputShutdownException.class);
+            assertThat(empty.refCnt()).isZero();
+
             assertThat(serverStreams.events).isEmpty();
 
             quicChannel.close().sync();

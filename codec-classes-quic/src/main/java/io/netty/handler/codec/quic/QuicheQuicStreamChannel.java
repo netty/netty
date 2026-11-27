@@ -772,6 +772,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 queueAndFailAll(msg, promise, new ClosedChannelException());
             } else if (finSent) {
                 queueAndFailAll(msg, promise, new ChannelOutputShutdownException("Fin was sent already"));
+            } else if (outputStopped) {
+                queueAndFailAll(msg, promise, new ChannelOutputShutdownException("STOP_SENDING frame received"));
             } else if (!queue.isEmpty()) {
                 // If the queue is not empty we should just add the message to the queue as we will drain
                 // it later once the stream becomes writable again.
