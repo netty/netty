@@ -112,6 +112,10 @@ public final class Http2Client {
             http2SettingsHandler.awaitSettings(5, TimeUnit.SECONDS);
 
             HttpResponseHandler responseHandler = initializer.responseHandler();
+            // Pass the stream id in the STREAM_ID extension header so it is known before the write and the response can
+            // be matched to it; without it HttpToHttp2ConnectionHandler picks the next id itself. Client stream ids are
+            // odd and must increase in write order. Id 1 is used by the h2c upgrade, so start at 3. For concurrent
+            // requests use Http2StreamChannelBootstrap instead, as in the ./http2/helloworld/frame/client/ example.
             int streamId = 3;
             HttpScheme scheme = SSL ? HttpScheme.HTTPS : HttpScheme.HTTP;
             AsciiString hostName = new AsciiString(HOST + ':' + PORT);
@@ -123,6 +127,7 @@ public final class Http2Client {
                 request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
+                request.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
                 responseHandler.put(streamId, channel.write(request), channel.newPromise());
                 streamId += 2;
             }
@@ -134,6 +139,7 @@ public final class Http2Client {
                 request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
                 request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
+                request.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
                 responseHandler.put(streamId, channel.write(request), channel.newPromise());
             }
             channel.flush();
