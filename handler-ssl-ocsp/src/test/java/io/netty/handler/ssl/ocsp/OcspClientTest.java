@@ -76,6 +76,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.cert.CertificateException;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -134,6 +135,73 @@ class OcspClientTest extends AbstractOcspTest {
 
                     // 'null' means certificate is valid
                     assertNull(basicOCSPResp.getResponses()[0].getCertStatus());
+                } finally {
+                    resolver.close();
+                }
+            } finally {
+                server.close().sync();
+            }
+        } finally {
+            serverGroup.shutdownGracefully(0, 1, TimeUnit.SECONDS).syncUninterruptibly();
+        }
+    }
+
+    /**
+     * The issuer is taken from the certificate chain sent by the peer, which does not need to be in order to pass
+     * certificate path validation. A certificate that did not issue the queried certificate must not be accepted
+     * as issuer, as its key would otherwise be trusted to sign the OCSP response.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"CN=UnrelatedCA", "CN=TrustedRootCA"})
+    void queryRejectsIssuerThatDidNotIssueCertificate(String impostorSubject) throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                .subject("CN=TrustedRootCA")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        X509Bundle impostor = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                .subject(impostorSubject)
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        EventLoopGroup serverGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        try {
+            // The responder answers good for every request and signs with the key of the impostor.
+            Channel server = new ServerBootstrap()
+                    .group(serverGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel ch) {
+                            ch.pipeline().addLast(new HttpServerCodec(), new HttpObjectAggregator(64 * 1024),
+                                    new LocalOcspResponder(impostor));
+                        }
+                    })
+                    .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0))
+                    .sync().channel();
+            try {
+                int port = ((InetSocketAddress) server.localAddress()).getPort();
+                GeneralName ocspName = new GeneralName(GeneralName.uniformResourceIdentifier,
+                        "http://127.0.0.1:" + port + '/');
+                AuthorityInformationAccess aia = new AuthorityInformationAccess(
+                        new AccessDescription(AccessDescription.id_ad_ocsp, ocspName));
+                X509Bundle serverCert = new CertificateBuilder()
+                        .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                        .subject("CN=TargetServer")
+                        .addExtensionOctetString("1.3.6.1.5.5.7.1.1", false, aia.getEncoded())
+                        .buildIssuedBy(caRoot);
+
+                IoTransport transport = createDefaultTransport();
+                DnsNameResolver resolver = createDefaultResolver(transport);
+                try {
+                    Promise<BasicOCSPResp> promise = transport.eventLoop().newPromise();
+                    OcspClient.query(serverCert.getCertificate(), impostor.getCertificate(), true,
+                            transport, resolver, promise);
+                    assertThat(promise.await(10, TimeUnit.SECONDS)).isTrue();
+
+                    assertThat(promise.isSuccess()).isFalse();
+                    assertThat(promise.cause()).isInstanceOf(CertificateException.class);
                 } finally {
                     resolver.close();
                 }
