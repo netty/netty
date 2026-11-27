@@ -33,6 +33,7 @@ EXAMPLE_MAP=(
   'websocket-server:io.netty.example.http.websocketx.server.WebSocketServer'
   'http2-client:io.netty.example.http2.helloworld.client.Http2Client'
   'http2-server:io.netty.example.http2.helloworld.server.Http2Server'
+  'http2-websocket:io.netty.example.http2.websocket.Http2WebSocketExample'
   'http2-tiles:io.netty.example.http2.tiles.Launcher'
   'http2-multiplex-server:io.netty.example.http2.helloworld.multiplex.server.Http2Server'
   'spdy-client:io.netty.example.spdy.client.SpdyClient'

@@ -63,6 +63,34 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec$ControlHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec$ControlHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec$DeflateReservedBitsValidator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2WebSocketFrameCodec$DeflateReservedBitsValidator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2WebSocketHandshaker$ClientHandshake",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2WebSocketHandshaker$ClientHandshake"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler"

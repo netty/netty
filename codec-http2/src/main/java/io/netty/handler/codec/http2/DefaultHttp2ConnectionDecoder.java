@@ -267,10 +267,31 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
+    private void readContentLength(Http2Stream stream, Http2Headers headers) throws Http2Exception {
+        List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
+        if (contentLength != null && !contentLength.isEmpty()) {
+            try {
+                long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                if (cLength != -1) {
+                    headers.setLong(HttpHeaderNames.CONTENT_LENGTH, cLength);
+                    stream.setProperty(contentLengthKey, new ContentLength(cLength));
+                }
+            } catch (IllegalArgumentException e) {
+                throw streamError(stream.id(), PROTOCOL_ERROR, e,
+                        "Multiple content-length headers received");
+            }
+        }
+    }
+
     // See https://tools.ietf.org/html/rfc7540#section-8.1.2.6
     private void verifyContentLength(Http2Stream stream, int data, boolean isEnd) throws Http2Exception {
         ContentLength contentLength = stream.getProperty(contentLengthKey);
         if (contentLength != null) {
+            if (connection.isServer() && encoder.isConnectHeadersSent(stream)) {
+                // The peer's DATA now carries tunnel bytes in this direction as well (RFC 9113 section 8.5).
+                stream.removeProperty(contentLengthKey);
+                return;
+            }
             try {
                 contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd);
             } finally {
@@ -475,8 +496,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
-            boolean isInformational = !connection.isServer() &&
-                    HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL;
+            HttpStatusClass status = connection.isServer() ? null : HttpStatusClass.valueOf(headers.status());
+            boolean isInformational = status == INFORMATIONAL;
             if ((isInformational || !endOfStream) && stream.isHeadersReceived() || stream.isTrailersReceived()) {
                 throw streamError(streamId, PROTOCOL_ERROR,
                                   "Stream %d received too many headers EOS: %s state: %s",
@@ -516,19 +537,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     //https://github.com/netty/netty/issues/17449
                     validatePseudoHeadersDirection(connection.isServer(), streamId, headers);
                 }
-                // extract the content-length header
-                List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-                if (contentLength != null && !contentLength.isEmpty()) {
-                    try {
-                        long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
-                        if (cLength != -1) {
-                            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, cLength);
-                            stream.setProperty(contentLengthKey, new ContentLength(cLength));
-                        }
-                    } catch (IllegalArgumentException e) {
-                        throw streamError(stream.id(), PROTOCOL_ERROR, e,
-                                "Multiple content-length headers received");
+                if (connection.isServer() && HttpMethod.CONNECT.asciiName().contentEquals(headers.method())) {
+                    encoder.remoteConnectRequest(stream);
+                }
+                if (status == HttpStatusClass.SUCCESS && encoder.isConnectHeadersSent(stream)) {
+                    // RFC 9110 section 9.3.6: DATA following a 2xx CONNECT response belongs to the tunnel.
+                    if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                        headers.remove(HttpHeaderNames.CONTENT_LENGTH);
                     }
+                    stream.removeProperty(contentLengthKey);
+                } else {
+                    readContentLength(stream, headers);
                 }
                 // Use size() instead of isEmpty() for backward compatibility with grpc-java prior to 1.59.1,
                 // see https://github.com/grpc/grpc-java/issues/10665

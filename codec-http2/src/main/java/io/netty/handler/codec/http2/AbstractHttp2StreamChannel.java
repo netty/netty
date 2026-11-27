@@ -428,6 +428,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         return bytes <= 0 || isWritable() ? 0 : bytes;
     }
 
+    static boolean isRemoteSideClosed(Http2StreamChannel channel) {
+        // The decoder transitions the stream after delivering the frame. An application's accept callback
+        // can run during that delivery, when the child has already observed END_STREAM.
+        return !channel.stream().state().remoteSideOpen() || channel instanceof AbstractHttp2StreamChannel &&
+                ((AbstractHttp2StreamChannel) channel).unsafe.receivedEndOfStream;
+    }
+
     @Override
     public Unsafe unsafe() {
         return unsafe;

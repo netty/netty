@@ -31,8 +31,9 @@ import static io.netty.handler.codec.http.websocketx.extensions.compression.PerM
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * <a href="https://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
- * handshake implementation.
+ * <a href="https://www.rfc-editor.org/rfc/rfc7692">permessage-deflate</a> handshake implementation.
+ * When client window negotiation is explicitly enabled, JZlib can encode with windows from 9 to 15 bits.
+ * A response requiring an 8-bit client window is declined.
  */
 public final class PerMessageDeflateClientExtensionHandshaker implements WebSocketClientExtensionHandshaker {
 
@@ -56,12 +57,12 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
     }
 
     /**
-     * Constructor with default configuration.
+     * Uses a fixed client compression window. RFC 7692 does not let the client offer a minimum window size.
      * @param maxAllocation
      *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
     public PerMessageDeflateClientExtensionHandshaker(int maxAllocation) {
-        this(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(), MAX_WINDOW_SIZE, false, false, maxAllocation);
+        this(6, false, MAX_WINDOW_SIZE, false, false, maxAllocation);
     }
 
     /**
@@ -70,10 +71,10 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param allowClientWindowSize
-     *            allows WebSocket server to customize the client inflater window size
+     *            allows the server to limit the client compressor window when JZlib is available
      *            (default is false).
      * @param requestedServerWindowSize
-     *            indicates the requested sever window size to use if server inflater is customizable.
+     *            upper bound on the server compressor window requested by the client.
      * @param allowClientNoContext
      *            allows WebSocket server to activate client_no_context_takeover
      *            (default is false).
@@ -98,10 +99,10 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param allowClientWindowSize
-     *            allows WebSocket server to customize the client inflater window size
+     *            allows the server to limit the client compressor window when JZlib is available
      *            (default is false).
      * @param requestedServerWindowSize
-     *            indicates the requested sever window size to use if server inflater is customizable.
+     *            upper bound on the server compressor window requested by the client.
      * @param allowClientNoContext
      *            allows WebSocket server to activate client_no_context_takeover
      *            (default is false).
@@ -125,10 +126,10 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param allowClientWindowSize
-     *            allows WebSocket server to customize the client inflater window size
+     *            allows the server to limit the client compressor window when JZlib is available
      *            (default is false).
      * @param requestedServerWindowSize
-     *            indicates the requested sever window size to use if server inflater is customizable.
+     *            upper bound on the server compressor window requested by the client.
      * @param allowClientNoContext
      *            allows WebSocket server to activate client_no_context_takeover
      *            (default is false).
@@ -156,10 +157,10 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
      * @param allowClientWindowSize
-     *            allows WebSocket server to customize the client inflater window size
+     *            allows the server to limit the client compressor window when JZlib is available
      *            (default is false).
      * @param requestedServerWindowSize
-     *            indicates the requested sever window size to use if server inflater is customizable.
+     *            upper bound on the server compressor window requested by the client.
      * @param allowClientNoContext
      *            allows WebSocket server to activate client_no_context_takeover
      *            (default is false).
@@ -186,7 +187,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
-        this.allowClientWindowSize = allowClientWindowSize;
+        this.allowClientWindowSize = allowClientWindowSize && ZlibCodecFactory.isSupportingWindowSizeAndMemLevel();
         this.requestedServerWindowSize = requestedServerWindowSize;
         this.allowClientNoContext = allowClientNoContext;
         this.requestedServerNoContext = requestedServerNoContext;
@@ -237,7 +238,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                     if (value != null) {
                         // Let NumberFormatException bubble up if value is invalid
                         clientWindowSize = Integer.parseInt(value);
-                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_ENCODER_WINDOW_SIZE) {
                             succeed = false;
                         }
                     }

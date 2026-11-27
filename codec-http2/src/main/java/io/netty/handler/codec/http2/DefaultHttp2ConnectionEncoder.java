@@ -20,9 +20,12 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -48,7 +51,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     static final int MAX_OUTSTANDING_REMOTE_SETTINGS = 128;
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
+    private final Http2Connection.PropertyKey connectRequestKey;
     private Http2LifecycleManager lifecycleManager;
+    private boolean localConnectProtocolEnabled;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<OutstandingLocalSettings> outstandingLocalSettingsQueue =
@@ -58,6 +63,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        connectRequestKey = connection.newKey();
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
@@ -249,7 +255,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                     //
                     // This just sets internal stream state which is used elsewhere in the codec and doesn't
                     // necessarily mean the write will complete successfully.
-                    stream.headersSent(isInformational);
+                    headersSent(stream, headers, isInformational);
 
                     if (!future.isSuccess()) {
                         // Either the future is not done or failed in the meantime.
@@ -281,6 +287,34 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         }
     }
 
+    private void headersSent(Http2Stream stream, Http2Headers headers, boolean isInformational) {
+        if (!stream.isHeadersSent() && !isInformational) {
+            if (connection.isServer()) {
+                if (stream.getProperty(connectRequestKey) != null) {
+                    if (HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
+                        stream.setProperty(connectRequestKey, Boolean.TRUE);
+                    } else {
+                        stream.removeProperty(connectRequestKey);
+                    }
+                }
+            } else if (HttpMethod.CONNECT.asciiName().contentEquals(headers.method())) {
+                stream.setProperty(connectRequestKey, Boolean.TRUE);
+            }
+        }
+        stream.headersSent(isInformational);
+    }
+
+    @Override
+    public void remoteConnectRequest(Http2Stream stream) {
+        // Keep the request length check until this server actually writes a successful final response.
+        stream.setProperty(connectRequestKey, Boolean.FALSE);
+    }
+
+    @Override
+    public boolean isConnectHeadersSent(Http2Stream stream) {
+        return Boolean.TRUE.equals(stream.getProperty(connectRequestKey));
+    }
+
     @Override
     public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
             boolean exclusive, ChannelPromise promise) {
@@ -295,6 +329,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
+    public boolean isLocalConnectProtocolEnabled() {
+        return localConnectProtocolEnabled;
+    }
+
+    @Override
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
             ChannelPromise promise) {
         try {
@@ -306,16 +345,40 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             return promise.setFailure(e);
         }
 
-        final OutstandingLocalSettings outstandingLocalSettings = new OutstandingLocalSettings(settings);
+        Boolean enableConnect = settings.connectProtocolEnabled();
+        if (Boolean.FALSE.equals(enableConnect) &&
+                (localConnectProtocolEnabled || hasPendingConnectEnable())) {
+            return promise.setFailure(connectionError(PROTOCOL_ERROR,
+                    "SETTINGS_ENABLE_CONNECT_PROTOCOL cannot be revoked"));
+        }
+        boolean enabling = !localConnectProtocolEnabled && Boolean.TRUE.equals(enableConnect);
+        // The caller may already have attached listeners. Publish the write outcome after updating the
+        // outstanding settings queue and the advertised CONNECT capability.
+        final ChannelPromise result = promise.unvoid();
+        final OutstandingLocalSettings outstandingLocalSettings =
+                new OutstandingLocalSettings(settings, enabling, result);
         outstandingLocalSettingsQueue.add(outstandingLocalSettings);
-        final ChannelPromise writePromise = promise.unvoid();
-        final ChannelFuture future = frameWriter.writeSettings(ctx, settings, writePromise);
+        final ChannelPromise writePromise = new DefaultChannelPromise(ctx.channel(), ctx.executor()) {
+            @Override
+            public boolean setUncancellable() {
+                // Once the transport owns the write, the caller can no longer cancel it.
+                return result.setUncancellable() && super.setUncancellable();
+            }
+        };
+        ChannelFuture future;
+        try {
+            future = frameWriter.writeSettings(ctx, settings, writePromise);
+        } catch (Throwable cause) {
+            writePromise.tryFailure(cause);
+            future = writePromise;
+        }
         if (future.isDone()) {
             outstandingLocalSettings.operationComplete(future);
         } else {
             future.addListener(outstandingLocalSettings);
         }
-        return future;
+        PromiseNotifier.cascade(false, future, result);
+        return result;
     }
 
     @Override
@@ -416,8 +479,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
     @Override
     public Http2Settings pollSentSettings() {
-        OutstandingLocalSettings outstandingLocalSettings = outstandingLocalSettingsQueue.poll();
-        return outstandingLocalSettings == null ? null : outstandingLocalSettings.settings;
+        OutstandingLocalSettings outstanding;
+        while ((outstanding = outstandingLocalSettingsQueue.poll()) != null) {
+            if (!outstanding.isCancelled()) {
+                // An ACK is also proof of delivery when a downstream handler delays write completion.
+                localConnectProtocolEnabled |= outstanding.enablingConnect;
+                return outstanding.settings;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -439,15 +509,36 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         return stream;
     }
 
+    private boolean hasPendingConnectEnable() {
+        // A caller can send another SETTINGS from its cancellation listener before the write is notified.
+        for (OutstandingLocalSettings outstanding : outstandingLocalSettingsQueue) {
+            if (outstanding.enablingConnect && !outstanding.isCancelled()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private final class OutstandingLocalSettings implements ChannelFutureListener {
         private final Http2Settings settings;
+        private final boolean enablingConnect;
 
-        OutstandingLocalSettings(Http2Settings settings) {
+        private ChannelFuture result;
+
+        OutstandingLocalSettings(Http2Settings settings, boolean enablingConnect, ChannelFuture result) {
             this.settings = settings;
+            this.enablingConnect = enablingConnect;
+            this.result = result;
+        }
+
+        boolean isCancelled() {
+            return result != null && result.isCancelled();
         }
 
         @Override
         public void operationComplete(ChannelFuture future) {
+            result = null;
+            localConnectProtocolEnabled |= enablingConnect && future.isSuccess();
             if (!future.isSuccess()) {
                 outstandingLocalSettingsQueue.remove(this);
             }
@@ -649,7 +740,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             if (failureCause == null) {
                 // This just sets internal stream state which is used elsewhere in the codec and doesn't
                 // necessarily mean the write will complete successfully.
-                stream.headersSent(isInformational);
+                headersSent(stream, headers, isInformational);
             }
         }
 
