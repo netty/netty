@@ -16,6 +16,7 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.KeyMaterialExporter;
 import io.netty.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty.handler.ssl.util.LazyX509Certificate;
 import io.netty.util.NetUtil;
@@ -26,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -34,6 +36,7 @@ import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.Arrays;
@@ -44,7 +47,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.LongFunction;
 
-final class QuicheQuicSslEngine extends QuicSslEngine {
+final class QuicheQuicSslEngine extends QuicSslEngine implements KeyMaterialExporter {
     QuicheQuicSslContext ctx;
     private final String peerHost;
     private final int peerPort;
@@ -200,6 +203,32 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     @Override
     public SSLSession getSession() {
         return session;
+    }
+
+    @Override
+    public void exportKeyingMaterial(String label, byte @Nullable [] context, byte[] out) throws SSLException {
+        ObjectUtil.checkNotNull(label, "label");
+        ObjectUtil.checkNotNull(out, "out");
+
+        QuicheQuicConnection connection = this.connection;
+        if (connection == null) {
+            throw new SSLException("No connection available, unable to export keying material");
+        }
+        // The SSL object is driven by the event loop, so we must not access it from another thread.
+        if (!connection.inEventLoop()) {
+            throw new IllegalStateException("exportKeyingMaterial(...) must be called from the event loop");
+        }
+        synchronized (this) {
+            if (!handshakeFinished) {
+                throw new SSLException("Handshake did not complete yet, unable to export keying material");
+            }
+        }
+        if (out.length == 0) {
+            return;
+        }
+        if (!connection.exportKeyingMaterial(label.getBytes(StandardCharsets.US_ASCII), context, out)) {
+            throw new SSLException("Unable to export keying material");
+        }
     }
 
     @Override
