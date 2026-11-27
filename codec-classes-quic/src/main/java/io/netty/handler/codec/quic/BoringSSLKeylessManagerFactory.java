@@ -21,15 +21,20 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.file.Files;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
+import java.security.Principal;
+import java.security.PrivateKey;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -43,17 +48,30 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 /**
- * {@link KeyManagerFactory} that can be used to support custom key signing via {@link BoringSSLAsyncPrivateKeyMethod}.
+ * {@link KeyManagerFactory} that uses a {@link BoringSSLAsyncPrivateKeyMethod} to sign TLS handshake data without
+ * exposing the corresponding private key to the QUIC TLS context.
+ * <p>
+ * A static certificate chain can be provided when creating the factory, or an
+ * {@link X509ExtendedKeyManager} can supply certificate chains dynamically for individual handshakes.
+ * The private key operations are handled by the supplied signing method in either case.
  */
 public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
 
     final BoringSSLAsyncPrivateKeyMethod privateKeyMethod;
+    final boolean dynamicKeyManager;
 
     private BoringSSLKeylessManagerFactory(KeyManagerFactory keyManagerFactory,
                                            BoringSSLAsyncPrivateKeyMethod privateKeyMethod) {
-        super(new KeylessManagerFactorySpi(keyManagerFactory),
+        this(keyManagerFactory, privateKeyMethod, null);
+    }
+
+    private BoringSSLKeylessManagerFactory(KeyManagerFactory keyManagerFactory,
+                                           BoringSSLAsyncPrivateKeyMethod privateKeyMethod,
+                                           @Nullable X509ExtendedKeyManager keyManager) {
+        super(new KeylessManagerFactorySpi(keyManagerFactory, keyManager),
                 keyManagerFactory.getProvider(), keyManagerFactory.getAlgorithm());
         this.privateKeyMethod = requireNonNull(privateKeyMethod, "privateKeyMethod");
+        dynamicKeyManager = keyManager != null;
     }
 
     /**
@@ -120,17 +138,52 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
         return factory;
     }
 
+    /**
+     * Creates a keyless factory that delegates alias selection and certificate-chain lookup to the supplied
+     * {@link X509ExtendedKeyManager}. The delegate's {@code getPrivateKey(String)} method is never called;
+     * signing is performed exclusively through {@code privateKeyMethod}.
+     * <p>
+     * On a QUIC server, the delegate can inspect the requested hostname using
+     * {@link QuicSslEngine#getRequestedSniHostname()} in {@code chooseEngineServerAlias(...)}.
+     * Certificate selection and chain retrieval take place during the TLS handshake, so the delegate must
+     * support concurrent calls and must return a chain matching the key used by {@code privateKeyMethod}.
+     * To load certificates using blocking I/O, configure a dedicated offloading executor with
+     * {@link QuicCodecBuilder#sslTaskExecutor(java.util.concurrent.Executor)}. Without an offloading
+     * executor, blocking key manager operations may block the QUIC event loop. This factory does not provide
+     * a future-based certificate loading API. The returned factory is already configured and cannot be
+     * reinitialized with another key store.
+     *
+     * @param privateKeyMethod              the method used for key signing.
+     * @param keyManager                    the key manager used for certificate selection and chain retrieval.
+     * @return                              a new factory instance.
+     * @throws NoSuchAlgorithmException     if the default key manager factory algorithm is unavailable.
+     */
+    public static BoringSSLKeylessManagerFactory newKeyless(BoringSSLAsyncPrivateKeyMethod privateKeyMethod,
+                                                            X509ExtendedKeyManager keyManager)
+            throws NoSuchAlgorithmException {
+        checkNotNull(keyManager, "keyManager");
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        return new BoringSSLKeylessManagerFactory(keyManagerFactory, privateKeyMethod,
+                new KeylessKeyManager(keyManager));
+    }
+
     private static final class KeylessManagerFactorySpi extends KeyManagerFactorySpi {
 
         private final KeyManagerFactory keyManagerFactory;
+        private final X509ExtendedKeyManager keyManager;
 
-        KeylessManagerFactorySpi(KeyManagerFactory keyManagerFactory) {
+        KeylessManagerFactorySpi(KeyManagerFactory keyManagerFactory,
+                                 @Nullable X509ExtendedKeyManager keyManager) {
             this.keyManagerFactory = requireNonNull(keyManagerFactory, "keyManagerFactory");
+            this.keyManager = keyManager;
         }
 
         @Override
         protected void engineInit(KeyStore ks, char[] password)
                 throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+            if (keyManager != null) {
+                throw new KeyStoreException("A custom key manager is already configured");
+            }
             keyManagerFactory.init(ks, password);
         }
 
@@ -141,9 +194,58 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
 
         @Override
         protected KeyManager[] engineGetKeyManagers() {
-            return keyManagerFactory.getKeyManagers();
+            return keyManager == null ? keyManagerFactory.getKeyManagers() : new KeyManager[] { keyManager };
         }
     }
+
+    private static final class KeylessKeyManager extends X509ExtendedKeyManager {
+        private final X509ExtendedKeyManager delegate;
+
+        KeylessKeyManager(X509ExtendedKeyManager delegate) {
+            this.delegate = requireNonNull(delegate, "delegate");
+        }
+
+        @Override
+        public String[] getClientAliases(String keyType, Principal[] issuers) {
+            return delegate.getClientAliases(keyType, issuers);
+        }
+
+        @Override
+        public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+            return delegate.chooseClientAlias(keyType, issuers, socket);
+        }
+
+        @Override
+        public String[] getServerAliases(String keyType, Principal[] issuers) {
+            return delegate.getServerAliases(keyType, issuers);
+        }
+
+        @Override
+        public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+            return delegate.chooseServerAlias(keyType, issuers, socket);
+        }
+
+        @Override
+        public X509Certificate[] getCertificateChain(String alias) {
+            return delegate.getCertificateChain(alias);
+        }
+
+        @Override
+        public PrivateKey getPrivateKey(String alias) {
+            return alias == null ? null : BoringSSLKeylessPrivateKey.INSTANCE;
+        }
+
+        @Override
+        public String chooseEngineClientAlias(String[] keyType, Principal[] issuers, SSLEngine engine) {
+            return delegate.chooseEngineClientAlias(keyType, issuers, engine);
+        }
+
+        @Override
+        public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+            return delegate.chooseEngineServerAlias(keyType, issuers, engine);
+        }
+    }
+
     private static final class KeylessKeyStore extends KeyStore {
         private static final String ALIAS = "key";
         private KeylessKeyStore(final X509Certificate[] certificateChain) {
