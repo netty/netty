@@ -76,15 +76,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     /**
      * Number of unsatisfied downstream {@code read()} calls. A downstream {@code read()} is considered unsatisfied
-     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} or
-     * a cumulative {@code fireChannelReadComplete}.
+     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead}.
      * <p>
-     * A {@code read()} can be satisfied in three ways, whichever comes first:
+     * A {@code read()} can be satisfied in two ways, whichever comes first:
      * <ul>
      *     <li>inside the {@code read()} call itself, by {@code dequeue()}ing a message</li>
      *     <li>in a {@code channelRead()}</li>
-     *     <li>in a {@code channelReadComplete()}</li>
      * </ul>
+     * An upstream {@code channelReadComplete()} does not satisfy outstanding reads, as the upstream read cycle may
+     * not have produced any message for this handler.
+     * <p>
      * A {@code read()} can be satisfied with auto-read on.
      * <p>
      * When one or more {@code read()} calls are unsatisfied, a downstream {@code channelReadComplete} is fired
@@ -202,10 +203,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped.
+        // Upstream closed the read cycle. Outstanding reads are NOT reset here: the upstream read cycle may have
+        // produced no message for us (e.g. a decoder in front of us received only a partial frame), or the
+        // downstream handler may have requested another read while processing the last message of this cycle.
+        // In both cases the transport keeps reading and the next message must still be delivered.
+        // Spurious upstream completions with no pending read are dropped.
         if (config.isAutoRead() || unsatisfiedReads > 0) {
-            unsatisfiedReads = 0;
             ctx.fireChannelReadComplete();
         }
     }
