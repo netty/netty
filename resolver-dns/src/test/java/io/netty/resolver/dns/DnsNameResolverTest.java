@@ -4614,21 +4614,24 @@ public class DnsNameResolverTest {
 
     private static void assertIpv4ChannelSearchFallsBackToBareName(DnsNameResolverChannelStrategy strategy,
             boolean ipv6First, Path tempDir, ResolvedAddressTypes addressTypes) throws Exception {
-        String address = "192.0.2.1";
-        String hostname = "httpbin.org";
-        Queue<String> questions = new ConcurrentLinkedQueue<>();
-        AtomicBoolean queriedBareAaaa = new AtomicBoolean();
-        TestDnsServer server = new TestDnsServer(question -> {
-            String name = question.getDomainName();
-            if (question.getRecordType() != RecordType.A) {
-                if (question.getRecordType() == RecordType.AAAA && hostname.equals(name)) {
-                    queriedBareAaaa.set(true);
-                    return Collections.emptySet();
+        final String address = "192.0.2.1";
+        final String hostname = "httpbin.org";
+        final Queue<String> questions = new ConcurrentLinkedQueue<String>();
+        final AtomicBoolean queriedBareAaaa = new AtomicBoolean();
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                String name = question.getDomainName();
+                if (question.getRecordType() != RecordType.A) {
+                    if (question.getRecordType() == RecordType.AAAA && hostname.equals(name)) {
+                        queriedBareAaaa.set(true);
+                        return Collections.emptySet();
+                    }
+                    return null;
                 }
-                return null;
+                questions.add(name);
+                return hostname.equals(name) ? Collections.singleton(newARecord(name, address)) : null;
             }
-            questions.add(name);
-            return hostname.equals(name) ? Collections.singleton(newARecord(name, address)) : null;
         });
         server.start();
         try {
@@ -4661,7 +4664,7 @@ public class DnsNameResolverTest {
     }
 
     private static List<Arguments> ipv4ChannelNameServerOrders() {
-        List<Arguments> orders = new ArrayList<>();
+        List<Arguments> orders = new ArrayList<Arguments>();
         for (DnsNameResolverChannelStrategy strategy : DnsNameResolverChannelStrategy.values()) {
             orders.add(Arguments.of(strategy, false));
             orders.add(Arguments.of(strategy, true));
@@ -4675,17 +4678,25 @@ public class DnsNameResolverTest {
                                                            boolean ipv6BeforeTimeout) throws Exception {
         String hostname = "backend";
         String firstName = hostname + ".first.test";
-        String secondName = hostname + ".second.test";
-        Queue<String> questions = new ConcurrentLinkedQueue<>();
-        TestDnsServer server = new TestDnsServer(question -> {
-            if (question.getRecordType() != RecordType.A) {
-                return null;
+        final String secondName = hostname + ".second.test";
+        final Queue<String> questions = new ConcurrentLinkedQueue<String>();
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getRecordType() != RecordType.A) {
+                    return null;
+                }
+                String name = question.getDomainName();
+                questions.add(name);
+                return secondName.equals(name) ? Collections.singleton(newARecord(name, "192.0.2.1")) : null;
             }
-            String name = question.getDomainName();
-            questions.add(name);
-            return secondName.equals(name) ? Collections.singleton(newARecord(name, "192.0.2.1")) : null;
         });
-        TestDnsServer silentServer = new TestDnsServer(question -> Collections.emptySet());
+        TestDnsServer silentServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                return Collections.emptySet();
+            }
+        });
         server.start();
         try {
             silentServer.start(RecordType.A);
@@ -4740,10 +4751,20 @@ public class DnsNameResolverTest {
 
     private static DnsNameResolverBuilder newIpv4ChannelResolver(DnsNameResolverChannelStrategy strategy) {
         return new DnsNameResolverBuilder(group.next())
-                .datagramChannelFactory(() -> NetUtil.isIpV4StackPreferred() ?
-                        new NioDatagramChannel() : new NioDatagramChannel(InternetProtocolFamily.IPv4))
+                .datagramChannelFactory(new ChannelFactory<NioDatagramChannel>() {
+                    @Override
+                    public NioDatagramChannel newChannel() {
+                        return NetUtil.isIpV4StackPreferred() ?
+                                new NioDatagramChannel() : new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    }
+                })
                 .datagramChannelStrategy(strategy)
-                .hostsFileEntriesResolver((hostname, addressTypes) -> null)
+                .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
+                    @Override
+                    public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
+                        return null;
+                    }
+                })
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .optResourceEnabled(false);
     }
