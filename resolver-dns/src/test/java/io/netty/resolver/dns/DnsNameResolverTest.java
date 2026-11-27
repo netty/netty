@@ -89,6 +89,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -107,6 +108,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -4540,6 +4543,156 @@ public class DnsNameResolverTest {
         } finally {
             resolver.close();
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("ipv4ChannelNameServerOrders")
+    public void testIpv4ChannelSearchFallsBackToBareName(DnsNameResolverChannelStrategy strategy,
+                                                       boolean ipv6First, @TempDir Path tempDir) throws Exception {
+        assertIpv4ChannelSearchFallsBackToBareName(strategy, ipv6First, tempDir, ResolvedAddressTypes.IPV4_ONLY);
+    }
+
+    @Test
+    public void testIpv4ChannelSearchFallsBackToBareNameWithBothRecordTypes(@TempDir Path tempDir) throws Exception {
+        assertIpv4ChannelSearchFallsBackToBareName(DnsNameResolverChannelStrategy.ChannelPerResolver, false,
+                tempDir, ResolvedAddressTypes.IPV4_PREFERRED);
+    }
+
+    private static void assertIpv4ChannelSearchFallsBackToBareName(DnsNameResolverChannelStrategy strategy,
+            boolean ipv6First, Path tempDir, ResolvedAddressTypes addressTypes) throws Exception {
+        String address = "192.0.2.1";
+        String hostname = "httpbin.org";
+        Queue<String> questions = new ConcurrentLinkedQueue<>();
+        AtomicBoolean queriedBareAaaa = new AtomicBoolean();
+        TestDnsServer server = new TestDnsServer(question -> {
+            String name = question.getDomainName();
+            if (question.getRecordType() != RecordType.A) {
+                if (question.getRecordType() == RecordType.AAAA && hostname.equals(name)) {
+                    queriedBareAaaa.set(true);
+                    return Collections.emptySet();
+                }
+                return null;
+            }
+            questions.add(name);
+            return hostname.equals(name) ? Collections.singleton(newARecord(name, address)) : null;
+        });
+        server.start();
+        try {
+            Path resolvConf = tempDir.resolve("resolv.conf");
+            String ipv4NameServer = "nameserver 127.0.0.1";
+            String ipv6NameServer = "nameserver ::1";
+            Files.write(resolvConf, asList("port " + server.localAddress().getPort(),
+                    "search default.svc.cluster.local svc.cluster.local cluster.local",
+                    ipv6First ? ipv6NameServer : ipv4NameServer,
+                    ipv6First ? ipv4NameServer : ipv6NameServer));
+            DnsNameResolver resolver = newIpv4ChannelResolver(strategy)
+                    .resolvedAddressTypes(addressTypes)
+                    .nameServerProvider(new UnixResolverDnsServerAddressStreamProvider(resolvConf.toFile()))
+                    .searchDomains(UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(
+                            resolvConf.toFile()))
+                    .ndots(5)
+                    .build();
+            try {
+                InetAddress resolved = resolver.resolve(hostname).get(DEFAULT_TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                assertThat(resolved.getHostAddress()).isEqualTo(address);
+                assertThat(questions).containsExactly(hostname + ".default.svc.cluster.local",
+                        hostname + ".svc.cluster.local", hostname + ".cluster.local", hostname);
+                assertEquals(addressTypes == ResolvedAddressTypes.IPV4_PREFERRED, queriedBareAaaa.get());
+            } finally {
+                resolver.close();
+            }
+        } finally {
+            server.stop();
+        }
+    }
+
+    private static List<Arguments> ipv4ChannelNameServerOrders() {
+        List<Arguments> orders = new ArrayList<>();
+        for (DnsNameResolverChannelStrategy strategy : DnsNameResolverChannelStrategy.values()) {
+            orders.add(Arguments.of(strategy, false));
+            orders.add(Arguments.of(strategy, true));
+        }
+        return orders;
+    }
+
+    @ParameterizedTest
+    @MethodSource("ipv4ChannelNameServerOrders")
+    public void testIpv4ChannelSearchKeepsNameServerTimeout(DnsNameResolverChannelStrategy strategy,
+                                                           boolean ipv6BeforeTimeout) throws Exception {
+        String hostname = "backend";
+        String firstName = hostname + ".first.test";
+        String secondName = hostname + ".second.test";
+        Queue<String> questions = new ConcurrentLinkedQueue<>();
+        TestDnsServer server = new TestDnsServer(question -> {
+            if (question.getRecordType() != RecordType.A) {
+                return null;
+            }
+            String name = question.getDomainName();
+            questions.add(name);
+            return secondName.equals(name) ? Collections.singleton(newARecord(name, "192.0.2.1")) : null;
+        });
+        TestDnsServer silentServer = new TestDnsServer(question -> Collections.emptySet());
+        server.start();
+        try {
+            silentServer.start(RecordType.A);
+            try {
+                InetSocketAddress ipv6NameServer =
+                        new InetSocketAddress(NetUtil.LOCALHOST6, server.localAddress().getPort());
+                InetSocketAddress silentNameServer = silentServer.localAddress();
+                DnsNameResolver resolver = newIpv4ChannelResolver(strategy)
+                        .nameServerProvider(new SequentialDnsServerAddressStreamProvider(
+                                server.localAddress(),
+                                ipv6BeforeTimeout ? ipv6NameServer : silentNameServer,
+                                ipv6BeforeTimeout ? silentNameServer : ipv6NameServer))
+                        .searchDomains(asList("first.test", "second.test"))
+                        .ndots(1)
+                        .queryTimeoutMillis(1000)
+                        .build();
+                try {
+                    Future<InetAddress> result = resolver.resolve(hostname);
+                    assertTrue(result.await(DEFAULT_TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+                    assertTrue(DnsNameResolver.isTimeoutError(result.cause()));
+                    assertThat(questions).containsExactly(firstName);
+                } finally {
+                    resolver.close();
+                }
+            } finally {
+                silentServer.stop();
+            }
+        } finally {
+            server.stop();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testIpv4ChannelSearchWithOnlyIpv6NameServerFails(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        InetSocketAddress ipv6NameServer = new InetSocketAddress(NetUtil.LOCALHOST6, 53);
+        DnsNameResolver resolver = newIpv4ChannelResolver(strategy)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(ipv6NameServer))
+                .searchDomains(asList("first.test", "second.test"))
+                .ndots(1)
+                .build();
+        try {
+            Future<InetAddress> result = resolver.resolve("backend");
+            assertTrue(result.await(DEFAULT_TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            assertTrue(DnsNameResolver.isTransportOrTimeoutError(result.cause()));
+            assertFalse(DnsNameResolver.isTimeoutError(result.cause()));
+        } finally {
+            resolver.close();
+        }
+    }
+
+    private static DnsNameResolverBuilder newIpv4ChannelResolver(DnsNameResolverChannelStrategy strategy) {
+        return new DnsNameResolverBuilder(group.next())
+                .datagramChannelFactory(eventLoop -> NetUtil.isIpV4StackPreferred() ?
+                        new NioDatagramChannel(eventLoop) :
+                        new NioDatagramChannel(eventLoop, SocketProtocolFamily.INET))
+                .datagramChannelStrategy(strategy)
+                .hostsFileEntriesResolver((hostname, addressTypes) -> null)
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .optResourceEnabled(false);
     }
 
     @ParameterizedTest

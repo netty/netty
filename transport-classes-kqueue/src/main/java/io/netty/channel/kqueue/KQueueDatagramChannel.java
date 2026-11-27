@@ -46,7 +46,6 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 import static io.netty.channel.unix.Socket.isIPv6Preferred;
@@ -375,18 +374,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         return e;
     }
 
-    private static void checkUnresolved(SocketAddress address) {
-        if (address instanceof InetSocketAddress
-                && (((InetSocketAddress) address).isUnresolved())) {
-            throw new UnresolvedAddressException();
-        }
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkUnresolved(packet.recipient());
+            UnixChannelUtil.checkDatagramRecipient(packet.recipient(), socket.protocolFamily());
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
