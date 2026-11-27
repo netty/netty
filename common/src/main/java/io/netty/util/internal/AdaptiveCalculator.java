@@ -28,17 +28,19 @@ import static java.lang.Math.min;
 public final class AdaptiveCalculator {
     private static final int INDEX_INCREMENT = 4;
     private static final int INDEX_DECREMENT = 1;
+    private static final int SMALL_SIZE_INCREMENT = 16;
+    private static final int SMALL_SIZE_LIMIT = 512;
 
     private static final int[] SIZE_TABLE;
 
     static {
         List<Integer> sizeTable = new ArrayList<Integer>();
-        for (int i = 16; i < 512; i += 16) {
+        for (int i = SMALL_SIZE_INCREMENT; i < SMALL_SIZE_LIMIT; i += SMALL_SIZE_INCREMENT) {
             sizeTable.add(i);
         }
 
         // Suppress a warning since i becomes negative when an integer overflow happens
-        for (int i = 512; i > 0; i <<= 1) {
+        for (int i = SMALL_SIZE_LIMIT; i > 0; i <<= 1) {
             sizeTable.add(i);
         }
 
@@ -115,18 +117,29 @@ public final class AdaptiveCalculator {
     }
 
     public void record(int size) {
-        if (size <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
-            if (decreaseNow) {
-                index = max(index - INDEX_DECREMENT, minIndex);
-                nextSize = min(max(SIZE_TABLE[index], minCapacity), maxCapacity);
-                decreaseNow = false;
-            } else {
-                decreaseNow = true;
-            }
-        } else if (size >= nextSize) {
+        if (size >= nextSize) {
             index = min(index + INDEX_INCREMENT, maxIndex);
             nextSize = max(min(SIZE_TABLE[index], maxCapacity), minCapacity);
             decreaseNow = false;
+            return;
+        }
+
+        int smallerIndex = max(index - INDEX_DECREMENT, minIndex);
+        if (smallerIndex >= index) {
+            return;
+        }
+        int smallerSize = SIZE_TABLE[smallerIndex];
+        // Leave 25% headroom in the smaller buffer, with a narrower margin for closely spaced small sizes.
+        int headroom = (smallerSize <= SMALL_SIZE_LIMIT ? SMALL_SIZE_INCREMENT : smallerSize) >>> 2;
+        int shrinkThreshold = smallerSize - headroom;
+        if (size > shrinkThreshold) {
+            decreaseNow = false;
+        } else if (decreaseNow) {
+            index = smallerIndex;
+            nextSize = min(max(smallerSize, minCapacity), maxCapacity);
+            decreaseNow = false;
+        } else {
+            decreaseNow = true;
         }
     }
 

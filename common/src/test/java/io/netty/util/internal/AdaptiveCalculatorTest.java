@@ -59,4 +59,57 @@ class AdaptiveCalculatorTest {
         calculator.record(Integer.MAX_VALUE);
         assertThat(calculator.nextSize()).isEqualTo(15);
     }
+
+    @Test
+    void fullReadAtSmallestSizeTableEntryGrows() {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(16, 16, 128);
+        calculator.record(16);
+        assertThat(calculator.nextSize()).isEqualTo(80);
+    }
+
+    @Test
+    void keepsCapacityWhenReadWouldFillNextSmallerBuffer() {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(64, 4096, 65536);
+        for (int i = 0; i < 16; i++) {
+            calculator.record(2048);
+            assertThat(calculator.nextSize()).isEqualTo(4096);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "64, 4096, 2047, 2047, 2048", "64, 4096, 1700, 1700, 2048", "64, 4096, 1500, 2048, 2048",
+            "16, 32, 15, 15, 16" })
+    void mixedReadsDoNotTriggerShrinkAndGrow(int minimum, int initial, int first, int second, int third) {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(minimum, initial, 65536);
+        int[] reads = { first, second, third };
+        for (int i = 0; i < 16; i++) {
+            for (int size : reads) {
+                calculator.record(size);
+                assertThat(calculator.nextSize()).isEqualTo(initial);
+            }
+        }
+    }
+
+    @Test
+    void shrinksAfterTwoConsecutiveReadsAtThresholdAndStillGrowsOnFullRead() {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(64, 4096, 65536);
+        calculator.record(1536);
+        assertThat(calculator.nextSize()).isEqualTo(4096);
+        calculator.record(1537);
+        calculator.record(1536);
+        assertThat(calculator.nextSize()).isEqualTo(4096);
+        calculator.record(1536);
+        assertThat(calculator.nextSize()).isEqualTo(2048);
+        calculator.record(2048);
+        assertThat(calculator.nextSize()).isEqualTo(32768);
+    }
+
+    @Test
+    void capacityDoesNotGrowOnSmallReadsAtNonTableMinimum() {
+        AdaptiveCalculator calculator = new AdaptiveCalculator(513, 700, 1023);
+        for (int i = 0; i < 4; i++) {
+            calculator.record(256);
+            assertThat(calculator.nextSize()).isEqualTo(513);
+        }
+    }
 }
