@@ -226,6 +226,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         parent().streamShutdown(streamId(), false, true, error, channelPromise);
         outputShutdown = true;
+        setUnwritable();
         closeIfDone();
     }
 
@@ -274,6 +275,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         inputShutdown = true;
         outputShutdown = true;
+        setUnwritable();
         parent().streamShutdown(streamId(), true, true, error, channelPromise);
         closeIfDone();
     }
@@ -293,6 +295,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return outputShutdown;
     }
 
+    private void setUnwritable() {
+        writable = false;
+        capacity = 0;
+    }
+
     void stopSendingErrorCode(long errorCode) {
         stopSendingErrorCode = errorCode;
     }
@@ -301,8 +308,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (!outputStopped) {
             outputStopped = true;
             outputShutdown = true;
-            writable = false;
-            capacity = 0;
+            setUnwritable();
             if (registered) {
                 pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
                 eventLoop().execute(this::closeIfDone);
@@ -583,6 +589,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 return;
             }
             active = false;
+            setUnwritable();
             try {
                 // Close the channel and fail the queued messages in all cases.
                 sendFinIfNeeded();
@@ -932,6 +939,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 if (fin) {
                     finSent = true;
                     outputShutdown = true;
+                    setUnwritable();
                 }
                 return 1;
             } finally {

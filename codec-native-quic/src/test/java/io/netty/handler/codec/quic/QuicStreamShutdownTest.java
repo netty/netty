@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -30,9 +31,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -210,6 +214,71 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                 fail("Failure during execution", error);
             }
             assertEquals(100, applicationErrorCode.get());
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testNotWritableAfterShutdownOutput(Executor executor) throws Throwable {
+        testNotWritableAfterOutputShutdown(executor, QuicStreamChannel::shutdownOutput);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testNotWritableAfterShutdownOutputWithError(Executor executor) throws Throwable {
+        testNotWritableAfterOutputShutdown(executor, stream -> stream.shutdownOutput(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testNotWritableAfterShutdownWithError(Executor executor) throws Throwable {
+        testNotWritableAfterOutputShutdown(executor, stream -> stream.shutdown(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testNotWritableAfterClose(Executor executor) throws Throwable {
+        testNotWritableAfterOutputShutdown(executor, QuicStreamChannel::close);
+    }
+
+    private static void testNotWritableAfterOutputShutdown(
+            Executor executor, Function<QuicStreamChannel, ChannelFuture> shutdownOutput) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, new ChannelInboundHandlerAdapter());
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get(5, TimeUnit.SECONDS);
+
+            AtomicInteger writabilityChanges = new AtomicInteger();
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                            writabilityChanges.incrementAndGet();
+                            ctx.fireChannelWritabilityChanged();
+                        }
+                    }).get(5, TimeUnit.SECONDS);
+            assertThat(stream.isWritable()).isTrue();
+
+            shutdownOutput.apply(stream).sync();
+
+            // Like a channel whose output was shut down: not writable, without a writability change.
+            assertThat(stream.isWritable()).isFalse();
+            assertThat(stream.bytesBeforeUnwritable()).isZero();
+            assertThat(writabilityChanges.get()).isZero();
+
+            quicChannel.close().sync();
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
