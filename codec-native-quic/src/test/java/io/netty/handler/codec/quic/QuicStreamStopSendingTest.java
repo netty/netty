@@ -80,6 +80,41 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
+    public void testStopSendingBeforeFirstDataIsReported(Executor executor) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            ServerStreams serverStreams = new ServerStreams();
+            server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, serverStreams);
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = connect(channel, server);
+
+            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
+            clientStream.shutdownInput((int) ERROR_CODE).sync();
+            // The data of a second stream is sent after the STOP_SENDING, so once the server has seen that stream, it
+            // has also processed the STOP_SENDING, before any data of the first stream.
+            QuicStreamChannel barrier = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
+            serverStreams.open(barrier);
+
+            // The server stream is created already stopped. The STOP_SENDING is reported once its handler was added.
+            QuicStreamChannel serverStream = serverStreams.open(clientStream);
+            assertStopped(serverStreams.next());
+            assertThat(serverStream.isOutputShutdown()).isTrue();
+            assertThat(serverStreams.events).isEmpty();
+
+            quicChannel.close().sync();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
     public void testStopSendingReceivedWithQueuedWrites(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;

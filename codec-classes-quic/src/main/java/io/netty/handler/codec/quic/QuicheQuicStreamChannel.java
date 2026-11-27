@@ -297,7 +297,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (!outputStopped) {
             outputStopped = true;
             outputShutdown = true;
-            pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+            if (registered) {
+                pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+            }
         }
     }
 
@@ -535,6 +537,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             promise.setSuccess();
             pipeline.fireChannelRegistered();
             pipeline.fireChannelActive();
+            if (outputStopped) {
+                pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
+            }
         }
 
         @Override
