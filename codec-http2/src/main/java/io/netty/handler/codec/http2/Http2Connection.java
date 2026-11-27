@@ -159,13 +159,15 @@ public interface Http2Connection {
          * <li>The requested stream ID is not the next sequential stream ID for this endpoint.</li>
          * <li>The number of concurrent streams is above the allowed threshold for this endpoint.</li>
          * <li>The connection is marked as going away.</li>
-         * <li>The parent stream ID does not exist or is not {@code OPEN} from the side sending the push
-         * promise.</li>
+         * <li>The parent stream is in a state that does not permit push promises.</li>
          * <li>Could not set a valid priority for the new stream.</li>
          * </ul>
          *
          * @param streamId the ID of the push stream
-         * @param parent the parent stream used to initiate the push stream.
+         * @param parent the parent stream used to initiate the push stream. For a remote push, a reset or
+         *               closed parent is allowed to account for in-flight PUSH_PROMISE frames. This may be
+         *               {@code null} for a remote push if the caller has verified that the parent stream
+         *               may have existed and has already been removed.
          */
         Http2Stream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception;
 

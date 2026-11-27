@@ -29,6 +29,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -40,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Integer.MAX_VALUE;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -313,6 +316,30 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
         assertEquals(1, server.numActiveStreams());
         assertEquals(2, server.local().lastStreamCreated());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void localPushShouldRejectMissingOrClosedParent(boolean missingParent) throws Http2Exception {
+        Http2Stream parent = server.remote().createStream(3, false);
+        parent.resetSent().close();
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                server.local().reservePushStream(2, missingParent ? null : parent));
+
+        assertThat(exception.error()).isEqualTo(Http2Error.PROTOCOL_ERROR);
+        assertThat(server.stream(2)).isNull();
+    }
+
+    @Test
+    public void remotePushShouldRejectParentWithRemoteSideClosed() throws Http2Exception {
+        Http2Stream parent = client.local().createStream(3, false).closeRemoteSide();
+
+        Http2Exception exception = assertThrows(Http2Exception.class, () ->
+                client.remote().reservePushStream(2, parent));
+
+        assertThat(exception.error()).isEqualTo(Http2Error.PROTOCOL_ERROR);
+        assertThat(client.stream(2)).isNull();
     }
 
     @Test

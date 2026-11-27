@@ -1215,6 +1215,64 @@ public class Http2FrameCodecTest {
         assertInboundStreamFrame(3, new DefaultHttp2PriorityFrame(1, (short) 31, true));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void framesForPushPromisedOnResetStreamShouldNotCloseConnection(boolean rstStream) throws Exception {
+        setUp(Http2FrameCodecBuilder.forClient(), new Http2Settings(), false);
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        frameInboundWriter.writeInboundSettingsAck();
+
+        Http2FrameStream parent = frameCodec.newStream();
+        channel.writeOutbound(new DefaultHttp2HeadersFrame(request, false).stream(parent));
+        channel.writeOutbound(new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(parent));
+
+        // The server sent these before it processed our RST_STREAM.
+        frameInboundWriter.writePushPromise(parent.id(), 2, request, 0);
+        if (rstStream) {
+            frameInboundWriter.writeInboundRstStream(2, Http2Error.CANCEL.code());
+        } else {
+            frameInboundWriter.writeInboundPriority(2, parent.id(), (short) 16, false);
+        }
+
+        channel.checkException();
+        assertTrue(channel.isActive());
+        assertInstanceOf(Http2SettingsFrame.class, inboundHandler.readInbound());
+        assertInstanceOf(Http2SettingsAckFrame.class, inboundHandler.readInbound());
+        assertNull(inboundHandler.readInbound());
+        if (rstStream) {
+            assertNull(frameCodec.connection().stream(2));
+        } else {
+            assertEquals(State.RESERVED_REMOTE, frameCodec.connection().stream(2).state());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void framesForReportedPushPromiseShouldBeDelivered(boolean rstStream) throws Exception {
+        setUp(Http2FrameCodecBuilder.forClient(), new Http2Settings(), false);
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        frameInboundWriter.writeInboundSettingsAck();
+
+        Http2FrameStream parent = frameCodec.newStream();
+        channel.writeOutbound(new DefaultHttp2HeadersFrame(request, false).stream(parent));
+        frameInboundWriter.writePushPromise(parent.id(), 2, request, 0);
+
+        assertInstanceOf(Http2SettingsFrame.class, inboundHandler.readInbound());
+        assertInstanceOf(Http2SettingsAckFrame.class, inboundHandler.readInbound());
+        Http2PushPromiseFrame pushPromise = inboundHandler.readInbound();
+        assertEquals(parent, pushPromise.stream());
+
+        if (rstStream) {
+            frameInboundWriter.writeInboundRstStream(2, Http2Error.CANCEL.code());
+            assertInboundStreamFrame(2, new DefaultHttp2ResetFrame(Http2Error.CANCEL));
+        } else {
+            frameInboundWriter.writeInboundPriority(2, parent.id(), (short) 16, false);
+            assertInboundStreamFrame(2, new DefaultHttp2PriorityFrame(parent.id(), (short) 16, false));
+        }
+        channel.checkException();
+        assertTrue(channel.isActive());
+    }
+
     private void writeHeaderAndAssert(int streamId) {
         frameInboundWriter.writeInboundHeaders(streamId, request, 31, false);
 

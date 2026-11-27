@@ -625,6 +625,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
+            if (isUnreportedPushStream(connection().stream(streamId))) {
+                return;
+            }
             Http2FrameStream stream = requireStream(streamId);
             onHttp2Frame(ctx, new DefaultHttp2ResetFrame(errorCode).stream(stream));
         }
@@ -681,8 +684,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                                    short weight, boolean exclusive) {
 
             Http2Stream stream = connection().stream(streamId);
-            if (stream == null) {
-                // The stream was not opened yet, let's just ignore this for now.
+            if (stream == null || isUnreportedPushStream(stream)) {
+                // The stream was not opened or its PUSH_PROMISE was discarded.
                 return;
             }
             Http2FrameStream frameStream = requireStream(streamId);
@@ -711,6 +714,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 throw new IllegalStateException("Stream object required for identifier: " + streamId);
             }
             return stream;
+        }
+
+        private boolean isUnreportedPushStream(Http2Stream stream) {
+            // A PUSH_PROMISE on a reset parent reserves the stream without notifying this codec.
+            return stream.state() == State.RESERVED_REMOTE && stream.getProperty(streamKey) == null;
         }
     }
 
