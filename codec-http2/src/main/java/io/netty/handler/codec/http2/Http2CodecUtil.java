@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.LeakPresenceDetector;
@@ -118,6 +119,7 @@ public final class Http2CodecUtil {
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
     static final int DEFAULT_MAX_SMALL_CONTINUATION_FRAME = 16;
+    static final PropertyKey CONNECT_TUNNEL_KEY = Http2ConnectionPropertyKeys.newGlobalKey();
 
     /**
      * While the RFC only specified a minimum we should still pick a default which is good enough that most people
@@ -125,6 +127,29 @@ public final class Http2CodecUtil {
      * defined by the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">HTTP/2 spec</a>.
      */
     static final int DEFAULT_MAX_CONCURRENT_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
+
+    /**
+     * Tracks the lifecycle state of a standard HTTP/2 {@code CONNECT} stream
+     * (RFC 9113 Section 8.5).
+     * <p>
+     * Standard {@code CONNECT} tunnels (where no {@code :protocol} pseudo-header is present)
+     * restrict frame types to {@code DATA} and stream-management frames once established
+     * with a 2xx response. Extended {@code CONNECT} (RFC 8441) streams are not tracked by this state.
+     */
+    enum Http2ConnectState {
+        /**
+         * A standard {@code CONNECT} request has been initiated (sent by client or received by server),
+         * but a 2xx response has not yet been exchanged to establish the tunnel.
+         */
+        PENDING,
+
+        /**
+         * A 2xx status response has been sent (server) or received (client), establishing
+         * the raw TCP tunnel on the stream. Subsequent {@code HEADERS} frames on this stream
+         * MUST trigger a {@code PROTOCOL_ERROR}.
+         */
+        ESTABLISHED
+    }
 
     /**
      * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.

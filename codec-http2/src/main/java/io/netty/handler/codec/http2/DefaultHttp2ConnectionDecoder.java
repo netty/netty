@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http2.Http2CodecUtil.Http2ConnectState;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.logging.InternalLogger;
@@ -30,6 +31,8 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
+import static io.netty.handler.codec.http.HttpStatusClass.SUCCESS;
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECT_TUNNEL_KEY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -475,6 +478,30 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
+            if (stream != null) {
+                // REJECT PROHIBITED HEADERS: Check if a header frame is arriving on an ALREADY established tunnel
+                if (stream.isHeadersReceived() &&
+                    stream.getProperty(CONNECT_TUNNEL_KEY) == Http2ConnectState.ESTABLISHED) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                                      "HEADERS frame received on established CONNECT stream %d", streamId);
+                }
+
+                // CLIENT ROLE: Transition PENDING -> ESTABLISHED upon receiving inbound 2xx response
+                if (!connection.isServer()) {
+                    CharSequence status = headers.status();
+                    if (status != null && HttpStatusClass.valueOf(status) == SUCCESS) {
+                        if (stream.getProperty(CONNECT_TUNNEL_KEY) == Http2ConnectState.PENDING) {
+                            stream.setProperty(CONNECT_TUNNEL_KEY, Http2ConnectState.ESTABLISHED);
+                        }
+                    }
+                }
+
+                // SERVER ROLE: Set state to PENDING upon receiving initial inbound CONNECT request
+                if (connection.isServer() && HttpMethod.CONNECT.asciiName().contentEquals(headers.method())
+                    && !headers.contains(PseudoHeaderName.PROTOCOL.value())) {
+                    stream.setProperty(CONNECT_TUNNEL_KEY, Http2ConnectState.PENDING);
+                }
+            }
             boolean isInformational = !connection.isServer() &&
                     HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL;
             if ((isInformational || !endOfStream) && stream.isHeadersReceived() || stream.isTrailersReceived()) {
@@ -685,6 +712,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
+            if (parentStream != null && parentStream.getProperty(CONNECT_TUNNEL_KEY) == Http2ConnectState.ESTABLISHED) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                                  "PUSH_PROMISE frame received on established CONNECT stream %d", streamId);
+            }
+
             switch (parentStream.state()) {
               case OPEN:
               case HALF_CLOSED_LOCAL:
@@ -775,7 +807,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             if (stream == null) {
                 return;
             }
-
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
         }
 
