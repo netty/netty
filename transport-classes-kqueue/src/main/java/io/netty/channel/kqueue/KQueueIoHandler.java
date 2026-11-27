@@ -47,8 +47,11 @@ import static java.lang.Math.min;
  */
 public final class KQueueIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueIoHandler.class);
-    private static final AtomicIntegerFieldUpdater<KQueueIoHandler> WAKEN_UP_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(KQueueIoHandler.class, "wakenUp");
+    private static final AtomicIntegerFieldUpdater<KQueueIoHandler> WAKEUP_STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(KQueueIoHandler.class, "wakeupState");
+    private static final int AWAKE = 0;
+    private static final int SELECTING = 1;
+    private static final int WAKEUP_REQUESTED = 2;
     private static final int KQUEUE_WAKE_UP_IDENT = 0;
     // `kqueue()` may return EINVAL when a large number such as Integer.MAX_VALUE is specified as timeout.
     // 24 hours would be a large enough value.
@@ -76,7 +79,13 @@ public final class KQueueIoHandler implements IoHandler {
     private final LongObjectMap<DefaultKqueueIoRegistration> registrations = new LongObjectHashMap<>(4096);
     private long nextId;
 
-    private volatile int wakenUp;
+    // AWAKE:            the event loop is running and will not block without checking for work first.
+    // SELECTING:        the event loop is about to block in (or is blocked in) kevent(...).
+    // WAKEUP_REQUESTED: another thread asked for a wakeup. If the event loop was SELECTING the user event was
+    //                   triggered as well. Otherwise the request is only remembered and makes the next
+    //                   kevent(...) non-blocking, which avoids a syscall for every task submitted to a running
+    //                   event loop. A wakeup does not always come with a queued task (for example, suspension).
+    private volatile int wakeupState = AWAKE;
 
     private long generateNextId() {
         boolean reset = false;
@@ -147,8 +156,10 @@ public final class KQueueIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.isExecutorThread(Thread.currentThread())
-                && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
+        if (!executor.isExecutorThread(Thread.currentThread()) && wakeupState != WAKEUP_REQUESTED
+                && WAKEUP_STATE_UPDATER.getAndSet(this, WAKEUP_REQUESTED) == SELECTING) {
+            // Only needed if the event loop is about to block or already blocked. In every other state it will
+            // see the request (or the work that came with it) before it blocks the next time.
             wakeup0();
         }
     }
@@ -159,19 +170,28 @@ public final class KQueueIoHandler implements IoHandler {
         // So it is not very practical to assert the return value is always >= 0.
     }
 
-    private int kqueueWait(IoHandlerContext context, boolean oldWakeup) throws IOException {
-        // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
-        // So we need to check task queue again before calling kqueueWait. If we don't, the task might be pended
-        // until kqueueWait was timed out. It might be pended until idle timeout if IdleStateHandler existed
-        // in pipeline.
-        if (oldWakeup && !context.canBlock()) {
+    private int kqueueWait(IoHandlerContext context) throws IOException {
+        if (!WAKEUP_STATE_UPDATER.compareAndSet(this, AWAKE, SELECTING)) {
+            // A wakeup was requested while we were awake. It was only remembered, so consume it with a
+            // non-blocking kevent(...) and let the caller look for the work that came with it.
+            WAKEUP_STATE_UPDATER.lazySet(this, AWAKE);
             return kqueueWaitNow();
         }
+        try {
+            // Check again after publishing SELECTING. A task submitted before that is seen here and one submitted
+            // later will trigger the user event. Without this the task might be pended until kqueueWait was timed
+            // out. It might be pended until idle timeout if IdleStateHandler existed in pipeline.
+            if (!context.canBlock() || wakeupState == WAKEUP_REQUESTED) {
+                return kqueueWaitNow();
+            }
 
-        long totalDelay = context.delayNanos(System.nanoTime());
-        int delaySeconds = (int) min(totalDelay / 1000000000L, KQUEUE_MAX_TIMEOUT_SECONDS);
-        int delayNanos = (int) (totalDelay % 1000000000L);
-        return kqueueWait(delaySeconds, delayNanos);
+            long totalDelay = context.delayNanos(System.nanoTime());
+            int delaySeconds = (int) min(totalDelay / 1000000000L, KQUEUE_MAX_TIMEOUT_SECONDS);
+            int delayNanos = (int) (totalDelay % 1000000000L);
+            return kqueueWait(delaySeconds, delayNanos);
+        } finally {
+            WAKEUP_STATE_UPDATER.lazySet(this, AWAKE);
+        }
     }
 
     private int kqueueWaitNow() throws IOException {
@@ -229,39 +249,7 @@ public final class KQueueIoHandler implements IoHandler {
                     // fall-through to SELECT since the busy-wait is not supported with kqueue
 
                 case SelectStrategy.SELECT:
-                    strategy = kqueueWait(context, WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
-
-                    // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                    // before calling 'selector.wakeup()' to reduce the wake-up
-                    // overhead. (Selector.wakeup() is an expensive operation.)
-                    //
-                    // However, there is a race condition in this approach.
-                    // The race condition is triggered when 'wakenUp' is set to
-                    // true too early.
-                    //
-                    // 'wakenUp' is set to true too early if:
-                    // 1) Selector is waken up between 'wakenUp.set(false)' and
-                    //    'selector.select(...)'. (BAD)
-                    // 2) Selector is waken up between 'selector.select(...)' and
-                    //    'if (wakenUp.get()) { ... }'. (OK)
-                    //
-                    // In the first case, 'wakenUp' is set to true and the
-                    // following 'selector.select(...)' will wake up immediately.
-                    // Until 'wakenUp' is set to false again in the next round,
-                    // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                    // any attempt to wake up the Selector will fail, too, causing
-                    // the following 'selector.select(...)' call to block
-                    // unnecessarily.
-                    //
-                    // To fix this problem, we wake up the selector again if wakenUp
-                    // is true immediately after selector.select(...).
-                    // It is inefficient in that it wakes up the selector for both
-                    // the first case (BAD - wake-up required) and the second case
-                    // (OK - no wake-up required).
-
-                    if (wakenUp == 1) {
-                        wakeup0();
-                    }
+                    strategy = kqueueWait(context);
                     // fall-through
                 default:
             }
