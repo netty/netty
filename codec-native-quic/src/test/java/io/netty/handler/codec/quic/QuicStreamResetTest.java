@@ -232,8 +232,9 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = connect(channel, server);
 
-            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter()).get();
+            ExceptionsAfterClose exceptions = new ExceptionsAfterClose(false);
+            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, exceptions)
+                    .get();
             QuicStreamChannel serverStream = serverStreams.open(clientStream);
 
             // The stream is closed before its input is terminated, it stays tracked until the reset is received.
@@ -241,6 +242,8 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             serverStream.shutdownOutput((int) ERROR_CODE).sync();
 
             awaitStreamRemoved(clientStream);
+            // The reset ends the input of the closed stream, there is nobody to report it to.
+            assertThat(exceptions.exceptions).isEmpty();
 
             quicChannel.close().sync();
         } finally {
@@ -265,14 +268,9 @@ public class QuicStreamResetTest extends AbstractQuicTest {
 
             // Close the stream once the first bytes are received. The server never ends its output with a FIN, so
             // the draining of the input can only be ended by the reset.
-            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            ReferenceCountUtil.release(msg);
-                            ctx.close();
-                        }
-                    }).get();
+            ExceptionsAfterClose exceptions = new ExceptionsAfterClose(true);
+            QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, exceptions)
+                    .get();
             QuicStreamChannel serverStream = serverStreams.open(clientStream);
 
             // Write more than the stream window of the client, so the client closes the stream while the server is
@@ -282,6 +280,8 @@ public class QuicStreamResetTest extends AbstractQuicTest {
             serverStream.shutdownOutput((int) ERROR_CODE).sync();
 
             awaitStreamRemoved(clientStream);
+            // The reset ends the input of the closed stream, there is nobody to report it to.
+            assertThat(exceptions.exceptions).isEmpty();
 
             quicChannel.close().sync();
         } finally {
@@ -356,6 +356,42 @@ public class QuicStreamResetTest extends AbstractQuicTest {
                 fail("Stream was not removed from its parent");
             }
             Thread.sleep(10);
+        }
+    }
+
+    /**
+     * Records the exceptions fired on a stream, also after it was closed: the pipeline of a closed stream is torn
+     * down, so this handler adds a recorder to it when it is removed.
+     */
+    private static final class ExceptionsAfterClose extends ChannelInboundHandlerAdapter {
+        final BlockingQueue<Throwable> exceptions = new LinkedBlockingQueue<>();
+        private final boolean closeOnRead;
+
+        ExceptionsAfterClose(boolean closeOnRead) {
+            this.closeOnRead = closeOnRead;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ReferenceCountUtil.release(msg);
+            if (closeOnRead) {
+                ctx.close();
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            exceptions.add(cause);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext recorderCtx, Throwable cause) {
+                    exceptions.add(cause);
+                }
+            });
         }
     }
 
