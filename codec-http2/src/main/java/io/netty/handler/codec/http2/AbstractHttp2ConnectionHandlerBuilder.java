@@ -75,6 +75,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     private static final int DEFAULT_MAX_RST_FRAMES_PER_CONNECTION_FOR_SERVER = 200;
+    private static final int DEFAULT_MAX_SETTINGS_FRAMES_PER_CONNECTION_FOR_SERVER = 200;
 
     // The properties that can always be set.
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
@@ -111,6 +112,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private int maxConsecutiveEmptyFrames = 2;
     private Integer maxDecodedRstFramesPerWindow;
     private int maxDecodedRstFramesSecondsPerWindow = 30;
+    private Integer maxDecodedSettingsFramesPerWindow;
+    private int maxDecodedSettingsFramesSecondsPerWindow = 30;
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
     private int maxSmallContinuationFrames = Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME;
@@ -474,11 +477,26 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Sets the maximum number of SETTINGS frames that are allowed per window before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
+     *
+     * If either parameter is {@code 0}, no protection is applied.
+     */
+    protected B decoderEnforceMaxSettingsFramesPerWindow(
+        int maxSettingsFramesPerWindow, int secondsPerWindow) {
+        enforceNonCodecConstraints("decoderEnforceMaxSettingsFramesPerWindow");
+        this.maxDecodedSettingsFramesPerWindow = checkPositiveOrZero(
+            maxSettingsFramesPerWindow, "maxSettingsFramesPerWindow");
+        this.maxDecodedSettingsFramesSecondsPerWindow = checkPositiveOrZero(secondsPerWindow, "secondsPerWindow");
+        return self();
+    }
+
+    /**
      * Sets the maximum number RST frames that are allowed per window before
      * the connection is closed. This allows to protect against the remote peer that will trigger us to generate a flood
      * of RST frames and so use up a lot of CPU.
      *
-     * {@code 0} for any of the parameters means no protection should be applied.
+     * If either parameter is {@code 0}, no protection is applied.
      */
     protected B encoderEnforceMaxRstFramesPerWindow(int maxRstFramesPerWindow, int secondsPerWindow) {
         enforceNonCodecConstraints("encoderEnforceMaxRstFramesPerWindow");
@@ -691,6 +709,22 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
         if (maxDecodedRstFrames > 0 && maxDecodedRstFramesSecondsPerWindow > 0) {
             decoder = new Http2MaxRstFrameDecoder(decoder, maxDecodedRstFrames, maxDecodedRstFramesSecondsPerWindow);
+        }
+        final int maxDecodedSettingsFrames;
+        if (maxDecodedSettingsFramesPerWindow == null) {
+            // Only enable by default on the server.
+            if (isServer()) {
+                maxDecodedSettingsFrames = DEFAULT_MAX_SETTINGS_FRAMES_PER_CONNECTION_FOR_SERVER;
+            } else {
+                maxDecodedSettingsFrames = 0;
+            }
+        } else {
+            maxDecodedSettingsFrames = maxDecodedSettingsFramesPerWindow;
+        }
+        // A zero limit or window disables SETTINGS frame protection.
+        if (maxDecodedSettingsFrames > 0 && maxDecodedSettingsFramesSecondsPerWindow > 0) {
+            decoder = new Http2MaxSettingsFrameDecoder(
+                decoder, maxDecodedSettingsFrames, maxDecodedSettingsFramesSecondsPerWindow);
         }
         final T handler;
         try {

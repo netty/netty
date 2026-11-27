@@ -203,6 +203,13 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public Http2FrameCodecBuilder decoderEnforceMaxSettingsFramesPerWindow(
+            int maxSettingsFramesPerWindow, int secondsPerWindow) {
+        return super.decoderEnforceMaxSettingsFramesPerWindow(
+                    maxSettingsFramesPerWindow, secondsPerWindow);
+    }
+
+    @Override
     public Http2FrameCodecBuilder encoderEnforceMaxRstFramesPerWindow(
             int maxRstFramesPerWindow, int secondsPerWindow) {
         return super.encoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);

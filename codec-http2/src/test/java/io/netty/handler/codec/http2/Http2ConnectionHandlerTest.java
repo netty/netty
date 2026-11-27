@@ -993,6 +993,55 @@ public class Http2ConnectionHandlerTest {
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
     }
 
+    @Test
+    public void settingsFrameProtectionIsEnabledByDefaultForServer() {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+            .frameListener(new Http2FrameAdapter())
+            .server(true)
+            .build();
+
+        assertTrue(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
+    }
+
+    @Test
+    public void settingsFrameProtectionIsDisabledByDefaultForClient() {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+            .frameListener(new Http2FrameAdapter())
+            .server(false)
+            .build();
+
+        assertFalse(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
+    }
+
+    @Test
+    public void settingsFrameProtectionCanBeEnabled() {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+            .decoderEnforceMaxSettingsFramesPerWindow(10, 30)
+            .frameListener(new Http2FrameAdapter())
+            .server(true)
+            .build();
+
+        assertTrue(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
+    }
+
+    @Test
+    public void settingsAndRstFrameProtectionCanBeEnabledTogether() {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+            .decoderEnforceMaxRstFramesPerWindow(10, 30)
+            .decoderEnforceMaxSettingsFramesPerWindow(10, 30)
+            .frameListener(new Http2FrameAdapter())
+            .server(true)
+            .build();
+
+        assertTrue(handler.decoder() instanceof Http2MaxSettingsFrameDecoder);
+
+        Http2MaxSettingsFrameDecoder settingsDecoder =
+            (Http2MaxSettingsFrameDecoder) handler.decoder();
+
+        assertTrue(settingsDecoder.delegate() instanceof Http2MaxRstFrameDecoder);
+        assertTrue(settingsDecoder.frameListener0() instanceof Http2MaxSettingsFrameListener);
+    }
+
     @ParameterizedTest
     @ValueSource(longs = { 30000, -1 })
     public void gracefulShutdownCompletesWhenGoAwayClosesLastStream(long gracefulShutdownTimeoutMillis) {
