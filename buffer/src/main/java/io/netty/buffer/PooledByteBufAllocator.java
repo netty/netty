@@ -35,6 +35,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link ByteBufAllocator} implementation that pools heap and direct memory to reduce allocation churn.
+ * <p>
+ * Pooled memory is split across one or more {@link PoolArena}s. Each thread is associated with a least-used
+ * heap and direct arena through a {@link PoolThreadCache}. Eligible threads also keep per-size caches so many
+ * allocations can be served without locking the arena.
+ * <p>
+ * Arenas obtain memory in {@link PoolChunk}s and organize those chunks by utilization in {@link PoolChunkList}s.
+ * Small allocations may additionally use {@link PoolSubpage}s. Allocations larger than the configured pooled
+ * size classes bypass these structures and use an unpooled chunk.
+ */
 public class PooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
