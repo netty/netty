@@ -297,6 +297,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (!outputStopped) {
             outputStopped = true;
             outputShutdown = true;
+            writable = false;
+            capacity = 0;
             if (registered) {
                 pipeline.fireUserEventTriggered(new QuicStreamStoppedEvent(stopSendingErrorCode));
             }

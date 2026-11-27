@@ -36,6 +36,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,6 +63,14 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
             QuicStreamChannel clientStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter()).get(5, TimeUnit.SECONDS);
             QuicStreamChannel serverStream = serverStreams.open(clientStream);
+            AtomicInteger writabilityChanges = new AtomicInteger();
+            serverStream.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                    writabilityChanges.incrementAndGet();
+                    ctx.fireChannelWritabilityChanged();
+                }
+            });
 
             clientStream.shutdownInput((int) ERROR_CODE).sync();
 
@@ -69,6 +78,11 @@ public class QuicStreamStopSendingTest extends AbstractQuicTest {
             // stays open.
             assertStopped(serverStreams.next());
             assertThat(serverStream.isOutputShutdown()).isTrue();
+
+            // The stream is not writable any more, like after a shutdown of the output, without a writability change.
+            assertThat(serverStream.isWritable()).isFalse();
+            assertThat(serverStream.bytesBeforeUnwritable()).isZero();
+            assertThat(writabilityChanges.get()).isZero();
             assertThat(serverStream.isActive()).isTrue();
             assertThat(serverStreams.events).isEmpty();
 
