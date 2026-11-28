@@ -15,14 +15,18 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.resolver.AddressResolver;
+import io.netty.resolver.DefaultNameResolver;
 import io.netty.resolver.InetSocketAddressResolver;
+import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.apache.directory.server.dns.messages.QuestionRecord;
@@ -41,7 +45,9 @@ import java.util.concurrent.ExecutionException;
 
 import static io.netty.resolver.dns.TestDnsServer.newARecord;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsAddressResolverGroupTest {
@@ -132,5 +138,68 @@ public class DnsAddressResolverGroupTest {
         promise.sync();
         InetSocketAddress inetSocketAddress = promise.get();
         return inetSocketAddress.getAddress();
+    }
+
+    @Test
+    public void testGetNameResolver() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
+        DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(
+                new DnsNameResolverBuilder().datagramChannelType(NioDatagramChannel.class));
+        try {
+            EventLoop loop1 = group.next();
+            EventLoop loop2 = group.next();
+
+            DnsNameResolver nameResolver1 = resolverGroup.getNameResolver(loop1);
+            DnsNameResolver nameResolver2 = resolverGroup.getNameResolver(loop2);
+
+            // One per executor, the same as the one of its resolver, sharing the caches.
+            assertSame(nameResolver1, resolverGroup.getNameResolver(loop1));
+            assertNotSame(nameResolver1, nameResolver2);
+            assertSame(loop1, nameResolver1.executor());
+            assertSame(nameResolver1.resolveCache(), nameResolver2.resolveCache());
+
+            resolverGroup.close();
+
+            assertNotSame(nameResolver1, resolverGroup.getNameResolver(loop1));
+        } finally {
+            resolverGroup.close();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testGetNameResolverOfTerminatedExecutor() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(
+                new DnsNameResolverBuilder().datagramChannelType(NioDatagramChannel.class));
+        try {
+            EventLoop loop = group.next();
+            resolverGroup.getNameResolver(loop);
+            group.shutdownGracefully().sync();
+
+            assertThrows(IllegalStateException.class, () -> resolverGroup.getNameResolver(loop));
+        } finally {
+            resolverGroup.close();
+        }
+    }
+
+    @Test
+    public void testGetNameResolverWithoutDnsNameResolver() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(
+                new DnsNameResolverBuilder().datagramChannelType(NioDatagramChannel.class)) {
+            @Override
+            protected NameResolver<InetAddress> newNameResolver(EventLoop eventLoop,
+                    ChannelFactory<? extends DatagramChannel> channelFactory,
+                    DnsServerAddressStreamProvider nameServerProvider) throws Exception {
+                return new DefaultNameResolver(eventLoop);
+            }
+        };
+        try {
+            assertThrows(IllegalStateException.class, () -> resolverGroup.getNameResolver(group.next()));
+        } finally {
+            resolverGroup.close();
+            group.shutdownGracefully();
+        }
     }
 }

@@ -24,12 +24,16 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.InetSocketAddressResolver;
 import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -42,6 +46,10 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
     private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = new ConcurrentHashMap<>();
+    private final Map<EventExecutor, DnsNameResolver> nameResolvers = new ConcurrentHashMap<>();
+    private final Map<EventExecutor, GenericFutureListener<Future<Object>>> nameResolverListeners =
+            new ConcurrentHashMap<>();
+    private DnsNameResolver newNameResolver;
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
@@ -66,7 +74,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // or create a new one to share among the entire group.
         return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
                 .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache())
+                .httpsCache(dnsResolverBuilder.getOrNewHttpsCache());
     }
 
     @SuppressWarnings("deprecation")
@@ -81,9 +90,50 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // we don't really need to pass channelFactory and nameServerProvider separately,
         // but still keep this to ensure backward compatibility with (potentially) override methods
         EventLoop loop = dnsResolverBuilder.eventLoop;
-        return newResolver(loop == null ? (EventLoop) executor : loop,
+        final AddressResolver<InetSocketAddress> resolver = newResolver(loop == null ? (EventLoop) executor : loop,
                 dnsResolverBuilder.datagramChannelFactory(),
                 dnsResolverBuilder.nameServerProvider());
+        final DnsNameResolver nameResolver = newNameResolver;
+        newNameResolver = null;
+        if (nameResolver != null) {
+            nameResolvers.put(executor, nameResolver);
+            final GenericFutureListener<Future<Object>> listener = future -> {
+                nameResolvers.remove(executor);
+                nameResolverListeners.remove(executor);
+            };
+            nameResolverListeners.put(executor, listener);
+            executor.terminationFuture().addListener(listener);
+        }
+        return resolver;
+    }
+
+    /**
+     * Returns the {@link DnsNameResolver} used by the resolver of {@code executor}, created if needed like
+     * {@link #getResolver(EventExecutor)} does, for instance to call its methods that are not part of an
+     * {@link AddressResolver}.
+     *
+     * @throws IllegalStateException if {@code executor} is shutting down, or if
+     *         {@link #newNameResolver(EventLoop, ChannelFactory, DnsServerAddressStreamProvider)} did not return a
+     *         {@link DnsNameResolver}
+     */
+    @UnstableApi
+    public DnsNameResolver getNameResolver(EventExecutor executor) {
+        getResolver(executor);
+        final DnsNameResolver nameResolver = nameResolvers.get(executor);
+        if (nameResolver == null) {
+            throw new IllegalStateException("No DnsNameResolver for " + executor);
+        }
+        return nameResolver;
+    }
+
+    @Override
+    public void close() {
+        for (Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry : nameResolverListeners.entrySet()) {
+            entry.getKey().terminationFuture().removeListener(entry.getValue());
+        }
+        nameResolverListeners.clear();
+        nameResolvers.clear();
+        super.close();
     }
 
     /**
@@ -94,9 +144,13 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) throws Exception {
 
+        final NameResolver<InetAddress> nameResolver = newNameResolver(eventLoop, channelFactory, nameServerProvider);
+        if (nameResolver instanceof DnsNameResolver) {
+            newNameResolver = (DnsNameResolver) nameResolver;
+        }
         final NameResolver<InetAddress> resolver = new InflightNameResolver<InetAddress>(
                 eventLoop,
-                newNameResolver(eventLoop, channelFactory, nameServerProvider),
+                nameResolver,
                 resolvesInProgress,
                 resolveAllsInProgress);
 

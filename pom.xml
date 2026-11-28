@@ -1298,6 +1298,12 @@
         <version>2.0.0.AM27</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>3.7.1</version>
+        <scope>test</scope>
+      </dependency>
 
       <!-- Test dependency for log4j2 tests -->
       <dependency>
@@ -1502,6 +1508,30 @@
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>class net.jpountz.lz4.LZ4JNIHCFastResetCompressor</new>
                   <justification>Added in at.yawk.lz4:lz4-java:1.11.0.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.resolver.dns.DnsNameResolver</classQualifiedName>
+                  <new>method io.netty.util.concurrent.Future&lt;java.util.List&lt;io.netty.resolver.dns.DnsHttpsAddress&gt;&gt; io.netty.resolver.dns.DnsNameResolver::resolveAll(io.netty.resolver.dns.DnsHttpsQuery)</new>
+                  <justification>New overloads taking the new DnsHttpsQuery type, which no existing subclass can declare;
+                    final like the other resolveAll methods.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.resolver.dns.DnsNameResolver</classQualifiedName>
+                  <new>method io.netty.util.concurrent.Future&lt;java.util.List&lt;io.netty.resolver.dns.DnsHttpsAddress&gt;&gt; io.netty.resolver.dns.DnsNameResolver::resolveAll(io.netty.resolver.dns.DnsHttpsQuery, java.lang.Iterable&lt;io.netty.handler.codec.dns.DnsRecord&gt;)</new>
+                  <justification>New overloads taking the new DnsHttpsQuery type, which no existing subclass can declare;
+                    final like the other resolveAll methods.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.resolver.dns.DnsNameResolver</classQualifiedName>
+                  <new>method io.netty.util.concurrent.Future&lt;java.util.List&lt;io.netty.resolver.dns.DnsHttpsAddress&gt;&gt; io.netty.resolver.dns.DnsNameResolver::resolveAll(io.netty.resolver.dns.DnsHttpsQuery, java.lang.Iterable&lt;io.netty.handler.codec.dns.DnsRecord&gt;, io.netty.util.concurrent.Promise&lt;java.util.List&lt;io.netty.resolver.dns.DnsHttpsAddress&gt;&gt;)</new>
+                  <justification>New overloads taking the new DnsHttpsQuery type, which no existing subclass can declare;
+                    final like the other resolveAll methods.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>

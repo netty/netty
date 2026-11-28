@@ -18,6 +18,8 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
+import java.util.List;
+
 /**
  * The default {@link DnsRecordEncoder} implementation.
  *
@@ -54,6 +56,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodeOptCookieRecord((DnsOptCookieRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
             encodeOptPseudoRecord((DnsOptPseudoRecord) record, out);
+        } else if (record instanceof DnsSvcbRecord) {
+            encodeSvcbRecord((DnsSvcbRecord) record, out);
         } else if (record instanceof DnsRawRecord) {
             encodeRawRecord((DnsRawRecord) record, out);
         } else {
@@ -148,6 +152,34 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     // Package-Private for testing
     static int calculateEcsAddressLength(int sourcePrefixLength, int lowOrderBitsToPreserve) {
         return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0 ? 1 : 0);
+    }
+
+    private void encodeSvcbRecord(DnsSvcbRecord record, ByteBuf out) throws Exception {
+        DefaultDnsSvcbRecord svcbRecord = record instanceof DefaultDnsSvcbRecord ? (DefaultDnsSvcbRecord) record :
+                new DefaultDnsSvcbRecord(record.name(), record.type(), record.dnsClass(), record.timeToLive(),
+                        record.priority(), record.targetName(), record.params());
+        List<SvcParam> params = svcbRecord.params();
+        for (int i = 1; i < params.size(); i++) {
+            if (params.get(i).key() == params.get(i - 1).key()) {
+                throw new IllegalArgumentException("duplicate SvcParamKey: " + params.get(i).key());
+            }
+        }
+        String inconsistency = svcbRecord.determineSelfConsistency();
+        if (inconsistency != null) {
+            throw new IllegalArgumentException(inconsistency);
+        }
+
+        encodeRecord0(svcbRecord, out);
+
+        int rdLengthIndex = out.writerIndex();
+        out.writeShort(0);
+        DnsSvcbUtil.encodeRdata(svcbRecord.priority(), svcbRecord.targetName(), params, out);
+
+        int rdLength = out.writerIndex() - rdLengthIndex - 2;
+        if (rdLength > 65535) {
+            throw new IllegalArgumentException("SVCB RDATA too long: " + rdLength);
+        }
+        out.setShort(rdLengthIndex, rdLength);
     }
 
     private void encodeRawRecord(DnsRawRecord record, ByteBuf out) throws Exception {
