@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -390,5 +393,26 @@ public class QueryStringDecoderTest {
         QueryStringDecoder empty = new QueryStringDecoder("");
         assertEquals("", empty.rawPath());
         assertEquals("", empty.rawQuery());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] uri={0} hasPath={1} rawQuery={2}")
+    @CsvSource(delimiter = '|', value = {
+            "a=1&b=2         | false | a=1&b=2",
+            "?a=1&b=2        | false | a=1&b=2",
+            "a=1#frag        | false | a=1",
+            "/p?a=1&b=2      | true  | a=1&b=2",
+            "/p?a=1#frag     | true  | a=1",
+            "/p#frag         | true  | ''",
+            "/p#frag?a=1     | true  | ''",
+            "/p?             | true  | ''",
+            "/p              | true  | ''",
+            "/p??a=1         | true  | ?a=1",
+    })
+    public void testRawQuery(String uri, boolean hasPath, String rawQuery) {
+        QueryStringDecoder decoder = new QueryStringDecoder(uri, hasPath);
+        assertThat(decoder.rawQuery()).isEqualTo(rawQuery);
+        // Decoding the raw query on its own gives the same parameters.
+        assertThat(new QueryStringDecoder('?' + decoder.rawQuery(), false).parameters())
+                .isEqualTo(decoder.parameters());
     }
 }
