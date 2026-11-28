@@ -162,7 +162,6 @@ class Http2WebSocketTransportTest {
         assertGracefulClose();
     }
 
-
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
     void serverApplicationOwnsPingAndADeferredCloseReply(boolean autoRead) throws Exception {
