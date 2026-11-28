@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
@@ -49,18 +50,19 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
         } else {
             CharSequence uriCharSequence = uri;
             boolean needSlash = false;
-            int start = uri.indexOf("://");
-            if (start != -1 && uri.charAt(0) != SLASH) {
-                start += 3;
+            int schemeEnd = uri.indexOf("://");
+            if (schemeEnd != -1 && uri.charAt(0) != SLASH) {
+                int authorityStart = schemeEnd + 3;
                 // Correctly handle query params.
                 // See https://github.com/netty/netty/issues/2732
-                int index = uri.indexOf(QUESTION_MARK, start);
+                int index = uri.indexOf(QUESTION_MARK, authorityStart);
                 if (index == -1) {
-                    if (uri.lastIndexOf(SLASH) < start) {
-                        needSlash = true;
+                    if (uri.lastIndexOf(SLASH) < authorityStart) {
+                        // Preserve the server-wide absolute-form OPTIONS target (RFC 9112 section 3.2.4).
+                        needSlash = !HttpMethod.OPTIONS.equals(request.method()) || !isHttpScheme(uri, schemeEnd);
                     }
                 } else {
-                    if (uri.lastIndexOf(SLASH, index) < start) {
+                    if (uri.lastIndexOf(SLASH, index) < authorityStart) {
                         uriCharSequence = new StringBuilder(uri).insert(index, SLASH);
                     }
                 }
@@ -76,5 +78,10 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
 
         request.protocolVersion().encode(buf);
         ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+    }
+
+    private static boolean isHttpScheme(String uri, int schemeEnd) {
+        return schemeEnd == 4 && AsciiString.regionMatchesAscii(uri, true, 0, "http", 0, 4)
+                || schemeEnd == 5 && AsciiString.regionMatchesAscii(uri, true, 0, "https", 0, 5);
     }
 }
