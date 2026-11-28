@@ -49,9 +49,8 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
     private static final int ST_DECODING_ARRAY_STREAM = 2;
 
     private int openBraces;
-    private int idx;
-
-    private int lastReaderIndex;
+    // Number of bytes after the reader index that were already processed.
+    private int scanned;
 
     private int state;
     private boolean insideString;
@@ -93,21 +92,10 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        if (this.idx > in.readerIndex() && lastReaderIndex != in.readerIndex()) {
-            this.idx = in.readerIndex() + (idx - lastReaderIndex);
-        }
-
-        // index of next byte to process.
-        int idx = this.idx;
+        // index of next byte to process. It is kept relative to the reader index, so it stays valid when the
+        // buffer is compacted or replaced, and when the buffer does not start at index 0.
+        int idx = in.readerIndex() + scanned;
         int wrtIdx = in.writerIndex();
-
-        if (wrtIdx > maxObjectLength) {
-            // buffer size exceeded maxObjectLength; discarding the complete buffer.
-            in.skipBytes(in.readableBytes());
-            reset();
-            throw new TooLongFrameException(
-                            "object length exceeds " + maxObjectLength + ": " + wrtIdx + " bytes discarded");
-        }
 
         for (/* use current idx */; idx < wrtIdx; idx++) {
             byte c = in.getByte(idx);
@@ -117,7 +105,11 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
                 // All opening braces/brackets have been closed. That's enough to conclude
                 // that the JSON object/array is complete.
                 if (openBraces == 0) {
-                    ByteBuf json = extractObject(ctx, in, in.readerIndex(), idx + 1 - in.readerIndex());
+                    int length = idx + 1 - in.readerIndex();
+                    if (length > maxObjectLength) {
+                        tooLongObject(in, length);
+                    }
+                    ByteBuf json = extractObject(ctx, in, in.readerIndex(), length);
                     if (json != null) {
                         out.add(json);
                     }
@@ -145,7 +137,11 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
                         idxNoSpaces--;
                     }
 
-                    ByteBuf json = extractObject(ctx, in, in.readerIndex(), idxNoSpaces + 1 - in.readerIndex());
+                    int length = idxNoSpaces + 1 - in.readerIndex();
+                    if (length > maxObjectLength) {
+                        tooLongObject(in, length);
+                    }
+                    ByteBuf json = extractObject(ctx, in, in.readerIndex(), length);
                     if (json != null) {
                         out.add(json);
                     }
@@ -174,12 +170,22 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
-        if (in.readableBytes() == 0) {
-            this.idx = 0;
-        } else {
-            this.idx = idx;
+        // Bytes that are left belong to an object (or array element) that is not complete yet.
+        int length = idx - in.readerIndex();
+        if (length > maxObjectLength) {
+            tooLongObject(in, length);
         }
-        this.lastReaderIndex = in.readerIndex();
+        scanned = length;
+    }
+
+    private void tooLongObject(ByteBuf in, int length) {
+        // The object exceeds maxObjectLength; discarding the complete buffer.
+        int discarded = in.readableBytes();
+        in.skipBytes(discarded);
+        reset();
+        scanned = 0;
+        throw new TooLongFrameException("object length exceeds " + maxObjectLength + ": " + length + " bytes, " +
+                discarded + " bytes discarded");
     }
 
     /**
