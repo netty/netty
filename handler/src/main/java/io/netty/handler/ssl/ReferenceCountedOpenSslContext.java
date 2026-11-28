@@ -54,6 +54,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -170,6 +171,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    // Snapshot of the jdk.tls.disabledAlgorithms security property, taken when the context was created.
+    final JdkDisabledAlgorithms disabledAlgorithms;
     // What a new engine reports as its enabled protocols. Computed once as it is the same for every engine.
     final String[] enabledProtocols;
     final String endpointIdentificationAlgorithm;
@@ -305,23 +308,75 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         this.tlsFalseStart = tlsFalseStart;
 
-        leak = leakDetection ? leakDetector.track(this) : null;
-        this.mode = mode;
-        this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
-        this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
-        enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols);
-        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
-        this.serverNames = serverNames;
-        this.enableOcsp = enableOcsp;
+        this.disabledAlgorithms = JdkDisabledAlgorithms.current();
 
-        this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
-
+        // Calculate the cipher suites first as this may throw, which must not leave a tracked (never released)
+        // context behind.
         String[] suites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, availableJavaCipherSuites());
         // Filter out duplicates.
         LinkedHashSet<String> suitesSet = new LinkedHashSet<String>(suites.length);
         Collections.addAll(suitesSet, suites);
+        if (!disabledAlgorithms.isEmpty()) {
+            if (suitesSet.isEmpty()) {
+                // An empty list would mean "use the OpenSSL defaults", which are not filtered by the security
+                // property. Apply the property to the default cipher suites that are available instead.
+                for (String cipher : OpenSsl.DEFAULT_CIPHERS) {
+                    if (OpenSsl.isCipherSuiteAvailable(cipher)) {
+                        suitesSet.add(cipher);
+                    }
+                }
+            }
+            List<String> configured = new ArrayList<String>(suitesSet);
+            // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
+            Iterator<String> suitesIt = suitesSet.iterator();
+            while (suitesIt.hasNext()) {
+                String suite = suitesIt.next();
+                if (ReferenceCountedOpenSslEngine.isCipherSuiteDisabled(disabledAlgorithms, suite)) {
+                    suitesIt.remove();
+                }
+            }
+            if (suitesSet.isEmpty()) {
+                // An empty list would mean "use the OpenSSL defaults", which must not happen here.
+                throw new SSLException("All configured cipher suites are disabled via the security property '" +
+                        JdkDisabledAlgorithms.PROPERTY + "': " + configured);
+            }
+            if (OpenSsl.isBoringSSL()) {
+                for (String suite : configured) {
+                    if (SslUtils.isTLSv13Cipher(suite) && disabledAlgorithms.isCipherSuiteDisabled(suite)) {
+                        logger.warn("The TLSv1.3 cipher suite {} is disabled via the security property '{}' but " +
+                                "BoringSSL does not allow to disable TLSv1.3 cipher suites, so it stays enabled.",
+                                suite, JdkDisabledAlgorithms.PROPERTY);
+                    }
+                }
+            }
+        }
         unmodifiableCiphers = new ArrayList<String>(suitesSet);
+
+        leak = leakDetection ? leakDetector.track(this) : null;
+        this.mode = mode;
+        this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
+        String[] configuredProtocols = protocols == null ?
+                OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        if (!disabledAlgorithms.isEmpty() && !unmodifiableCiphers.isEmpty() &&
+                !hasNonTlsv13Cipher(unmodifiableCiphers)) {
+            // Only TLSv1.3 cipher suites are left. Setting an empty cipher list is a no-op for OpenSSL / BoringSSL,
+            // so it would fall back to its defaults for TLSv1.2 and below unless we explicitly do not enable them.
+            List<String> tlsv13Only = new ArrayList<String>(1);
+            for (String protocol : configuredProtocols) {
+                if (SslProtocols.TLS_v1_3.equals(protocol)) {
+                    tlsv13Only.add(protocol);
+                }
+            }
+            configuredProtocols = tlsv13Only.toArray(EmptyArrays.EMPTY_STRINGS);
+        }
+        this.protocols = configuredProtocols;
+        enabledProtocols = ReferenceCountedOpenSslEngine.toEnabledProtocols(this.protocols, disabledAlgorithms);
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        this.serverNames = serverNames;
+        this.enableOcsp = enableOcsp;
+
+        this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
         this.apn = checkNotNull(apn, "apn");
 
@@ -509,6 +564,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 release();
             }
         }
+    }
+
+    private static boolean hasNonTlsv13Cipher(List<String> ciphers) {
+        for (String cipher : ciphers) {
+            if (!SslUtils.isTLSv13Cipher(cipher)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isCertificateCompressionDisabled(int mode) {

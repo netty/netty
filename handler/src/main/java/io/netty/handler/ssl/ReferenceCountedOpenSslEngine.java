@@ -116,6 +116,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.SSL_OP_NO_TLSv1_2,
             SSL.SSL_OP_NO_TLSv1_3
     };
+    // Same order as OPENSSL_OP_NO_PROTOCOLS.
+    private static final String[] OPENSSL_PROTOCOL_NAMES = {
+            SslProtocols.SSL_v2,
+            SslProtocols.SSL_v3,
+            SslProtocols.TLS_v1,
+            SslProtocols.TLS_v1_1,
+            SslProtocols.TLS_v1_2,
+            SslProtocols.TLS_v1_3
+    };
 
     /**
      * Depends upon tcnative ... only use if tcnative is available!
@@ -214,6 +223,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private boolean outboundClosed;
 
     final boolean jdkCompatibilityMode;
+    // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
+    private final JdkDisabledAlgorithms disabledAlgorithms;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
     private final OpenSslEngineMap engines;
@@ -251,6 +262,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         enableOcsp = context.enableOcsp;
         groups = context.groups.clone();
         this.jdkCompatibilityMode = jdkCompatibilityMode;
+        this.disabledAlgorithms = context.disabledAlgorithms;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
@@ -1768,7 +1780,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     enabledSet.add(cipher);
                 }
-                Collections.addAll(enabledSet, extraCiphers);
+                for (String extraCipher : extraCiphers) {
+                    if (!isCipherSuiteDisabled(disabledAlgorithms, extraCipher)) {
+                        enabledSet.add(extraCipher);
+                    }
+                }
             }
             return enabledSet.toArray(EMPTY_STRINGS);
         }
@@ -1781,7 +1797,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
-        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13,
+        // Validate all the given cipher suites first, this also includes the ones that are disabled via the
+        // jdk.tls.disabledAlgorithms security property.
+        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), new StringBuilder(),
+                new StringBuilder(), OpenSsl.isBoringSSL());
+
+        // Respect the jdk.tls.disabledAlgorithms security property, same as the JDK implementation does.
+        List<String> allowedCipherSuites = new ArrayList<String>(cipherSuites.length);
+        for (String cipherSuite : cipherSuites) {
+            if (cipherSuite == null || !isCipherSuiteDisabled(disabledAlgorithms, cipherSuite)) {
+                allowedCipherSuites.add(cipherSuite);
+            }
+        }
+        if (allowedCipherSuites.isEmpty()) {
+            throw new IllegalArgumentException("All cipher suites are disabled via the security property '" +
+                    JdkDisabledAlgorithms.PROPERTY + "': " + Arrays.asList(cipherSuites));
+        }
+
+        CipherSuiteConverter.convertToCipherStrings(allowedCipherSuites, buf, bufTLSv13,
                 OpenSsl.isBoringSSL());
         final String cipherSuiteSpec = buf.toString();
         final String cipherSuiteSpecTLSv13 = bufTLSv13.toString();
@@ -1860,18 +1893,33 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final void setEnabledProtocols(String[] protocols) {
         checkNotNullWithIAE(protocols, "protocols");
         synchronized (this) {
-            enabledProtocols = toEnabledProtocols(protocols);
+            enabledProtocols = toEnabledProtocols(protocols, disabledAlgorithms);
 
             setEnabledProtocols0(protocols, !hasTLSv13Cipher);
         }
     }
 
-    static String[] toEnabledProtocols(String[] protocols) {
+    /**
+     * Returns {@code true} if the given cipher suite is disabled via the {@code jdk.tls.disabledAlgorithms} security
+     * property and OpenSSL / BoringSSL is able to honor this.
+     */
+    static boolean isCipherSuiteDisabled(JdkDisabledAlgorithms disabledAlgorithms, String cipherSuite) {
+        // BoringSSL does not allow to enable or disable TLSv1.3 cipher suites explicitly (see
+        // OpenSsl.checkTls13Ciphers(...)), so they are always enabled and must be reported as such.
+        return disabledAlgorithms.isCipherSuiteDisabled(cipherSuite) &&
+                !(OpenSsl.isBoringSSL() && SslUtils.isTLSv13Cipher(cipherSuite));
+    }
+
+    static String[] toEnabledProtocols(String[] protocols, JdkDisabledAlgorithms disabledAlgorithms) {
         Set<String> enabledProtocols = new LinkedHashSet<String>();
         // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
         enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
 
-        Collections.addAll(enabledProtocols, protocols);
+        for (String protocol : protocols) {
+            if (!disabledAlgorithms.isProtocolDisabled(protocol)) {
+                enabledProtocols.add(protocol);
+            }
+        }
         return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
@@ -1883,6 +1931,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         for (String protocol : protocols) {
             if (!OpenSsl.isProtocolSupported(protocol)) {
                 throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
+            }
+            if (disabledAlgorithms.isProtocolDisabled(protocol)) {
+                // Disabled via the jdk.tls.disabledAlgorithms security property.
+                continue;
             }
 
             int index;
@@ -1931,6 +1983,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         assert maxProtocolIndex != MAX_VALUE;
         for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
             opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+        // A protocol that is disabled via the jdk.tls.disabledAlgorithms security property might still be inside of
+        // the [min protocol, max protocol] range. Disabling only that protocol would leave a non-contiguous range,
+        // which BoringSSL and OpenSSL clients cut down to the lowest contiguous part. Raise the minimum instead.
+        for (int i = maxProtocolIndex; i >= minProtocolIndex; --i) {
+            if (disabledAlgorithms.isProtocolDisabled(OPENSSL_PROTOCOL_NAMES[i])) {
+                for (int j = minProtocolIndex; j <= i; ++j) {
+                    opts |= OPENSSL_OP_NO_PROTOCOLS[j];
+                }
+                break;
+            }
         }
 
         SSL.setOptions(ssl, opts);
