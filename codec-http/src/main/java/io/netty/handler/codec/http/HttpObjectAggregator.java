@@ -17,12 +17,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,6 +31,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPECT;
 import static io.netty.handler.codec.http.HttpUtil.getContentLength;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.StringUtil.className;
 
 /**
@@ -56,6 +58,14 @@ import static io.netty.util.internal.StringUtil.className;
  * For convenience, consider putting a {@link HttpServerCodec} before the {@link HttpObjectAggregator}
  * as it functions as both a {@link HttpRequestDecoder} and a {@link HttpResponseEncoder}.
  * </p>
+ * On a socket connection, the default terminal rejection sends the response, half-closes TCP output,
+ * and drains input until peer EOF or the {@linkplain #setCloseTimeoutMillis(long) configured deadline}
+ * (RFC 9112, section 9.6). During teardown
+ * the pipeline discards further requests and incoming application data. TLS closure alerts are processed normally.
+ * During the drain, the transport may defer additional close requests until peer EOF or the deadline.
+ * The deadline bounds the response write and any TLS close wait as well as the drain.
+ * Subclasses replacing {@link #handleOversizedMessage} control their own oversized-request teardown.
+ * <p>
  * Be aware that {@link HttpObjectAggregator} may end up sending a {@link HttpResponse}:
  * <table border summary="Possible Responses">
  *   <tbody>
@@ -104,6 +114,8 @@ public class HttpObjectAggregator
     }
 
     private final boolean closeOnExpectationFailed;
+    private volatile long closeTimeoutMillis = 5000;
+    private boolean closing;
 
     /**
      * Creates a new instance.
@@ -127,6 +139,25 @@ public class HttpObjectAggregator
     public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
         super(maxContentLength, HttpObject.class);
         this.closeOnExpectationFailed = closeOnExpectationFailed;
+    }
+
+    /**
+     * Returns the deadline in milliseconds for closing a socket after a terminal request rejection.
+     * The default is 5000 milliseconds. Zero disables staged teardown.
+     */
+    public long closeTimeoutMillis() {
+        return closeTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum time from initiating the rejection response to fully closing the socket.
+     * The deadline includes flushing the response and waiting for peer EOF after shutting down output.
+     * Set to zero to close as soon as the rejection write completes. Changes apply to subsequent rejections.
+     *
+     * @param closeTimeoutMillis a non-negative timeout in milliseconds
+     */
+    public void setCloseTimeoutMillis(long closeTimeoutMillis) {
+        this.closeTimeoutMillis = checkPositiveOrZero(closeTimeoutMillis, "closeTimeoutMillis");
     }
 
     @Override
@@ -192,6 +223,11 @@ public class HttpObjectAggregator
     }
 
     @Override
+    protected void prepareToCloseAfterContinueResponse(ChannelHandlerContext ctx) {
+        prepareToClose(ctx);
+    }
+
+    @Override
     protected boolean ignoreContentAfterContinueResponse(Object msg) {
         if (msg instanceof HttpResponse) {
             final HttpResponse httpResponse = (HttpResponse) msg;
@@ -238,6 +274,24 @@ public class HttpObjectAggregator
         }
     }
 
+    private void prepareToClose(ChannelHandlerContext ctx) {
+        closing = true;
+        long timeoutMillis = closeTimeoutMillis;
+        if (timeoutMillis > 0 && ctx.channel() instanceof SocketChannel) {
+            HttpServerLingeringCloseHandler.install(ctx.pipeline(), timeoutMillis);
+        }
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (closing) {
+            // The decoder may already have emitted more messages from the same read.
+            ReferenceCountUtil.release(msg);
+        } else {
+            super.channelRead(ctx, msg);
+        }
+    }
+
     @Override
     protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) throws Exception {
         if (oversized instanceof HttpRequest) {
@@ -248,12 +302,14 @@ public class HttpObjectAggregator
             // If auto read is false the channel must be closed or it will be stuck without a call to read()
             if (oversized instanceof FullHttpMessage || !ctx.channel().config().isAutoRead() ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
-                ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
-                future.addListener(f -> {
-                    if (!f.isSuccess()) {
-                        logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());
+                prepareToClose(ctx);
+                ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                        HttpServerLingeringCloseHandler.abort(ctx);
+                    } else {
+                        ctx.close();
                     }
-                    ctx.close();
                 });
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {

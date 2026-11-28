@@ -234,6 +234,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 boolean closeAfterWrite = closeAfterContinueResponse(continueResponse);
                 handlingOversizedMessage = ignoreContentAfterContinueResponse(continueResponse);
 
+                if (closeAfterWrite) {
+                    prepareToCloseAfterContinueResponse(ctx);
+                }
                 final ChannelFuture future = ctx.writeAndFlush(continueResponse).addListener(listener);
 
                 if (closeAfterWrite) {
@@ -356,6 +359,12 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written. {@code false} otherwise.
      */
     protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
+
+    /**
+     * Called before writing a continue response for which {@link #closeAfterContinueResponse(Object)}
+     * returned {@code true}.
+     */
+    protected void prepareToCloseAfterContinueResponse(ChannelHandlerContext ctx) { }
 
     /**
      * Determine if all objects for the current request/response should be ignored or not.
