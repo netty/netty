@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
 
 env:
-  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=10000 -Daether.connector.http.connectionMaxTtl=240
 
 permissions:
   contents: read
