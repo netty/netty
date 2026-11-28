@@ -33,6 +33,7 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.UncheckedBooleanSupplier;
@@ -50,7 +51,6 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
-import java.nio.channels.UnresolvedAddressException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -330,18 +330,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         active = true;
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
-            throw new UnresolvedAddressException();
-        }
-    }
-
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkUnresolved(packet);
+            UnixChannelUtil.checkDatagramRecipient(packet.recipient(), socket.family());
             ByteBuf content = packet.content();
             return !content.hasMemoryAddress() ?
                     packet.replace(newDirectBuffer(packet, content)) : msg;
@@ -355,7 +348,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
+            UnixChannelUtil.checkDatagramRecipient(e.recipient(), socket.family());
             if (e.content() instanceof ByteBuf &&
                 (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 

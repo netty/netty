@@ -57,7 +57,6 @@ import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.indexOf;
 import static io.netty.util.AsciiString.trim;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
-import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
@@ -522,35 +521,53 @@ public final class HttpConversionUtil {
                 if (aName.contentEqualsIgnoreCase(TE)) {
                     toHttp3HeadersFilterTE(entry, out);
                 } else if (aName.contentEqualsIgnoreCase(COOKIE)) {
-                    AsciiString value = AsciiString.of(entry.getValue());
-                    // split up cookies to allow for better compression
-                    try {
-                        int index = value.forEachByte(FIND_SEMI_COLON);
-                        if (index != -1) {
-                            int start = 0;
-                            do {
-                                out.add(COOKIE, value.subSequence(start, index, false));
-                                // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
-                                start = index + 2;
-                            } while (start < value.length() &&
-                                    (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
-                            if (start >= value.length()) {
-                                throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
-                            }
-                            out.add(COOKIE, value.subSequence(start, value.length(), false));
-                        } else {
-                            out.add(COOKIE, value);
-                        }
-                    } catch (Exception e) {
-                        // This is not expect to happen because FIND_SEMI_COLON never throws but must be caught
-                        // because of the ByteProcessor interface.
-                        throw new IllegalStateException(e);
+                    CharSequence valueCs = entry.getValue();
+                    if (isSplittableCookieHeader(valueCs)) {
+                        splitValidCookieHeader(out, valueCs);
+                    } else {
+                        out.add(COOKIE, valueCs);
                     }
                 } else {
                     out.add(aName, entry.getValue());
                 }
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if the {@code cookie} value can be split into one field per cookie-pair such that
+     * joining the fields with {@code "; "} (as required by
+     * <a href="https://www.rfc-editor.org/rfc/rfc9114.html#section-4.2.1">RFC 9114, Section 4.2.1</a>) gives
+     * back the original value: every {@code ';'} is followed by a space and another character, and all characters
+     * fit into a single byte.
+     */
+    private static boolean isSplittableCookieHeader(CharSequence valueCs) {
+        for (int i = 0; i < valueCs.length(); i++) {
+            char c = valueCs.charAt(i);
+            if (c == ';') {
+                if (i + 2 >= valueCs.length() || valueCs.charAt(i + 1) != ' ') {
+                    return false;
+                }
+                i++; // skip space
+            } else if (c > 255) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void splitValidCookieHeader(Http3Headers out, CharSequence valueCs) {
+        AsciiString value = AsciiString.of(valueCs);
+        // split up cookies to allow for better compression
+        int index = value.indexOf(';', 0);
+        int start = 0;
+        while (index != -1) {
+            out.add(COOKIE, value.subSequence(start, index, false));
+            // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+            start = index + 2;
+            index = value.indexOf(';', start);
+        }
+        out.add(COOKIE, value.subSequence(start, value.length(), false));
     }
 
     /**
