@@ -315,8 +315,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                 // RFC 7692: client_max_window_bits may have a value or no value
                 String value = parameter.getValue();
                 if (value != null) {
-                    // Let NumberFormatException bubble up if value is invalid
-                    clientWindowSize = Integer.parseInt(value);
+                    // RFC 7692 §7.1: an offer with an invalid parameter value is declined
+                    clientWindowSize = parseWindowBits(value);
                     if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
                         deflateEnabled = false;
                     }
@@ -325,9 +325,14 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                     clientWindowSize = preferredClientWindowSize;
                 }
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-                // use provided windowSize if it is allowed
-                if (allowServerWindowSize) {
-                    int clientOfferedServerWindowSize = Integer.parseInt(parameter.getValue());
+                // RFC 7692 §7.1.2.1: server_max_window_bits in an offer MUST have a value.
+                // A valueless parameter is not a window size and the offer is declined.
+                String value = parameter.getValue();
+                if (value == null) {
+                    deflateEnabled = false;
+                } else if (allowServerWindowSize) {
+                    // RFC 7692 §7.1: an offer with an invalid parameter value is declined
+                    int clientOfferedServerWindowSize = parseWindowBits(value);
                     if (clientOfferedServerWindowSize > MAX_WINDOW_SIZE
                             || clientOfferedServerWindowSize < MIN_WINDOW_SIZE) {
                         deflateEnabled = false;
@@ -362,6 +367,31 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         } else {
             return null;
         }
+    }
+
+    /**
+     * Parses the value of a {@code *_max_window_bits} offer parameter.
+     * <p>
+     * RFC 7692 §7.1.2 defines the value as {@code 1*DIGIT} "without leading zeroes". Anything else (a sign,
+     * whitespace, non-ASCII digits, leading zeroes, ...) is mapped to {@code -1}. That is outside of
+     * {@code [MIN_WINDOW_SIZE, MAX_WINDOW_SIZE]} and so makes the caller decline the offer as required by
+     * RFC 7692 §7.1, instead of failing with a {@link NumberFormatException}.
+     */
+    private static int parseWindowBits(String value) {
+        int length = value.length();
+        // More than two digits is always greater than MAX_WINDOW_SIZE, so there is no need to parse (or overflow) it.
+        if (length == 0 || length > 2 || value.charAt(0) == '0') {
+            return -1;
+        }
+        int result = 0;
+        for (int i = 0; i < length; i++) {
+            char c = value.charAt(i);
+            if (c < '0' || c > '9') {
+                return -1;
+            }
+            result = result * 10 + (c - '0');
+        }
+        return result;
     }
 
     private static class PermessageDeflateExtension implements WebSocketServerExtension {

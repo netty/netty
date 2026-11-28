@@ -303,4 +303,70 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
             }
         });
     }
+
+    @Test
+    public void testServerMaxWindowBitsWithoutValueIsDeclined() {
+        // RFC 7692 §7.1.2.1: server_max_window_bits in an offer must have a value.
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
+                        false, false, 12, 8, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, null);
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
+
+    @Test
+    public void testInvalidServerMaxWindowBitsIsDeclined() {
+        for (String value : INVALID_WINDOW_BITS) {
+            assertOfferDeclined(SERVER_MAX_WINDOW, value);
+        }
+    }
+
+    @Test
+    public void testInvalidClientMaxWindowBitsIsDeclined() {
+        for (String value : INVALID_WINDOW_BITS) {
+            assertOfferDeclined(CLIENT_MAX_WINDOW, value);
+        }
+    }
+
+    @Test
+    public void testValidMaxWindowBitsAreAccepted() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
+                        false, false, 12, 8, 0);
+        for (int bits = MIN_WINDOW_SIZE; bits <= MAX_WINDOW_SIZE; bits++) {
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put(SERVER_MAX_WINDOW, Integer.toString(bits));
+            parameters.put(CLIENT_MAX_WINDOW, Integer.toString(bits));
+            WebSocketServerExtension extension = handshaker.handshakeExtension(
+                    new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+            assertNotNull(extension, "window bits " + bits);
+            // The configured server window caps the offer.
+            assertEquals(Integer.toString(Math.min(bits, 12)),
+                    extension.newReponseData().parameters().get(SERVER_MAX_WINDOW));
+        }
+    }
+
+    // RFC 7692 §7.1.2: the value is 1*DIGIT, between 8 and 15, without leading zeroes.
+    private static final String[] INVALID_WINDOW_BITS = {
+            "abc", "", " ", "12 ", " 12", "+12", "-12", "012", "08", "0", "7", "16", "1.5", "0x0c",
+            "99999999999", "\u0669", "\uFF11\uFF12" // Arabic-indic digit nine, full-width "12"
+    };
+
+    private static void assertOfferDeclined(String parameter, String value) {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, MAX_WINDOW_SIZE,
+                        false, false, 12, 8, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(parameter, value);
+
+        assertNull(handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters)));
+    }
 }
