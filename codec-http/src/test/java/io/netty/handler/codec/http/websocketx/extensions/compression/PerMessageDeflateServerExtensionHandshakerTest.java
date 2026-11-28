@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -266,6 +267,16 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertNotNull(extension);
         WebSocketExtensionData data = extension.newReponseData();
         assertEquals("9", data.parameters().get(SERVER_MAX_WINDOW));
+    }
+
+    @Test
+    public void testEightBitServerWindowDeclinesCompressionDuringNegotiation() {
+        PerMessageDeflateServerExtensionHandshaker handshaker = new PerMessageDeflateServerExtensionHandshaker(
+                6, true, MAX_WINDOW_SIZE, false, false, 8, DEFAULT_MEM_LEVEL, 0);
+        assertThat(handshaker.handshakeExtension(new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION,
+                Collections.<String, String>emptyMap()))).isNull();
+        assertThat(handshaker.handshakeExtension(new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION,
+                Collections.singletonMap(SERVER_MAX_WINDOW, "12")))).isNull();
     }
 
     @Test

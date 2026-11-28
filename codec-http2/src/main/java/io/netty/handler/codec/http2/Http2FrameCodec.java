@@ -154,6 +154,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final PropertyKey upgradeKey;
 
     private final Integer initialFlowControlWindowSize;
+    private boolean remoteConnectProtocolEnabled;
 
     ChannelHandlerContext ctx;
 
@@ -174,6 +175,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         streamKey = connection().newKey();
         upgradeKey = connection().newKey();
         initialFlowControlWindowSize = initialSettings.initialWindowSize();
+    }
+
+    final boolean isConnectProtocolEnabled() {
+        return connection().isServer() ? encoder().isLocalConnectProtocolEnabled() : remoteConnectProtocolEnabled;
     }
 
     /**
@@ -610,6 +615,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
+            if (!connection().isServer() && Boolean.TRUE.equals(settings.connectProtocolEnabled())) {
+                remoteConnectProtocolEnabled = true;
+            }
             onHttp2Frame(ctx, new DefaultHttp2SettingsFrame(settings));
         }
 

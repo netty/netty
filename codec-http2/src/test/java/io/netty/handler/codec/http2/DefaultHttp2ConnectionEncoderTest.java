@@ -209,6 +209,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         doNothing().when(remoteFlow).addFlowControlled(any(Http2Stream.class), payloadCaptor.capture());
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
+        when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
         doAnswer(new Answer<ChannelPromise>() {
             @Override
             public ChannelPromise answer(InvocationOnMock in) throws Throwable {
@@ -765,7 +766,8 @@ public class DefaultHttp2ConnectionEncoderTest {
         goAwayReceived(0);
         ChannelPromise promise = newPromise();
         encoder.writeSettings(ctx, new Http2Settings(), promise);
-        verify(writer).writeSettings(eq(ctx), any(Http2Settings.class), eq(promise));
+        verify(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
+        assertTrue(promise.isSuccess());
     }
 
     @Test
@@ -777,7 +779,8 @@ public class DefaultHttp2ConnectionEncoderTest {
 
         ChannelPromise promise = newPromise();
         encoder.writeSettings(ctx, settings, promise);
-        verify(writer).writeSettings(eq(ctx), eq(settings), eq(promise));
+        verify(writer).writeSettings(eq(ctx), eq(settings), any(ChannelPromise.class));
+        assertTrue(promise.isSuccess());
     }
 
     @Test
@@ -801,16 +804,17 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void synchronousSettingsWriteFailureDoesNotConsumeNextSettingsAck() {
         final ChannelPromise failedPromise = newPromise();
+        final Http2Settings failedSettings = new Http2Settings().initialWindowSize(100);
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) {
                 ChannelPromise promise = invocation.getArgument(2);
-                return promise == failedPromise ? promise.setFailure(Http2TestUtil.FAKE_EXCEPTION) :
+                return invocation.getArgument(1) == failedSettings ? promise.setFailure(Http2TestUtil.FAKE_EXCEPTION) :
                         promise.setSuccess();
             }
         }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
 
-        encoder.writeSettings(ctx, new Http2Settings().initialWindowSize(100), failedPromise);
+        encoder.writeSettings(ctx, failedSettings, failedPromise);
         Http2Settings validSettings = new Http2Settings().initialWindowSize(200);
         encoder.writeSettings(ctx, validSettings, newPromise());
 
@@ -821,12 +825,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void asynchronousSettingsWriteFailurePreservesQueueOrder() {
-        doAnswer(new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocation) {
-                return invocation.getArgument(2);
-            }
-        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
+        List<ChannelPromise> writes = captureSettingsWrites();
 
         Http2Settings firstSettings = new Http2Settings().initialWindowSize(100);
         Http2Settings failedSettings = new Http2Settings().initialWindowSize(100);
@@ -838,9 +837,12 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeSettings(ctx, firstSettings, firstPromise);
         encoder.writeSettings(ctx, failedSettings, failedPromise);
         encoder.writeSettings(ctx, lastSettings, lastPromise);
-        failedPromise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
-        firstPromise.setSuccess();
-        lastPromise.setSuccess();
+        writes.get(1).setFailure(Http2TestUtil.FAKE_EXCEPTION);
+        writes.get(0).setSuccess();
+        writes.get(2).setSuccess();
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, failedPromise.cause());
+        assertTrue(firstPromise.isSuccess());
+        assertTrue(lastPromise.isSuccess());
 
         assertSame(firstSettings, encoder.pollSentSettings());
         assertSame(lastSettings, encoder.pollSentSettings());
@@ -849,27 +851,34 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void asynchronousSettingsWriteFailureSupportsVoidPromise() {
-        doAnswer(new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocation) {
-                return invocation.getArgument(2);
-            }
-        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
+        List<ChannelPromise> writes = captureSettingsWrites();
 
-        ChannelPromise future = (ChannelPromise) encoder.writeSettings(ctx,
+        ChannelFuture future = encoder.writeSettings(ctx,
                 new Http2Settings().initialWindowSize(100), newVoidPromise(channel));
         assertFalse(future.isDone());
         assertFalse(future.isVoid());
-        future.setFailure(Http2TestUtil.FAKE_EXCEPTION);
+        writes.get(0).setFailure(Http2TestUtil.FAKE_EXCEPTION);
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, future.cause());
 
         Http2Settings validSettings = new Http2Settings().initialWindowSize(200);
         ChannelPromise validPromise = newPromise();
         encoder.writeSettings(ctx, validSettings, validPromise);
-        validPromise.setSuccess();
+        writes.get(1).setSuccess();
+        assertTrue(validPromise.isSuccess());
 
         verify(pipeline).fireExceptionCaught(Http2TestUtil.FAKE_EXCEPTION);
         assertSame(validSettings, encoder.pollSentSettings());
         assertNull(encoder.pollSentSettings());
+    }
+
+    private List<ChannelPromise> captureSettingsWrites() {
+        List<ChannelPromise> writes = new ArrayList<ChannelPromise>();
+        doAnswer(invocation -> {
+            ChannelPromise promise = invocation.getArgument(2);
+            writes.add(promise);
+            return promise;
+        }).when(writer).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
+        return writes;
     }
 
     @Test

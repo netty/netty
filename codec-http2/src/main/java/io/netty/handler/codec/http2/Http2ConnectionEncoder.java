@@ -46,8 +46,8 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
     Http2FrameWriter frameWriter();
 
     /**
-     * Gets the local settings on the top of the queue that has been sent but not ACKed. This may
-     * return {@code null}.
+     * Consumes the oldest local settings in response to a SETTINGS acknowledgment. Returns {@code null}
+     * if there are no outstanding settings.
      */
     Http2Settings pollSentSettings();
 
@@ -55,6 +55,27 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
      * Sets the settings for the remote endpoint of the HTTP/2 connection.
      */
     void remoteSettings(Http2Settings settings) throws Http2Exception;
+
+    /**
+     * Records an incoming CONNECT request so the encoder can recognize its final response.
+     */
+    default void remoteConnectRequest(Http2Stream stream) { }
+
+    /**
+     * Returns whether the local endpoint has written the opening HEADERS for a CONNECT tunnel:
+     * a CONNECT request on a client, or a successful response to CONNECT on a server.
+     */
+    default boolean isConnectHeadersSent(Http2Stream stream) {
+        return false;
+    }
+
+    /**
+     * Returns whether this endpoint has advertised support for extended CONNECT (RFC 8441).
+     * Encoders that support this setting must return {@code true} after successfully writing it with value 1.
+     */
+    default boolean isLocalConnectProtocolEnabled() {
+        return false;
+    }
 
     /**
      * Writes the given data to the internal {@link Http2FrameWriter} without performing any

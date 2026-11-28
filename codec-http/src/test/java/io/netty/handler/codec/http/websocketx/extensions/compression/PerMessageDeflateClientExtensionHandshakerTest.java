@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -49,7 +50,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         WebSocketExtensionData data = handshaker.newRequestData();
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
-        assertEquals(ZlibCodecFactory.isSupportingWindowSizeAndMemLevel() ? 1 : 0, data.parameters().size());
+        assertTrue(data.parameters().isEmpty());
     }
 
     @Test
@@ -79,6 +80,23 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertEquals(RSV1, extension.rsv());
         assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
         assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
+    }
+
+    @Test
+    public void testExplicitClientWindowNegotiationRespectsEncoderMinimum() {
+        PerMessageDeflateClientExtensionHandshaker handshaker = new PerMessageDeflateClientExtensionHandshaker(
+                6, true, MAX_WINDOW_SIZE, false, false, 0);
+        boolean supportsCustomWindow = ZlibCodecFactory.isSupportingWindowSizeAndMemLevel();
+        assertThat(handshaker.newRequestData().parameters().containsKey(CLIENT_MAX_WINDOW))
+                .isEqualTo(supportsCustomWindow);
+        assertThat(handshaker.handshakeExtension(new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION,
+                Collections.singletonMap(CLIENT_MAX_WINDOW, "8")))).isNull();
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, "9");
+        parameters.put(SERVER_MAX_WINDOW, "8");
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+        assertThat(extension != null).isEqualTo(supportsCustomWindow);
     }
 
     @Test
