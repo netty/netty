@@ -82,6 +82,11 @@ final class Http2WebSocketHandshakeHeaders {
     }
 
     static Http2Headers newRequest(Http2Headers input, PerMessageDeflateClientExtensionHandshaker compression) {
+        return newRequest(input, compression, false);
+    }
+
+    static Http2Headers newRequest(Http2Headers input, PerMessageDeflateClientExtensionHandshaker compression,
+                                   boolean advertiseClientNoContext) {
         checkGenerated(input, PseudoHeaderName.METHOD.value(), HttpMethod.CONNECT.asciiName());
         checkGenerated(input, PROTOCOL, WEBSOCKET);
         checkGenerated(input, SEC_WEBSOCKET_VERSION, VERSION);
@@ -91,11 +96,17 @@ final class Http2WebSocketHandshakeHeaders {
         validateRequest(headers);
         if (compression != null) {
             WebSocketExtensionData offer = compression.newRequestData();
-            // Support a server's client_no_context_takeover request without making that promise in advance.
-            Map<String, String> parameters = new HashMap<String, String>(offer.parameters());
-            parameters.remove("client_no_context_takeover");
-            headers.set(SEC_WEBSOCKET_EXTENSIONS,
-                    extensionHeader(new WebSocketExtensionData(offer.name(), parameters)));
+            if (offer.parameters().containsKey(CLIENT_WINDOW)) {
+                throw new WebSocketHandshakeException(
+                        "HTTP/2 permessage-deflate does not offer client_max_window_bits");
+            }
+            if (!advertiseClientNoContext) {
+                // The default supports a server's client_no_context_takeover request without offering it.
+                Map<String, String> parameters = new HashMap<String, String>(offer.parameters());
+                parameters.remove("client_no_context_takeover");
+                offer = new WebSocketExtensionData(offer.name(), parameters);
+            }
+            headers.set(SEC_WEBSOCKET_EXTENSIONS, extensionHeader(offer));
         }
         return headers;
     }
@@ -214,7 +225,7 @@ final class Http2WebSocketHandshakeHeaders {
         }
         if (compression != null && !deflateExtensions(request, false).isEmpty()) {
             WebSocketExtensionData selection = deflateExtensions(response, true).get(0);
-            WebSocketClientExtension extension = compression.handshakeExtension(selection);
+            WebSocketClientExtension extension = compression.handshakeExtensionWithClientNoContextSupport(selection);
             if (extension != null) {
                 return extension;
             }

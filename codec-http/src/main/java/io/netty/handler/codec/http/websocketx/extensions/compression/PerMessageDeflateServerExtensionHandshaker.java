@@ -298,6 +298,13 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
+    /**
+     * Returns the maximum size of the decompression buffer in bytes, or {@code 0} if unlimited.
+     */
+    public int maxAllocation() {
+        return maxAllocation;
+    }
+
     @Override
     public WebSocketServerExtension handshakeExtension(WebSocketExtensionData extensionData) {
         if (!PERMESSAGE_DEFLATE_EXTENSION.equals(extensionData.name())) {

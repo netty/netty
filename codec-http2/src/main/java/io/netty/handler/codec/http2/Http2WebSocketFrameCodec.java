@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 
 final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
     static void install(ChannelHandlerContext ctx, boolean server, int maxFramePayloadLength,
-                        WebSocketExtension extension, long timeoutMillis) {
+                        WebSocketExtension extension, long timeoutMillis, boolean automaticControlFrames) {
         String name = ctx.name();
         ChannelPipeline p = ctx.pipeline();
         p.addBefore(name, null, new Http2WebSocketFrameCodec());
@@ -58,7 +58,7 @@ final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
             p.addBefore(name, null, extension.newExtensionDecoder());
         }
         p.addBefore(name, null, new Utf8FrameValidator(false));
-        p.addBefore(name, null, new ControlHandler(timeoutMillis));
+        p.addBefore(name, null, new ControlHandler(timeoutMillis, automaticControlFrames));
     }
 
     @Override
@@ -105,25 +105,32 @@ final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
 
     private static final class ControlHandler extends ChannelDuplexHandler {
         private final long timeoutMillis;
+        private final boolean automaticControlFrames;
         private boolean sentClose;
         private boolean receivedClose;
         private boolean sentEnd;
         private boolean failed;
         private ScheduledFuture<?> timeout;
 
-        ControlHandler(long timeoutMillis) {
+        ControlHandler(long timeoutMillis, boolean automaticControlFrames) {
             this.timeoutMillis = timeoutMillis;
+            this.automaticControlFrames = automaticControlFrames;
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof CloseWebSocketFrame) {
                 receivedClose = true;
-                if (!sentClose) {
+                if (automaticControlFrames && !sentClose) {
                     writeClose(ctx, ((CloseWebSocketFrame) msg).retainedDuplicate(), ctx.newPromise());
                 }
-                endStream(ctx);
-            } else if (msg instanceof PingWebSocketFrame) {
+                if (sentClose) {
+                    endStream(ctx, true);
+                } else {
+                    // A custom handler may write its response later, including after the peer's END_STREAM.
+                    startCloseTimeout(ctx);
+                }
+            } else if (automaticControlFrames && msg instanceof PingWebSocketFrame) {
                 PingWebSocketFrame ping = (PingWebSocketFrame) msg;
                 if (!receivedClose && !failed) {
                     ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
@@ -151,11 +158,16 @@ final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-            if (sentClose && msg instanceof WebSocketFrame) {
+            // A custom handler can still answer a Ping that crossed a locally initiated Close.
+            if (sentClose && msg instanceof WebSocketFrame &&
+                    (automaticControlFrames || !(msg instanceof PongWebSocketFrame) || receivedClose || failed)) {
                 ReferenceCountUtil.release(msg);
                 promise.tryFailure(new ClosedChannelException());
             } else if (msg instanceof CloseWebSocketFrame) {
                 writeClose(ctx, (CloseWebSocketFrame) msg, promise);
+                if (!automaticControlFrames && receivedClose) {
+                    endStream(ctx, false);
+                }
             } else {
                 ctx.write(msg, promise);
             }
@@ -171,24 +183,31 @@ final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
 
         private void writeClose(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
             sentClose = true;
-            // Bound both a flow-controlled close write and a peer that never sends its closing frame or FIN.
-            timeout = ctx.executor().schedule(() -> ctx.close(), timeoutMillis, TimeUnit.MILLISECONDS);
+            startCloseTimeout(ctx);
             abortOnFailure(ctx, ctx.write(frame, promise.unvoid()));
             if (!ctx.channel().config().isAutoRead()) {
                 ctx.read();
             }
         }
 
-        private void endStream(ChannelHandlerContext ctx) {
+        private void startCloseTimeout(ChannelHandlerContext ctx) {
+            if (timeout == null) {
+                // Bound both flow-controlled writes and a close exchange that doesn't complete.
+                timeout = ctx.executor().schedule(() -> ctx.close(), timeoutMillis, TimeUnit.MILLISECONDS);
+            }
+        }
+
+        private void endStream(ChannelHandlerContext ctx, boolean flush) {
             if (!sentEnd) {
                 sentEnd = true;
-                abortOnFailure(ctx, ctx.writeAndFlush(new DefaultHttp2DataFrame(true)));
+                Http2DataFrame end = new DefaultHttp2DataFrame(true);
+                abortOnFailure(ctx, flush ? ctx.writeAndFlush(end) : ctx.write(end));
             }
         }
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-            if (!ctx.channel().isActive()) {
+            if (!ctx.channel().isActive() || (!automaticControlFrames && !sentClose)) {
                 ctx.close(promise);
                 return;
             }
@@ -222,7 +241,7 @@ final class Http2WebSocketFrameCodec extends ChannelDuplexHandler {
                     WebSocketCloseStatus status = ((CorruptedWebSocketFrameException) cause).closeStatus();
                     writeClose(ctx, new CloseWebSocketFrame(status, ctx.alloc()), ctx.newPromise());
                 }
-                endStream(ctx);
+                endStream(ctx, true);
             } else {
                 ctx.close();
             }

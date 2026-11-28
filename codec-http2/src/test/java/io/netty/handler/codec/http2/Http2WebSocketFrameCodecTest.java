@@ -114,6 +114,6 @@ class Http2WebSocketFrameCodecTest {
         channel.pipeline().addLast(app);
         WebSocketExtension extension = compression ? Http2WebSocketHandshakeHeaders.clientCompression(256)
                 .handshakeExtension(new WebSocketExtensionData("permessage-deflate", Collections.emptyMap())) : null;
-        Http2WebSocketFrameCodec.install(channel.pipeline().context(app), false, 256, extension, 1000);
+        Http2WebSocketFrameCodec.install(channel.pipeline().context(app), false, 256, extension, 1000, true);
     }
 }

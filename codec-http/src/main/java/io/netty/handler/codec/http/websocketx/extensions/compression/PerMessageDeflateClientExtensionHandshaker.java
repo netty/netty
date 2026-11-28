@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilterProvider;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -213,8 +214,32 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
         return new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters);
     }
 
+    /**
+     * Returns the maximum size of the decompression buffer in bytes, or {@code 0} if unlimited.
+     */
+    public int maxAllocation() {
+        return maxAllocation;
+    }
+
     @Override
     public WebSocketClientExtension handshakeExtension(WebSocketExtensionData extensionData) {
+        return handshakeExtension(extensionData, allowClientNoContext);
+    }
+
+    /**
+     * Validates a response with support for {@code client_no_context_takeover}, as required by RFC 7692
+     * section 7.1.1.2. This does not change the offer or the other response checks.
+     *
+     * @param extensionData the server's extension response
+     * @return the negotiated extension, or {@code null} if the response cannot be accepted
+     */
+    @UnstableApi
+    public WebSocketClientExtension handshakeExtensionWithClientNoContextSupport(WebSocketExtensionData extensionData) {
+        return handshakeExtension(extensionData, true);
+    }
+
+    private WebSocketClientExtension handshakeExtension(WebSocketExtensionData extensionData,
+                                                        boolean acceptClientNoContext) {
         if (!PERMESSAGE_DEFLATE_EXTENSION.equals(extensionData.name())) {
             return null;
         }
@@ -253,8 +278,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                     succeed = false;
                 }
             } else if (CLIENT_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
-                // allowed client_no_context_takeover
-                if (allowClientNoContext) {
+                if (acceptClientNoContext) {
                     clientNoContext = true;
                 } else {
                     succeed = false;

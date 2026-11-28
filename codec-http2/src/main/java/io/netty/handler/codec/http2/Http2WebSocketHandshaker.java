@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensio
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -54,18 +55,37 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * Origin, and any credentials before calling {@link #accept}. Other streams keep their HTTP/2 pipelines.
  * A client should wait for an {@link Http2SettingsFrame} advertising support before opening its outbound stream.
  *
- * <p>Closing the child channel performs the WebSocket closing handshake. An incoming close frame is
- * acknowledged and forwarded to the application. The child channel's close future signals that the stream
- * closed. Inspect the received close frame for the WebSocket close status. To abort immediately, write a
- * {@link Http2ResetFrame}.
+ * <p>By default, closing the child channel performs the WebSocket closing handshake. An incoming close frame
+ * is acknowledged and forwarded to the application. To respond to control frames yourself, select
+ * {@link ControlFrameHandling#APPLICATION}. In either mode, the child channel's close future signals that
+ * the stream closed. Inspect the received close frame for the WebSocket close status. To abort immediately,
+ * write a {@link Http2ResetFrame}.
  * Stream reads and writes use the existing HTTP/2 flow controller. When using manual HTTP/2 window updates,
  * account for the original {@link Http2DataFrame#initialFlowControlledBytes()} before the WebSocket codecs.
  */
 @UnstableApi
 public final class Http2WebSocketHandshaker {
+    /** Selects who responds to WebSocket control frames for each stream opened by this handshaker. */
+    public enum ControlFrameHandling {
+        /**
+         * Automatically answers Ping frames, acknowledges an incoming Close, and initiates the closing
+         * handshake when the child channel is closed. Pong and Close frames are forwarded to the application.
+         */
+        AUTOMATIC,
+
+        /**
+         * Passes Ping, Pong and Close frames to the application, which is responsible for writing Pong
+         * and Close replies. For a graceful shutdown, write and flush a Close frame; Netty sends the
+         * HTTP/2 end-of-stream signal after both Close frames and handles protocol errors and close timeouts.
+         * Closing the channel without first writing a Close frame aborts the stream instead.
+         */
+        APPLICATION
+    }
+
     private final int maxFramePayloadLength;
     private final boolean allowCompression;
     private final long timeoutMillis;
+    private final boolean automaticControlFrames;
 
     /** Uses a 64 KiB frame limit, disables compression, and uses a ten-second handshake timeout. */
     public Http2WebSocketHandshaker() {
@@ -78,11 +98,24 @@ public final class Http2WebSocketHandshaker {
     }
 
     /**
-     * @param maxFramePayloadLength maximum wire frame payload and, when compressed, decompression buffer size
+     * @param maxFramePayloadLength maximum wire frame payload and the decompression buffer size for default compression
      * @param allowCompression whether to offer or accept permessage-deflate
      * @param timeoutMillis timeout in milliseconds for opening on the client and for closing on either endpoint
      */
     public Http2WebSocketHandshaker(int maxFramePayloadLength, boolean allowCompression, long timeoutMillis) {
+        this(maxFramePayloadLength, allowCompression, timeoutMillis, ControlFrameHandling.AUTOMATIC);
+    }
+
+    /**
+     * @param maxFramePayloadLength maximum wire frame payload and the decompression buffer size for default compression
+     * @param allowCompression whether to offer or accept permessage-deflate
+     * @param timeoutMillis timeout in milliseconds for opening on the client and for closing on either endpoint
+     * @param controlFrameHandling whether Netty or the application responds to control frames
+     */
+    public Http2WebSocketHandshaker(int maxFramePayloadLength, boolean allowCompression, long timeoutMillis,
+                                    ControlFrameHandling controlFrameHandling) {
+        this.automaticControlFrames = checkNotNull(controlFrameHandling, "controlFrameHandling") ==
+                ControlFrameHandling.AUTOMATIC;
         this.maxFramePayloadLength = checkPositive(maxFramePayloadLength, "maxFramePayloadLength");
         this.allowCompression = allowCompression;
         this.timeoutMillis = checkPositive(timeoutMillis, "timeoutMillis");
@@ -101,6 +134,29 @@ public final class Http2WebSocketHandshaker {
      * of this stream. To observe the end of the abort, wait for the child channel's close future.
      */
     public Future<Http2Headers> connect(ChannelHandlerContext ctx, Http2Headers requestHeaders) {
+        return connect0(ctx, requestHeaders, null);
+    }
+
+    /**
+     * Opens a stream using the supplied permessage-deflate handshaker instead of the constructor's compression
+     * setting. The supplied handshaker must not offer {@code client_max_window_bits} because the local encoder
+     * cannot support all of the window sizes a server could select. As required by RFC 7692, the client
+     * accepts {@code client_no_context_takeover} in a response even when it does not appear in the offer.
+     *
+     * @param ctx the application context on the client stream's event loop
+     * @param requestHeaders the application headers for the opening request
+     * @param compression the permessage-deflate configuration for this stream
+     * @return the same handshake future as {@link #connect(ChannelHandlerContext, Http2Headers)}
+     * @throws IllegalArgumentException if the decompression buffer limit is unlimited or exceeds the frame limit
+     */
+    public Future<Http2Headers> connect(ChannelHandlerContext ctx, Http2Headers requestHeaders,
+                                        PerMessageDeflateClientExtensionHandshaker compression) {
+        checkCompressionLimit(checkNotNull(compression, "compression").maxAllocation());
+        return connect0(ctx, requestHeaders, compression);
+    }
+
+    private Future<Http2Headers> connect0(ChannelHandlerContext ctx, Http2Headers requestHeaders,
+                                          PerMessageDeflateClientExtensionHandshaker customCompression) {
         Http2FrameCodec codec = frameCodec(ctx, false);
         if (((Http2StreamChannel) ctx.channel()).stream().id() > 0 ||
                 ctx.pipeline().context(ClientHandshake.class) != null) {
@@ -110,11 +166,13 @@ public final class Http2WebSocketHandshaker {
             return ctx.executor().newFailedFuture(new WebSocketHandshakeException(
                     "peer has not advertised SETTINGS_ENABLE_CONNECT_PROTOCOL"));
         }
-        PerMessageDeflateClientExtensionHandshaker compression = allowCompression ?
-                Http2WebSocketHandshakeHeaders.clientCompression(maxFramePayloadLength) : null;
+        PerMessageDeflateClientExtensionHandshaker compression = customCompression;
+        if (compression == null && allowCompression) {
+            compression = Http2WebSocketHandshakeHeaders.clientCompression(maxFramePayloadLength);
+        }
         final Http2Headers request;
         try {
-            request = Http2WebSocketHandshakeHeaders.newRequest(requestHeaders, compression);
+            request = Http2WebSocketHandshakeHeaders.newRequest(requestHeaders, compression, customCompression != null);
         } catch (WebSocketHandshakeException e) {
             return ctx.executor().newFailedFuture(e);
         }
@@ -151,6 +209,29 @@ public final class Http2WebSocketHandshaker {
      * Neither supplied headers object is modified.
      */
     public ChannelFuture accept(ChannelHandlerContext ctx, Http2HeadersFrame request, Http2Headers responseHeaders) {
+        return accept0(ctx, request, responseHeaders, null);
+    }
+
+    /**
+     * Accepts a stream using the supplied permessage-deflate handshaker instead of the constructor's compression
+     * setting.
+     *
+     * @param ctx the application context on the server stream's event loop
+     * @param request the opening request the application has routed and authorized
+     * @param responseHeaders the application headers for the opening response
+     * @param compression the permessage-deflate configuration for this stream
+     * @return the same local response-write future as
+     *         {@link #accept(ChannelHandlerContext, Http2HeadersFrame, Http2Headers)}
+     * @throws IllegalArgumentException if the decompression buffer limit is unlimited or exceeds the frame limit
+     */
+    public ChannelFuture accept(ChannelHandlerContext ctx, Http2HeadersFrame request, Http2Headers responseHeaders,
+                                PerMessageDeflateServerExtensionHandshaker compression) {
+        checkCompressionLimit(checkNotNull(compression, "compression").maxAllocation());
+        return accept0(ctx, request, responseHeaders, compression);
+    }
+
+    private ChannelFuture accept0(ChannelHandlerContext ctx, Http2HeadersFrame request, Http2Headers responseHeaders,
+                                  PerMessageDeflateServerExtensionHandshaker customCompression) {
         Http2FrameCodec codec = frameCodec(ctx, true);
         Http2StreamChannel channel = (Http2StreamChannel) ctx.channel();
         if (request.stream() != null && request.stream() != channel.stream()) {
@@ -182,12 +263,17 @@ public final class Http2WebSocketHandshaker {
         final WebSocketServerExtension extension;
         try {
             response = Http2WebSocketHandshakeHeaders.copyOf(responseHeaders);
-            extension = Http2WebSocketHandshakeHeaders.negotiateServer(request.headers(), response, allowCompression ?
-                    Http2WebSocketHandshakeHeaders.serverCompression(maxFramePayloadLength) : null, offers);
+            PerMessageDeflateServerExtensionHandshaker compression = customCompression;
+            if (compression == null && allowCompression) {
+                compression = Http2WebSocketHandshakeHeaders.serverCompression(maxFramePayloadLength);
+            }
+            extension = Http2WebSocketHandshakeHeaders.negotiateServer(
+                    request.headers(), response, compression, offers);
         } catch (WebSocketHandshakeException e) {
             return ctx.newFailedFuture(e);
         }
-        Http2WebSocketFrameCodec.install(ctx, true, maxFramePayloadLength, extension, timeoutMillis);
+        Http2WebSocketFrameCodec.install(ctx, true, maxFramePayloadLength, extension, timeoutMillis,
+                automaticControlFrames);
         // Write the HTTP response before returning control to the application. A failed response aborts the stream.
         ChannelHandlerContext transport = ctx.pipeline().context(Http2WebSocketFrameCodec.class);
         return transport.writeAndFlush(new DefaultHttp2HeadersFrame(response)).addListener(f -> {
@@ -195,6 +281,13 @@ public final class Http2WebSocketHandshaker {
                 transport.close();
             }
         });
+    }
+
+    private void checkCompressionLimit(int maxAllocation) {
+        if (maxAllocation <= 0 || maxAllocation > maxFramePayloadLength) {
+            throw new IllegalArgumentException("compression maxAllocation must be between 1 and "
+                    + maxFramePayloadLength + " (was " + maxAllocation + ')');
+        }
     }
 
     private static Http2FrameCodec frameCodec(ChannelHandlerContext ctx, boolean server) {
@@ -262,7 +355,8 @@ public final class Http2WebSocketHandshaker {
                 if (!result.setUncancellable()) {
                     return;
                 }
-                Http2WebSocketFrameCodec.install(ctx, false, maxFramePayloadLength, extension, timeoutMillis);
+                Http2WebSocketFrameCodec.install(ctx, false, maxFramePayloadLength, extension, timeoutMillis,
+                        automaticControlFrames);
                 ctx.pipeline().remove(this);
                 result.trySuccess(response);
             } catch (WebSocketHandshakeException e) {

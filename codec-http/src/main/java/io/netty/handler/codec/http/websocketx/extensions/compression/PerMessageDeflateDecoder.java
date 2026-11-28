@@ -17,7 +17,10 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
@@ -62,6 +65,11 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
         }
 
         WebSocketFrame wsFrame = (WebSocketFrame) msg;
+        if (wsFrame instanceof PingWebSocketFrame || wsFrame instanceof PongWebSocketFrame ||
+                wsFrame instanceof CloseWebSocketFrame) {
+            // Control frames may be interleaved with compressed fragments; they never use permessage-deflate.
+            return false;
+        }
         if (extensionDecoderFilter().mustSkip(wsFrame)) {
             if (compressing) {
                 throw new IllegalStateException("Cannot skip per message deflate decoder, compression in progress");
