@@ -62,14 +62,13 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Pinned to v5.1.0
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+      - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-linux-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            cache-maven-${{ hashFiles('**/pom.xml') }}
-            cache-maven-
+            cache-maven-linux-
 
       - name: Delete old netty artifacts in local maven repository
         run:
