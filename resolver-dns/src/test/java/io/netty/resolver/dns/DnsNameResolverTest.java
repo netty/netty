@@ -133,7 +133,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -4663,11 +4662,11 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static List<Arguments> ipv4ChannelNameServerOrders() {
-        List<Arguments> orders = new ArrayList<Arguments>();
+    private static List<Object[]> ipv4ChannelNameServerOrders() {
+        List<Object[]> orders = new ArrayList<Object[]>();
         for (DnsNameResolverChannelStrategy strategy : DnsNameResolverChannelStrategy.values()) {
-            orders.add(Arguments.of(strategy, false));
-            orders.add(Arguments.of(strategy, true));
+            orders.add(new Object[] { strategy, false });
+            orders.add(new Object[] { strategy, true });
         }
         return orders;
     }
