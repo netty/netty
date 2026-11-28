@@ -54,6 +54,10 @@ final class BsdSocket extends Socket {
         super(fd);
     }
 
+    InternetProtocolFamily family() {
+        return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
+    }
+
     void setAcceptFilter(AcceptFilter acceptFilter) throws IOException {
         setAcceptFilter(intValue(), acceptFilter.filterName(), acceptFilter.filterArgs());
     }
